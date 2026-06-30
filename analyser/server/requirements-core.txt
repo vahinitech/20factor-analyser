@@ -1,0 +1,14 @@
+# Vahini analyser — CORE service deps (always required, no OCR engine).
+# These are light and CPU-friendly. Install an engine tier on top:
+#   requirements-paddle.txt   (default, fast, private)
+#   requirements-trocr.txt    (English handwriting)
+#   requirements-surya.txt    (multilingual/Indic handwriting)
+#   requirements-chandra.txt  (best accuracy; GPU/local — API needs no deps)
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+pillow>=10.0.0
+numpy>=1.24
+opencv-python-headless>=4.9.0
+# Used by starlette/fastapi TestClient in the regression suite.
+httpx>=0.27

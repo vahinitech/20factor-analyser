@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vahini · Why “Messy” Matters</title>
+<link rel="icon" href="../site/assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{ margin:0; height:100%; background:#0a0a0a; }
+  #video-root{ position:fixed; inset:0; }
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#222831"/>
+    <text x="50" y="52" font-family="Caveat, cursive" font-size="30" fill="#EEEEEE" text-anchor="middle" transform="rotate(-6 50 50)">messy?</text>
+    <text x="50" y="80" font-family="sans-serif" font-size="7.5" fill="#00ADB5" text-anchor="middle" letter-spacing="1.5">WHY IT MATTERS</text>
+  </svg>
+</template>
+<div id="video-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="../scripts/video/animations.jsx"></script>
+<script type="text/babel" src="../scripts/video/video-helpers.jsx"></script>
+<script type="text/babel" src="../scripts/video/v5-scenes.jsx"></script>
+
+<script type="text/babel">
+const DUR = 33;
+const S = { hook:[0,7], reveal:[7,26], fix:[26,33] };
+const len = ([a,b]) => b-a;
+function ScreenLabel(){ const t=useTime(); React.useEffect(()=>{ const r=document.getElementById('video-root'); if(r) r.setAttribute('data-screen-label', Math.floor(t)+'s'); }, [Math.floor(t)]); return null; }
+function Controller(){ const tl=useTimeline(); React.useEffect(()=>{ window.__seek=(x)=>{ tl.setPlaying(false); tl.setTime(x); }; },[tl]); return null; }
+function Film(){
+  return (
+    <Stage width={1920} height={1080} duration={DUR} background={V.ink2} persistKey="vahiniWhyMessy" loop={true}>
+      <ScreenLabel/><Controller/>
+      <Sprite start={S.hook[0]}   end={S.hook[1]}>  <WM_Hook   dur={len(S.hook)}/></Sprite>
+      <Sprite start={S.reveal[0]} end={S.reveal[1]}><WM_Reveal dur={len(S.reveal)}/></Sprite>
+      <Sprite start={S.fix[0]}    end={S.fix[1]}>   <WM_Fix    dur={len(S.fix)}/></Sprite>
+    </Stage>
+  );
+}
+ReactDOM.createRoot(document.getElementById('video-root')).render(<Film/>);
+</script>
+</body>
+</html>

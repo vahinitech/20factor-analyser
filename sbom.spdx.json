@@ -1,0 +1,172 @@
+{
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-20260622",
+  "creationInfo": {
+    "created": "2026-06-22T00:00:00Z",
+    "creators": [
+      "Organization: Vahini Technologies",
+      "Tool: vahini-sbom-manual"
+    ],
+    "licenseListVersion": "3.22"
+  },
+  "comment": "Software Bill of Materials for the Vahini 20-Factor Handwriting Analyser web application. The browser engine is 100% first-party JavaScript (no bundled third-party code libraries — no OpenCV, Tesseract, jQuery, React, etc.). Third-party components are limited to web fonts loaded at runtime, two optional/server-side or hosted services, and the deployment web server.",
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-Vahini",
+      "name": "vahini-20-factor-analyser",
+      "versionInfo": "3.1",
+      "supplier": "Organization: Vahini Technologies",
+      "originator": "Organization: Vahini Technologies",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "AGPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
+      "copyrightText": "Copyright (c) 2026 Vahini Technologies.",
+      "primaryPackagePurpose": "APPLICATION",
+      "comment": "The Vahini 20-Factor Analyser: deterministic computer-vision engine (packed), report renderer, browser app, and pluggable Python OCR server. Free software under GNU AGPL-3.0-only; the dual-IMU handwriting-motion sensing method is the subject of Indian Patent No. 584433."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Spectral",
+      "name": "spectral",
+      "versionInfo": "Google Fonts CSS API v2 (rolling)",
+      "supplier": "Organization: Production Type (via Google Fonts)",
+      "downloadLocation": "https://fonts.google.com/specimen/Spectral",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2017 The Spectral Project Authors (https://github.com/productiontype/Spectral)",
+      "primaryPackagePurpose": "FONT",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/google-fonts/spectral" }
+      ],
+      "comment": "Serif display/body font, loaded at runtime from fonts.googleapis.com."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-HankenGrotesk",
+      "name": "hanken-grotesk",
+      "versionInfo": "Google Fonts CSS API v2 (rolling)",
+      "supplier": "Person: Alfredo Marco Pradil (via Google Fonts)",
+      "downloadLocation": "https://fonts.google.com/specimen/Hanken+Grotesk",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2020 The Hanken Grotesk Project Authors",
+      "primaryPackagePurpose": "FONT",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/google-fonts/hanken-grotesk" }
+      ],
+      "comment": "Sans-serif UI/body font, loaded at runtime from fonts.googleapis.com."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Caveat",
+      "name": "caveat",
+      "versionInfo": "Google Fonts CSS API v2 (rolling)",
+      "supplier": "Organization: Impallari Type (via Google Fonts)",
+      "downloadLocation": "https://fonts.google.com/specimen/Caveat",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2014 The Caveat Project Authors",
+      "primaryPackagePurpose": "FONT",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/google-fonts/caveat" }
+      ],
+      "comment": "Handwriting accent font used for sample/expected passages."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-EduSABeginner",
+      "name": "edu-sa-beginner",
+      "versionInfo": "Google Fonts CSS API v2 (rolling)",
+      "supplier": "Organization: EduType / Australian Type Foundry (via Google Fonts)",
+      "downloadLocation": "https://fonts.google.com/specimen/Edu+SA+Beginner",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2021 The Edu Project Authors",
+      "primaryPackagePurpose": "FONT",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/google-fonts/edu-sa-beginner" }
+      ],
+      "comment": "Beginner-handwriting model font used in practice/sample sheets."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-PaddleOCR",
+      "name": "paddleocr",
+      "versionInfo": "PP-OCRv5 (server/optional)",
+      "supplier": "Organization: PaddlePaddle (Baidu)",
+      "downloadLocation": "https://github.com/PaddlePaddle/PaddleOCR",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright PaddlePaddle Authors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:github/PaddlePaddle/PaddleOCR" }
+      ],
+      "comment": "OPTIONAL, server-side only. Text recognition (detect + read) used on the heavy server path to confirm which characters were attempted. It is NOT bundled in the browser app and is never the basis of a handwriting score. Not present unless a recognition server is configured."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-nginx",
+      "name": "nginx",
+      "versionInfo": "stable",
+      "supplier": "Organization: F5, Inc. / nginx authors",
+      "downloadLocation": "https://nginx.org/download/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "Copyright (C) Igor Sysoev, Copyright (C) Nginx, Inc.",
+      "primaryPackagePurpose": "OTHER",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/nginx" }
+      ],
+      "comment": "Deployment web server (see deploy/nginx.conf and Dockerfile). Used to serve static files; not part of the shipped client bundle."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-goQR",
+      "name": "goqr-api",
+      "versionInfo": "v1",
+      "supplier": "Organization: goQR.me",
+      "downloadLocation": "https://goqr.me/api/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Hosted QR-image service (api.qrserver.com) called at runtime in the optional share flow to render a QR for a share link. No code is redistributed; the service is free for commercial and non-commercial use per goQR.me terms. Has a graceful offline fallback (link shown directly)."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-GoogleAnalytics",
+      "name": "google-analytics-gtm",
+      "versionInfo": "GA4 / GTM",
+      "supplier": "Organization: Google LLC",
+      "downloadLocation": "https://www.googletagmanager.com/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Google-Terms",
+      "licenseDeclared": "LicenseRef-Google-Terms",
+      "copyrightText": "Copyright Google LLC",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Proprietary hosted analytics service (Google Analytics 4 + Google Tag Manager) injected at runtime by site.js. Governed by Google's Terms of Service, not an open-source licence."
+    }
+  ],
+  "hasExtractedLicensingInfos": [
+    {
+      "licenseId": "LicenseRef-Google-Terms",
+      "name": "Google APIs / Analytics Terms of Service",
+      "extractedText": "Use of Google Analytics and Google Tag Manager is governed by the Google Analytics Terms of Service and the Google APIs Terms of Service, not an open-source licence. See https://marketingplatform.google.com/about/analytics/terms/us/ ."
+    }
+  ],
+  "relationships": [
+    { "spdxElementId": "SPDXRef-DOCUMENT", "relationshipType": "DESCRIBES", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Spectral" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-HankenGrotesk" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Caveat" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-EduSABeginner" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "OPTIONAL_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-PaddleOCR" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-goQR" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-GoogleAnalytics" },
+    { "spdxElementId": "SPDXRef-Package-nginx", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" }
+  ]
+}

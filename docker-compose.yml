@@ -1,0 +1,44 @@
+# 20-Factor Analyser — local stack.
+#
+# Single self-contained service: the FastAPI server serves the analyser app
+# (under /analyser) AND the OCR + 20-factor APIs (/ocr, /report-python,
+# /analyze-vl) on the same origin.
+#
+#   docker compose up -d --build
+#   open http://localhost:8080/analyser/Vahini%20Analyser.html
+#   docker compose down
+#
+# Switch OCR engine with VAHINI_OCR_BACKEND (paddle|trocr|surya|chandra|auto).
+# The default image ships PaddleOCR only; trocr/surya need their build args.
+services:
+  analyser:
+    container_name: vahini-20factor
+    build:
+      context: ./analyser
+      dockerfile: server/Dockerfile.analyser
+      args:
+        # Set to "1" to bake the English handwriting refiner (TrOCR) or the
+        # multilingual/Indic engine (Surya). Both add CPU latency.
+        VAHINI_WITH_TROCR: "0"
+        VAHINI_WITH_SURYA: "0"
+    image: vahini/20factor-analyser:local
+    restart: unless-stopped
+    environment:
+      - PORT=8868
+      - VAHINI_OCR_BACKEND=paddle
+      - VAHINI_OCR_LANGS=${VAHINI_OCR_LANGS:-en}
+      - VAHINI_OCR_VARIANTS=2
+      - VAHINI_OCR_GPU=0
+    ports:
+      - "8080:8868"
+    volumes:
+      - paddle_models:/opt/paddle-models
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8868/ocr/health', timeout=5).getcode()==200 else 1)"]
+      interval: 30s
+      timeout: 8s
+      retries: 5
+      start_period: 240s            # first run downloads PP-OCRv5 weights
+
+volumes:
+  paddle_models:

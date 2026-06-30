@@ -1,0 +1,6 @@
+# Engine tier: Chandra 2 (datalab) — best handwriting/Indic accuracy.
+# Only needed for LOCAL runs (VAHINI_CHANDRA_METHOD=hf or vllm). Both want a
+# GPU; CPU (hf) is impractical on a laptop. The recommended path on a CPU-only
+# box is the hosted API (VAHINI_CHANDRA_METHOD=api + DATALAB_API_KEY), which
+# needs NO extra packages — do not install this tier for the API path.
+chandra-ocr>=0.2.0

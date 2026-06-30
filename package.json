@@ -1,0 +1,22 @@
+{
+  "name": "20factor-analyser",
+  "version": "3.1.0",
+  "private": false,
+  "license": "AGPL-3.0-only",
+  "description": "Vahini 20-Factor Handwriting Analyser — deterministic computer-vision handwriting analysis with a pluggable OCR backend.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vahinitech/20factor-analyser.git"
+  },
+  "scripts": {
+    "build:bundle": "python analyser/build_bundle.py",
+    "test:regression:serve": "./node_modules/.bin/http-server . -p 4173 -c-1",
+    "test:regression:headless": "node tests/regression-headless.mjs",
+    "test:recognition": "node tests/e2e-recognition.mjs",
+    "test:regression:install": "./node_modules/.bin/playwright install chromium"
+  },
+  "devDependencies": {
+    "http-server": "^14.1.1",
+    "playwright": "^1.61.1"
+  }
+}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="only light">
+<title>Vahini — Print-vs-Handwriting Tests</title>
+<link rel="stylesheet" href="../analyser/styles/report.css">
+<style>
+  body{ font-family:system-ui,sans-serif; margin:0; padding:24px; background:#EEEEEE; color:#222831; }
+  h1{ font-size:22px; margin:0 0 4px; }
+  .sub{ color:#565D66; font-size:13px; margin-bottom:18px; max-width:900px; }
+  .summary{ font-size:15px; font-weight:700; padding:10px 14px; border-radius:10px; margin-bottom:16px; display:inline-block; }
+  .summary.pass{ background:#DCF1E8; color:#0F6E56; }
+  .summary.fail{ background:#F8E5E1; color:#A80016; }
+  .summary.run{ background:#F3E9CF; color:#9A7B25; }
+  ul{ list-style:none; padding:0; margin:0; max-width:900px; }
+  li{ background:#fff; border:1px solid #E3E5E7; border-radius:10px; padding:11px 14px; margin-bottom:8px; font-size:13px; display:flex; gap:10px; align-items:flex-start; }
+  li .ic{ font-weight:800; flex:0 0 auto; }
+  li.ok .ic{ color:#0F6E56; } li.no .ic{ color:#A80016; }
+  li .d{ color:#565D66; font-size:12px; margin-top:3px; }
+  #host{ display:none; }
+  #appstubs{ display:none; }
+</style>
+</head>
+<body>
+<h1>Print-vs-Handwriting · regression tests</h1>
+<div class="sub">Runs the packed engine on real uploaded images. Asserts printed text is excluded from a mixed page, clean handwriting is never over-flagged, noise is rejected, and the rendered report carries no leaked printed fragments or unusual characters.</div>
+<div class="summary run" id="summary">Running…</div>
+<ul id="results"></ul>
+<div id="host"></div>
+
+<!-- the packed bundle also contains app.js, which auto-wires the analyser UI on
+     load; these hidden stubs satisfy its element lookups so init() doesn't throw. -->
+<div id="appstubs">
+  <section class="screen on" id="screen-upload"></section>
+  <section class="screen" id="screen-process"><div class="screen-head"></div><div class="panel"><div id="proc-stage"><span class="stage-tag"></span></div><div id="proc-log-steps"></div></div></section>
+  <div id="dropzone"></div><input id="file-input" type="file"><button id="dz-clear"></button>
+  <img id="dz-preview"><div id="dz-prompt"></div><div id="passage-list"></div>
+</div>
+
+<script src="../analyser/scripts/core/engine.bundle.js"></script>
+<script>
+(function(){
+  const results = [];
+  const add = (ok, name, detail) => { results.push({ ok:!!ok, name, detail:detail||'' }); };
+  const loadImg = (src) => new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('image failed: '+src)); i.src=src; });
+
+  function analyze(img){
+    const { metrics, overlay } = VahiniEngine.analyze(img);
+    const analysis = VahiniFactors.scoreAll(metrics);
+    return { metrics, overlay, analysis };
+  }
+  function renderText({metrics, overlay, analysis}){
+    const host = document.getElementById('host');
+    const det = VahiniOCR.renderDetection(overlay.canvas, overlay, 'detect');
+    const crops = window.VahiniCrops ? VahiniCrops.build(overlay, metrics) : null;
+    const letterFindings = window.VahiniLetters ? VahiniLetters.build(overlay, metrics, '', '', 'local') : null;
+    VahiniReport.render(host, {
+      intake:{ role:'individual', writerName:'' },
+      analysis, expectedText:'', recognizedText:'', ocrEngine:'local',
+      detURL: det && det.toDataURL ? det.toDataURL('image/jpeg',0.6) : '',
+      pipeline:{ binMethod:metrics.binMethod, nLines:metrics.nLines, nWords:metrics.nWords, nChars:metrics.nChars, ocrEngine:'local', docType:metrics.docType, quality:metrics.quality },
+      crops, letterFindings
+    });
+    return host.textContent || '';
+  }
+
+  async function run(){
+    if (typeof VahiniEngine !== 'object'){ add(false,'engine bundle loaded'); return finish(); }
+    add(true,'engine bundle loaded');
+
+    // 1) DOCTOR'S FORM — printed labels + declaration + handwriting (mixed page)
+    try{
+      const form = analyze(await loadImg('../samples/IMG_1100.jpeg'));
+      const m = form.metrics;
+      add(m.printedLines >= 6, 'Mixed form: printed lines detected & excluded', 'printed='+m.printedLines+' (expect \u22656), handwritten='+m.nLines);
+      add(m.docType.key === 'mixed', 'Mixed form: classified "Mixed printed + handwritten"', 'docType='+m.docType.label);
+      add(/Handwriting only/i.test(m.docType.accuracy), 'Mixed form: scores the handwriting alone', m.docType.accuracy);
+      const txt = renderText(form);
+      const leakWords = ['AH/IPCS','Form-27','medicines prescribed','obtain urgent care','Consultant Doctor'];
+      const leaked = leakWords.filter(w => txt.indexOf(w) !== -1);
+      add(leaked.length === 0, 'Mixed form: report text carries no printed-form fragments', leaked.length ? 'LEAKED: '+leaked.join(' | ') : 'clean');
+      const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g) || []);
+      add(weird.length === 0, 'Mixed form: report has no unusual / control characters', weird.length ? weird.length+' found' : 'none');
+
+      // structural: no scored "letter" is an oversized merged bar / ruled box /
+      // printed-code blob (the bug that put "AH/IPCS/Form-27" into the crops).
+      const L = form.overlay.letters;
+      const hs = L.map(b=>b.h).sort((a,b)=>a-b); const medH = hs[Math.floor(hs.length/2)]||10;
+      const widest = Math.max(...L.map(b=>b.w));
+      add(widest <= medH*4.2, 'Mixed form: no oversized merged blobs in scored letters', 'widest='+widest+'px, capped at '+Math.round(medH*4.2)+'px');
+
+      // structural: the longest line (drives the F6/F11/F18 full-line crops) must
+      // not span a huge void into a far-off printed region.
+      const lng = [...form.overlay.scoreLines].sort((a,b)=>b.boxes.length-a.boxes.length)[0];
+      let maxGap = 0; const bx=[...lng.boxes].sort((a,b)=>a.x-b.x);
+      for (let i=1;i<bx.length;i++) maxGap = Math.max(maxGap, bx[i].x-(bx[i-1].x+bx[i-1].w));
+      add(maxGap <= medH*9, 'Mixed form: longest line has no cross-column void (tight crop)', 'maxGap='+Math.round(maxGap)+'px');
+    }catch(e){ add(false,'Mixed form analysis ran', String(e)); }
+
+    // 2) CLEAN HANDWRITING SAMPLE — must NOT be over-flagged as printed
+    try{
+      const s = analyze(await loadImg('../samples/IMG_1099.jpeg'));
+      const m = s.metrics;
+      add(m.printedLines === 0, 'Clean sample: nothing wrongly flagged as printed', 'printed='+m.printedLines);
+      add(m.reject.rejected === false, 'Clean sample: accepted (not rejected)');
+      add(m.nLines >= 2, 'Clean sample: handwriting lines scored', 'lines='+m.nLines);
+      const txt = renderText(s);
+      const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/g) || []);
+      add(weird.length === 0, 'Clean sample: report has no unusual characters', weird.length ? weird.length+' found' : 'none');
+    }catch(e){ add(false,'Clean sample analysis ran', String(e)); }
+
+    // 3) NOISE PHOTO (floor + a couple of scribbled numbers) — must be rejected
+    try{
+      const n = analyze(await loadImg('../uploads/IMG_1059.jpeg'));
+      add(n.metrics.reject.rejected === true, 'Noise photo: rejected (not a handwriting page)', n.metrics.reject.reason||'');
+    }catch(e){ add(false,'Noise photo analysis ran', String(e)); }
+
+    finish();
+  }
+
+  function finish(){
+    document.getElementById('results').innerHTML = results.map(r => '<li class="'+(r.ok?'ok':'no')+'"><span class="ic">'+(r.ok?'PASS':'FAIL')+'</span><div><div>'+r.name+'</div>'+(r.detail?'<div class="d">'+r.detail+'</div>':'')+'</div></li>').join('');
+    const passed = results.filter(r=>r.ok).length, total = results.length, allOk = passed === total;
+    const s = document.getElementById('summary');
+    s.className = 'summary ' + (allOk?'pass':'fail');
+    s.textContent = (allOk?'ALL PASSING':'FAILURES') + ' \u2014 ' + passed + ' / ' + total + ' checks';
+    window.__testResults = { passed, total, allOk, results };
+  }
+
+  // run after the bundle's own DOMContentLoaded init has settled
+  if (document.readyState === 'complete' || document.readyState === 'interactive') setTimeout(run, 0);
+  else window.addEventListener('DOMContentLoaded', ()=>setTimeout(run,0));
+})();
+</script>
+</body>
+</html>

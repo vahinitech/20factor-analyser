@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battu, Why the Pen Matters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2236; --ink2:#39405A; --accent:#D4633A; --accent-deep:#B14A28; --accent-soft:#F6E2D6;
+    --grow:#2F8F7F; --grow-soft:#DDEFEA; --gold:#C29A45; --indigo:#4F5BD5; --indigo-soft:#E1E3F7;
+    --muted:#76715F; --paper:#FBF6EC; --paper2:#F4EADA; --card:#fff; --hair:#E8DECB;
+    --serif:"Spectral",Georgia,serif; --sans:"Hanken Grotesk",system-ui,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html{ background:#2c3038; }
+  body{ margin:0; font-family:var(--sans); color:var(--ink); line-height:1.62; background:var(--paper); }
+  .wrap{ max-width:940px; margin:0 auto; padding:0 24px; }
+  a{ color:var(--accent-deep); }
+
+  .hero{ background:linear-gradient(155deg,#11141f,#1f2742 60%,#2a2140); color:#fff; padding:54px 0 46px; position:relative; overflow:hidden; }
+  .hero::after{ content:""; position:absolute; inset:0; background:radial-gradient(120% 90% at 85% 0%, rgba(212,99,58,.3), transparent 55%); }
+  .hero .wrap{ position:relative; z-index:1; }
+  .hero .brand{ display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+  .hero .brand img{ width:42px;height:42px;border-radius:50%; }
+  .hero .brand .bt{ font-family:var(--serif); font-size:18px; font-weight:600; }
+  .hero .brand .bs{ font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#9aa0b8;font-weight:700; }
+  .hero .ey{ font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#F0B59B; }
+  .hero h1{ font-family:var(--serif); font-size:48px; font-weight:600; letter-spacing:-.02em; line-height:1.03; margin:13px 0 14px; max-width:760px; }
+  .hero h1 i{ color:#F0B59B; font-style:italic; }
+  .hero p{ font-size:15.5px; color:#c7ccdc; max-width:640px; margin:0; }
+  .hero .pill{ display:inline-block; margin-top:18px; font-size:11px; font-weight:700; letter-spacing:.06em; background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.2); color:#fff; padding:6px 14px; border-radius:99px; }
+
+  section{ padding:42px 0 8px; }
+  h2{ font-family:var(--serif); font-size:30px; font-weight:600; letter-spacing:-.01em; margin:0 0 6px; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 24px; max-width:680px; }
+
+  /* the "what a photo can't see" contrast */
+  .vs{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .vs .col{ border-radius:15px; padding:22px 24px; }
+  .vs .photo{ background:var(--card); border:1px solid var(--hair); }
+  .vs .pen{ background:linear-gradient(160deg,#1c2236,#2a3350); color:#eef0f7; }
+  .vs h3{ font-family:var(--serif); font-size:19px; font-weight:600; margin:0 0 4px; display:flex; align-items:center; gap:9px; }
+  .vs .pen h3{ color:#fff; }
+  .vs .tag{ font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+  .vs .pen .tag{ color:#9aa0b8; }
+  .vs ul{ list-style:none; padding:0; margin:0; }
+  .vs li{ position:relative; padding-left:26px; margin-bottom:11px; font-size:13px; line-height:1.45; }
+  .vs .photo li{ color:var(--ink2); }
+  .vs .pen li{ color:#d2d6e6; }
+  .vs li svg{ position:absolute; left:0; top:2px; width:16px; height:16px; }
+
+  /* sensor array */
+  .array{ background:var(--paper2); }
+  .pen-schematic{ background:#0f1320; border-radius:16px; padding:20px; margin-bottom:18px; }
+  .pen-schematic svg{ width:100%; height:auto; display:block; }
+  .pen-schematic .pl{ fill:#aeb4c8; font-size:12px; font-family:var(--sans); font-weight:700; }
+  .sensors{ display:grid; grid-template-columns:repeat(4,1fr); gap:13px; }
+  .sensor{ background:var(--card); border:1px solid var(--hair); border-radius:13px; padding:15px 16px; }
+  .sensor .sh{ display:flex; align-items:center; gap:8px; }
+  .sensor .sh i{ width:11px;height:11px;border-radius:50%; flex:0 0 auto; }
+  .sensor .sh b{ font-size:13px; }
+  .sensor .ss{ font-size:11px; color:var(--muted); margin:4px 0 9px; }
+  .sensor .ax{ display:flex; flex-wrap:wrap; gap:4px; }
+  .sensor .ax span{ font-size:9px; font-weight:700; padding:2px 6px; border-radius:5px; }
+
+  /* the 4 factors the pen measures */
+  .factor{ background:var(--card); border:1px solid var(--hair); border-radius:16px; padding:24px; margin-bottom:16px; display:grid; grid-template-columns:64px 1fr; gap:20px; }
+  .factor .fn{ width:64px;height:64px;border-radius:16px;background:var(--indigo-soft);color:var(--indigo);display:grid;place-items:center; }
+  .factor .fn svg{ width:34px;height:34px; }
+  .factor .ftag{ font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--indigo); }
+  .factor h3{ font-family:var(--serif); font-size:21px; font-weight:600; margin:3px 0 8px; }
+  .factor .why{ background:var(--paper2); border-radius:10px; padding:12px 15px; margin-top:12px; }
+  .factor .why b{ color:var(--ink); }
+  .factor .why .wl{ font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--accent-deep); display:block; margin-bottom:4px; }
+  .factor p{ font-size:13.5px; color:var(--ink2); margin:0; }
+  .factor .meas{ font-size:11.5px; color:var(--muted); margin-top:10px; }
+  .factor .meas code{ background:var(--paper2); padding:1px 7px; border-radius:5px; font-family:ui-monospace,Menlo,monospace; font-size:11px; color:var(--accent-deep); }
+
+  .kalman{ display:grid; grid-template-columns:1.1fr 1fr; gap:20px; align-items:center; background:var(--card); border:1px solid var(--hair); border-radius:16px; padding:24px; }
+  .kalman h3{ font-family:var(--serif); font-size:20px; margin:0 0 8px; }
+  .kalman p{ font-size:13.5px; color:var(--ink2); margin:0 0 10px; }
+  .kalman .viz{ background:#0f1320; border-radius:12px; padding:14px; }
+  .kalman svg{ width:100%; height:auto; display:block; }
+
+  .callout{ background:var(--accent-soft); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; padding:16px 20px; font-size:13px; color:var(--ink2); margin:8px 0 0; }
+  .callout b{ color:var(--ink); }
+
+  .foot{ background:#1C2236; color:#c7ccdc; padding:26px 0; margin-top:34px; font-size:12px; }
+  .foot .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .foot b{ color:#fff; }
+
+  .toolbar{ position:fixed; right:18px; bottom:18px; z-index:30; }
+  .toolbar button{ font:inherit; font-weight:700; font-size:13px; background:var(--ink); color:#fff; border:0; border-radius:11px; padding:11px 18px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.3); display:flex; align-items:center; gap:8px; }
+  .toolbar button svg{ width:15px;height:15px; }
+
+  @media print{ html{ background:#fff; } .toolbar{ display:none; } .factor,.kalman,.vs .col{ break-inside:avoid; } }
+  @media (max-width:760px){ .vs,.sensors,.kalman{ grid-template-columns:1fr; } .hero h1{ font-size:34px; } .factor{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="brand"><img src="../assets/vahini-logo.png" alt=""><div><div class="bt">Vahini</div><div class="bs">Battu · Patent 584433</div></div></div>
+    <div class="ey">Why the pen matters</div>
+    <h1>A photo shows the <i>result</i>.<br>The pen feels the <i>process</i>.</h1>
+    <p>Four of the twenty factors describe *how* the hand moves, speed, pressure, flow and pen-lifts. These live in the motion of writing, not the marks left behind. The Battu measures them directly with a 16-axis sensor array at 208 Hz.</p>
+    <span class="pill">16 axes · 208 Hz · Kalman-filtered</span>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- What a photo can't see -->
+  <section>
+    <h2>Why a photo isn't enough</h2>
+    <p class="sub">A scan is a perfect record of the <b>finished</b> page. But two writers can produce an identical-looking line in completely different ways, one relaxed and fluent, one slow and pressing hard. That difference is invisible in a photo, and it is exactly what determines whether writing is comfortable and sustainable.</p>
+    <div class="vs">
+      <div class="col photo">
+        <h3>📷 A photo can measure</h3>
+        <div class="tag">From the marks on the page</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F8F7F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Letter size, spacing &amp; margins</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F8F7F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Baseline, slant &amp; line straightness</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#2F8F7F" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>Loop closure &amp; letter shape</li>
+        </ul>
+      </div>
+      <div class="col pen">
+        <h3>✍️ Only the pen can measure</h3>
+        <div class="tag">From the motion of the hand</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#F0B59B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>How fast and how evenly you write</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#F0B59B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>How hard you press, moment to moment</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="#F0B59B" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>Whether strokes flow or stop-start</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- The four factors -->
+  <section>
+    <h2>The four factors the pen measures</h2>
+    <p class="sub">These make up the <b>Dynamics</b> section (20% of the overall score). In photo mode they are honest estimates; with the pen they become <b>measured</b>, and far more accurate.</p>
+
+    <div class="factor">
+      <div class="fn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg></div>
+      <div>
+        <div class="ftag">Factor 13 · Dynamics</div>
+        <h3>Speed Consistency</h3>
+        <p>How steady your writing pace is, stroke to stroke, measured from the pen's velocity, not guessed from ink thickness.</p>
+        <div class="why"><span class="wl">Why it matters to you</span><b>Even speed is the heart of fluent, effortless writing.</b> Writers who speed up and slow down erratically tire faster and make more slips. Smoothing your pace makes writing feel easier and look neater, at the same time.</div>
+        <div class="meas">Measured: per-stroke peak velocity → <code>consistency(velocity)</code> over the whole sample.</div>
+      </div>
+    </div>
+
+    <div class="factor">
+      <div class="fn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v6"/><circle cx="12" cy="14" r="6"/><path d="M9 14h6"/></svg></div>
+      <div>
+        <div class="ftag">Factor 14 · Dynamics</div>
+        <h3>Pressure Consistency</h3>
+        <p>How evenly you press the pen, captured live by the tip force sensor in the nib.</p>
+        <div class="why"><span class="wl">Why it matters to you</span><b>Pressing too hard or unevenly causes hand fatigue and pain</b>, the number-one reason writing becomes uncomfortable. A steady, relaxed force lets you write longer without aching, and keeps line weight clean and consistent.</div>
+        <div class="meas">Measured: per-stroke mean force → <code>consistency(force)</code>; a photo can only see ink darkness.</div>
+      </div>
+    </div>
+
+    <div class="factor">
+      <div class="fn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12c3-6 6-6 9 0s6 6 9 0"/></svg></div>
+      <div>
+        <div class="ftag">Factor 15 · Dynamics</div>
+        <h3>Stroke Continuity</h3>
+        <p>Whether your strokes connect and flow, or break up into many small pieces, read from the pen-contact signal.</p>
+        <div class="why"><span class="wl">Why it matters to you</span><b>Flowing strokes are faster and more automatic.</b> When writing connects smoothly, the hand thinks less about forming each letter and more about ideas. Choppy, broken strokes slow you down and make notes harder to keep up with.</div>
+        <div class="meas">Measured: pen-contact segments per word → connectivity vs target.</div>
+      </div>
+    </div>
+
+    <div class="factor">
+      <div class="fn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3-1 12-12-2-2L4 18z"/><path d="M15 5l2 2"/><path d="M19 13v6M16 16h6" opacity=".5"/></svg></div>
+      <div>
+        <div class="ftag">Factor 16 · Dynamics</div>
+        <h3>Pen-Lift Frequency</h3>
+        <p>How often the pen leaves the page, an event that exists only in time, and so is impossible to see in a still image.</p>
+        <div class="why"><span class="wl">Why it matters to you</span><b>Frequent, unnecessary lifts are a hidden brake on writing speed.</b> Each lift is a tiny pause that adds up. Reducing them is one of the fastest ways to write more fluently and finish faster, something only the pen can show you.</div>
+        <div class="meas">Measured: pen-up events ÷ characters → <code>lifts_per_char</code>.</div>
+      </div>
+    </div>
+
+    <div class="callout"><b>The big idea:</b> the pen turns handwriting from a picture into a <b>recording</b>. That's why the same four factors jump from "estimated" to "measured" the moment you use the Battu, and why they're the truest guide to whether your writing is becoming <b>fast and efficient</b>.</div>
+  </section>
+
+  <!-- The sensor array -->
+  <section class="array" style="margin:34px -24px 0; padding:42px 24px;">
+    <div class="wrap" style="padding:0;">
+      <h2>Inside the pen, 16 axes</h2>
+      <p class="sub">Two inertial units (one 9-axis with a built-in magnetometer, one 6-axis) and a tip force sensor are fused together so motion, orientation and pressure are captured at once, 208 times a second.</p>
+      <div class="pen-schematic">
+        <svg viewBox="0 0 600 150" preserveAspectRatio="xMidYMid meet">
+          <rect x="50" y="60" width="430" height="30" rx="15" fill="#1c2236" stroke="#39405a"/>
+          <rect x="50" y="60" width="150" height="30" rx="15" fill="#2a3350"/>
+          <polygon points="480,60 540,75 480,90" fill="#39405a"/>
+          <circle cx="552" cy="75" r="6" fill="#D4633A"/>
+          <g><circle cx="120" cy="75" r="15" fill="#2F8F7F" opacity="0.3"/><circle cx="120" cy="75" r="7" fill="#2F8F7F"/></g>
+          <g><circle cx="235" cy="75" r="15" fill="#C29A45" opacity="0.3"/><circle cx="235" cy="75" r="7" fill="#C29A45"/></g>
+          <g><circle cx="390" cy="75" r="15" fill="#D4633A" opacity="0.3"/><circle cx="390" cy="75" r="7" fill="#D4633A"/></g>
+          <g><circle cx="505" cy="75" r="13" fill="#4F5BD5" opacity="0.3"/><circle cx="505" cy="75" r="6" fill="#4F5BD5"/></g>
+          <text x="120" y="112" text-anchor="middle" class="pl">6-axis IMU</text>
+          <text x="235" y="112" text-anchor="middle" class="pl">Magnetometer</text>
+          <text x="390" y="112" text-anchor="middle" class="pl">9-axis IMU</text>
+          <text x="505" y="112" text-anchor="middle" class="pl">Force sensor</text>
+          <text x="552" y="112" text-anchor="middle" class="pl" style="fill:#D4633A;">nib</text>
+        </svg>
+      </div>
+      <div class="sensors">
+        <div class="sensor"><div class="sh"><i style="background:#D4633A"></i><b>9-axis IMU</b></div><div class="ss">At the nib, accelerometer, gyroscope &amp; magnetometer, captures fine stroke motion and heading.</div><div class="ax"><span style="color:#D4633A;background:#D4633A1a">Aₓ</span><span style="color:#D4633A;background:#D4633A1a">A_y</span><span style="color:#D4633A;background:#D4633A1a">A_z</span><span style="color:#D4633A;background:#D4633A1a">Gₓ</span><span style="color:#D4633A;background:#D4633A1a">G_y</span><span style="color:#D4633A;background:#D4633A1a">G_z</span><span style="color:#D4633A;background:#D4633A1a">Mₓ</span><span style="color:#D4633A;background:#D4633A1a">M_y</span><span style="color:#D4633A;background:#D4633A1a">M_z</span></div></div>
+        <div class="sensor"><div class="sh"><i style="background:#2F8F7F"></i><b>6-axis IMU</b></div><div class="ss">At the grip, accelerometer &amp; gyroscope, captures overall tilt &amp; hand orientation.</div><div class="ax"><span style="color:#2F8F7F;background:#2F8F7F1a">Aₓ</span><span style="color:#2F8F7F;background:#2F8F7F1a">A_y</span><span style="color:#2F8F7F;background:#2F8F7F1a">A_z</span><span style="color:#2F8F7F;background:#2F8F7F1a">Gₓ</span><span style="color:#2F8F7F;background:#2F8F7F1a">G_y</span><span style="color:#2F8F7F;background:#2F8F7F1a">G_z</span></div></div>
+        <div class="sensor"><div class="sh"><i style="background:#4F5BD5"></i><b>Force sensor</b></div><div class="ss">A single analog channel, pen-tip pressure.</div><div class="ax"><span style="color:#4F5BD5;background:#4F5BD51a">Tip</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Kalman -->
+  <section>
+    <h2>Clean signals you can trust</h2>
+    <p class="sub">Raw sensors are noisy. A Kalman filter fuses the readings and removes jitter in real time, so the numbers behind your score reflect your <b>hand</b>, not the electronics.</p>
+    <div class="kalman">
+      <div>
+        <h3>Raw → Kalman-filtered</h3>
+        <p>The filter predicts where each signal should be, then gently corrects toward the new reading, smoothing spikes while staying responsive. You see the smooth line live on the capture screen.</p>
+        <p style="color:var(--muted);font-size:12px;margin:0;">The faint line is the raw sensor; the bold line is what the analysis uses.</p>
+      </div>
+      <div class="viz">
+        <svg viewBox="0 0 360 120" preserveAspectRatio="none">
+          <polyline points="0,72 18,40 30,88 44,30 56,95 70,44 86,80 100,36 116,86 132,52 150,70 168,48 186,78 204,40 222,82 240,52 258,68 276,50 294,74 312,46 330,66 348,54" fill="none" stroke="#4F5BD5" stroke-width="1.4" opacity="0.4"/>
+          <path d="M0 70 Q40 56 80 62 T160 60 T240 60 T320 60 L348 60" fill="none" stroke="#7d86ff" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <section style="padding-bottom:20px;">
+    <div class="callout" style="background:var(--grow-soft);border-color:var(--grow);"><b>Honest status:</b> there is no clinical training dataset yet, so the live demo streams a physically-plausible <b>simulation</b> to show the experience and the maths. When the production pen feeds real samples, the Kalman filtering, the four formulas and the report stay exactly the same, only the data source changes.</div>
+  </section>
+
+</div>
+
+<div class="foot"><div class="wrap"><span>© 2026 Vahini Technologies · Vahini IMU Sensor Pen · Patent No. 584433</span><span><b>vahinitech.com</b> · info@vahinitech.com · go@vahinitech.com</span></div></div>
+
+<div class="toolbar"><button onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button></div>
+
+</body>
+</html>

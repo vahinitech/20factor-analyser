@@ -1,0 +1,42 @@
+# ---- Vahini repo ignores ----
+
+# PRIVACY: real user-supplied sample images (may contain personal/medical data).
+# These must never be published. Synthetic CI fixtures live in tests/fixtures/.
+samples/
+
+# Dead / superseded duplicates kept only for local reference, not for release.
+archive/
+analyser/archive/
+screenshots/
+
+# Scratch / working files (not part of the deployable product)
+uploads/
+shots/
+scraps/
+.thumbnail
+.image-slots.state.json
+
+# Local Claude Code / editor config (machine-specific, not for release)
+.claude/
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+*~
+.idea/
+.vscode/
+
+# Node (only if tooling is added later)
+node_modules/
+npm-debug.log*
+
+# Python (optional local OCR server)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Build artifacts / local exports
+export/
+*.log

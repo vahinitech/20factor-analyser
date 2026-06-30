@@ -1,0 +1,5 @@
+# Engine tier: Surya 2 (datalab) — multilingual + Indic + handwriting.
+# Surya 2 is a 650M VLM. On CPU it needs the llama.cpp `llama-server` binary as
+# its inference backend (vllm is GPU-only); see server/README.md for the CPU
+# setup. Detection runs in pytorch. Expect ~10-60s/page on this CPU.
+surya-ocr>=0.6.0

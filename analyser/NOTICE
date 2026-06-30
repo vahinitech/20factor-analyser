@@ -1,0 +1,22 @@
+Vahini 20-Factor Analyser — Attribution Notice
+
+Copyright (c) 2026 Vahini Technologies
+Contact: info@vahinitech.com
+
+This project is free software, licensed under the GNU Affero General Public
+License v3.0 only (AGPL-3.0-only). See the LICENSE file for the full text.
+SPDX-License-Identifier: AGPL-3.0-only
+
+Because this is AGPL-3.0: if you run a modified version of this software to
+provide a service over a network, you must offer the complete corresponding
+source of your modified version to the users of that service.
+
+When integrating into another repository or portal, preserve:
+1. This NOTICE file.
+2. The SPDX header lines in source files.
+3. Third-party notices referenced in /THIRD-PARTY-NOTICES.md.
+
+Dual-IMU handwriting-motion sensing on ordinary paper is the subject of Indian
+Patent No. 584433. The AGPL-3.0 grant includes the express patent license in
+section 11 of the license for this software's contributor versions; it does not
+grant rights to the "Vahini" trademark.

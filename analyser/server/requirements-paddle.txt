@@ -1,0 +1,6 @@
+# Engine tier: PaddleOCR PP-OCRv5 (default). Fast, CPU-friendly, private.
+# paddleocr pulls PP-OCRv5 detection + recognition weights on first use; run
+# warmup_models.py to pre-download them. For a CUDA GPU, replace paddlepaddle
+# with the matching paddlepaddle-gpu build and set VAHINI_OCR_GPU=1.
+paddleocr>=3.0.0
+paddlepaddle==3.1.1

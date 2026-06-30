@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vahini · How 20 Factors Help Handwriting</title>
+<link rel="icon" href="../site/assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Caveat:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  html,body{ margin:0; height:100%; background:#0a0a0a; }
+  #video-root{ position:fixed; inset:0; }
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail">
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <rect width="100" height="100" fill="#222831"/>
+    <text x="50" y="44" font-family="Georgia,serif" font-size="30" fill="#00ADB5" text-anchor="middle" font-weight="700">20</text>
+    <text x="50" y="66" font-family="sans-serif" font-size="9" fill="#EEEEEE" text-anchor="middle" letter-spacing="2">FACTORS</text>
+  </svg>
+</template>
+
+<div id="video-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="scripts/video/animations.jsx"></script>
+<script type="text/babel" src="scripts/video/video-helpers.jsx"></script>
+<script type="text/babel" src="scripts/video/scenes-a.jsx"></script>
+<script type="text/babel" src="scripts/video/scenes-b.jsx"></script>
+
+<script type="text/babel">
+const DUR = 64;
+// scene boundaries
+const S = {
+  verdict:[0,8], measure:[8,17.5], families:[17.5,28.5],
+  baseline:[28.5,35.5], size:[35.5,42.5], spacing:[42.5,49.5],
+  drill:[49.5,57], payoff:[57,64],
+};
+const len = ([a,b]) => b-a;
+
+function ScreenLabel(){
+  const t = useTime();
+  React.useEffect(()=>{
+    const r = document.getElementById('video-root');
+    if(r) r.setAttribute('data-screen-label', String(Math.floor(t))+'s');
+  }, [Math.floor(t)]);
+  return null;
+}
+
+function Controller(){
+  const tl = useTimeline();
+  React.useEffect(()=>{ window.__seek = (t)=>{ tl.setPlaying(false); tl.setTime(t); }; }, [tl]);
+  return null;
+}
+
+function Film(){
+  return (
+    <Stage width={1920} height={1080} duration={DUR} background={V.ink2} persistKey="vahini20factors" loop={true}>
+      <ScreenLabel/>
+      <Controller/>
+      <Sprite start={S.verdict[0]}  end={S.verdict[1]}>  <SceneVerdict  dur={len(S.verdict)}/></Sprite>
+      <Sprite start={S.measure[0]}  end={S.measure[1]}>  <SceneMeasure  dur={len(S.measure)}/></Sprite>
+      <Sprite start={S.families[0]} end={S.families[1]}> <SceneFamilies dur={len(S.families)}/></Sprite>
+      <Sprite start={S.baseline[0]} end={S.baseline[1]}> <DemoBaseline  dur={len(S.baseline)}/></Sprite>
+      <Sprite start={S.size[0]}     end={S.size[1]}>     <DemoSize      dur={len(S.size)}/></Sprite>
+      <Sprite start={S.spacing[0]}  end={S.spacing[1]}>  <DemoSpacing   dur={len(S.spacing)}/></Sprite>
+      <Sprite start={S.drill[0]}    end={S.drill[1]}>    <SceneDrill    dur={len(S.drill)}/></Sprite>
+      <Sprite start={S.payoff[0]}   end={S.payoff[1]}>   <ScenePayoff   dur={len(S.payoff)}/></Sprite>
+    </Stage>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('video-root')).render(<Film/>);
+</script>
+</body>
+</html>

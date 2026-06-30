@@ -1,0 +1,6 @@
+# analyser image build context (context = ./analyser). Keep it lean.
+**/__pycache__/
+*.pyc
+server/tests/
+archive/
+*.md

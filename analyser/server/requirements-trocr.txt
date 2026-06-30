@@ -1,0 +1,8 @@
+# Engine tier: TrOCR (Microsoft) — strong on English handwriting, CPU-friendly.
+# Pure transformers + torch (CPU wheels). Recogniser-only: it reuses paddle's
+# detector for text-line boxes, so install requirements-paddle.txt too.
+# Default model: microsoft/trocr-base-handwritten (override VAHINI_TROCR_MODEL).
+# CPU torch wheels: pip install torch --index-url https://download.pytorch.org/whl/cpu
+torch>=2.2
+transformers>=4.44
+sentencepiece>=0.2.0

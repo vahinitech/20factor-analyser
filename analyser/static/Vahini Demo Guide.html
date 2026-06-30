@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vahini, Demo Playbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{ --ink:#1C2236; --ink2:#39405A; --accent:#D4633A; --accent-deep:#B14A28; --grow:#2F8F7F; --gold:#C29A45;
+    --muted:#76715F; --paper:#FBF6EC; --paper2:#F4EADA; --card:#fff; --hair:#E8DECB; --soft:#F6E2D6; --grow-soft:#DDEFEA; }
+  *{ box-sizing:border-box; }
+  html{ background:#2c3038; }
+  body{ margin:0; font-family:"Hanken Grotesk",system-ui,sans-serif; color:var(--ink); line-height:1.6; background:var(--paper); }
+  .wrap{ max-width:980px; margin:0 auto; padding:0 24px 80px; }
+
+  .hero{ background:linear-gradient(155deg,#1C2236,#2A3350); color:#fff; padding:54px 0 48px; margin-bottom:34px; }
+  .hero .wrap{ padding-bottom:0; }
+  .hero .brand{ display:flex; align-items:center; gap:12px; margin-bottom:26px; }
+  .hero .brand img{ width:42px;height:42px;border-radius:50%; }
+  .hero .brand .bt{ font-family:"Spectral",serif; font-size:18px; font-weight:600; }
+  .hero .brand .bs{ font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#9aa0b8;font-weight:700; }
+  .hero .ey{ font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#F0B59B; }
+  .hero h1{ font-family:"Spectral",serif; font-size:50px; font-weight:600; letter-spacing:-.02em; line-height:1.02; margin:14px 0 16px; }
+  .hero h1 i{ color:#F0B59B; font-style:italic; }
+  .hero p{ font-size:16px; color:#c7ccdc; max-width:640px; }
+
+  h2{ font-family:"Spectral",serif; font-size:28px; font-weight:600; letter-spacing:-.01em; margin:42px 0 6px; display:flex; align-items:center; gap:13px; }
+  h2 .no{ width:34px;height:34px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:"Hanken Grotesk";font-size:15px;font-weight:800;flex:0 0 auto; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 20px 47px; }
+
+  .card{ background:var(--card); border:1px solid var(--hair); border-radius:15px; padding:24px 26px; }
+  .card + .card{ margin-top:16px; }
+
+  /* the stall flow */
+  .flow{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .flow .step{ background:var(--card); border:1px solid var(--hair); border-radius:14px; padding:18px; position:relative; }
+  .flow .step .si{ width:42px;height:42px;border-radius:11px;background:var(--soft);color:var(--accent-deep);display:grid;place-items:center;margin-bottom:13px; }
+  .flow .step .si svg{ width:23px;height:23px; }
+  .flow .step .sn{ position:absolute; top:16px; right:18px; font-family:"Spectral",serif; font-size:30px; color:var(--paper2); font-weight:700; }
+  .flow .step h3{ font-size:15px; margin:0 0 6px; }
+  .flow .step p{ font-size:12px; color:var(--ink2); margin:0; line-height:1.45; }
+
+  .two{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .pill{ display:inline-flex; align-items:center; gap:7px; font-size:11px; font-weight:700; padding:5px 12px; border-radius:99px; background:var(--grow-soft); color:var(--grow); margin:0 6px 8px 0; }
+  .pill.warn{ background:var(--soft); color:var(--accent-deep); }
+
+  ul.clean{ list-style:none; padding:0; margin:14px 0 0; }
+  ul.clean li{ position:relative; padding-left:26px; margin-bottom:11px; font-size:13.5px; color:var(--ink2); }
+  ul.clean li::before{ content:""; position:absolute; left:0; top:7px; width:11px;height:11px;border-radius:3px;background:var(--accent); }
+  ul.clean li b{ color:var(--ink); }
+
+  .kbd{ font-family:ui-monospace,Menlo,monospace; font-size:12.5px; background:var(--paper2); padding:2px 8px; border-radius:6px; color:var(--accent-deep); border:1px solid var(--hair); }
+  a{ color:var(--accent-deep); }
+
+  .opt-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .opt{ border:1px solid var(--hair); border-radius:13px; padding:18px; background:var(--card); }
+  .opt .ot{ font-weight:800; font-size:14px; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+  .opt .oeffort{ font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:99px; }
+  .opt p{ font-size:12px; color:var(--ink2); margin:8px 0 0; line-height:1.45; }
+  .e-low{ background:var(--grow-soft); color:var(--grow); }
+  .e-med{ background:#F3E9CF; color:#9A7B25; }
+  .e-hi{ background:var(--soft); color:var(--accent-deep); }
+
+  .links{ display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+  .links a{ text-decoration:none; background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:13px; font-weight:700; display:inline-flex; align-items:center; gap:8px; }
+  .links a.alt{ background:var(--card); color:var(--ink); border:1.5px solid var(--hair); }
+  .links a svg{ width:15px;height:15px; }
+
+  .callout{ background:var(--paper2); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; padding:16px 20px; margin-top:16px; font-size:13px; color:var(--ink2); }
+  .callout b{ color:var(--ink); }
+
+  .foot{ margin-top:48px; padding-top:20px; border-top:1px solid var(--hair); font-size:12px; color:var(--muted); display:flex; justify-content:space-between; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="brand"><img src="../assets/vahini-logo.png" alt=""><div><div class="bt">Vahini</div><div class="bs">Handwriting Intelligence</div></div></div>
+    <div class="ey">Demo Playbook</div>
+    <h1>Run the stall demo in<br><i>under 60 seconds</i> per visitor.</h1>
+    <p>Everything you need to show Vahini at an event, school visit or investor stall, the booth flow, the kit, the easy interface, and the best ways to share the report. No backend required for the basic demo.</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- THE BOOTH FLOW -->
+  <h2><span class="no">1</span>The booth flow</h2>
+  <p class="sub">A visitor walks up. Here is the whole loop, paper in, report out.</p>
+  <div class="flow">
+    <div class="step"><span class="sn">1</span><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></div><h3>Hand them a sheet</h3><p>Give the printed <b>A4 practice sheet</b>, a reference sentence on top, ruled space to write below.</p></div>
+    <div class="step"><span class="sn">2</span><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3-1 12-12-2-2L4 18z"/><path d="M15 5l2 2"/></svg></div><h3>They write</h3><p>They copy the sentence in their normal handwriting. Takes 30–40 seconds.</p></div>
+    <div class="step"><span class="sn">3</span><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L19 6h0a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><circle cx="12" cy="12.5" r="3.5"/></svg></div><h3>Snap a photo</h3><p>On the booth phone/tablet, open Studio → fill name → <b>Photo / Scan</b> → take the picture.</p></div>
+    <div class="step"><span class="sn">4</span><div class="si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16v14H4z"/><path d="M8 22h8M12 18v4"/><path d="M8 11l3 3 5-6"/></svg></div><h3>Report appears</h3><p>The 20-factor report renders on screen in seconds. Show it, then <b>Save as PDF</b> or share the link.</p></div>
+  </div>
+  <div class="callout"><b>Want the “wow”?</b> For VIPs, switch to the <b>Battu</b> mode and let them write with the IMU pen, the live 208 Hz force/tilt/velocity stream on screen is the showstopper, then “Finish” generates the pen report.</div>
+
+  <!-- THE KIT -->
+  <h2><span class="no">2</span>The booth kit</h2>
+  <p class="sub">Minimal hardware. Everything below runs offline from the booth device.</p>
+  <div class="card">
+    <span class="pill">1 × tablet or laptop</span>
+    <span class="pill">1 × phone camera (or the tablet’s)</span>
+    <span class="pill">Printed practice sheets</span>
+    <span class="pill">A pen or two</span>
+    <span class="pill warn">Optional: IMU pen for the hero demo</span>
+    <span class="pill warn">Optional: PaddleOCR server for live recognition</span>
+    <ul class="clean">
+      <li><b>Practice sheets</b>, print <span class="kbd">Vahini Practice Sheet.html</span> (the “Switch sentence” button cycles three options). Print 30–50 for a busy day.</li>
+      <li><b>The interface</b>, open <span class="kbd">Vahini Analyser.html</span> full-screen. That is the entire app; no install, no login.</li>
+      <li><b>Stand mount</b>, a phone stand at fixed height over a contrasting mat gives clean, repeatable photos.</li>
+    </ul>
+  </div>
+
+  <!-- THE EASY INTERFACE -->
+  <h2><span class="no">3</span>The one-tap interface</h2>
+  <p class="sub">Built so a volunteer can run it with zero training.</p>
+  <div class="two">
+    <div class="card">
+      <h3 style="font-family:Spectral,serif;font-size:18px;margin:0 0 10px;">For the operator</h3>
+      <ul class="clean" style="margin-top:4px;">
+        <li>Open Studio → type the visitor’s <b>first name</b> → Continue.</li>
+        <li>Pick <b>Photo / Scan</b> → tap the dropzone → take the photo.</li>
+        <li>The reference sentence is <b>pre-selected</b>, no typing the expected text.</li>
+        <li>Tap <b>Run analysis</b>. Report is ready in a few seconds.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="font-family:Spectral,serif;font-size:18px;margin:0 0 10px;">Photo tips for clean scores</h3>
+      <ul class="clean" style="margin-top:4px;">
+        <li>Fill the frame with the <b>writing area only</b>; avoid the table.</li>
+        <li>Even light, <b>no harsh shadow</b>, the engine auto-switches to adaptive thresholding for phone photos, but flat light is best.</li>
+        <li>Hold the phone <b>square</b> to the page (the sheet’s corner marks help).</li>
+        <li>Plain or lightly-ruled paper reads best.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- SHARING -->
+  <h2><span class="no">4</span>Getting the report to the visitor</h2>
+  <p class="sub">Pick by how much setup you want. All keep the visitor’s data on the device unless you choose to host.</p>
+  <div class="opt-grid">
+    <div class="opt"><div class="ot">Save as PDF <span class="oeffort e-low">Easiest</span></div><p>Tap <b>Save as PDF</b> in the report toolbar, then AirDrop / email / WhatsApp the file. Works fully offline.</p></div>
+    <div class="opt"><div class="ot">QR to a hosted link <span class="oeffort e-med">Recommended</span></div><p>Host the Studio (or a pre-rendered report) on any static host; print a QR on the sheet so visitors scan and view on their own phone.</p></div>
+    <div class="opt"><div class="ot">Email capture <span class="oeffort e-hi">Lead-gen</span></div><p>Use the optional email field on the intake screen, then send the PDF + a follow-up from <span class="kbd">go@vahinitech.com</span>.</p></div>
+  </div>
+  <div class="callout" style="margin-top:18px;"><b>Make it a single file to share.</b> The report can be exported as one self-contained HTML or a PDF, so a hosted link or an emailed file just works, no missing fonts or images.</div>
+
+  <!-- GOING LIVE -->
+  <h2><span class="no">5</span>From demo to production</h2>
+  <p class="sub">What to swap when the real hardware and models are ready.</p>
+  <div class="card">
+    <ul class="clean" style="margin-top:2px;">
+      <li><b>Real recognition</b>, set <span class="kbd">window.VAHINI_OCR_ENDPOINT</span> to your PaddleOCR service. The app POSTs the image and uses the returned <span class="kbd">{lines:[{text,box,score}]}</span> as the detected text automatically; offline it falls back to the local detector.</li>
+      <li><b>Real pen</b>, the IMU screen streams a physically-plausible <b>simulation</b> today (no dataset yet). When the pen feeds live samples, swap the source in <span class="kbd">imu.js</span>; the Kalman filtering, the §4C dynamics formulas and the report stay identical.</li>
+      <li><b>Calibration</b>, the deterministic factors are measured now; the two estimated factors (legibility, character distinction) tighten once coach-rated samples are collected.</li>
+    </ul>
+  </div>
+
+  <div class="links">
+    <a href="../Vahini Analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg>Open Vahini Analyser</a>
+    <a class="alt" href="Vahini Practice Sheet.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Print practice sheets</a>
+    <a class="alt" href="../Vahini Analyser.html?demo=imu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3-1 12-12-2-2L4 18z"/></svg>Preview the pen demo</a>
+  </div>
+
+  <div class="foot"><span>© 2026 Vahini Technologies · IMU Sensor Pen · Patent No. 584433</span><span>vahinitech.com · info@vahinitech.com</span></div>
+</div>
+
+</body>
+</html>

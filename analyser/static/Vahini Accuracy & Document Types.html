@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vahini, Accuracy & Document Types</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C2236; --ink2:#39405A; --accent:#D4633A; --accent-deep:#B14A28; --accent-soft:#F6E2D6;
+    --grow:#2F8F7F; --grow-soft:#DDEFEA; --gold:#C29A45; --gold-soft:#F3E9CF;
+    --muted:#76715F; --paper:#FBF6EC; --paper2:#F4EADA; --card:#fff; --hair:#E8DECB;
+    --serif:"Spectral",Georgia,serif; --sans:"Hanken Grotesk",system-ui,sans-serif;
+  }
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html{ background:var(--paper); }
+  body{ margin:0; font-family:var(--sans); color:var(--ink); line-height:1.62; background:var(--paper); }
+  .wrap{ max-width:940px; margin:0 auto; padding:0 24px; }
+  a{ color:var(--accent-deep); }
+
+  .hero{ background:linear-gradient(155deg,#1C2236,#2A3350); color:#fff; padding:50px 0 42px; }
+  .hero .brand{ display:flex; align-items:center; gap:12px; margin-bottom:22px; }
+  .hero .brand img{ width:42px;height:42px;border-radius:50%; }
+  .hero .brand .bt{ font-family:var(--serif); font-size:18px; font-weight:600; }
+  .hero .brand .bs{ font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:#9aa0b8;font-weight:700; }
+  .hero .ey{ font-size:12px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#F0B59B; }
+  .hero h1{ font-family:var(--serif); font-size:44px; font-weight:600; letter-spacing:-.02em; line-height:1.04; margin:13px 0 14px; max-width:740px; }
+  .hero p{ font-size:15.5px; color:#c7ccdc; max-width:640px; margin:0; }
+
+  section{ padding:40px 0 6px; }
+  h2{ font-family:var(--serif); font-size:29px; font-weight:600; letter-spacing:-.01em; margin:0 0 6px; display:flex; align-items:center; gap:12px; }
+  h2 .no{ width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--sans);font-size:14px;font-weight:800;flex:0 0 auto; }
+  .sub{ color:var(--muted); font-size:14px; margin:0 0 22px; max-width:700px; }
+  p.body{ font-size:14px; color:var(--ink2); max-width:760px; }
+
+  table{ width:100%; border-collapse:collapse; background:var(--card); border:1px solid var(--hair); border-radius:13px; overflow:hidden; font-size:13px; }
+  th,td{ text-align:left; padding:12px 15px; border-bottom:1px solid var(--hair); vertical-align:top; }
+  th{ background:var(--paper2); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase; color:var(--ink2); font-weight:800; }
+  tr:last-child td{ border-bottom:0; }
+  td b{ color:var(--ink); }
+  .acc{ display:inline-block; font-size:10px; font-weight:800; padding:3px 9px; border-radius:99px; white-space:nowrap; }
+  .a-high{ background:var(--grow-soft); color:var(--grow); }
+  .a-mod{ background:var(--gold-soft); color:#9A7B25; }
+  .a-low{ background:var(--accent-soft); color:var(--accent-deep); }
+
+  .why-grid{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:8px; }
+  .why{ background:var(--card); border:1px solid var(--hair); border-radius:13px; padding:18px 20px; }
+  .why h4{ font-family:var(--serif); font-size:16px; font-weight:600; margin:0 0 6px; display:flex; align-items:center; gap:9px; }
+  .why .ic{ width:30px;height:30px;border-radius:8px;background:var(--accent-soft);color:var(--accent-deep);display:grid;place-items:center;flex:0 0 auto; }
+  .why .ic svg{ width:17px;height:17px; }
+  .why p{ font-size:12.5px; color:var(--ink2); margin:0; line-height:1.5; }
+
+  .pills{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .pill{ font-size:11.5px; font-weight:700; padding:6px 13px; border-radius:99px; }
+  .chip-prose{ background:var(--grow-soft); color:var(--grow); }
+  .chip-short{ background:var(--gold-soft); color:#9A7B25; }
+  .chip-sym{ background:var(--accent-soft); color:var(--accent-deep); }
+  .chip-fig{ background:#E1E3F7; color:#3A45B0; }
+
+  .callout{ background:var(--paper2); border-left:4px solid var(--accent); border-radius:0 12px 12px 0; padding:16px 20px; font-size:13px; color:var(--ink2); margin:18px 0 0; }
+  .callout b{ color:var(--ink); }
+
+  /* OpenCV compare */
+  .cv2{ display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .cv2 .col{ border-radius:15px; padding:22px 24px; }
+  .cv2 .py{ background:var(--card); border:1px solid var(--hair); }
+  .cv2 .js{ background:linear-gradient(160deg,#1c2236,#2a3350); color:#eef0f7; }
+  .cv2 h3{ font-family:var(--serif); font-size:19px; font-weight:600; margin:0 0 3px; }
+  .cv2 .js h3{ color:#fff; }
+  .cv2 .lang{ font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+  .cv2 .js .lang{ color:#9aa0b8; }
+  .cv2 ul{ list-style:none; padding:0; margin:0; }
+  .cv2 li{ position:relative; padding-left:22px; margin-bottom:9px; font-size:12.5px; line-height:1.45; }
+  .cv2 .py li{ color:var(--ink2); } .cv2 .js li{ color:#d2d6e6; }
+  .cv2 li::before{ content:""; position:absolute; left:0; top:6px; width:8px;height:8px;border-radius:2px; }
+  .cv2 .py li::before{ background:var(--grow); } .cv2 .js li::before{ background:#F0B59B; }
+  code{ font-family:ui-monospace,Menlo,monospace; font-size:12px; background:var(--paper2); padding:1px 7px; border-radius:5px; color:var(--accent-deep); }
+  .cv2 .js code{ background:rgba(255,255,255,.1); color:#cfe; }
+
+  .foot{ background:#1C2236; color:#c7ccdc; padding:26px 0; margin-top:34px; font-size:12px; }
+  .foot .wrap{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+  .foot b{ color:#fff; }
+  .toolbar{ position:fixed; right:18px; bottom:18px; z-index:30; }
+  .toolbar button{ font:inherit; font-weight:700; font-size:13px; background:var(--ink); color:#fff; border:0; border-radius:11px; padding:11px 18px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.3); display:flex; align-items:center; gap:8px; }
+  .toolbar button svg{ width:15px;height:15px; }
+  @media print{ html,body{ background:#fff; } .toolbar{ display:none; } table,.why,.cv2 .col{ break-inside:avoid; } }
+  @media (max-width:760px){ .why-grid,.cv2{ grid-template-columns:1fr; } .hero h1{ font-size:32px; } }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="brand"><img src="../assets/vahini-logo.png" alt=""><div><div class="bt">Vahini</div><div class="bs">Handwriting Intelligence</div></div></div>
+    <div class="ey">Accuracy &amp; document types</div>
+    <h1>What happens when the page isn't plain prose?</h1>
+    <p>Equations, multiple-choice answers, science notes with diagrams, tiny numbers and symbols all behave differently under the engine. This note explains how the algorithm treats each, how accuracy shifts, and why, plus how Vahini reports the document type it detected.</p>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- What the engine assumes -->
+  <section>
+    <h2><span class="no">1</span>What the engine is built for</h2>
+    <p class="body">The Vahini engine measures handwriting <b>geometry</b>: it finds ink, groups it into letters, letters into words, words into lines, then fits a baseline and measures size, spacing, slant, margins and zones. Every one of those steps assumes <b>connected, left-to-right lines of handwritten prose</b>. That is the content type it is calibrated for and where the 20 factors are most accurate.</p>
+    <div class="callout"><b>The short version:</b> the further a page is from "a few lines of normal handwriting," the more the spacing, baseline and slant factors should be read as <b>indicative</b> rather than precise. Vahini detects this and labels the document type and an accuracy expectation directly on the report.</div>
+  </section>
+
+  <!-- Accuracy by content type -->
+  <section>
+    <h2><span class="no">2</span>Accuracy by content type</h2>
+    <p class="sub">How each kind of upload is handled, and the realistic accuracy of the geometric factors.</p>
+    <table>
+      <thead><tr><th style="width:21%">Upload type</th><th style="width:14%">Accuracy</th><th>How the engine handles it &amp; why accuracy changes</th></tr></thead>
+      <tbody>
+        <tr><td><b>Handwritten prose</b><br>sentences, paragraphs</td><td><span class="acc a-high">High</span></td><td>Ideal. Clear letters, words and lines let the baseline, spacing, slant and zone factors all measure correctly. <b>Use this for assessment.</b></td></tr>
+        <tr><td><b>Mixed text &amp; numbers</b><br>notes with figures</td><td><span class="acc a-mod">Moderate</span></td><td>Digits are short, isolated tokens. Letter-formation and size still read well; <b>word/letter spacing</b> becomes noisier because numbers don't form normal "words".</td></tr>
+        <tr><td><b>Equations &amp; formulas</b><br>maths, physics, chemistry</td><td><span class="acc a-low">Reduced</span></td><td>Superscripts, subscripts, fraction bars, √, ∫, =, +, − break the single-baseline, left-to-right assumption. Spacing and baseline factors are unreliable; letter-shape and pressure (with the pen) remain meaningful.</td></tr>
+        <tr><td><b>Multiple / short answers</b><br>one-word, MCQ, fill-ins</td><td><span class="acc a-mod">Moderate</span></td><td>Too few words per line for stable spacing/margin statistics. Form and size factors work on what's there; the sample is simply small, so confidence drops.</td></tr>
+        <tr><td><b>Science notes with diagrams</b><br>biology/physics sketches</td><td><span class="acc a-low">Reduced</span></td><td>Large drawings, arrows, labels and boxes are detected as <b>non-text figures and excluded</b> from scoring. Only the handwritten text is assessed; the diagram itself is not graded.</td></tr>
+        <tr><td><b>Tiny / dense text</b><br>small writing, low-res photo</td><td><span class="acc a-low">Reduced</span></td><td>Fewer pixels per letter means noisier height/width/stroke measurements and missed thin strokes. A sharper, larger photo restores accuracy.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Why accuracy changes -->
+  <section>
+    <h2><span class="no">3</span>Why the numbers move</h2>
+    <p class="sub">Four concrete mechanisms behind the accuracy shifts above.</p>
+    <div class="why-grid">
+      <div class="why"><h4><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 18h16M4 12h16M4 6h10"/></svg></span>Baseline breaks</h4><p>The engine fits one straight baseline per line. Equations place symbols <i>above and below</i> the line (powers, fractions), so the "baseline" no longer describes a single row, baseline and zone factors lose meaning.</p></div>
+      <div class="why"><h4><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6v12M18 6v12M9 12h6"/></svg></span>Spacing needs words</h4><p>Word and letter spacing are computed from the gaps <i>between letters and words</i>. Numbers, symbols and one-word answers don't form normal word groups, so the gap statistics become erratic.</p></div>
+      <div class="why"><h4><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 15l5-4 4 3 4-5 5 6"/></svg></span>Figures are filtered</h4><p>To protect the text scores, large connected regions (drawings, boxes, long rules) are identified as figures and removed before measuring. The report says when this happened, the diagram is not assessed.</p></div>
+      <div class="why"><h4><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></span>Resolution sets the floor</h4><p>Every metric is measured in pixels. Small or blurry writing gives few pixels per stroke, so size, stroke-width and loop-closure measurements get noisier. Sharper, larger photos measure better.</p></div>
+    </div>
+  </section>
+
+  <!-- The detector -->
+  <section>
+    <h2><span class="no">4</span>How Vahini labels the document</h2>
+    <p class="sub">Before scoring, a layout classifier inspects the page (it does <b>not</b> read the text) and reports a type and an honest accuracy expectation on the report, on the cover and the sample page.</p>
+    <p class="body">It reasons from structure only: how many lines and words, average token length, whether large non-text blobs (figures) are present, and ink density. From these it picks one of:</p>
+    <div class="pills">
+      <span class="pill chip-prose">Handwritten prose · High</span>
+      <span class="pill chip-short">Short answers / few lines · Moderate</span>
+      <span class="pill chip-sym">Numeric / symbolic (equations) · Reduced</span>
+      <span class="pill chip-fig">Text with diagrams / figures · Reduced</span>
+      <span class="pill chip-short">Sparse / very short · Indicative</span>
+    </div>
+    <div class="callout"><b>Why this matters:</b> a coach or parent can see at a glance whether the score is a confident assessment or a rough read of an unusual page, and the reduced-accuracy types come with a plain-language note explaining what was and wasn't measured.</div>
+  </section>
+
+  <!-- Recommendations -->
+  <section>
+    <h2><span class="no">5</span>Getting the most accurate report</h2>
+    <div class="why-grid">
+      <div class="why"><h4>Do</h4><p>Use the Vahini <b>practice / sample sheet</b> (a few lines of prose). Write at a comfortable size, in good even light, with the phone square to the page.</p></div>
+      <div class="why"><h4>Avoid for assessment</h4><p>Equation-heavy maths/physics pages, pages dominated by diagrams, single-word answers, and tiny or blurry photos, fine to explore, but read the scores as indicative.</p></div>
+    </div>
+  </section>
+
+  <!-- OpenCV -->
+  <section>
+    <h2><span class="no">6</span>Python OpenCV vs JavaScript / TypeScript OpenCV</h2>
+    <p class="sub">A common question: are the two "OpenCVs" different? They share the same C++ core and the same maths, the difference is the runtime, coverage and speed, not the correctness of an algorithm.</p>
+    <div class="cv2">
+      <div class="col py">
+        <h3>Python OpenCV (<code>cv2</code>)</h3>
+        <div class="lang">Native · server / desktop</div>
+        <ul>
+          <li>Thin Python bindings over the full <b>C++ OpenCV</b> library, the complete function set.</li>
+          <li>Fast: SIMD, multi-threading, optional GPU. Best for batch jobs and training.</li>
+          <li>Pairs naturally with <b>PaddleOCR</b>, NumPy, scikit-image, PyTorch.</li>
+          <li>Vahini uses this server-side for heavy recognition and any model training.</li>
+        </ul>
+      </div>
+      <div class="col js">
+        <h3>OpenCV.js (+ TypeScript)</h3>
+        <div class="lang">WebAssembly · in the browser</div>
+        <ul>
+          <li>An <b>Emscripten/WASM build of a subset</b> of OpenCV that runs in the browser.</li>
+          <li>Slower than native and a large (~8 MB) download; not every function is exposed.</li>
+          <li>TypeScript adds <i>type definitions</i> only, it's the same opencv.js underneath.</li>
+          <li>Same algorithms → results match within floating-point tolerance; gaps are about <i>coverage</i>, not accuracy.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="callout"><b>What Vahini actually does:</b> the in-browser demo engine does <b>not</b> ship OpenCV.js at all. It implements just the primitives it needs, Otsu &amp; adaptive thresholding, connected components, baseline regression, gradient-orientation slant, in plain JavaScript. That keeps the demo <b>tiny, instant and fully offline</b>, with no 8 MB WASM download. The maths is identical to OpenCV's, so the measurements agree; the production server can use Python OpenCV + PaddleOCR for the heavy lifting. <b>Same algorithms, two runtimes, chosen per job.</b></div>
+  </section>
+
+</div>
+
+<div class="foot"><div class="wrap"><span>© 2026 Vahini Technologies · For handwriting improvement only, not a diagnostic assessment.</span><span><b>vahinitech.com</b> · info@vahinitech.com</span></div></div>
+
+<div class="toolbar"><button onclick="window.print()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button></div>
+
+</body>
+</html>

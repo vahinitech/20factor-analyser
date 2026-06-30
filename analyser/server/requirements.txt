@@ -1,0 +1,14 @@
+# Vahini analyser recognition service — default working set (CPU).
+#
+# This file = CORE + the default PaddleOCR engine. It is the proven, fast,
+# private pipeline and the right place to start. Switch/add engines with the
+# tier files and the VAHINI_OCR_BACKEND env var (paddle|trocr|surya|chandra|auto):
+#
+#   pip install -r requirements.txt                 # core + paddle (default)
+#   pip install -r requirements-trocr.txt           # + English handwriting
+#   pip install -r requirements-surya.txt           # + multilingual/Indic
+#   pip install -r requirements-chandra.txt         # + local Chandra (GPU)
+#
+# Or just run setup.ps1 / setup.sh which does the venv + tiers + model download.
+-r requirements-core.txt
+-r requirements-paddle.txt
