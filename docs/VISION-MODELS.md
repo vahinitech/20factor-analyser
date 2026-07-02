@@ -98,9 +98,9 @@ but they're different products inside the report.
 
 ## 4. Recommendation for Vahini (in order)
 
-1. **Now — deploy PaddleOCR PP-OCRv5 self-hosted** (already coded in `src/server/ppocr-server.py`).
-   Free, CPU-friendly, English + Telugu + Hindi, **data never leaves your server**. This alone
-   switches the spelling/word/craft layer from "needs a known passage" to "works on any upload."
+1. **Deployed — PaddleOCR PP-OCRv5 self-hosted** (`analyser/server/ppocr-server.py`).
+   Free, CPU-friendly, English + Telugu + Hindi, **data never leaves your server**. It now also
+   computes the 20-factor analysis itself, not just recognition.
 2. **Measure on real samples.** Collect a small set of real Telugu/English handwriting and record
    line-accuracy. This tells you whether PaddleOCR is *good enough* before spending on a GPU.
 3. **If Indic handwriting accuracy is the bottleneck — pilot Chandra 2.** Trial via the hosted API's

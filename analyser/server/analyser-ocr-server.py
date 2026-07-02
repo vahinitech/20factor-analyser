@@ -3,6 +3,13 @@
 # Combined analyser + OCR service:
 # - Reuses PP-OCRv5 endpoints from ppocr-server.py
 # - Serves analyser static files under /analyser
+#
+# Filename is intentionally hyphenated (matches the sibling ppocr-server.py
+# and the JS-side kebab-case convention); it is loaded by file path via
+# importlib, never `import analyser_ocr_server`, so the hyphen is harmless.
+# Only the module-name check is silenced here; re-enabled right after.
+# pylint: disable=invalid-name
+# pylint: enable=invalid-name
 
 from importlib import util
 from pathlib import Path
@@ -42,12 +49,18 @@ ANALYSER_DIR = ROOT_DIR / "analyser"
 if not ANALYSER_DIR.exists():
     raise RuntimeError(f"Analyser directory not found: {ANALYSER_DIR}")
 
-app.mount("/analyser", StaticFiles(directory=str(ANALYSER_DIR), html=False), name="analyser")
+app.mount(
+    "/analyser",
+    StaticFiles(directory=str(ANALYSER_DIR), html=False),
+    name="analyser",
+)
 
 
 @app.get("/analyser", include_in_schema=False)
 def analyser_root():
-    return RedirectResponse(url="/analyser/Vahini%20Analyser.html", status_code=302)
+    return RedirectResponse(
+        url="/analyser/Vahini%20Analyser.html", status_code=302
+    )
 
 
 @app.get("/ocr/health", include_in_schema=False)

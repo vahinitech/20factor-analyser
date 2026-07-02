@@ -31,6 +31,8 @@ try:
 except Exception:  # pragma: no cover - cv2 optional
     cv2 = None
 
+from geometry import clamp_box  # noqa: E402 (after the optional cv2 import)
+
 
 def _env_f(name, default):
     try:
@@ -65,7 +67,9 @@ def _ink_mask(gray):
     if gray.size == 0:
         return np.zeros_like(gray, dtype=np.uint8)
     if cv2 is not None:
-        _t, th = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        _t, th = cv2.threshold(
+            gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+        )
         return (th > 0).astype(np.uint8)
     thr = float(np.mean(gray)) - 12.0
     return (gray < thr).astype(np.uint8)
@@ -108,7 +112,9 @@ def _glyph_height_cv(mask):
     """
     if cv2 is None or mask.sum() < 20:
         return 0.0
-    num, _lab, stats, _c = cv2.connectedComponentsWithStats(mask.astype(np.uint8), connectivity=8)
+    num, _lab, stats, _c = cv2.connectedComponentsWithStats(
+        mask.astype(np.uint8), connectivity=8
+    )
     if num <= 2:
         return 0.0
     heights = []
@@ -163,7 +169,9 @@ def _text_printed_score(text, score, box):
         return 0.0
     low = t.lower()
     alpha = len(re.findall(r"[A-Za-z]", t))
-    upper_ratio = (len(re.findall(r"[A-Z]", t)) / max(1, alpha)) if alpha else 0.0
+    upper_ratio = (
+        (len(re.findall(r"[A-Z]", t)) / max(1, alpha)) if alpha else 0.0
+    )
     digit_ratio = len(re.findall(r"\d", t)) / max(1, len(t))
     has_kw = bool(_FORM_KW.search(low))
     aspect = 0.0
@@ -229,7 +237,11 @@ def _structural_printed_score(feat):
 
 def printed_probability(crop_rgb, text, score, box):
     """Fuse structural + textual evidence into P(printed) in [0,1]."""
-    feat = region_features(crop_rgb) if crop_rgb is not None and crop_rgb.size else {}
+    feat = (
+        region_features(crop_rgb)
+        if crop_rgb is not None and crop_rgb.size
+        else {}
+    )
     struct = _structural_printed_score(feat)
     textual = _text_printed_score(text, float(score or 0.0), box)
     # Weight structure a touch higher than text cues; both must agree to push high.
@@ -240,14 +252,12 @@ def printed_probability(crop_rgb, text, score, box):
 def _crop(arr, box):
     if arr is None or not box:
         return None
-    H, W = arr.shape[:2]
+    height, width = arr.shape[:2]
     x, y, w, h = box[:4]
-    x0 = max(0, int(round(x)))
-    y0 = max(0, int(round(y)))
-    x1 = min(W, int(round(x + w)))
-    y1 = min(H, int(round(y + h)))
-    if x1 <= x0 or y1 <= y0:
+    box_px = clamp_box(x, y, w, h, width, height)
+    if box_px is None:
         return None
+    x0, y0, x1, y1 = box_px
     return arr[y0:y1, x0:x1]
 
 
@@ -266,7 +276,9 @@ def classify_lines(arr, lines, threshold=None):
     probs = []
     for ln in lines:
         crop = _crop(arr, ln.get("box"))
-        prob, feat = printed_probability(crop, ln.get("text", ""), ln.get("score", 0.0), ln.get("box"))
+        prob, feat = printed_probability(
+            crop, ln.get("text", ""), ln.get("score", 0.0), ln.get("box")
+        )
         ln["printed_prob"] = round(prob, 3)
         ln["_feat"] = feat
         probs.append(prob)
@@ -283,7 +295,9 @@ def classify_lines(arr, lines, threshold=None):
         t = str(ln.get("text", "") or "").strip()
         return p >= 0.70 or (sc >= 0.96 and len(t) >= 6)
 
-    strong_count = sum(1 for ln, p in zip(lines, probs) if _is_strong_printed(ln, p))
+    strong_count = sum(
+        1 for ln, p in zip(lines, probs) if _is_strong_printed(ln, p)
+    )
     page_has_print = strong_count >= max(1, int(0.15 * len(lines)))
 
     # Position relative to the DETECTED TEXT BLOCK, not the image — a phone photo
@@ -305,7 +319,9 @@ def classify_lines(arr, lines, threshold=None):
         sc = float(ln.get("score", 0.0) or 0.0)
         clean = len(re.sub(r"[^\w]", "", text)) / max(1, len(text))
         box = ln.get("box") or [0, 0, 0, 0]
-        y_center = (float(box[1]) + float(box[3]) / 2.0) if len(box) >= 4 else 0.0
+        y_center = (
+            (float(box[1]) + float(box[3]) / 2.0) if len(box) >= 4 else 0.0
+        )
         y_ratio = (y_center - content_y0) / content_span
 
         if page_has_print and 0.45 <= prob < threshold and sw and sw <= 0.30:
@@ -322,7 +338,12 @@ def classify_lines(arr, lines, threshold=None):
         # printed (letterhead, address, form labels) — handwriting almost never
         # reads this cleanly. Skip the override only when stroke width is clearly
         # variable, which protects exceptionally neat handwriting.
-        if sc >= 0.96 and len(text) >= 6 and clean >= 0.6 and (not sw or sw < 0.5):
+        if (
+            sc >= 0.96
+            and len(text) >= 6
+            and clean >= 0.6
+            and (not sw or sw < 0.5)
+        ):
             prob = max(prob, 0.85)
 
         ln["printed_prob"] = round(prob, 3)

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
-   © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 // @ds-adherence-ignore -- animation scene file; brand tokens via video-helpers
 /* Vahini — Video 4 · WHY INDIC SCRIPTS (the data story, ~50s)

@@ -21,34 +21,36 @@ what Vahini does for each — and the condition under which it fires.
 | Slant consistency | ✅ Done | F17 shear-search | always |
 | Open vs closed loops | ✅ Done | F3 hole topology | always |
 | Line quality / shakiness | ✅ Done | F4 stroke-width variance | always |
-| **Mixed cursive vs print** | ✅ Done | `letters.js` style mix | needs aligned text* |
-| **Stray capitals mid-word** | ✅ Done | `letters.js` zone height | needs aligned text* |
-| **Missing sentence-start capitals** | ✅ Done | `letters.js` | needs aligned text* |
-| **Same letter, different shapes** | ✅ Done | `letters.js` form variance | needs aligned text* |
-| **Punctuation present/missing** (full stop, comma, hyphen) | ✅ Done | `letters.js` mark audit | needs aligned text* |
-| **Spelling mistakes** | ◑ Partial | `letters.js` word audit | **OCR server only** |
+| **Mixed cursive vs print** | ◻ Retired | was `letters.js` (removed) | — |
+| **Stray capitals mid-word** | ◻ Retired | was `letters.js` (removed) | — |
+| **Missing sentence-start capitals** | ◻ Retired | was `letters.js` (removed) | — |
+| **Same letter, different shapes** | ◻ Retired | was `letters.js` (removed) | — |
+| **Punctuation present/missing** (full stop, comma, hyphen) | ◻ Retired | was `letters.js` (removed) | — |
+| **Spelling mistakes** | ◻ Retired | was `letters.js` (removed) | — |
 | **Grammar / phrasing** | ✅ Done | `craft.js` rules | needs recognised text |
 | **Homophones** (your/you're, its/it's) | ✅ Done | `craft.js` rules | needs recognised text |
 | **Missing apostrophe / comma / full stop** | ✅ Done | `craft.js` + audit | needs recognised text |
 | **Sign-off & letter formatting** | ✅ Done | `craft.js` completeness | letter type |
-| Mixed small & CAPS (case mixing) | ✅ Done | `letters.js` caseMix | needs aligned text* |
+| Mixed small & CAPS (case mixing) | ◻ Retired | was `letters.js` (removed) | — |
 | Telugu/Hindi letter reading | ◑ Partial | PP-OCRv5 server | **OCR server only** |
 
-> **\* "needs aligned text"** = the engine must know what the words *should* be. Two ways that
-> happens: **(a)** the writer copied a **known passage** we have on file (offline path), or **(b)**
-> the **OCR server** recognised the text (any free-form upload). **Without either, these checks
-> can't fire** and the report shows geometry only. This is the single biggest gap (see §3).
+> **The per-letter findings layer (`letters.js`) was removed** when the 20-factor scoring moved
+> server-side (mid-2026): it read the in-browser CV overlay directly and had no server equivalent.
+> `craft.js` (grammar/homophones/formatting on recognised text) is unaffected and still runs.
+> Re-introducing per-letter findings would need a server-side rewrite — see the gap below.
 
-**Bottom line:** the "human reading" layer is **built and wired** (`letters.js` + `craft.js`,
-rendered on the *Letter-Level Findings* page). It runs fully when the writer used a known passage,
-and runs on **any** upload **once the PaddleOCR server is switched on**. The code is done; the
-deployment is the missing link.
+**Bottom line:** the geometry factors (F1–F20) are always live; the recognised-text layer
+(`craft.js`, rendered on the *Letter-Level Findings* page) runs whenever the recognition server
+returns text with reasonable confidence. The per-letter coach checks that used to sit alongside it
+are retired pending a server-side rewrite.
 
 ---
 
 ## 2. What's implemented today (status: ✅ live)
 
-- **20-factor geometry engine** — deterministic CV pipeline; runs offline in the browser.
+- **20-factor geometry engine** — deterministic CV pipeline; runs on the recognition server
+  (`analyser/server/ppocr-server.py`). The browser sends the photo and renders the result; a live
+  server connection is required (no offline mode).
 - **Two overalls** — "Measured" (photo) vs full (pen), honestly labelled.
 - **Document-type detection** — prose / short-answer / numeric / figures / sparse, with accuracy expectation.
 - **Sample-quality gate** — Good/Usable/Limited + retake tips; rejects non-handwriting.
@@ -60,7 +62,7 @@ deployment is the missing link.
 - **Four Foundations panel** — grip, posture, pressure, warm-up (coaching pedagogy).
 - **Growth forecast** — learning-curve projection over 8 weeks.
 - **Progress vs last scan** — per-section deltas, stored locally.
-- **PP-OCRv5 server** — coded (`src/server/ppocr-server.py`): English + Telugu, doc-unwarp, print hint. **Not yet deployed.**
+- **PP-OCRv5 server** — deployed (`analyser/server/ppocr-server.py`): English + Telugu, doc-unwarp, print hint. Now the only 20-factor scorer; the analysis runs here, not in the browser.
 - **Audience + feedback system** — local profile, private feedback widget, email backend script. **Endpoint not yet set.**
 
 ---
@@ -69,7 +71,7 @@ deployment is the missing link.
 
 | Gap | Impact | Fix |
 |---|---|---|
-| **OCR server not deployed** | Spelling + Telugu reading + free-form craft checks don't fire | Deploy `ppocr-server.py` (see VISION-MODELS.md §4) |
+| **Letter-level findings retired** | Style-mix / stray-capital / letterform / punctuation / word-audit checks no longer run (were `letters.js`, browser-side) | Re-implement as a server-side pass once there's budget for it |
 | **Feedback endpoint not set** | Feedback stored locally only, not centralised | Deploy `docs/feedback-email-backend.gs`, paste URL in `site.js` |
 | **No real IMU pen data** | Dynamics factors (13–16) are estimates/simulated | Capture from Battu hardware |
 | **Indic geometry thresholds tuned on Latin** | Telugu/Hindi quality scores less reliable | Re-fit bands on Indic samples |

@@ -1,0 +1,85 @@
+[MASTER]
+# ignore the JS-side build script and virtualenv/site-packages.
+ignore=.venv,venv,node_modules
+
+[FORMAT]
+# CODE is hard-capped at 79 columns by `black --line-length 79` (the
+# project's actual formatting hardstop; verified to leave every file
+# unchanged). black deliberately never rewraps comments/docstrings, so this
+# pylint-only ceiling is set a little looser purely to avoid flagging prose
+# that isn't a code-formatting problem. The two real >99-char lines found
+# (a regex and a user-facing message) were manually wrapped instead of
+# raising this further.
+max-line-length=99
+
+[BASIC]
+# Common short/uppercase names used throughout the CV & geometry code
+# (image width/height, pixel coordinates, optional-dependency fallback
+# bindings). These are clearer than long names for this domain and are
+# allowlisted rather than disabling naming checks project-wide.
+good-names=i,j,k,x,y,w,h,x0,y0,x1,y1,H,W,OH,OW,dx,dy,cv2,Image,ImageDraw,TestClient,e,fx,ex
+
+[TYPECHECK]
+# cv2 is a compiled C-extension whose real members pylint's static analysis
+# cannot introspect (a well-known limitation for OpenCV specifically), so
+# every cv2.<anything> access otherwise false-positives as no-member.
+generated-members=cv2.*
+
+[DESIGN]
+# The per-factor feature-extraction / scoring functions in scoring.py
+# (_extract_features, _score_factor_map, build_analysis) are
+# inherently a flat enumeration over 20 independent factors, not a sign of
+# poor structure: splitting them would scatter one coherent table across
+# many tiny functions. Thresholds are raised modestly rather than disabled.
+# clamp_box() in geometry.py also needs 6 plain numeric args (x, y, w, h,
+# max_w, max_h); there's no natural way to group them without an
+# artificial wrapper object for a 12-line pure function.
+max-args=8
+max-positional-arguments=8
+max-locals=55
+max-statements=80
+max-branches=25
+max-returns=8
+max-module-lines=2300
+# FactorScore (scoring.py) mirrors the browser's exact per-factor report
+# card shape (17 fields: score/band/value/evidence plus the confidence/
+# unmeasured-state flags); AnalysisResult bundles the 5 top-level report
+# sections. config.Settings is every VAHINI_OCR_*/VAHINI_CHANDRA_* env var
+# parsed once (23 fields). All three are plain data holders (Settings has
+# no methods at all; the others have an explicit to_dict()), not objects
+# with hidden behavior, so a higher attribute count is the accurate model
+# rather than a design smell.
+max-attributes=23
+
+[MESSAGES CONTROL]
+disable=
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    broad-exception-caught,
+    import-outside-toplevel,
+    import-error,
+    wrong-import-position,
+    duplicate-code,
+    fixme,
+
+# Rationale for the disables above (all reflect deliberate, documented
+# architecture rather than defects):
+#   missing-*-docstring:    this project writes docstrings only where the
+#                           WHY is non-obvious, not on every function.
+#   broad-exception-caught: the OCR pipeline and its pluggable backends
+#                           (paddle/trocr/surya/chandra) fail open by
+#                           design. A third-party engine error must never
+#                           500 the client, and the set of exceptions a
+#                           model/library can raise isn't enumerable.
+#   import-outside-toplevel: paddleocr/torch/transformers/surya/pypdfium2
+#                           are optional heavy dependencies, lazily
+#                           imported so the module loads without them.
+#   import-error:           those same optional dependencies are not
+#                           installed in every environment (e.g. the CI
+#                           "python-tests" job installs only the light
+#                           core requirements).
+#   wrong-import-position:  ppocr-server.py must set env vars and extend
+#                           sys.path before importing its sibling helper
+#                           modules (ocr_backends, classify); see the
+#                           comment at the top of that file.

@@ -6,14 +6,14 @@ Browser-run smoke tests — no toolchain required. Open the file in a modern bro
 | File | Checks |
 |---|---|
 | `smoke.test.html` | Loads the **packed engine bundle**, runs the demo analysis, and asserts the engine's public API, a rendered multi-page report, **no duplicate pages**, and that the **validity gate** + Dynamics handling behave in photo mode. |
-| `print-vs-handwriting.test.html` | Mixed printed+handwritten filtering and report leakage checks using real local sample images from `samples/`. |
+| `print-vs-handwriting.test.html` | Feeds a server-shaped 20-factor `analysis` object (what `/report-python` returns) into the packed bundle's `VahiniReport.render` and asserts the report renders all 20 factors, the overall score, and no leaked control/replacement characters. Render-only: no CV engine or private sample images. |
 
 ## How to run
 
 Open `tests/smoke.test.html`. Each assertion shows ✓ (pass) or ✗ (fail) with a short reason.
 A green summary banner means all checks passed.
 
-For fast OCR/handwriting regression on local sample images (no manual upload each run):
+For fast report-render regression (no manual upload, no server, no sample images):
 
 1. Start a local static server from project root:
 
@@ -23,10 +23,8 @@ For fast OCR/handwriting regression on local sample images (no manual upload eac
 
 	`http://127.0.0.1:4173/tests/print-vs-handwriting.test.html`
 
-3. Refresh after code changes to rerun checks against:
-
-	- `samples/IMG_1100.jpeg` (mixed printed + handwritten)
-	- `samples/IMG_1099.jpeg` (handwritten sample)
+3. Refresh after editing `analyser/src/report/report-render.js` (rebuild the bundle first with
+   `python analyser/build_bundle.py`) to rerun the render checks.
 
 ## Headless regression (terminal)
 

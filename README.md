@@ -34,12 +34,9 @@ into the dynamics factors (speed, pressure, pen-lifts).
 
 ## Quickstart
 
-### Just open it (no build, no server)
-
-Open `analyser/Vahini Analyser.html` in a modern browser, upload a page, and read
-the report. `?demo=report` jumps straight to a finished report. Without an OCR
-backend the app measures **geometry only** and does not claim to have read the
-words.
+The analysis (computer vision + the 20-factor scoring) runs on the Python
+recognition server; the browser captures the image and renders the report. A
+running server is therefore required. The quickest way is Docker.
 
 ### With Docker (app + OCR backend on one origin)
 
@@ -118,9 +115,10 @@ tests/        headless Chrome e2e (recognition + print/handwriting) + fixtures
 
 ## Development
 
-The browser engine source lives in `analyser/src/`. It ships as a single packed
-file, `analyser/scripts/core/engine.bundle.js`. **After editing `src/`, rebuild
-the bundle** (CI fails if it is out of sync):
+The browser client source (recognition client + report renderer) lives in
+`analyser/src/`; the CV + scoring engine lives in `analyser/server/`. The client
+ships as a single packed file, `analyser/scripts/core/engine.bundle.js`. **After
+editing `src/`, rebuild the bundle** (CI fails if it is out of sync):
 
 ```bash
 python analyser/build_bundle.py

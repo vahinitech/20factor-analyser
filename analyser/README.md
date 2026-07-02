@@ -1,10 +1,11 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only
-     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
      Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
 # Analyser Layout
 
 This folder contains the live handwriting analyser app, printable report assets,
-video explainers, and the engine source used to build the packed browser bundle.
+video explainers, the browser-client source used to build the packed bundle, and
+the Python server that runs the CV + 20-factor scoring engine.
 
 ## Structure
 
@@ -14,8 +15,8 @@ video explainers, and the engine source used to build the packed browser bundle.
 - `scripts/core/` — runtime scripts (`engine.bundle.js`, `protect.js`, `report.js`, `image-slot.js`).
 - `scripts/video/` — JSX scene helpers and motion files used by explainer pages.
 - `assets/` — logos and static media consumed by analyser pages.
-- `src/` — source-of-truth engine modules (not shipped raw in production).
-- `server/` — optional local PP-OCR server.
+- `src/` — browser-client source (recognition client + report renderer; not shipped raw).
+- `server/` — the PP-OCR + 20-factor scoring server (**required** to produce a report).
 
 ## Build notes
 
@@ -27,23 +28,24 @@ video explainers, and the engine source used to build the packed browser bundle.
 
 - License: GNU AGPL v3.0 only (`AGPL-3.0-only`).
 - See `LICENSE` and `NOTICE` in this folder.
-- Attribution contact: `infor@vahinitech.com`.
+- Attribution contact: `info@vahinitech.com`.
 
 ## Standalone run (independent)
 
-You can run this analyser by itself, without the full repository portal:
+You can run this analyser by itself, without the full repository portal. A report
+needs the recognition server (it computes the CV + 20-factor analysis), so run the
+server and open the app on the same origin:
 
-1. Serve the `analyser/` directory as static files.
-2. Open `Vahini Analyser.html`.
-3. Optional: point OCR to your server by setting `window.VAHINI_OCR_ENDPOINT` before loading `scripts/core/engine.bundle.js`.
+1. Start the server (serves the app under `/analyser` and the `/report-python`,
+   `/ocr`, `/analyze-vl` APIs on one origin):
 
-Example:
+   ```bash
+   python server/analyser-ocr-server.py
+   # open http://127.0.0.1:8868/analyser/Vahini%20Analyser.html
+   ```
 
-```bash
-cd analyser
-npx http-server . -p 8081 -c-1
-# open http://127.0.0.1:8081/Vahini%20Analyser.html
-```
+2. Or serve the static files separately and point the client at your OCR server by
+   setting `window.VAHINI_OCR_ENDPOINT` before loading `scripts/core/engine.bundle.js`.
 
 ## Integration into another repository/portal
 

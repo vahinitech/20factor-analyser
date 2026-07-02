@@ -1,37 +1,44 @@
 # Build — producing `engine.bundle.js`
 
 The browser only ever loads **`analyser/scripts/core/engine.bundle.js`** (packed + base64-encoded). The readable
-algorithm sources live in **`analyser/src/`** and are never shipped. This doc explains how the bundle is
+sources live in **`analyser/src/`** and are never shipped. This doc explains how the bundle is
 produced so the build stays reproducible after edits.
+
+> **Scoring runs server-side.** The 20-factor analysis and all computer vision now live in the
+> Python recognition server (`analyser/server/ppocr-server.py`, `POST /report-python`). The browser
+> bundle is the **recognition client + report renderer** only: it sends the image and renders the
+> analysis the server returns. There is no in-browser CV engine or scorer.
 
 ## Source order
 
-The bundle concatenates the engine sources **in this order**, then base64-encodes the result and
+The bundle concatenates the browser sources **in this order**, then base64-encodes the result and
 wraps it in a tiny self-decoding loader:
 
 ```
-analyser/src/engine/engine.js
-analyser/src/engine/factors.js
 analyser/src/engine/ocr.js
 analyser/src/engine/imu.js
 analyser/src/engine/forecast.js
 analyser/src/engine/craft.js
-analyser/src/engine/crops.js
-analyser/src/engine/letters.js
 analyser/src/engine/narrate.js
 analyser/src/report/report-render.js
 analyser/src/app/app.js
 analyser/src/app/share.js
 ```
 
-Order matters: `app.js` references the globals (`VahiniEngine`, `VahiniFactors`, `VahiniReport`,
-…) defined by the earlier modules, so it must come last.
+Order matters: `app.js` references the globals (`VahiniOCR`, `VahiniReport`, …) defined by the
+earlier modules, so it must come last. The canonical list lives in `analyser/build_bundle.py`.
 
 ## Rebuild steps
 
 1. Edit the relevant file(s) under `analyser/src/`.
-2. Concatenate the files in the order above into one string.
-3. Base64-encode (UTF-8 safe) and emit the loader:
+2. Run the packer:
+
+   ```
+   python analyser/build_bundle.py
+   ```
+
+   It concatenates the sources in the order above, base64-encodes (UTF-8 safe) the result, and
+   writes the self-decoding loader to **`analyser/scripts/core/engine.bundle.js`**:
 
    ```js
    /* Vahini engine — packed build. */
@@ -41,12 +48,14 @@ Order matters: `app.js` references the globals (`VahiniEngine`, `VahiniFactors`,
    } catch (e) { console.error("engine load failed", e); } })();
    ```
 
-4. Write the result to **`analyser/scripts/core/engine.bundle.js`**.
-5. Open `analyser/Vahini Analyser.html?demo=report` and confirm a report renders with no console errors.
+3. Commit the regenerated bundle. CI (`e2e` job) re-runs `build_bundle.py` and fails if the
+   committed `engine.bundle.js` is stale.
+4. With the recognition server running (`docker compose up -d`), open
+   `analyser/Vahini Analyser.html`, upload a sample, and confirm a report renders with no console
+   errors.
 
-> In this project the concatenate-and-pack step is run by the tooling that generated the current
-> `analyser/scripts/core/engine.bundle.js`. The bundle is self-contained — moving the `analyser/src/` files does not affect the
-> already-built bundle; only a **rebuild** reads from `analyser/src/`.
+> The bundle is self-contained: moving the `analyser/src/` files does not affect the already-built
+> bundle; only a **rebuild** reads from `analyser/src/`.
 
 ## Why not just ship `src/`?
 

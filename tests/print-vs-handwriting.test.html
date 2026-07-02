@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
-<title>Vahini — Print-vs-Handwriting Tests</title>
+<title>Vahini: Report Render Tests</title>
 <link rel="stylesheet" href="../analyser/styles/report.css">
 <style>
   body{ font-family:system-ui,sans-serif; margin:0; padding:24px; background:#EEEEEE; color:#222831; }
@@ -24,9 +24,13 @@
 </style>
 </head>
 <body>
-<h1>Print-vs-Handwriting · regression tests</h1>
-<div class="sub">Runs the packed engine on real uploaded images. Asserts printed text is excluded from a mixed page, clean handwriting is never over-flagged, noise is rejected, and the rendered report carries no leaked printed fragments or unusual characters.</div>
-<div class="summary run" id="summary">Running…</div>
+<h1>Report renderer &middot; regression tests</h1>
+<div class="sub">The scoring engine now lives on the Python recognition server. This suite feeds a
+  server-shaped 20-factor <code>analysis</code> object (exactly what <code>/report-python</code>
+  returns) into the packed browser bundle's <code>VahiniReport.render</code> and asserts the report
+  renders every factor, the overall score, and carries no leaked control/replacement characters,
+  with no in-browser CV engine and no private sample images required.</div>
+<div class="summary run" id="summary">Running&hellip;</div>
 <ul id="results"></ul>
 <div id="host"></div>
 
@@ -44,78 +48,126 @@
 (function(){
   const results = [];
   const add = (ok, name, detail) => { results.push({ ok:!!ok, name, detail:detail||'' }); };
-  const loadImg = (src) => new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('image failed: '+src)); i.src=src; });
 
-  function analyze(img){
-    const { metrics, overlay } = VahiniEngine.analyze(img);
-    const analysis = VahiniFactors.scoreAll(metrics);
-    return { metrics, overlay, analysis };
+  /* ---- Build a server-shaped analysis object (mirrors ppocr-server.py
+     _build_python_analysis: results[], sections[], overall, topWeak, topStrong). ---- */
+  const SECTIONS = [
+    { id:'structure', name:'Structure',           weight:0.30, blurb:'Letter shapes, size & control' },
+    { id:'spatial',   name:'Spatial',             weight:0.30, blurb:'Spacing, baseline & layout' },
+    { id:'dynamics',  name:'Dynamics',            weight:0.20, blurb:'Speed, pressure & flow' },
+    { id:'style',     name:'Style & Readability', weight:0.20, blurb:'Slant, legibility & neatness' },
+  ];
+  const META = {
+    1:['structure','Letter Formation Accuracy','round','shape dist =0.10'],
+    2:['structure','Stroke Order Consistency','round','edit dist =2'],
+    3:['structure','Loop Closure','round','95% closed'],
+    4:['structure','Line Quality (Smoothness)','slant','jitter =0.5 px'],
+    5:['structure','Size Consistency','round','height CV =0.12'],
+    6:['structure','Ascender / Descender Control','round','ratio err =0.15'],
+    7:['spatial','Baseline Alignment','frame','RMS =0.08 x-h'],
+    8:['spatial','Word Spacing','rhythm','~1.0 x-h'],
+    9:['spatial','Letter Spacing','rhythm','gap CV =0.30'],
+    10:['spatial','Margin Discipline','frame','left CV =0.05'],
+    11:['spatial','Line Straightness','frame','drift =1 deg'],
+    12:['spatial','Vertical Alignment','slant','tilt CV =0.20'],
+    13:['dynamics','Speed Consistency','wave','velocity CV =0.20'],
+    14:['dynamics','Pressure Consistency','wave','CV =0.20'],
+    15:['dynamics','Stroke Continuity','rhythm','0 unintended breaks'],
+    16:['dynamics','Pen Lift Frequency','rhythm','=0.3 lifts/char'],
+    17:['style','Slant Consistency','slant','angle CV low'],
+    18:['style','Legibility Score','round','even & clear'],
+    19:['style','Character Distinction','round','clear letter pairs'],
+    20:['style','Overall Neatness','frame','weighted variance'],
+  };
+  const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0;
+  function bandOf(s){ return s>=7.5?'strong':s>=5?'dev':'focus'; }
+
+  function makeAnalysis(scores){
+    const rs = [];
+    for (let n=1;n<=20;n++){
+      const [sec,name,ex,target] = META[n];
+      const score = scores[n-1];
+      rs.push({
+        n, sec, name, ex, target, conf:'measured',
+        tip:'Practise this factor with short daily drills and rescan after 3-5 days.',
+        score, score100:Math.round(score*10), band:bandOf(score),
+        value:`${Math.round(score*10)}%`,
+        evidence:`Server-side OCR/layout heuristic for ${name}.`,
+        imuMeasured:false, unmeasured:false, unmeasuredReason:null, unmeasuredKind:null,
+        basedOn:'server estimate',
+      });
+    }
+    const sections = SECTIONS.map(s=>{
+      const fs = rs.filter(r=>r.sec===s.id);
+      const avg = mean(fs.map(r=>r.score));
+      return { ...s, avg:Math.round(avg*10)/10, avg100:Math.round(avg*10), factors:fs, scoredCount:fs.length };
+    });
+    const wsum = sections.reduce((a,s)=>a+s.weight,0) || 1;
+    const overall = Math.round(sections.reduce((a,s)=>a + (s.avg100||0)*(s.weight/wsum), 0));
+    const ranked = [...rs].sort((a,b)=>a.score-b.score);
+    return {
+      results: rs, sections, overall, overallMeasured:overall, measuredCount:20,
+      topWeak: ranked.slice(0,3),
+      topStrong: [...rs].sort((a,b)=>b.score-a.score).slice(0,4),
+      source:'python',
+      recognition:{ backend:'paddle', hand_lines:5, printed_lines:0, reliable_lines:4,
+        mean_confidence:0.91, confidence_pct:91, level:'high', assistive_only:true,
+        passage_aligned:false, note:'The 20 factors are measured from geometry.' },
+    };
   }
-  function renderText({metrics, overlay, analysis}){
+
+  function renderReport(analysis){
     const host = document.getElementById('host');
-    const det = VahiniOCR.renderDetection(overlay.canvas, overlay, 'detect');
-    const crops = window.VahiniCrops ? VahiniCrops.build(overlay, metrics) : null;
-    const letterFindings = window.VahiniLetters ? VahiniLetters.build(overlay, metrics, '', '', 'local') : null;
     VahiniReport.render(host, {
       intake:{ role:'individual', writerName:'' },
-      analysis, expectedText:'', recognizedText:'', ocrEngine:'local',
-      detURL: det && det.toDataURL ? det.toDataURL('image/jpeg',0.6) : '',
-      pipeline:{ binMethod:metrics.binMethod, nLines:metrics.nLines, nWords:metrics.nWords, nChars:metrics.nChars, ocrEngine:'local', docType:metrics.docType, quality:metrics.quality },
-      crops, letterFindings
+      analysis, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
+      ocrEngine:'server', detURL:'', crops:{}, letterFindings:null, history:null,
+      pipeline:{ nLines:3, nWords:9, nChars:36, ocrEngine:'server' },
     });
-    return host.textContent || '';
+    return host;
   }
 
-  async function run(){
-    if (typeof VahiniEngine !== 'object'){ add(false,'engine bundle loaded'); return finish(); }
-    add(true,'engine bundle loaded');
+  function run(){
+    // 1) bundle is server-only: renderer present, deleted engines absent
+    add(typeof VahiniReport === 'object' && typeof VahiniReport.render === 'function',
+      'Packed bundle exposes VahiniReport.render');
+    add(typeof window.VahiniEngine === 'undefined' && typeof window.VahiniFactors === 'undefined',
+      'In-browser scoring engine removed (VahiniEngine / VahiniFactors absent)',
+      'engine='+(typeof window.VahiniEngine)+' factors='+(typeof window.VahiniFactors));
 
-    // 1) DOCTOR'S FORM — printed labels + declaration + handwriting (mixed page)
+    if (typeof VahiniReport !== 'object'){ return finish(); }
+
+    // 2) render a full report from a server-shaped analysis
+    let host;
     try{
-      const form = analyze(await loadImg('../samples/IMG_1100.jpeg'));
-      const m = form.metrics;
-      add(m.printedLines >= 6, 'Mixed form: printed lines detected & excluded', 'printed='+m.printedLines+' (expect \u22656), handwritten='+m.nLines);
-      add(m.docType.key === 'mixed', 'Mixed form: classified "Mixed printed + handwritten"', 'docType='+m.docType.label);
-      add(/Handwriting only/i.test(m.docType.accuracy), 'Mixed form: scores the handwriting alone', m.docType.accuracy);
-      const txt = renderText(form);
-      const leakWords = ['AH/IPCS','Form-27','medicines prescribed','obtain urgent care','Consultant Doctor'];
-      const leaked = leakWords.filter(w => txt.indexOf(w) !== -1);
-      add(leaked.length === 0, 'Mixed form: report text carries no printed-form fragments', leaked.length ? 'LEAKED: '+leaked.join(' | ') : 'clean');
-      const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g) || []);
-      add(weird.length === 0, 'Mixed form: report has no unusual / control characters', weird.length ? weird.length+' found' : 'none');
+      const analysis = makeAnalysis([8.2,6.1,9.0,7.5,4.2,6.8,7.1,5.5,3.9,6.0,7.8,5.1,6.4,6.9,7.2,5.8,4.8,6.6,7.0,6.3]);
+      host = renderReport(analysis);
+      add(true, 'Report renders from server analysis without throwing');
+    }catch(e){ add(false,'Report renders from server analysis without throwing', String(e)); return finish(); }
 
-      // structural: no scored "letter" is an oversized merged bar / ruled box /
-      // printed-code blob (the bug that put "AH/IPCS/Form-27" into the crops).
-      const L = form.overlay.letters;
-      const hs = L.map(b=>b.h).sort((a,b)=>a-b); const medH = hs[Math.floor(hs.length/2)]||10;
-      const widest = Math.max(...L.map(b=>b.w));
-      add(widest <= medH*4.2, 'Mixed form: no oversized merged blobs in scored letters', 'widest='+widest+'px, capped at '+Math.round(medH*4.2)+'px');
+    // 3) all 20 factors are shown on the scoreboard
+    const fscores = host.querySelectorAll('.fscore');
+    add(fscores.length === 20, 'All 20 factors rendered on the scoreboard', 'found='+fscores.length);
 
-      // structural: the longest line (drives the F6/F11/F18 full-line crops) must
-      // not span a huge void into a far-off printed region.
-      const lng = [...form.overlay.scoreLines].sort((a,b)=>b.boxes.length-a.boxes.length)[0];
-      let maxGap = 0; const bx=[...lng.boxes].sort((a,b)=>a.x-b.x);
-      for (let i=1;i<bx.length;i++) maxGap = Math.max(maxGap, bx[i].x-(bx[i-1].x+bx[i-1].w));
-      add(maxGap <= medH*9, 'Mixed form: longest line has no cross-column void (tight crop)', 'maxGap='+Math.round(maxGap)+'px');
-    }catch(e){ add(false,'Mixed form analysis ran', String(e)); }
+    // 4) multiple report pages built (cover, scorecard, factor pages, forecast, ...)
+    const pages = host.querySelectorAll('.page');
+    add(pages.length >= 8, 'Full multi-page report generated', 'pages='+pages.length);
 
-    // 2) CLEAN HANDWRITING SAMPLE — must NOT be over-flagged as printed
-    try{
-      const s = analyze(await loadImg('../samples/IMG_1099.jpeg'));
-      const m = s.metrics;
-      add(m.printedLines === 0, 'Clean sample: nothing wrongly flagged as printed', 'printed='+m.printedLines);
-      add(m.reject.rejected === false, 'Clean sample: accepted (not rejected)');
-      add(m.nLines >= 2, 'Clean sample: handwriting lines scored', 'lines='+m.nLines);
-      const txt = renderText(s);
-      const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/g) || []);
-      add(weird.length === 0, 'Clean sample: report has no unusual characters', weird.length ? weird.length+' found' : 'none');
-    }catch(e){ add(false,'Clean sample analysis ran', String(e)); }
+    // 5) the overall score appears in the cover / rings
+    const txt = host.textContent || '';
+    add(/out of 100/.test(txt), 'Overall score rendered', 'has "out of 100"='+/out of 100/.test(txt));
 
-    // 3) NOISE PHOTO (floor + a couple of scribbled numbers) — must be rejected
-    try{
-      const n = analyze(await loadImg('../uploads/IMG_1059.jpeg'));
-      add(n.metrics.reject.rejected === true, 'Noise photo: rejected (not a handwriting page)', n.metrics.reject.reason||'');
-    }catch(e){ add(false,'Noise photo analysis ran', String(e)); }
+    // 6) no control / replacement / unusual characters leaked into the report
+    const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g) || []);
+    add(weird.length === 0, 'Report has no control / replacement characters', weird.length ? weird.length+' found' : 'none');
+
+    // 7) strengths + focus chips present (topStrong / topWeak wired through)
+    add(/Top strengths/i.test(txt) && /Focus areas/i.test(txt), 'Scorecard shows strengths & focus areas');
+
+    // 8) a low-scoring factor is flagged focus, a high one strong
+    const focusChip = host.querySelectorAll('.fscore.focus').length;
+    const strongChip = host.querySelectorAll('.fscore.strong').length;
+    add(focusChip >= 1 && strongChip >= 1, 'Factor bands rendered (focus + strong present)', 'focus='+focusChip+' strong='+strongChip);
 
     finish();
   }
@@ -125,7 +177,7 @@
     const passed = results.filter(r=>r.ok).length, total = results.length, allOk = passed === total;
     const s = document.getElementById('summary');
     s.className = 'summary ' + (allOk?'pass':'fail');
-    s.textContent = (allOk?'ALL PASSING':'FAILURES') + ' \u2014 ' + passed + ' / ' + total + ' checks';
+    s.textContent = (allOk?'ALL PASSING':'FAILURES') + ' - ' + passed + ' / ' + total + ' checks';
     window.__testResults = { passed, total, allOk, results };
   }
 

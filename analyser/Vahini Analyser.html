@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!-- SPDX-License-Identifier: AGPL-3.0-only
-     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
      Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
 <html lang="en" data-site-base="../site/">
 <head>
@@ -82,6 +82,11 @@
     <p>Add one clear, well-lit photo or scan of a handwritten page. The engine reads the text for you, measures the geometry of every letter, and scores all 20 factors.</p>
   </div>
 
+  <div class="service-banner" id="service-banner" style="display:none;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    <div><b>Recognition server unavailable</b><p id="service-banner-detail">Checking connection…</p></div>
+    <button class="btn btn-ghost" id="service-retry" type="button">Retry now</button>
+  </div>
   <div class="panel">
     <div class="intake-split">
      <div class="intake-col">
@@ -240,7 +245,7 @@
         <div id="proc-log-steps"></div>
       </div>
     </div>
-    <div class="arch-note">Text recognition runs when configured; otherwise the analysis runs fully in your browser. All measurements are computed on-device.</div>
+    <div class="arch-note">Analysis and text recognition run on the Vahini recognition server. A live connection is required to generate a report.</div>
   </div>
 </section>
 

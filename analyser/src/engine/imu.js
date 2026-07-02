@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
-   © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Battu — IMU sensor simulation & live capture.
@@ -10,7 +10,22 @@
    ========================================================================= */
 (function (global) {
 'use strict';
-const E = global.VahiniEngine;
+/* Small stats helpers used by the live-capture summary. These used to live in
+   the browser CV engine (engine.js); scoring moved server-side, so the handful
+   the pen simulation needs are inlined here to keep this module self-contained. */
+const E = (function(){
+  const mean = a => a.length ? a.reduce((s,x)=>s+x,0)/a.length : 0;
+  const std  = a => { if(a.length<2) return 0; const m=mean(a); return Math.sqrt(mean(a.map(x=>(x-m)*(x-m)))); };
+  const cv   = a => { const m=mean(a); return m ? std(a)/Math.abs(m) : Infinity; };
+  const scoreFromError = (error, tolGood, tolBad) => {
+    if (error <= tolGood) return 10;
+    if (error >= tolBad)  return 0;
+    return 10 * (tolBad - error) / (tolBad - tolGood);
+  };
+  const scoreFromConsistency = (values, cvGood, cvBad) =>
+    (values.length<2 || mean(values)===0) ? 5 : scoreFromError(cv(values), cvGood, cvBad);
+  return { mean, std, cv, scoreFromError, scoreFromConsistency };
+})();
 
 /* ---- 16-axis sensor map (for the schematic + breakdown) --------------- */
 const SENSOR_GROUPS = [
@@ -239,10 +254,11 @@ function createSession(){
   }
 
   /* ---- render a handwriting canvas from the captured trajectory -------- */
-  /* (used so the geometry/structure/spatial factors can still be computed) */
+  /* (posted to the server so the geometry/structure/spatial factors can be
+     measured from the reconstructed writing) */
   function traceCanvas(passage){
     // Render the passage with tremor & slant consistent with the captured tilt,
-    // so VahiniEngine.analyze can measure the product factors.
+    // so the recognition server can measure the product factors from it.
     const W=900,H=520; const c=document.createElement('canvas'); c.width=W;c.height=H;
     const ctx=c.getContext('2d'); ctx.fillStyle='#fbfaf4'; ctx.fillRect(0,0,W,H);
     const meanTilt = E.mean(samplesTilt)||-6;

@@ -25,15 +25,13 @@ import os
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Order matters: app.js references globals defined by earlier modules.
+# Scoring + CV now run server-side (ppocr-server.py); the browser bundle is
+# recognition-client + report rendering only.
 SOURCES = [
-    "src/engine/engine.js",
-    "src/engine/factors.js",
     "src/engine/ocr.js",
     "src/engine/imu.js",
     "src/engine/forecast.js",
     "src/engine/craft.js",
-    "src/engine/crops.js",
-    "src/engine/letters.js",
     "src/engine/narrate.js",
     "src/report/report-render.js",
     "src/app/app.js",
@@ -68,5 +66,7 @@ def build():
 
 if __name__ == "__main__":
     src_len, b64_len = build()
-    print(f"[build] packed {len(SOURCES)} sources: {src_len} src chars -> {b64_len} base64 chars")
+    print(
+        f"[build] packed {len(SOURCES)} sources: {src_len} src chars -> {b64_len} base64 chars"
+    )
     print(f"[build] wrote {OUT}")

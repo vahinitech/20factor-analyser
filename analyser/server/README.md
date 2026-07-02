@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only
-     © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
      Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
 # Vahini recognition (OCR) — server vs. client, in plain terms
 
@@ -36,6 +36,24 @@ $env:VAHINI_OCR_BACKEND = "paddle"     # paddle | trocr | surya | chandra | auto
 
 Check what's installed/ready:  `curl http://127.0.0.1:8868/health`  →  the
 `backends` field lists every engine and whether it can run here.
+
+### Server module layout
+
+Each file has one job, so a change (a new OCR engine, a CV tweak, a 21st
+factor) touches one obvious place:
+
+| File | Responsibility |
+|---|---|
+| `ppocr-server.py` | Thin FastAPI layer: the `/ocr`, `/analyze-vl`, `/report-python` and `/health` routes, CORS, and wiring the modules below together at startup. |
+| `config.py` | Every `VAHINI_OCR_*`/`VAHINI_CHANDRA_*` env var, parsed once into a `Settings` dataclass. |
+| `cache.py` | The response cache (TTL + max-item eviction) shared by the three recognition endpoints. |
+| `ocr_backends.py` | One adapter per engine (paddle/trocr/surya/chandra/paddleocr-vl) behind a common `OCRBackend` interface, plus the paddle engine cache/lock/inference call. |
+| `detector.py` | Preprocessing variants and candidate text-region filtering (dedup, noise, printed-vs-handwriting heuristics). |
+| `recognizer.py` | Orchestrates recognition across backends: language resolution, backend dispatch (`auto` mode scores every engine and keeps the best), refinement and reference-passage alignment. |
+| `computer_vision.py` | Pure image algorithms: decoding an upload, crops/previews, layout and document-context signals. |
+| `scoring.py` | The 20-factor model: `FactorScore`/`SectionScore`/`AnalysisResult` dataclasses and the feature-extraction/scoring maths. |
+| `classify.py` | The printed-vs-handwriting classifier. |
+| `geometry.py`, `model_map.py`, `gpu_detect.py` | Small shared helpers (bbox clamping, `lang:model` map parsing, GPU auto-detection). |
 
 ### The engines (and the honest CPU verdict on this laptop)
 
@@ -76,6 +94,39 @@ messy cursive has a hard ceiling regardless of model; the two paths past it are
 (1) the **reference-passage** feature (when the writer copies a known passage,
 the recognised text can be aligned to it for near-perfect letter checks) and
 (2) a **GPU VLM** (`paddleocr-vl` / `chandra`).
+
+### GPU vs CPU (auto-detected)
+
+Every engine (paddle, trocr, surya, chandra) picks its device automatically:
+if this machine has a GPU that the installed build can actually reach, it's
+used; otherwise the engine runs on CPU. No configuration needed on either
+kind of machine.
+
+| Env var | Effect when set to `1` / `0` |
+|---|---|
+| `VAHINI_OCR_GPU` | force paddle (and `paddleocr-vl`) onto GPU / CPU |
+| `VAHINI_TROCR_GPU` | force trocr onto GPU / CPU |
+| `VAHINI_SURYA_GPU` | force surya onto GPU / CPU |
+| `VAHINI_CHANDRA_GPU` | force chandra's `hf` method onto GPU / CPU |
+
+Leave the variable unset to auto-detect (the default and the recommended
+setting). `docker compose` sets `VAHINI_OCR_GPU=0` explicitly, because the
+shipped image installs the CPU-only `paddlepaddle` wheel; see
+`requirements-paddle.txt` to switch to `paddlepaddle-gpu` for a GPU build.
+`/health` reports both the resolved choice (`gpu`) and whether an NVIDIA GPU
+was found on the machine at all (`gpu_detected`), so you can tell "no GPU
+here" apart from "a GPU is here, but this engine's build can't use it."
+
+### Multiple analyses at once
+
+Several users (or browser tabs) analysing at the same time run concurrently,
+not one after another: `/ocr`, `/analyze-vl` and `/report-python` offload
+their CPU-heavy work to a thread pool, so the server keeps answering
+`/health` and other requests while an analysis is in flight. Calls that share
+the same cached engine instance (the common case: repeated requests in the
+same language) are serialized internally to avoid running one engine
+concurrently on itself; different languages or different engines still run
+in parallel.
 
 ### How `trocr` mode works — guarded refinement (no hallucinations)
 

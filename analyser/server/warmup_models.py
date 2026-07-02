@@ -1,6 +1,8 @@
+# pylint: disable=line-too-long
 # SPDX-License-Identifier: AGPL-3.0-only
-# © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+# © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
 # Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json
+# pylint: enable=line-too-long
 #
 # warmup_models.py — pre-download / warm the recognition models so the FIRST
 # real request isn't slow (model weights are fetched + cached on first use).
@@ -15,24 +17,12 @@
 #   python warmup_models.py
 import os
 
+from model_map import parse_model_map
+
 
 def parse_langs(raw):
     langs = [x.strip() for x in (raw or "").split(",") if x.strip()]
     return langs or ["en"]
-
-
-def parse_model_map(raw):
-    out = {}
-    for item in (raw or "").split(","):
-        token = item.strip()
-        if not token or ":" not in token:
-            continue
-        k, v = token.split(":", 1)
-        k = k.strip().lower()
-        v = v.strip()
-        if k and v:
-            out[k] = v
-    return out
 
 
 def rec_for_lang(model_map, lang):
@@ -56,11 +46,22 @@ def warm_paddle():
         print(f"[warmup] paddle: skipped (not installed: {e})")
         return
     langs = parse_langs(os.environ.get("VAHINI_OCR_PRELOAD_LANGS", "en,te"))
-    ocr_version = (os.environ.get("VAHINI_OCR_VERSION", "PP-OCRv5") or "").strip() or None
-    det_model_name = (os.environ.get("VAHINI_OCR_DET_MODEL_NAME", "PP-OCRv5_mobile_det") or "").strip() or None
-    rec_model_map = parse_model_map(os.environ.get(
-        "VAHINI_OCR_REC_MODEL_MAP", "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec"))
-    det_limit_side_len = max(0, int(os.environ.get("VAHINI_OCR_DET_LIMIT_SIDE_LEN", "2048")))
+    ocr_version = (
+        os.environ.get("VAHINI_OCR_VERSION", "PP-OCRv5") or ""
+    ).strip() or None
+    det_model_name = (
+        os.environ.get("VAHINI_OCR_DET_MODEL_NAME", "PP-OCRv5_mobile_det")
+        or ""
+    ).strip() or None
+    rec_model_map = parse_model_map(
+        os.environ.get(
+            "VAHINI_OCR_REC_MODEL_MAP",
+            "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec",
+        )
+    )
+    det_limit_side_len = max(
+        0, int(os.environ.get("VAHINI_OCR_DET_LIMIT_SIDE_LEN", "2048"))
+    )
     for lang in langs:
         print(f"[warmup] paddle: loading PP-OCRv5 for lang={lang}")
         kwargs = {
@@ -82,7 +83,9 @@ def warm_paddle():
         try:
             PaddleOCR(**kwargs)
         except TypeError:
-            PaddleOCR(lang=lang, use_angle_cls=True, use_gpu=False, show_log=False)
+            PaddleOCR(
+                lang=lang, use_angle_cls=True, use_gpu=False, show_log=False
+            )
     print("[warmup] paddle: done")
 
 
@@ -94,7 +97,9 @@ def warm_trocr():
     except Exception as e:
         print(f"[warmup] trocr: skipped (not installed: {e})")
         return
-    model = os.environ.get("VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten")
+    model = os.environ.get(
+        "VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten"
+    )
     print(f"[warmup] trocr: downloading {model}")
     TrOCRProcessor.from_pretrained(model)
     VisionEncoderDecoderModel.from_pretrained(model)
@@ -105,7 +110,6 @@ def warm_surya():
     if not _wanted("surya"):
         return
     try:
-        import surya  # noqa: F401
         from surya.detection import DetectionPredictor
     except Exception as e:
         print(f"[warmup] surya: skipped (not installed: {e})")
@@ -113,8 +117,10 @@ def warm_surya():
     print("[warmup] surya: loading detection weights")
     try:
         DetectionPredictor()
-        print("[warmup] surya: detection ready (recognition needs the inference "
-              "backend running — see server/README.md)")
+        print(
+            "[warmup] surya: detection ready (recognition needs the inference "
+            "backend running — see server/README.md)"
+        )
     except Exception as e:
         print(f"[warmup] surya: detection load failed: {e}")
 

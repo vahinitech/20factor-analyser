@@ -11,11 +11,19 @@ technical term is spelled out the first time it appears, each step has an "**In 
 explanation, and there is a [Glossary](#0-glossary--read-this-first) and an [FAQ](#8-faq) at the end.
 If you only read two sections, read the **Glossary** and the **FAQ**.
 
-**Where the code lives** (for developers):
-- `engine.js` — the **CV pipeline** (Computer Vision pipeline) that finds and measures the writing.
-- `factors.js` — turns those measurements into the 20 factor scores.
-- `imu.js` — handles the **IMU pen** (the smart pen) and its motion signals.
-- `forecast.js` — predicts future improvement.
+**Where the code lives** (for developers): the CV pipeline and the 20-factor scoring run
+**server-side** in Python; the browser is the recognition client + report renderer.
+- `analyser/server/ppocr-server.py` — the thin FastAPI layer serving `POST /report-python` and the
+  other recognition endpoints; the CV, OCR and scoring logic itself lives in sibling modules:
+  `computer_vision.py` (image decode/crop/layout), `detector.py` + `recognizer.py` (finding and
+  reading handwriting across the pluggable `ocr_backends.py` engines), and `scoring.py`
+  (`_extract_features` → `_score_factor_map` → `build_analysis`, the 20-factor scorer).
+- `analyser/src/report/report-render.js` — renders the report from the server's `analysis`.
+- `analyser/src/app/app.js` — capture → upload → render flow (calls `/report-python`).
+- `analyser/src/engine/imu.js` — the **IMU pen** (smart pen) live-capture simulation.
+- `analyser/src/engine/forecast.js` — projects future improvement from the returned scores.
+
+The algorithm descriptions below explain *what* each step computes; they now run in the server.
 
 A few conventions used throughout:
 - Every factor is scored **0–10**. The report sometimes shows `score × 10` as a value out of **100**.
@@ -616,9 +624,10 @@ direction). Combining a 9-axis IMU (motion + a built-in compass) + a 6-axis IMU 
 To remove sensor "jitter" in real time so the motion scores reflect your hand, not electrical noise.
 
 **Q. Does Vahini use OpenCV?**
-The browser engine implements the few image steps it needs in plain JavaScript (no big library) so it's
-tiny, instant and works offline. A production server can use Python **OpenCV** + **PaddleOCR** for heavy
-recognition — same maths, different runtime. (See `Vahini Accuracy & Document Types.html`.)
+Yes. The analysis runs on the Python recognition server, which uses **OpenCV** (via
+`opencv-python-headless`, with NumPy fallbacks) for the image steps and **PaddleOCR** for recognition.
+The browser sends the photo to the server and renders the returned scores, so a running server is
+required for a report. (See `Vahini Accuracy & Document Types.html`.)
 
 **Q. Why not just use AI / machine learning / a neural network for everything?**
 Because most factors are **measurements, not predictions** — a distance, slope, ratio or count, where
@@ -691,45 +700,21 @@ improvement-only, **non-diagnostic** stance (see the disclaimer on every report)
 
 ---
 
-## 13. Letter-level findings (what a coach checks)
+## 13. Letter-level findings (retired)
 
-The 20 factors measure geometry; a human coach also reads **letter by letter**. Because the writer
-copies a **known passage**, the engine can align the expected letters to the detected ink and check
-the things coaches flag in real lessons (`letters.js`, report page *"Letter-Level Findings"*):
+Earlier versions aligned a known reference passage against the in-browser CV overlay to check
+per-letter things a coach would notice: style mixing, stray mid-word capitals, missing
+sentence-start capitals, inconsistent letterforms, a punctuation audit, and a spelling/word audit
+(`letters.js`, report page *"Letter-Level Findings"*).
 
-- **Style mixing.** Each matched word is classified **print** (≈ one ink piece per letter) or
-  **joined/cursive** (letters connected, far fewer pieces) from its component-to-letter ratio.
-  If both styles each make up ≥25% of words, the report flags the mix with a crop of one example of
-  each — coaches teach one settled style, not a mid-page blend.
-- **Capitals mid-word.** For print words with a 1:1 letter map, any expected middle-zone letter
-  (a, c, e, m, n, o, r, s, u, v, w, x, z) drawn taller than ~1.55× the x-height at position 2+ is
-  flagged as a suspected stray capital, with the letter boxed in a crop of the word.
-- **Capitals at sentence starts.** Words that open a sentence (start of passage, or following
-  . ! ?) and are expected to be capitalised are checked for a first letter ≥1.35× x-height;
-  missing capitals are flagged with the first letter boxed in a crop.
-- **Same letter, different shapes.** Every repeat of each expected letter is collected; the letter
-  with the highest width/height-ratio spread (CV > 0.22 on ≥3 instances) is shown three ways —
-  narrowest, typical, widest — from the writer's own ink ("your r, three ways").
-- **Punctuation audit.** Expected punctuation marks in the passage are counted against dot-sized
-  ink marks (`overlay.smallMarks` — components below the letter gate but above noise) — "the
-  passage has 3 full stops; we found 2."
-- **Word audit / spelling.** With the OCR server connected, recognised words are compared to the
-  expected passage (true spelling check). Offline, print words whose ink-piece count differs from
-  the expected letter count by ≥2 are flagged "check this word" with a crop — honestly labelled as
-  geometry, not recognition.
+That layer read the browser's CV overlay directly and had no server-side equivalent, so it was
+**removed** when the 20-factor scoring moved to the recognition server (mid-2026; see §15). The
+report's `letters.js`-driven page no longer renders. The **writing-craft layer** (`craft.js`:
+grammar, homophones, formatting, sign-offs; see §10) is unaffected and still runs whenever the
+recognition server returns text with reasonable confidence.
 
-Every finding carries a **Looks good / Check this** chip and, where applicable, cropped evidence
-from the writer's own page. Alignment is conservative: joined words are excluded from per-letter
-checks rather than guessed at.
-
-> **When does this "human reading" layer fire?** The per-letter and word checks need to know what
-> the words *should* be. That comes from one of two sources: **(a)** the writer copied a **known
-> passage** we hold on file (the offline path), or **(b)** the **PaddleOCR server** recognised the
-> text (works on any free-form upload). **With neither, the report shows geometry only** and the
-> spelling/word/craft findings are skipped rather than guessed. Deploying the OCR server
-> (`src/server/ppocr-server.py`) is therefore the single biggest unlock for content-level feedback.
-> A full capability matrix — what fires, and when — is in **`ROADMAP.md` §1**, and the engine
-> options/accuracy comparison is in **`VISION-MODELS.md`**.
+Re-introducing per-letter findings would need a server-side rewrite against the server's own
+detection geometry. Tracked in `ROADMAP.md` §3.
 
 ---
 

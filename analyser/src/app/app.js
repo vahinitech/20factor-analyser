@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
-   © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Vahini Studio — flow controller (intake → upload → process → report)
@@ -178,11 +178,11 @@ function showSample(img, url){
   $('#dz-preview').src = url; $('#dz-preview').style.display='block';
   $('#dz-clear').style.display='block';
   $('#dz-prompt').style.display='none';
-  $('#go-process').disabled = false;
+  applyServiceGate();
 }
 
 function handleSample(file){
-  if (!file) return;
+  if (!file || serviceUp === false) return;
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf){
     $('#dz-prompt').textContent = 'Reading PDF…';
@@ -201,7 +201,62 @@ function handleSample(file){
 }
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';
-  $('#dz-prompt').style.display='block'; $('#go-process').disabled=true; $('#file-input').value='';
+  $('#dz-prompt').style.display='block'; $('#file-input').value='';
+  applyServiceGate();
+}
+
+/* ---------- recognition-server availability gate -----------------------
+   Scoring runs entirely on the recognition server (see ocr.js); there is
+   no offline fallback. Rather than let someone upload and sit through the
+   pipeline animation only to hit a rejection after the request times out,
+   probe the server up front and keep uploads disabled with a clear reason
+   until it answers, re-checking periodically so it recovers on its own. */
+let serviceUp = null;            // null = not checked yet
+let serviceCheckTimer = null;
+
+function applyServiceGate(){
+  const down = serviceUp === false;
+  const banner = $('#service-banner');
+  const dz = $('#dropzone'), input = $('#file-input'), go = $('#go-process'), pen = $('#use-pen');
+  if (banner) banner.style.display = down ? 'flex' : 'none';
+  if (dz) dz.classList.toggle('disabled', down);
+  if (input) input.disabled = down;
+  if (pen) pen.classList.toggle('disabled', down);
+  if (go) go.disabled = down || !state.imageEl;
+}
+
+async function checkService(){
+  const detail = $('#service-banner-detail');
+  if (detail && serviceUp === null) detail.textContent = 'Checking connection…';
+  if (!(window.VahiniOCR && typeof VahiniOCR.checkHealth === 'function')){ serviceUp = true; applyServiceGate(); return; }
+  const res = await VahiniOCR.checkHealth();
+  serviceUp = !!(res && res.ok);
+  if (detail){
+    detail.textContent = serviceUp
+      ? 'Connected.'
+      : 'Start it with docker compose up -d, or python analyser/server/ppocr-server.py. It reconnects automatically.';
+  }
+  applyServiceGate();
+}
+
+function startServicePolling(){
+  checkService();
+  if (serviceCheckTimer) clearInterval(serviceCheckTimer);
+  serviceCheckTimer = setInterval(checkService, 10000);
+}
+
+/* Preview the uploaded photo in the process screen. Scoring runs server-side
+   now, so there is no in-browser detection overlay to draw; without this
+   the stage box would sit empty (and visibly black) for the whole pipeline. */
+function showProcStagePreview(img){
+  const host = $('#proc-stage');
+  if (!host) return;
+  const old = host.querySelector('img.proc-preview'); if (old) old.remove();
+  const el = document.createElement('img');
+  el.className = 'proc-preview';
+  el.alt = 'uploaded handwriting sample';
+  el.src = img.src;
+  host.appendChild(el);
 }
 
 /* ---------- expected passage ---------- */
@@ -257,11 +312,6 @@ function stepState(id, st, detail){
   else if(st==='done') ico.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
   if(detail){ const d=el.querySelector('.ls-d'); d.innerHTML=detail; }
 }
-function showStage(canvas, tag){
-  const host = $('#proc-stage'); host.querySelector('.stage-tag').textContent = tag;
-  const old = host.querySelector('canvas'); if(old) old.remove();
-  host.appendChild(canvas);
-}
 
 /* The engine refused the image (not handwriting / not enough of it). Replace
    the pipeline panel with a clear, honest rejection instead of a fake report. */
@@ -284,6 +334,29 @@ function showReject(rej){
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
 
+/* Rasterise an HTMLImageElement to a PNG blob to POST to the server. */
+function imageToBlob(img){
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth || img.width;
+  c.height = img.naturalHeight || img.height;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0);
+  return VahiniOCR.canvasToBlob(c);
+}
+
+/* Sample size for the cover / summary, derived from the server's recognised
+   handwriting lines (the CV geometry itself lives server-side now). */
+function sampleCounts(pyReport){
+  const lines = Array.isArray(pyReport.hand_lines) ? pyReport.hand_lines : [];
+  const text = pyReport.full_text || lines.map(l=>l.text).filter(Boolean).join('\n') || '';
+  const nWords = (text.match(/\S+/g) || []).length;
+  const nChars = text.replace(/\s+/g, '').length;
+  return { nLines: lines.length, nWords, nChars };
+}
+
+/* Server-only pipeline: the recognition server computes every report (OCR +
+   the 20-factor analysis). The browser sends the image and renders the result;
+   there is no in-browser scorer or offline fallback. */
 async function runPipeline(){
   go('process');
   // restore the pipeline panel + heading if a previous run replaced them with a rejection
@@ -293,146 +366,87 @@ async function runPipeline(){
   const img = state.imageEl;
   collectIntake();
 
-  // 1 load
-  stepState('load','active'); await sleep(420);
-  const { metrics, overlay } = VahiniEngine.analyze(img);
-  // Validity gate: refuse non-handwriting / insufficient samples outright,
-  // rather than emit a confident-looking but meaningless 20-factor report.
-  if (metrics.reject && metrics.reject.rejected){ showReject(metrics.reject); return; }
-  showStage(VahiniOCR.renderDetection(overlay.canvas, overlay, 'src'), 'Input');
-  stepState('load','done', `<b>${overlay.w}×${overlay.h}</b> working resolution`);
+  // Defensive re-check: the "Run analysis" button is normally disabled while
+  // the server is down, but re-verify here too (it may have dropped since the
+  // last poll) so a bad connection fails fast instead of animating through
+  // steps that would just time out two minutes later.
+  if (serviceUp === false) await checkService();
+  if (serviceUp === false){
+    showReject({
+      reason: 'Recognition server not reachable',
+      detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
+      tips: [
+        'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
+        'Or start it directly: python analyser/server/ppocr-server.py',
+        'Then reload this page and upload the photo again',
+      ],
+    });
+    return;
+  }
 
-  // 2 gray
-  stepState('gray','active'); await sleep(480);
-  stepState('gray','done', 'Luminance + corner-lighting check');
+  // 1 load: rasterise the upload and show it as the sample
+  stepState('load','active'); await sleep(300);
+  const blob = await imageToBlob(img);
+  const detURL = await compressImageURL(img.src, 1100, 0.72);
+  showProcStagePreview(img);
+  stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> uploaded`);
 
-  // 3 binarize
-  stepState('bin','active'); await sleep(360);
-  showStage(VahiniOCR.renderDetection(overlay.canvas, overlay, 'binary'), 'Binarized ink map');
-  stepState('bin','done', `Method: <b>${metrics.binMethod}</b>`);
+  // 2-4 the heavy CV (grayscale, binarize, segment) now runs on the server.
+  stepState('gray','active'); await sleep(220); stepState('gray','done', 'Uploading to the recognition server');
+  stepState('bin','active');  await sleep(220); stepState('bin','done',  'Server binarizes ink vs paper');
+  stepState('seg','active');  await sleep(220); stepState('seg','done',  'Server segments lines · words · letters');
 
-  // 4 segment
-  stepState('seg','active'); await sleep(560);
-  showStage(VahiniOCR.renderDetection(overlay.canvas, overlay, 'words'), 'Lines · words · letters');
-  stepState('seg','done', `<b>${metrics.nLines}</b> lines · <b>${metrics.nWords}</b> words · <b>${metrics.nChars}</b> letters`);
-
-  // 5 OCR (server first, fallback local)
-  stepState('ocr','active'); await sleep(300);
-  let ocrEngine='local', ocrResult=null;
-  let vlResult = null;
+  // 5 recognise + score (single server call returns OCR + the 20-factor analysis)
+  stepState('ocr','active');
   let pyReport = null;
-  let pyTiming = null;
-  let procW = null, procH = null;   // processed-image dims the server worked on
-  const blob = await VahiniOCR.canvasToBlob(overlay.canvas);
-  if (blob){
-    if (window.VAHINI_PYTHON_REPORT === true && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
-      pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
-      if (pyReport && pyReport.ok !== false){
-        ocrEngine = 'server';
-        pyTiming = pyReport._timing || null;
-        procW = pyReport.proc_w || null; procH = pyReport.proc_h || null;
-        const pyLines = Array.isArray(pyReport.hand_lines) ? pyReport.hand_lines : [];
-        // The Python server already separates handwriting from printed text with
-        // CV features (stroke-width / confidence / letterhead band). Trust that
-        // set directly — re-filtering it through the weaker in-browser detector
-        // (restrictToWordBoxes) was discarding most real handwriting on photos,
-        // leaving the recognised-text panel almost empty.
-        ocrResult = { lines: pyLines, full_text: pyLines.map(l=>l.text).filter(Boolean).join('\n') };
-        vlResult = {
-          document_context: pyReport.document_context || null,
-          layout: pyReport.layout || null,
-          regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
-          factor_regions: pyReport.factor_regions || {},
-        };
-      }
-    }
-
-    if (!ocrResult){
-      if (window.VahiniOCR && typeof VahiniOCR.serverVLAnalyze === 'function'){
-        vlResult = await VahiniOCR.serverVLAnalyze(blob);
-      }
-      const srv = await VahiniOCR.serverOCR(blob);
-      if(srv){
-        ocrEngine='server';
-        if (window.VahiniOCR && typeof VahiniOCR.restrictToWordBoxes === 'function'){
-          const hwBoxes = (typeof VahiniOCR.handwritingWordBoxes === 'function')
-            ? VahiniOCR.handwritingWordBoxes(overlay)
-            : (overlay.words || []);
-          const filteredLines = VahiniOCR.restrictToWordBoxes(srv.lines || [], hwBoxes);
-          ocrResult = { ...srv, lines: filteredLines, full_text: filteredLines.map(l=>l.text).filter(Boolean).join('\n') };
-        } else {
-          ocrResult = srv;
-        }
-      } else {
-        ocrResult = null;
-      }
-    }
+  if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
+    pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
   }
-  // Keep the chosen reference passage intact.
-  // OCR text is passed separately as recognizedText for report checks.
-  if (!ocrResult) ocrResult = VahiniOCR.localDetect(overlay, state.expected);
-  // On mixed pages, draw the orange boxes from the SERVER's handwriting
-  // classification (printed text excluded) when we have it; else local boxes.
-  let serverBoxesForDet = null;
-  if (ocrEngine==='server' && ocrResult && Array.isArray(ocrResult.lines) && typeof VahiniOCR.serverHandBoxes === 'function'){
-    serverBoxesForDet = VahiniOCR.serverHandBoxes(ocrResult.lines, procW||overlay.w, procH||overlay.h, overlay.w, overlay.h);
-  }
-  const detCanvas = VahiniOCR.renderDetection(overlay.canvas, overlay, 'detect', serverBoxesForDet);
-  showStage(detCanvas, ocrEngine==='server'?'Text detection (server)':'Detection (local)');
-  if (ocrEngine==='server'){
-    const ctxTag = vlResult && vlResult.document_context ? ' + context model' : '';
-    stepState('ocr','done', 'Recognition server: <b>detect + recognise</b>' + ctxTag);
-  } else {
+  if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
-    const detail = why ? ('Local detector (<b>server offline</b>) · ' + why) : 'Local detector (<b>server offline</b>)';
-    stepState('ocr','done', detail);
+    showReject({
+      reason: 'Recognition server not reachable',
+      detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
+        + (why ? ' (' + why + ')' : '') + '. Start the server and try again.',
+      tips: [
+        'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
+        'Or start it directly: python analyser/server/ppocr-server.py',
+        'Then reload this page and upload the photo again',
+      ],
+    });
+    return;
   }
+  const pyTiming = pyReport._timing || null;
+  const vlResult = {
+    document_context: pyReport.document_context || null,
+    layout: pyReport.layout || null,
+    regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
+    factor_regions: pyReport.factor_regions || {},
+  };
+  const ctxTag = vlResult.document_context ? ' + context model' : '';
+  stepState('ocr','done', 'Recognition server: <b>detect + recognise</b>' + ctxTag);
 
-  // 6 measure
-  stepState('meas','active'); await sleep(620);
-  if(!metrics.ok){ stepState('meas','done','⚠ weak signal — using best-effort'); }
-  let analysis = null;
-  if (pyReport && pyReport.analysis) analysis = pyReport.analysis;
-  if (!analysis && window.VAHINI_PYTHON_REPORT === true && blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
-    const py = await VahiniOCR.serverPythonReport(blob, state.expected || '');
-    if (py && py.analysis){
-      analysis = py.analysis;
-      if (!vlResult){
-        vlResult = {
-          document_context: py.document_context || null,
-          layout: py.layout || null,
-          regions: Array.isArray(py.regions) ? py.regions : [],
-          factor_regions: py.factor_regions || {},
-        };
-      }
-    }
-  }
-  if (!analysis) analysis = VahiniFactors.scoreAll(metrics);
+  // 6 measure: the analysis is already computed server-side
+  stepState('meas','active'); await sleep(300);
+  const analysis = pyReport.analysis;
   stepState('meas','done', `20 factors · overall <b>${analysis.overall}/100</b>`);
 
-  // 7 score + render
-  stepState('score','active'); await sleep(520);
-  const detURL = detCanvas.toDataURL ? compressCanvas(detCanvas, 900, 0.7) : '';
-  const recognizedText = (ocrResult.lines||[]).map(l=>l.text).filter(Boolean).join('\n');
-  const pipeline = { binMethod:metrics.binMethod, nLines:metrics.nLines, nWords:metrics.nWords, nChars:metrics.nChars, ocrEngine, weak:!metrics.ok, docType:metrics.docType, quality:metrics.quality, vl:vlResult, timing: pyTiming };
-  const localCrops = window.VahiniCrops ? VahiniCrops.build(overlay, metrics) : {};
-  const vlCrops = serverFactorCrops(vlResult);
-  const backendFirst = window.VAHINI_BACKEND_FIRST === true;
-  const crops = backendFirst ? { ...localCrops, ...vlCrops } : { ...vlCrops, ...localCrops };
-  const letterFindings = window.VahiniLetters ? VahiniLetters.build(overlay, metrics, state.expected, recognizedText, ocrEngine) : null;
+  // 7 render
+  stepState('score','active'); await sleep(300);
+  const counts = sampleCounts(pyReport);
+  const recognizedText = pyReport.full_text
+    || (Array.isArray(pyReport.hand_lines) ? pyReport.hand_lines.map(l=>l.text).filter(Boolean).join('\n') : '');
+  const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
+  const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine, detURL, pipeline, crops, letterFindings, history });
+  VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
   if (vlResult){
     const html = renderVLInsights(vlResult);
     if (html) $('#report-host').insertAdjacentHTML('beforeend', html);
   }
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);
-  // warning banner if weak signal
-  if(!metrics.ok){
-    $('#report-host').insertAdjacentHTML('afterbegin', `<div class="warn-banner" style="max-width:210mm;margin:0 auto 18px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg><p>The uploaded image had a weak handwriting signal (few clear letters detected). Scores are best-effort — for a precise analysis, upload a sharp, well-lit photo of a few lines of handwriting on plain or lightly-ruled paper.</p></div>`);
-  }
   stepState('score','done', `Report ready`);
-  await sleep(450);
+  await sleep(400);
   go('report');
 }
 
@@ -500,28 +514,51 @@ function startIMU(){
   });
 }
 function cancelIMU(){ if(imuSession){ imuSession.stop(); imuSession=null; } go('upload'); }
-function canvasToImg(canvas){ return new Promise(r=>{ const i=new Image(); i.onload=()=>r(i); i.src=canvas.toDataURL('image/png'); }); }
 async function finishIMU(){
   if(!imuSession) return;
   imuSession.stop();
   const summary = imuSession.summary();
   state.expected = state.expected || PASSAGES[0].text;
   const traceCanvas = imuSession.traceCanvas(state.expected);
-  const img = await canvasToImg(traceCanvas);
-  const { metrics, overlay } = VahiniEngine.analyze(img);
-  const analysis = VahiniFactors.scoreAll(metrics, summary);
-  const det = VahiniOCR.renderDetection(overlay.canvas, overlay, 'detect');
+  const detURL = compressCanvas(traceCanvas, 900, 0.7);
+  const blob = await VahiniOCR.canvasToBlob(traceCanvas);
+  imuSession = null;
+  // The 20-factor analysis is computed by the server from the reconstructed
+  // trace image; the pen's live dynamics remain the on-screen visualisation.
+  let pyReport = null;
+  if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
+    pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
+  }
+  if (!pyReport || pyReport.ok === false || !pyReport.analysis){
+    go('process');
+    showReject({
+      reason: 'Recognition server not reachable',
+      detail: 'The pen report is computed on the Vahini recognition server, which isn’t responding right now. Start the server and capture again.',
+      tips: [
+        'Run the server: docker compose up -d',
+        'Or start it directly: python analyser/server/ppocr-server.py',
+      ],
+    });
+    return;
+  }
+  const counts = sampleCounts(pyReport);
+  const analysis = pyReport.analysis;
+  const vlResult = {
+    document_context: pyReport.document_context || null,
+    layout: pyReport.layout || null,
+    regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
+    factor_regions: pyReport.factor_regions || {},
+  };
   VahiniReport.render($('#report-host'), {
     intake: state.intake, analysis, expectedText: state.expected, recognizedText: state.expected,
-    detURL: compressCanvas(det, 900, 0.7),
-    crops: (window.VahiniCrops ? VahiniCrops.build(overlay, metrics) : null),
-    letterFindings: (window.VahiniLetters ? VahiniLetters.build(overlay, metrics, state.expected, state.expected, 'imu') : null),
+    detURL,
+    crops: serverFactorCrops(vlResult),
+    letterFindings: null,
     history: loadHistory(state.intake.writerName),
-    pipeline: { binMethod:metrics.binMethod, nLines:metrics.nLines, nWords:metrics.nWords, nChars:metrics.nChars, ocrEngine:'imu', mode:'imu', docType:metrics.docType, quality:metrics.quality },
+    pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
     imu: summary,
   });
   saveHistory(state.intake.writerName, analysis.overall, analysis.sections);
-  imuSession = null;
   go('report');
 }
 
@@ -541,7 +578,8 @@ function init(){
   // upload is step 1 — straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', runPipeline);
   // optional: capture live with the sensor pen instead
-  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); collectIntake(); startIMU(); });
+  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; collectIntake(); startIMU(); });
+  const serviceRetry = $('#service-retry'); if(serviceRetry) serviceRetry.addEventListener('click', checkService);
   // imu screen
   const bm3 = $('#back-mode3'); if(bm3) bm3.addEventListener('click', cancelIMU);
   const fin = $('#finish-imu'); if(fin) fin.addEventListener('click', finishIMU);
@@ -551,27 +589,14 @@ function init(){
   const newRep = $('#new-report'); if(newRep) newRep.addEventListener('click', ()=>{ if(imuSession){imuSession.stop();imuSession=null;} clearSample(); go('upload'); });
 
   go('upload');
+  startServicePolling();
 
-  // demo helpers (testing / "try sample")
-  window.runDemo = async function(_role, instant){
+  // demo helper (testing / "try sample"): always runs the server pipeline.
+  window.runDemo = async function(_role, _instant){
     const img = new Image();
     await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='uploads/test-handwriting.png'; });
     state.imageEl = img;
     state.expected = PASSAGES[0].text;
-    if (instant){
-      collectIntake();
-      const { metrics, overlay } = VahiniEngine.analyze(img);
-      const analysis = VahiniFactors.scoreAll(metrics);
-      const det = VahiniOCR.renderDetection(overlay.canvas, overlay, 'detect');
-      VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText:state.expected,
-        detURL: compressCanvas(det, 900, 0.7),
-        crops: (window.VahiniCrops ? VahiniCrops.build(overlay, metrics) : null),
-        letterFindings: (window.VahiniLetters ? VahiniLetters.build(overlay, metrics, state.expected, state.expected, 'local') : null),
-        history: loadHistory(state.intake.writerName),
-        pipeline:{ binMethod:metrics.binMethod, nLines:metrics.nLines, nWords:metrics.nWords, nChars:metrics.nChars, ocrEngine:'local', docType:metrics.docType, quality:metrics.quality } });
-      go('report');
-      return $$('#report-host .page').length;
-    }
     await runPipeline();
     return $$('#report-host .page').length;
   };

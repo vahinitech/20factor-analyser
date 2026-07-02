@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
-   © 2026 Vahini Technologies. Contact: infor@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Vahini report renderer — builds the data-driven report from
@@ -8,7 +8,10 @@
    ========================================================================= */
 (function (global) {
 'use strict';
-const F = global.VahiniFactors;
+/* Overall-score label. Previously imported from VahiniFactors (factors.js); the
+   scoring engine now lives server-side, so this trivial rendering helper is
+   inlined here to keep the report self-contained. */
+const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' : o>=50?'Emerging — clear focus areas' : 'Early — lots to build on';
 
 const BAND_LABEL = { strong:'Strong', dev:'Developing', focus:'Focus area' };
 const BAND_COLOR = { strong:'var(--grow)', dev:'var(--gold)', focus:'var(--band-focus)' };
@@ -402,7 +405,7 @@ function render(host, data){
     <div class="subject">
       <div class="cell"><div class="k">Subject</div><div class="v">Your writing<small>20-factor analysis</small></div></div>
       ${orgLine}
-      <div class="cell"><div class="k">Overall</div><div class="v">${overall} / 100<small>${imu?F.overallBand(overall):('measured · '+measuredCount+' of 20 factors')}</small></div></div>
+      <div class="cell"><div class="k">Overall</div><div class="v">${overall} / 100<small>${imu?overallBand(overall):('measured · '+measuredCount+' of 20 factors')}</small></div></div>
       <div class="cell"><div class="k">Sample</div><div class="v">${pipeline.nWords} words<small>${pipeline.nLines} lines · ${pipeline.nChars} letters</small></div></div>
     </div>
     <div class="cover-foot" style="margin-top:18px;">
@@ -440,7 +443,7 @@ function render(host, data){
     <div class="dash-grid" style="margin-bottom:14px;">
       <div class="score-card">
         <div class="ring">${ringSVG(overall)}<div class="ring-num"><b>${overall}</b><span>out of 100</span></div></div>
-        <div class="band-pill">${F.overallBand(overall)}</div>
+        <div class="band-pill">${overallBand(overall)}</div>
         <div class="sc-note">${imu?'All 20 factors measured (pen + image).':`Measured from the image — ${measuredCount} of 20 factors${unmeasuredCount?'; '+unmeasuredCount+' couldn’t be read — re-scan':''}. The ${penPending} motion factors await the Vahini pen.`}</div>
       </div>
       <div class="cat-list">${scSecRows}
@@ -479,7 +482,7 @@ function render(host, data){
     <div class="dash-grid">
       <div class="score-card">
         <div class="ring">${ringSVG(overall)}<div class="ring-num"><b>${overall}</b><span>out of 100</span></div></div>
-        <div class="band-pill">${F.overallBand(overall)}</div>
+        <div class="band-pill">${overallBand(overall)}</div>
         <div class="sc-note">Weighted: Structure 30 · Spatial 30 · Dynamics 20 · Style 20.${imu?'':' Measured factors only.'}</div>
       </div>
       <div class="cat-list">${secRows}</div>

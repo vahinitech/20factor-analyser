@@ -39,11 +39,18 @@ import io
 import os
 import re
 import html
+import threading
+import importlib.util
 import urllib.request
 import urllib.parse
+from functools import lru_cache
 
 import numpy as np
 from PIL import Image
+
+import detector
+from geometry import clamp_box
+from gpu_detect import resolve_use_gpu, gpu_capable
 
 _TELUGU = re.compile(r"[ఀ-౿]")
 
@@ -88,58 +95,298 @@ class OCRBackend:
         """Return (ok: bool, reason: str). Cheap; never raises."""
         return False, "not implemented"
 
-    def recognize(self, arr, lang, langs, detector=None):
+    def recognize(self, arr, lang, langs, detect_fn=None):
         """Return list[line]. `arr` is an RGB uint8 numpy array.
 
-        `detector` is an optional callable arr -> list[poly] that a recogniser-only
-        engine (TrOCR) can use to localise text. Engines with their own detector
-        ignore it.
+        `detect_fn` is an optional callable arr -> list[poly] that a
+        recogniser-only engine (TrOCR) can use to localise text. Engines
+        with their own detector ignore it.
         """
         raise NotImplementedError
 
 
 # --------------------------------------------------------------------------- #
-# PaddleOCR (PP-OCRv5) — detection + recognition, classic CPU-friendly OCR
+# PaddleOCR (PP-OCRv5) — detection + recognition, classic CPU-friendly OCR.
+#
+# Paddle owns its own engine cache, per-engine lock and inference call here
+# (configure_paddle() sets the engine build options once at startup; only
+# the language-availability list is injected into PaddleBackend, since the
+# server owns VAHINI_OCR_LANGS).
 # --------------------------------------------------------------------------- #
-class PaddleBackend(OCRBackend):
-    """Thin wrapper around an injected paddle runner.
+_PADDLE_CFG = {
+    "use_gpu": False,
+    "ocr_version": None,
+    "det_model_name": None,
+    "rec_model_map": {},
+    "text_det_limit_side_len": 0,
+    "text_rec_score_thresh": 0.0,
+    "use_doc_orientation": False,
+    "use_doc_unwarping": False,
+    "use_textline_orientation": False,
+    "max_variants": 2,
+    "adv_preproc": True,
+}
 
-    The server owns the PaddleOCR engine cache + variant preprocessing (it is the
-    proven path), and injects a `run(arr, lang) -> list[line]` callable plus a
-    `detect(arr) -> list[poly]` callable. This keeps the legacy paddle code path
-    byte-for-byte while still exposing paddle through the common registry.
+_ENGINE_LOCKS_GUARD = threading.Lock()
+_ENGINE_LOCKS = {}
+
+
+def configure_paddle(**kwargs):
+    """Set the paddle engine build options once at startup. Unknown keys are
+    ignored so callers can pass a superset of _PADDLE_CFG."""
+    for k, v in kwargs.items():
+        if k in _PADDLE_CFG:
+            _PADDLE_CFG[k] = v
+
+
+def _lock_for_engine(engine):
+    # Multiple analyses can land at the same time (several browser tabs,
+    # several users). Engine objects are cached and reused across requests,
+    # but a single PaddleOCR instance is not guaranteed safe to run
+    # concurrently from more than one thread. Rather than serialize the
+    # whole server, only calls that share the SAME engine object take
+    # turns; a different language (a different engine instance) still runs
+    # at the same time.
+    key = id(engine)
+    with _ENGINE_LOCKS_GUARD:
+        lock = _ENGINE_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _ENGINE_LOCKS[key] = lock
+        return lock
+
+
+def _rec_model_for_paddle_lang(lang):
+    lg = (lang or "").strip().lower()
+    rec_map = _PADDLE_CFG["rec_model_map"]
+    if lg in rec_map:
+        return rec_map[lg]
+    return rec_map.get("*", None)
+
+
+def _paddle_engine_kwargs(lang, safe=False):
+    kwargs = {
+        "lang": lang,
+        "use_doc_orientation_classify": (
+            False if safe else _PADDLE_CFG["use_doc_orientation"]
+        ),
+        "use_doc_unwarping": (
+            False if safe else _PADDLE_CFG["use_doc_unwarping"]
+        ),
+        "use_textline_orientation": (
+            False if safe else _PADDLE_CFG["use_textline_orientation"]
+        ),
+        "device": (
+            "cpu" if safe else ("gpu" if _PADDLE_CFG["use_gpu"] else "cpu")
+        ),
+    }
+    if _PADDLE_CFG["ocr_version"]:
+        kwargs["ocr_version"] = _PADDLE_CFG["ocr_version"]
+    if _PADDLE_CFG["det_model_name"]:
+        kwargs["text_detection_model_name"] = _PADDLE_CFG["det_model_name"]
+    rec_name = _rec_model_for_paddle_lang(lang)
+    if rec_name:
+        kwargs["text_recognition_model_name"] = rec_name
+    if _PADDLE_CFG["text_det_limit_side_len"] > 0:
+        kwargs["text_det_limit_side_len"] = _PADDLE_CFG[
+            "text_det_limit_side_len"
+        ]
+    kwargs["text_rec_score_thresh"] = _PADDLE_CFG["text_rec_score_thresh"]
+    return kwargs
+
+
+@lru_cache(maxsize=8)
+def get_engine(lang: str):
+    """One PaddleOCR instance per language, built lazily and cached.
+    PP-OCRv5 is the default model family in PaddleOCR 3.x."""
+    from paddleocr import PaddleOCR
+
+    try:
+        return PaddleOCR(**_paddle_engine_kwargs(lang, safe=False))
+    except TypeError:
+        # PaddleOCR 2.x compatibility path.
+        return PaddleOCR(
+            lang=lang,
+            use_angle_cls=True,
+            use_gpu=_PADDLE_CFG["use_gpu"],
+            show_log=False,
+        )
+
+
+@lru_cache(maxsize=8)
+def get_engine_safe(lang: str):
+    """Fallback engine with minimal pre/post modules for max compatibility."""
+    from paddleocr import PaddleOCR
+
+    try:
+        return PaddleOCR(**_paddle_engine_kwargs(lang, safe=True))
+    except TypeError:
+        return PaddleOCR(
+            lang=lang,
+            use_angle_cls=True,
+            use_gpu=False,
+            show_log=False,
+        )
+
+
+def run(engine, arr: np.ndarray, lang: str):
+    """Return list[line] across PaddleOCR API variants."""
+    # Prefer the classic ocr() entrypoint on CPU builds to avoid PIR/oneDNN
+    # runtime incompatibilities seen on some Paddle 3.x combinations.
+    # Concurrent requests can share this exact engine object (see
+    # _lock_for_engine); only the model call itself needs to be serialized.
+    with _lock_for_engine(engine):
+        try:
+            results = engine.ocr(arr)
+        except Exception:
+            # Fallback to predict() for builds that only expose it.
+            results = engine.predict(arr)
+
+    lines = []
+    for res in results or []:
+        # 3.x result objects behave like dicts with these keys
+        d = res if isinstance(res, dict) else getattr(res, "json", None) or {}
+        if isinstance(res, dict) or "rec_texts" in d:
+            rt = (
+                res.get("rec_texts")
+                if isinstance(res, dict)
+                else d.get("rec_texts")
+            )
+            rp = (
+                res.get("rec_polys")
+                if isinstance(res, dict)
+                else d.get("rec_polys")
+            )
+            if rp is None:
+                rp = (
+                    res.get("rec_boxes")
+                    if isinstance(res, dict)
+                    else d.get("rec_boxes")
+                )
+            rs = (
+                res.get("rec_scores")
+                if isinstance(res, dict)
+                else d.get("rec_scores")
+            )
+            rt = list(rt) if rt is not None else []
+            rp = list(rp) if rp is not None else []
+            rs = list(rs) if rs is not None else []
+            for i, t in enumerate(rt):
+                poly = rp[i] if i < len(rp) else []
+                pts = [
+                    [float(x), float(y)]
+                    for x, y in (poly if poly is not None else [])
+                ]
+                if pts:
+                    xs = [p[0] for p in pts]
+                    ys = [p[1] for p in pts]
+                    box = [
+                        min(xs),
+                        min(ys),
+                        max(xs) - min(xs),
+                        max(ys) - min(ys),
+                    ]
+                else:
+                    box = [0.0, 0.0, 0.0, 0.0]
+                score = float(rs[i]) if i < len(rs) else 0.0
+                lines.append(
+                    {
+                        "text": t,
+                        "poly": pts,
+                        "box": box,
+                        "score": score,
+                        "lang": "te" if _TELUGU.search(t or "") else lang,
+                        "printed_hint": detector.looks_printed(t, score, box),
+                    }
+                )
+        else:
+            # --- classic API: [[poly, (text, score)], ...] ---
+            if not isinstance(res, (list, tuple)):
+                continue
+            for item in res:
+                poly, (txt, sc) = item[0], item[1]
+                pts = [[float(x), float(y)] for x, y in poly]
+                xs = [p[0] for p in pts]
+                ys = [p[1] for p in pts]
+                box = (
+                    [min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)]
+                    if pts
+                    else [0.0, 0.0, 0.0, 0.0]
+                )
+                score = float(sc)
+                lines.append(
+                    {
+                        "text": txt,
+                        "poly": pts,
+                        "box": box,
+                        "score": score,
+                        "lang": "te" if _TELUGU.search(txt or "") else lang,
+                        "printed_hint": detector.looks_printed(
+                            txt, score, box
+                        ),
+                    }
+                )
+    return lines
+
+
+def _paddle_run_lang(arr: np.ndarray, lg: str):
+    """Single-language paddle recogniser over all preprocessing variants."""
+    engine = get_engine(lg)
+    engine_safe = get_engine_safe(lg)
+    out = []
+    for variant in detector.variants(
+        arr, _PADDLE_CFG["max_variants"], _PADDLE_CFG["adv_preproc"]
+    ):
+        try:
+            out.extend(run(engine, variant, lg))
+        except Exception:
+            try:
+                out.extend(run(engine_safe, variant, lg))
+            except Exception:
+                pass
+    return out
+
+
+class PaddleBackend(OCRBackend):
+    """PaddleOCR (PP-OCRv5): engine cache, per-engine lock, preprocessing
+    variants and the actual inference call all live at module level above
+    (get_engine/get_engine_safe/run/_paddle_run_lang), configured once via
+    configure_paddle(). Only `resolve_langs` is injected, since the server
+    owns the language-availability list (VAHINI_OCR_LANGS).
     """
 
     name = "paddle"
 
-    def __init__(self, run=None, detect=None, resolve_langs=None):
-        self._run = run
-        self._detect = detect
+    def __init__(self, resolve_langs=None):
         self._resolve_langs = resolve_langs
 
     def available(self):
-        try:
-            import paddleocr  # noqa: F401
-            return True, ""
-        except Exception as e:
-            return False, f"paddleocr not installed: {e}"
+        if importlib.util.find_spec("paddleocr") is None:
+            return False, "paddleocr not installed"
+        return True, ""
 
     def detect(self, arr):
-        if self._detect is None:
-            return []
+        """Detection boxes (polys) from paddle, used by recogniser-only
+        engines such as TrOCR. Paddle detects + recognises in one pass; we
+        keep the polys."""
+        langs = self._resolve_langs("auto") if self._resolve_langs else ["en"]
+        primary = (langs[:1] or ["en"])[0]
         try:
-            return self._detect(arr)
+            lines = _paddle_run_lang(arr, primary)
         except Exception:
             return []
+        return [l.get("poly") for l in lines if l.get("poly")]
 
-    def recognize(self, arr, lang, langs, detector=None):
-        if self._run is None:
-            return []
+    def recognize(self, arr, lang, langs, detect_fn=None):
+        use_langs = langs or (
+            self._resolve_langs(lang)
+            if self._resolve_langs
+            else [lang or "en"]
+        )
         out = []
-        use_langs = langs or (self._resolve_langs(lang) if self._resolve_langs else [lang or "en"])
         for lg in use_langs:
             try:
-                out.extend(self._run(arr, lg))
+                out.extend(_paddle_run_lang(arr, lg))
             except Exception:
                 continue
         return out
@@ -156,62 +403,87 @@ class TrOCRBackend(OCRBackend):
     def __init__(self):
         self._model = None
         self._processor = None
-        self._device = "cpu"
-        self.model_name = _env("VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten")
+        # Guards the actual model call: this backend is a registry singleton,
+        # so concurrent analyses would otherwise call the same cached model
+        # from multiple threads at once.
+        self._lock = threading.Lock()
+        # VAHINI_TROCR_GPU=1/0 overrides; left unset, use the GPU if this
+        # machine's installed torch build can actually reach one.
+        self._device = "cuda" if resolve_use_gpu("VAHINI_TROCR_GPU") else "cpu"
+        self.model_name = _env(
+            "VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten"
+        )
         # Cap the number of crops we feed per page so a busy page can't stall the
         # CPU for minutes. Detection order is preserved (top-to-bottom).
-        self.max_crops = max(1, int(_env("VAHINI_TROCR_MAX_CROPS", "60") or "60"))
+        self.max_crops = max(
+            1, int(_env("VAHINI_TROCR_MAX_CROPS", "60") or "60")
+        )
         self.min_side = max(4, int(_env("VAHINI_TROCR_MIN_SIDE", "8") or "8"))
 
     def available(self):
-        try:
-            import torch  # noqa: F401
-            import transformers  # noqa: F401
-            return True, ""
-        except Exception as e:
-            return False, f"trocr deps missing (pip install torch transformers): {e}"
+        missing = [
+            name
+            for name in ("torch", "transformers")
+            if importlib.util.find_spec(name) is None
+        ]
+        if missing:
+            return (
+                False,
+                "trocr deps missing (pip install torch transformers): "
+                f"no {', '.join(missing)}",
+            )
+        return True, f"trocr ready (device: {self._device})"
 
     def _ensure_model(self):
         if self._model is not None:
             return
-        import torch
-        from transformers import TrOCRProcessor, VisionEncoderDecoderModel
+        with self._lock:
+            if self._model is not None:  # a concurrent call may have loaded it
+                return
+            import torch
+            from transformers import (
+                TrOCRProcessor,
+                VisionEncoderDecoderModel,
+            )
 
-        self._processor = TrOCRProcessor.from_pretrained(self.model_name)
-        self._model = VisionEncoderDecoderModel.from_pretrained(self.model_name)
-        self._model.to(self._device)
-        self._model.eval()
-        torch.set_grad_enabled(False)
+            processor = TrOCRProcessor.from_pretrained(self.model_name)
+            model = VisionEncoderDecoderModel.from_pretrained(self.model_name)
+            model.to(self._device)
+            model.eval()
+            torch.set_grad_enabled(False)
+            # Assign last, and only once fully prepared: another thread's
+            # fast-path check (self._model is not None) must never see a
+            # model that hasn't had .to()/.eval() applied yet.
+            self._processor = processor
+            self._model = model
 
-    def recognize(self, arr, lang, langs, detector=None):
-        if detector is None:
+    def recognize(self, arr, lang, langs, detect_fn=None):
+        if detect_fn is None:
             raise RuntimeError(
                 "TrOCR is a recogniser-only engine and needs a detector. "
                 "Run it with VAHINI_OCR_BACKEND=trocr while paddle is installed "
                 "(paddle supplies the text-line boxes)."
             )
-        polys = detector(arr) or []
+        polys = detect_fn(arr) or []
         if not polys:
             return []
         self._ensure_model()
-        import torch  # noqa: F401
 
         page = Image.fromarray(arr.astype(np.uint8), mode="RGB")
-        H, W = arr.shape[:2]
+        height, width = arr.shape[:2]
         # Recognise top-to-bottom, then left-to-right (reading order).
-        ordered = sorted(polys, key=lambda p: (poly_to_box(p)[1], poly_to_box(p)[0]))
+        ordered = sorted(
+            polys, key=lambda p: (poly_to_box(p)[1], poly_to_box(p)[0])
+        )
         out = []
         for poly in ordered[: self.max_crops]:
             x, y, w, h = poly_to_box(poly)
             if w < self.min_side or h < self.min_side:
                 continue
-            x0 = max(0, int(round(x)))
-            y0 = max(0, int(round(y)))
-            x1 = min(W, int(round(x + w)))
-            y1 = min(H, int(round(y + h)))
-            if x1 <= x0 or y1 <= y0:
+            box_px = clamp_box(x, y, w, h, width, height)
+            if box_px is None:
                 continue
-            crop = page.crop((x0, y0, x1, y1))
+            crop = page.crop(box_px)
             try:
                 text, score = self._read_crop(crop)
             except Exception:
@@ -225,25 +497,35 @@ class TrOCRBackend(OCRBackend):
         refinement path (paddle detects + classifies handwriting; TrOCR re-reads
         each handwriting crop for better text)."""
         self._ensure_model()
-        text, _score = self._read_crop(Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB"))
+        text, _score = self._read_crop(
+            Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB")
+        )
         return text
 
     def _read_crop(self, pil_img):
         import torch
 
-        pixel_values = self._processor(images=pil_img.convert("RGB"), return_tensors="pt").pixel_values
-        gen = self._model.generate(
-            pixel_values.to(self._device),
-            output_scores=True,
-            return_dict_in_generate=True,
-            max_new_tokens=64,
-        )
-        text = self._processor.batch_decode(gen.sequences, skip_special_tokens=True)[0].strip()
+        with self._lock:
+            pixel_values = self._processor(
+                images=pil_img.convert("RGB"), return_tensors="pt"
+            ).pixel_values
+            gen = self._model.generate(
+                pixel_values.to(self._device),
+                output_scores=True,
+                return_dict_in_generate=True,
+                max_new_tokens=64,
+            )
+            text = self._processor.batch_decode(
+                gen.sequences, skip_special_tokens=True
+            )[0].strip()
         # Approximate a confidence from the mean per-token softmax probability.
         score = 0.0
         try:
             if getattr(gen, "scores", None):
-                probs = [torch.softmax(s[0], dim=-1).max().item() for s in gen.scores]
+                probs = [
+                    torch.softmax(s[0], dim=-1).max().item()
+                    for s in gen.scores
+                ]
                 score = float(sum(probs) / max(1, len(probs)))
         except Exception:
             score = 0.0
@@ -263,52 +545,76 @@ class SuryaBackend(OCRBackend):
         self._det = None
         self._rec = None
         self._manager = None
+        # Guards both building the models (below) and the actual predict
+        # calls: this backend is a registry singleton shared by every
+        # concurrent analysis.
+        self._lock = threading.Lock()
 
     def available(self):
-        try:
-            import surya  # noqa: F401
-            return True, ""
-        except Exception as e:
-            return False, f"surya not installed (pip install surya-ocr): {e}"
+        if importlib.util.find_spec("surya") is None:
+            return False, "surya not installed (pip install surya-ocr)"
+        device = "gpu" if gpu_capable("torch") else "CPU (slow)"
+        return True, f"surya ready (device: {device})"
 
     def _ensure(self):
         if self._rec is not None:
             return
-        # Surya's module layout has shifted across releases; try the current
-        # high-level API first, then a couple of known fallbacks.
-        from surya.detection import DetectionPredictor
-        from surya.recognition import RecognitionPredictor
+        with self._lock:
+            if self._rec is not None:  # a concurrent call may have built it
+                return
+            # Surya (built on pydantic-settings) reads its device from the
+            # TORCH_DEVICE env var. Set a default only if the operator hasn't
+            # already chosen one, so VAHINI_SURYA_GPU=1/0 always wins and
+            # unset auto-detects this machine's installed torch build.
+            if "TORCH_DEVICE" not in os.environ:
+                use_gpu = resolve_use_gpu("VAHINI_SURYA_GPU")
+                os.environ["TORCH_DEVICE"] = "cuda" if use_gpu else "cpu"
+            # Surya's module layout has shifted across releases; try the
+            # current high-level API first, then a couple of known fallbacks.
+            from surya.detection import DetectionPredictor
+            from surya.recognition import RecognitionPredictor
 
-        self._det = DetectionPredictor()
-        try:
-            from surya.inference import SuryaInferenceManager
-            self._manager = SuryaInferenceManager()
-            self._rec = RecognitionPredictor(self._manager)
-        except Exception:
-            # Older API: RecognitionPredictor() takes no manager.
-            self._rec = RecognitionPredictor()
+            det = DetectionPredictor()
+            try:
+                from surya.inference import SuryaInferenceManager
+
+                manager = SuryaInferenceManager()
+                rec = RecognitionPredictor(manager)
+            except Exception:
+                # Older API: RecognitionPredictor() takes no manager.
+                manager = None
+                rec = RecognitionPredictor()
+            # Assign last: another thread's fast-path check must never see
+            # a partially-built predictor pair.
+            self._det = det
+            self._manager = manager
+            self._rec = rec
 
     def recognize_crop(self, crop_rgb):
         """Recognise a single pre-cropped line image → text (refinement path)."""
         self._ensure()
         img = Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB")
-        try:
-            preds = self._rec([img], det_predictor=self._det)
-        except TypeError:
-            preds = self._rec([img], [["en"]], self._det)
+        with self._lock:
+            try:
+                preds = self._rec([img], det_predictor=self._det)
+            except TypeError:
+                preds = self._rec([img], [["en"]], self._det)
         if not preds:
             return ""
         lines = getattr(preds[0], "text_lines", None) or []
-        return " ".join((getattr(ln, "text", "") or "").strip() for ln in lines).strip()
+        return " ".join(
+            (getattr(ln, "text", "") or "").strip() for ln in lines
+        ).strip()
 
-    def recognize(self, arr, lang, langs, detector=None):
+    def recognize(self, arr, lang, langs, detect_fn=None):
         self._ensure()
         page = Image.fromarray(arr.astype(np.uint8), mode="RGB")
-        try:
-            preds = self._rec([page], det_predictor=self._det)
-        except TypeError:
-            # Older API variants expect (images, langs, det_predictor).
-            preds = self._rec([page], [langs or [lang or "en"]], self._det)
+        with self._lock:
+            try:
+                preds = self._rec([page], det_predictor=self._det)
+            except TypeError:
+                # Older API variants expect (images, langs, det_predictor).
+                preds = self._rec([page], [langs or [lang or "en"]], self._det)
         if not preds:
             return []
         result = preds[0]
@@ -344,8 +650,16 @@ class ChandraBackend(OCRBackend):
 
     def __init__(self):
         self.method = (_env("VAHINI_CHANDRA_METHOD", "api") or "api").lower()
-        self.max_tokens = max(512, int(_env("VAHINI_CHANDRA_MAX_OUTPUT_TOKENS", "6144") or "6144"))
+        self.max_tokens = max(
+            512,
+            int(_env("VAHINI_CHANDRA_MAX_OUTPUT_TOKENS", "6144") or "6144"),
+        )
         self._manager = None
+        # Guards building the local (hf/vllm) manager and its generate()
+        # call: this backend is a registry singleton shared by every
+        # concurrent analysis. The hosted API path (_recognize_api) is a
+        # plain HTTP call and needs no lock.
+        self._lock = threading.Lock()
 
     def available(self):
         if self.method == "api":
@@ -353,12 +667,22 @@ class ChandraBackend(OCRBackend):
                 return True, ""
             return False, "chandra api: set DATALAB_API_KEY"
         if self.method == "hf":
-            try:
-                import torch  # noqa: F401
-                import transformers  # noqa: F401
-                return True, "chandra hf ready (CPU run is very slow)"
-            except Exception as e:
-                return False, f"chandra hf deps missing: {e}"
+            missing = [
+                name
+                for name in ("torch", "transformers")
+                if importlib.util.find_spec(name) is None
+            ]
+            if missing:
+                return (
+                    False,
+                    f"chandra hf deps missing: no {', '.join(missing)}",
+                )
+            if gpu_capable("torch"):
+                return True, "chandra hf ready (GPU detected)"
+            return (
+                True,
+                "chandra hf ready (no GPU detected: CPU run is very slow)",
+            )
         # vllm: probe the server quickly.
         base = _env("VLLM_API_BASE", "http://localhost:8000/v1")
         try:
@@ -379,9 +703,13 @@ class ChandraBackend(OCRBackend):
         api_key = _env("DATALAB_API_KEY")
         base = _env("DATALAB_API_BASE", "https://api.datalab.to/v1")
         buf = io.BytesIO()
-        Image.fromarray(arr.astype(np.uint8), mode="RGB").save(buf, format="PNG")
+        Image.fromarray(arr.astype(np.uint8), mode="RGB").save(
+            buf, format="PNG"
+        )
         b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-        body = json.dumps({"image": b64, "model": _env("DATALAB_OCR_MODEL", "chandra")}).encode()
+        body = json.dumps(
+            {"image": b64, "model": _env("DATALAB_OCR_MODEL", "chandra")}
+        ).encode()
         req = urllib.request.Request(
             f"{base}/ocr",
             data=body,
@@ -390,12 +718,27 @@ class ChandraBackend(OCRBackend):
         )
         with urllib.request.urlopen(req, timeout=60) as r:
             payload = json.loads(r.read().decode("utf-8"))
-        return self._chunks_to_lines(payload.get("chunks") or payload.get("results") or [], lang)
+        return self._chunks_to_lines(
+            payload.get("chunks") or payload.get("results") or [], lang
+        )
 
     # --- local model (vllm / hf) via the chandra package -------------------- #
     def _get_manager(self):
-        if self._manager is None:
+        if self._manager is not None:
+            return self._manager
+        with self._lock:
+            if (
+                self._manager is not None
+            ):  # a concurrent call may have built it
+                return self._manager
+            # "hf" runs on torch directly and reads TORCH_DEVICE the same way
+            # surya does; "vllm" targets an already-running external server,
+            # whose own device was chosen when that server started.
+            if self.method == "hf" and "TORCH_DEVICE" not in os.environ:
+                use_gpu = resolve_use_gpu("VAHINI_CHANDRA_GPU")
+                os.environ["TORCH_DEVICE"] = "cuda" if use_gpu else "cpu"
             from chandra.model import InferenceManager
+
             method = self.method if self.method in ("vllm", "hf") else "vllm"
             self._manager = InferenceManager(method=method)
         return self._manager
@@ -406,14 +749,15 @@ class ChandraBackend(OCRBackend):
         manager = self._get_manager()
         img = Image.fromarray(arr.astype(np.uint8), mode="RGB")
         batch = [BatchInputItem(image=img, prompt_type="ocr_layout")]
-        out = manager.generate(
-            batch,
-            max_output_tokens=self.max_tokens,
-            max_retries=0,
-            max_failure_retries=0,
-            include_images=False,
-            include_headers_footers=False,
-        )
+        with self._lock:
+            out = manager.generate(
+                batch,
+                max_output_tokens=self.max_tokens,
+                max_retries=0,
+                max_failure_retries=0,
+                include_images=False,
+                include_headers_footers=False,
+            )
         if not out:
             return []
         return self._chunks_to_lines(out[0].chunks or [], lang)
@@ -421,20 +765,37 @@ class ChandraBackend(OCRBackend):
     def _chunks_to_lines(self, chunks, lang):
         out = []
         for ch in chunks:
-            label = str((ch.get("label", "") if isinstance(ch, dict) else "") or "").strip().lower()
-            if label in ("image", "figure", "page-header", "page-footer", "blank-page"):
+            label = (
+                str(
+                    (ch.get("label", "") if isinstance(ch, dict) else "") or ""
+                )
+                .strip()
+                .lower()
+            )
+            if label in (
+                "image",
+                "figure",
+                "page-header",
+                "page-footer",
+                "blank-page",
+            ):
                 continue
             content = ch.get("content", "") if isinstance(ch, dict) else ""
             txt = _html_to_text(content)
             if not txt:
                 continue
-            bbox = (ch.get("bbox") if isinstance(ch, dict) else None) or [0, 0, 1, 1]
+            bbox = (ch.get("bbox") if isinstance(ch, dict) else None) or [
+                0,
+                0,
+                1,
+                1,
+            ]
             x0, y0, x1, y1 = [float(v) for v in bbox[:4]]
             poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
             out.append(make_line(txt, poly, 0.82, lang))
         return out
 
-    def recognize(self, arr, lang, langs, detector=None):
+    def recognize(self, arr, lang, langs, detect_fn=None):
         if self.method == "api":
             return self._recognize_api(arr, lang)
         return self._recognize_local(arr, lang)
@@ -459,6 +820,9 @@ class PaddleVLBackend(OCRBackend):
 
     def __init__(self):
         self._pipe = None
+        # Guards building the pipeline and its predict() call: this backend
+        # is a registry singleton shared by every concurrent analysis.
+        self._lock = threading.Lock()
 
     def available(self):
         try:
@@ -466,26 +830,36 @@ class PaddleVLBackend(OCRBackend):
         except Exception as e:
             return False, f"paddleocr not installed: {e}"
         if hasattr(paddleocr, "PaddleOCRVL"):
-            return True, "paddleocr-vl available (VLM; CPU run is slow, GPU advised)"
-        return False, "this paddleocr build has no PaddleOCRVL (pip install -U paddleocr)"
+            device = "GPU" if gpu_capable("paddle") else "CPU (slow)"
+            return True, f"paddleocr-vl available (device: {device})"
+        return (
+            False,
+            "this paddleocr build has no PaddleOCRVL (pip install -U paddleocr)",
+        )
 
     def _ensure(self):
-        if self._pipe is None:
+        if self._pipe is not None:
+            return
+        with self._lock:
+            if self._pipe is not None:  # a concurrent call may have built it
+                return
             from paddleocr import PaddleOCRVL
-            kwargs = {}
-            device = "gpu" if _env("VAHINI_OCR_GPU", "0") == "1" else "cpu"
+
+            use_gpu = resolve_use_gpu("VAHINI_OCR_GPU", engine="paddle")
+            device = "gpu" if use_gpu else "cpu"
             try:
                 self._pipe = PaddleOCRVL(device=device)
             except TypeError:
                 # Older signature without a device kwarg.
                 self._pipe = PaddleOCRVL()
 
-    def recognize(self, arr, lang, langs, detector=None):
+    def recognize(self, arr, lang, langs, detect_fn=None):
         self._ensure()
-        try:
-            results = self._pipe.predict(arr)
-        except TypeError:
-            results = self._pipe.predict(input=arr)
+        with self._lock:
+            try:
+                results = self._pipe.predict(arr)
+            except TypeError:
+                results = self._pipe.predict(input=arr)
         return _vl_results_to_lines(results, lang)
 
 
@@ -494,8 +868,12 @@ def _vl_results_to_lines(results, lang):
     shifted across versions, so we try, in order: classic rec_texts/rec_polys,
     layout-parsing block lists, then a markdown text-only fallback."""
     lines = []
-    for res in (results or []):
-        d = res if isinstance(res, dict) else (getattr(res, "json", None) or {})
+    for res in results or []:
+        d = (
+            res
+            if isinstance(res, dict)
+            else (getattr(res, "json", None) or {})
+        )
         if isinstance(d, dict) and isinstance(d.get("res"), dict):
             d = d["res"]
 
@@ -516,7 +894,12 @@ def _vl_results_to_lines(results, lang):
         # 2) layout-parsing block lists
         blocks = []
         if isinstance(d, dict):
-            for k in ("parsing_res_list", "layout_parsing_result", "blocks", "boxes"):
+            for k in (
+                "parsing_res_list",
+                "layout_parsing_result",
+                "blocks",
+                "boxes",
+            ):
                 v = d.get(k)
                 if isinstance(v, list) and v:
                     blocks = v
@@ -524,10 +907,19 @@ def _vl_results_to_lines(results, lang):
         for blk in blocks:
             if not isinstance(blk, dict):
                 continue
-            txt = _html_to_text(blk.get("block_content") or blk.get("content") or blk.get("text") or "")
+            txt = _html_to_text(
+                blk.get("block_content")
+                or blk.get("content")
+                or blk.get("text")
+                or ""
+            )
             if not txt:
                 continue
-            bbox = blk.get("block_bbox") or blk.get("bbox") or blk.get("coordinate")
+            bbox = (
+                blk.get("block_bbox")
+                or blk.get("bbox")
+                or blk.get("coordinate")
+            )
             if bbox and len(bbox) >= 4:
                 x0, y0, x1, y1 = [float(v) for v in bbox[:4]]
                 pts = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
@@ -573,10 +965,13 @@ def available_backends():
     return out
 
 
-def init_registry(paddle_run=None, paddle_detect=None, resolve_langs=None):
-    """Build the registry once. The server injects its proven paddle runner."""
+def init_registry(resolve_langs=None, paddle_config=None):
+    """Build the registry once. `paddle_config` (see configure_paddle) sets
+    the paddle engine build options; the server owns the language list."""
     _REGISTRY.clear()
-    register(PaddleBackend(run=paddle_run, detect=paddle_detect, resolve_langs=resolve_langs))
+    if paddle_config:
+        configure_paddle(**paddle_config)
+    register(PaddleBackend(resolve_langs=resolve_langs))
     register(TrOCRBackend())
     register(SuryaBackend())
     register(ChandraBackend())
