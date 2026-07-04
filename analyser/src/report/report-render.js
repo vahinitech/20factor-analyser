@@ -116,7 +116,7 @@ function exDraw(type){
   }
   return `<svg viewBox="0 0 340 86" preserveAspectRatio="xMidYMid meet">${defs}${rail}${s}</svg>`;
 }
-const EX_CAP = { slant:['forward  /  →','back  \\  →'], round:['ovals','circles'], rhythm:['zigzag','garland loops'], frame:['draw frame','write inside'], wave:['light → heavy','then even'] };
+const EX_CAP = { slant:['forward  /  →','back  \\  →'], round:['ovals','circles'], rhythm:['zigzag','wave loops'], frame:['draw frame','write inside'], wave:['light → heavy','then even'] };
 
 /* ---- role config ------------------------------------------------------- */
 function roleConfig(role){
@@ -278,7 +278,7 @@ function focusSVG(f){
                            like a medical lab report
      4. Practice & tries — the drills, and how many tries to the milestone */
 function render(host, data){
-  const { intake, analysis, ocrEngine, detURL, pipeline, imu, crops, history } = data;
+  const { intake, analysis, recognizedText, ocrEngine, detURL, pipeline, imu, crops, history } = data;
   const rc = roleConfig('individual');
   const name = intake.writerName || 'this sample';
   const isLive = (f)=> !f.unmeasured && (f.imuMeasured || f.conf!=='imu');
@@ -308,7 +308,7 @@ function render(host, data){
   const DRILL = {
     slant:  { title:'Slant rails',          goal:'a single, steady slant' },
     round:  { title:'Oval & circle roll',   goal:'even, rounded, same-size letters' },
-    rhythm: { title:'Spacing & rhythm run', goal:'consistent spacing between letters and words' },
+    rhythm: { title:'Even spacing practice', goal:'even gaps between letters and words' },
     frame:  { title:'Frame the page',       goal:'tidy margins and a straight baseline' },
     wave:   { title:'Pressure waves',       goal:'smooth, even pen pressure' },
   };
@@ -352,13 +352,32 @@ function render(host, data){
     <div class="fscore-grid">${analysis.results.map(f=>`<span class="fscore ${f.band}"${isLive(f)?'':' style="opacity:.45;filter:grayscale(.55)"'}><b>${String(f.n).padStart(2,'0')}</b><span class="fs-nm">${esc(f.name)}</span><i>${isLive(f)?f.score.toFixed(1):'—'}</i></span>`).join('')}</div>
   </div>`;
   const rec = (analysis && analysis.recognition) ? analysis.recognition : null;
-  const recLine = rec ? ({
-    'passage-verified':'Words verified against your passage.',
-    'high':'Words read with high confidence.',
-    'moderate':'Words read with moderate confidence.',
-    'low':'Word reading is assistive on this scan.',
-    'unavailable':'Words were not read this scan — the scores are unaffected.',
-  }[rec.level] || '') : '';
+  const recPct = (rec && Number.isFinite(rec.confidence_pct)) ? rec.confidence_pct : null;
+  const recLine = rec ? (({
+    'passage-verified':'Words verified against your passage',
+    'high':'Words read with high confidence',
+    'moderate':'Words read with moderate confidence',
+    'low':'Word reading is assistive on this scan',
+    'unavailable':'Words were not read this scan — the scores are unaffected',
+  }[rec.level] || 'Word reading is assistive') + (recPct!=null?` (${recPct}%)`:'') + '.') : '';
+  // Document checks — like the stamp on a lab report: parsed fully, and the
+  // recognised words run through the spelling/grammar rules when reading was
+  // dependable. Never claim a clean sheet off a low-confidence reading.
+  let checksLine = '';
+  if (ocrEngine==='server' && rec){
+    const readable = ['passage-verified','high','moderate'].indexOf(rec.level) >= 0;
+    const readText = String(recognizedText||'').trim();
+    if (readable && readText && window.VahiniCraft){
+      const craft = window.VahiniCraft.analyze(readText, pipeline.docType && pipeline.docType.key);
+      if (craft && craft.runGrammar){
+        checksLine = craft.count
+          ? `Document parsed fully ✓ · spelling &amp; grammar: <b>${craft.count} thing${craft.count>1?'s':''} to check</b> — ${esc(craft.findings.slice(0,1).map(x=>x.msg).join(''))}`
+          : `Document parsed fully ✓ · <b style="color:var(--grow);">no spelling mistakes ✓ · no grammar mistakes ✓</b> in the recognised text`;
+      }
+    } else {
+      checksLine = `Document parsed fully ✓ · spelling &amp; grammar checks switch on once the words are read dependably${recPct!=null?` (reading now: ${recPct}%)`:''}`;
+    }
+  }
   pages.push(`<section class="page" data-screen-label="Scorecard">
     ${head('Scorecard · '+today)}
     <div class="sec-title"><div><div class="eyebrow">Report ${rid} · 20-Factor Engine v3.1</div><h2>${esc(rc.greet(name))}</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
@@ -379,8 +398,9 @@ function render(host, data){
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:11px;color:var(--ink-2);">
       <b>${pipeline.nWords} words · ${pipeline.nLines} lines · ${pipeline.nChars} letters</b>
       ${pipeline.docType ? docTypeChip(pipeline.docType) : ''}
-      ${recLine?`<span>${recLine} The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</span>`:''}
+      ${checksLine?`<span>${checksLine}</span>`:''}
     </div>
+    ${recLine?`<div style="margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5;">${recLine} Text recognition is <b>under progress and will improve soon</b> — accuracy rises with every update, delivered in increments. The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</div>`:''}
     ${foot(pg,'One-page scorecard · improvement plan follows')}
   </section>`);
 
@@ -444,10 +464,18 @@ function render(host, data){
   }).join('');
   pages.push(`<section class="page" data-screen-label="Where to improve">
     ${head('Where exactly to improve')}
-    <div class="sec-title"><div><div class="eyebrow">${maintenance?'Nothing is weak — the three to keep polishing':'The '+focusFactors.length+' places the score grows fastest'}</div><h2>Where exactly to improve</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <p class="lead" style="max-width:86%;margin-bottom:14px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b> — so you can see exactly what was measured and where to aim next.</p>
+    <div class="sec-title"><div><div class="eyebrow">${maintenance?'Nothing is weak — the three to keep polishing':'Your top '+focusFactors.length+' issues — where the score grows fastest'}</div><h2>Where exactly to improve</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+    ${detURL?`<div class="ea-panel" style="margin-bottom:12px;">
+      <div class="ea-head act"><span class="t">Your page, as detected</span><span class="tag" style="background:var(--accent-deep);color:#fff;">orange = detected writing</span></div>
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center;padding:10px 14px;background:#fff;">
+        <img src="${detURL}" alt="detected sample" style="display:block;width:100%;max-height:235px;object-fit:contain;background:#fff;border:1px solid var(--paper-edge);border-radius:8px;">
+        <div style="font-size:11px;color:var(--ink-2);line-height:1.6;">Each <b style="color:var(--accent-deep);">orange box</b> is a piece of writing the engine found and measured — that is the evidence behind every score in this report. The <b style="color:var(--grow);">teal line</b> under a box is the baseline the writing sits on.</div>
+      </div>
+    </div>`:''}
+    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b> — so you can see exactly what was measured and where to aim next.</p>
     <div style="display:grid;gap:12px;">${improveCards}</div>
-    ${foot(pg,'Concept + your own reference, per factor')}
+    <div style="margin-top:10px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:9px 13px;">We show the <b>top 3 issues</b> so practice stays focused. Want the full 20-factor deep-dive report? Email <a href="mailto:info@vahinitech.com" style="color:var(--accent-deep);font-weight:700;">info@vahinitech.com</a>.</div>
+    ${foot(pg,'Top 3 issues · full 20-factor deep-dive: info@vahinitech.com')}
   </section>`);
 
   /* ---------- PAGE · REFERENCE VALUES (read like a lab report) ---------- */
@@ -508,15 +536,15 @@ function render(host, data){
   let predictHTML = '';
   if (fc){
     const fluentLine = fc.fluency.imageOnly
-      ? 'image-based estimate — motion not yet measured'
-      : (fc.fluency.alreadyFluent ? 'Already fast &amp; efficient'
-        : (fc.fluency.weeksToFluent!=null ? `~${fc.fluency.weeksToFluent} weeks to fluent` : 'with steady practice'));
+      ? 'estimated from the photo — the pen measures it exactly'
+      : (fc.fluency.alreadyFluent ? 'Already fast &amp; easy'
+        : (fc.fluency.weeksToFluent!=null ? `~${fc.fluency.weeksToFluent} weeks to fast, easy writing` : 'with steady practice'));
     predictHTML = `
       <div class="cat-band" style="margin-top:14px;"><span class="cb-no" style="color:var(--accent-deep)">PREDICTION</span><span class="cb-name" style="font-size:17px;">How many tries to the milestone</span><span class="cb-rule"></span></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
         ${card('How many tries?', tries?`≈ ${tries.sessions} tries`:'keep going', tries?`about <b>${tries.sessions} short practice sessions</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week) to reach <b>${MILESTONE}/100</b>`:`the milestone of ${MILESTONE}/100 sits beyond an 8-week projection — practise the drills and re-scan every 2 weeks`, 'var(--grow)')}
         ${card('Projected score', `${fc.overallNow} <span style="color:var(--muted);font-size:16px;">→</span> ${fc.projLow}–${fc.projHigh}`, `over ${fc.horizon} weeks of steady practice`, 'var(--ink)')}
-        ${card('Writing fluency', fc.fluency.bandNow, `${fluentLine}`, 'var(--accent-deep)')}
+        ${card('Writing flow &amp; speed', fc.fluency.bandNow, `${fluentLine}`, 'var(--accent-deep)')}
       </div>
       <div class="ea-panel">
         <div class="ea-head act"><span class="t">Projected score · each dot is one week of practice</span><span class="tag">estimate</span></div>
