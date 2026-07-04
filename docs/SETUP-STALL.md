@@ -86,7 +86,7 @@ reference sentence, true spelling/word checks in the report).
    ```
    python ppocr-server.py
    ```
-3. That's it — the app auto-detects `http://127.0.0.1:8868/ocr`. The report's
+3. That's it — the app auto-detects `http://127.0.0.1:8080/ocr`. The report's
    "Detected & recognised text" panel now shows the writer's actual words, and the
    reference sentence becomes optional.
 

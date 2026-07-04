@@ -11,7 +11,7 @@ same terms, and that you have the right to contribute it.
   git-ignored. Test fixtures under `tests/fixtures/` must be **synthetic**.
 - **No secrets.** API keys (e.g. `DATALAB_API_KEY`), tokens or passwords belong
   in environment variables, never in code, commits, or issues.
-- Keep the engine **deterministic and explainable** — scores are real geometry
+- Keep the engine **deterministic and explainable**: scores are real geometry
   computed from pixels/motion, never random or inferred personality traits.
 - Match the surrounding code style. House style for prose: no em dashes.
 
@@ -40,7 +40,6 @@ python -m unittest -v \
   analyser.server.tests.test_server_pipeline \
   analyser.server.tests.test_regression_functional
 npm ci && npx playwright install --with-deps chromium
-npm run test:e2e
 npm run test:regression:headless
 ```
 

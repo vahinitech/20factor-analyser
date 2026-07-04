@@ -1,65 +1,45 @@
 <!-- SPDX-License-Identifier: AGPL-3.0-only
      © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
      Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
-# Analyser Layout
+# Analyser folder
 
-This folder contains the live handwriting analyser app, printable report assets,
-video explainers, the browser-client source used to build the packed bundle, and
-the Python server that runs the CV + 20-factor scoring engine.
+The live app, its source, and the Python server that computes every report.
 
-## Structure
+## Layout
 
-- `Vahini Analyser.html` — analyser app entrypoint.
-- `Vahini *.html`, `Why Handwriting Matters.html`, `20 Factors Explained.html` — printable and informational pages.
-- `styles/` — analyser-only stylesheets (`report.css`, `studio.css`, `nav.css`).
-- `scripts/core/` — runtime scripts (`engine.bundle.js`, `protect.js`, `report.js`, `image-slot.js`).
-- `scripts/video/` — JSX scene helpers and motion files used by explainer pages.
-- `assets/` — logos and static media consumed by analyser pages.
-- `src/` — browser-client source (recognition client + report renderer; not shipped raw).
-- `server/` — the PP-OCR + 20-factor scoring server (**required** to produce a report).
+- `Vahini Analyser.html` is the app entrypoint.
+- `src/` is the browser client source (app flow, OCR client, report renderer).
+  Edit here, then rebuild the bundle.
+- `scripts/core/` holds the packed build (`engine.bundle.js`) and runtime helpers.
+- `scripts/video/` holds the JSX scene files used by the two explainer pages.
+- `styles/` has the report, studio and nav CSS.
+- `static/` has the printable and informational pages.
+- `server/` is the recognition and scoring server. A report needs it running.
+- `assets/` has logos and static media.
 
-## Build notes
+## Run it
 
-- Browser runtime loads only `scripts/core/engine.bundle.js`.
-- Engine source edits happen under `src/`.
-- Rebuild flow is documented in `../docs/BUILD.md`.
+```bash
+python server/analyser-ocr-server.py
+# open http://localhost:8080
+```
 
-## License
+The server hosts the app under `/analyser` and the analysis APIs on the same
+origin, so there is nothing else to configure. To host the static files
+somewhere else, set `window.VAHINI_OCR_ENDPOINT` to your server's `/ocr` URL
+before the engine bundle loads.
 
-- License: GNU AGPL v3.0 only (`AGPL-3.0-only`).
-- See `LICENSE` and `NOTICE` in this folder.
-- Attribution contact: `info@vahinitech.com`.
+## After editing src/
 
-## Standalone run (independent)
+```bash
+python ../build_bundle.py     # or: python analyser/build_bundle.py from the root
+```
 
-You can run this analyser by itself, without the full repository portal. A report
-needs the recognition server (it computes the CV + 20-factor analysis), so run the
-server and open the app on the same origin:
+The browser loads only the packed `scripts/core/engine.bundle.js`. CI fails
+if the bundle is out of date with `src/`.
 
-1. Start the server (serves the app under `/analyser` and the `/report-python`,
-   `/ocr`, `/analyze-vl` APIs on one origin):
+## Reusing the analyser elsewhere
 
-   ```bash
-   python server/analyser-ocr-server.py
-   # open http://127.0.0.1:8868/analyser/Vahini%20Analyser.html
-   ```
-
-2. Or serve the static files separately and point the client at your OCR server by
-   setting `window.VAHINI_OCR_ENDPOINT` before loading `scripts/core/engine.bundle.js`.
-
-## Integration into another repository/portal
-
-To integrate this analyser into any repository:
-
-1. Copy this full `analyser/` folder.
-2. Keep relative subfolders intact: `styles/`, `scripts/`, `assets/`, `src/`.
-3. Preserve `LICENSE`, `NOTICE`, SPDX headers, and third-party notices.
-4. If your host has no `../site/`, the analyser still works; only shared nav/footer enrichment is skipped.
-
-## Optional split deployment (separate analyser domain)
-
-If you want `analyser.vahinitech.com` separated from the main portal domain:
-
-1. Keep current containers as-is.
-2. Add host vhost from `../deploy/analyser.vhost.nginx.conf`.
-3. For production, change upstream in that file from `127.0.0.1:3016` to `127.0.0.1:3015`.
+Copy this whole folder and keep the subfolder layout intact. Preserve
+`LICENSE`, `NOTICE`, the SPDX headers and third-party notices. License is
+AGPL-3.0-only; attribution contact info@vahinitech.com.

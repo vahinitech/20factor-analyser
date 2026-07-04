@@ -1,6 +1,6 @@
 # Vahini PP-OCRv5 recognition service
 # Build:  docker build -t vahini-ocr ./server
-# Run:    docker run -p 8868:8868 vahini-ocr
+# Run:    docker run -p 8080:8080 vahini-ocr
 # First request per language downloads PP-OCRv5 weights into the image's cache.
 FROM python:3.11-slim
 
@@ -21,6 +21,6 @@ ENV PADDLE_PDX_CACHE_HOME=/opt/paddle-models
 RUN mkdir -p /opt/paddle-models
 RUN VAHINI_OCR_PRELOAD_LANGS=${VAHINI_OCR_PRELOAD_LANGS} python warmup_models.py
 
-ENV PORT=8868
-EXPOSE 8868
+ENV PORT=8080
+EXPOSE 8080
 CMD ["python", "ppocr-server.py"]
