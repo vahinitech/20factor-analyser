@@ -168,6 +168,18 @@
     // 4d) the how-many-tries prediction is present
     add(/tries/i.test(host.textContent||''), 'How-many-tries prediction rendered');
 
+    // 4e) recognition transparency: percentage in brackets + under-progress note
+    add(/\(91%\)/.test(host.textContent||'') && /under progress/i.test(host.textContent||''),
+      'Recognition % in brackets + under-progress note');
+
+    // 4f) document checks: spelling/grammar verdict on the scorecard
+    add(/no spelling mistakes/i.test(host.textContent||'') || /to check/i.test(host.textContent||''),
+      'Spelling & grammar document checks rendered');
+
+    // 4g) top-3 note with the full-report email
+    add(/full 20-factor deep-dive/i.test(host.textContent||''),
+      'Top-3 note with deep-dive email present');
+
     // 5) the overall score appears in the cover / rings
     const txt = host.textContent || '';
     add(/out of 100/.test(txt), 'Overall score rendered', 'has "out of 100"='+/out of 100/.test(txt));

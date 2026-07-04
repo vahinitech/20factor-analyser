@@ -58,7 +58,7 @@ function compressImageURL(url, maxW, q){
   });
 }
 
-function renderVLInsights(vl){
+function renderVLInsights(vl, recInfo){
   if (!vl || !vl.document_context) return '';
   const esc = s => String(s==null?'':s).replace(/[&<>\"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
   const doc = vl.document_context || {};
@@ -75,6 +75,16 @@ function renderVLInsights(vl){
     Number.isFinite(doc.content_coherence) ? `Coherence: ${Math.round(doc.content_coherence*100)}%` : '',
     Number.isFinite(layout.layout_complexity) ? `Layout complexity: ${Math.round(layout.layout_complexity*100)}%` : '',
   ].filter(Boolean);
+  // Caption honesty: garbled low-confidence readings under each crop erode
+  // trust. Show the recognised text only when the engine was actually
+  // confident in it; otherwise label the region neutrally — always with the
+  // confidence percentage in brackets.
+  const regionCaption = (r)=>{
+    const sc = Math.round(((r && r.score) || 0) * 100);
+    const t = String((r && r.text) || '').trim();
+    return (r && r.score >= 0.8 && t) ? `“${esc(t.slice(0,42))}” (${sc}%)` : `handwriting region (${sc}%)`;
+  };
+  const recPct = (recInfo && Number.isFinite(recInfo.confidence_pct)) ? recInfo.confidence_pct : null;
   return `<section class="vl-insights" style="max-width:210mm;margin:18px auto 0;background:#fff;border:1px solid rgba(34,40,49,.12);border-radius:14px;padding:14px 16px;">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;">
       <h3 style="margin:0;font-family:Spectral,serif;font-size:20px;color:#1d2938;">Context-aware document understanding</h3>
@@ -83,9 +93,65 @@ function renderVLInsights(vl){
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px;">${chips.map(c=>`<span style="font-size:11px;background:#F5F7FA;border:1px solid rgba(34,40,49,.1);border-radius:999px;padding:4px 9px;color:#354052;">${c}</span>`).join('')}</div>
     ${regions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">${regions.map(r=>`<figure style="margin:0;border:1px solid rgba(34,40,49,.12);border-radius:10px;overflow:hidden;background:#fafafa;">
       <img src="${r.preview||''}" alt="Detected region" style="display:block;width:100%;height:86px;object-fit:cover;background:#fff;" />
-      <figcaption style="padding:6px 8px;font-size:10.5px;color:#4a5568;line-height:1.35;">${esc((r.text||'').slice(0,48) || 'Region')}</figcaption>
+      <figcaption style="padding:6px 8px;font-size:10.5px;color:#4a5568;line-height:1.35;">${regionCaption(r)}</figcaption>
     </figure>`).join('')}</div>` : ''}
+    <p style="margin:12px 0 0;font-size:11px;line-height:1.55;color:#4a5568;background:#F5F7FA;border-radius:9px;padding:9px 12px;">
+      <b>Note · text recognition is under progress and will improve soon</b> — accuracy rises with every update, delivered in increments${recPct!=null?` (current reading confidence: ${recPct}%)`:''}. A wrong word here never changes the 20 factor scores: they are measured from the geometry of the writing, not from reading it.
+    </p>
   </section>`;
+}
+
+/* Draw the server-detected word boxes (orange) and their fitted baselines
+   (teal) over the uploaded photo — the detection view users know from
+   earlier releases. Boxes arrive in the server's processing resolution
+   (proc_w × proc_h) and are scaled onto the canvas. */
+function drawDetectionOverlay(img, pyReport, maxW){
+  try{
+    const lines = Array.isArray(pyReport.hand_lines) ? pyReport.hand_lines : [];
+    if (!lines.length) return null;
+    maxW = maxW || 1100;
+    const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+    const pw = Number(pyReport.proc_w) || w0, ph = Number(pyReport.proc_h) || h0;
+    // Zoom to the writing: crop to the union of the detected boxes (plus
+    // padding) so the boxes read clearly even from a tall phone photo of a
+    // whole page.
+    let ux0 = Infinity, uy0 = Infinity, ux1 = -Infinity, uy1 = -Infinity;
+    lines.forEach(l=>{
+      const b = l.box || [0,0,0,0];
+      if (!(b[2] > 2 && b[3] > 2)) return;
+      ux0 = Math.min(ux0, b[0]); uy0 = Math.min(uy0, b[1]);
+      ux1 = Math.max(ux1, b[0]+b[2]); uy1 = Math.max(uy1, b[1]+b[3]);
+    });
+    if (!(ux1 > ux0 && uy1 > uy0)){ ux0 = 0; uy0 = 0; ux1 = pw; uy1 = ph; }
+    const padX = (ux1-ux0)*0.05 + pw*0.01, padY = (uy1-uy0)*0.06 + ph*0.01;
+    ux0 = Math.max(0, ux0-padX); uy0 = Math.max(0, uy0-padY);
+    ux1 = Math.min(pw, ux1+padX); uy1 = Math.min(ph, uy1+padY);
+    // proc-space crop -> source-image pixels
+    const kx = w0 / Math.max(1, pw), ky = h0 / Math.max(1, ph);
+    const sx0 = ux0*kx, sy0 = uy0*ky, sw = (ux1-ux0)*kx, sh = (uy1-uy0)*ky;
+    const scale = Math.min(1.6, maxW / Math.max(1, sw));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(sw * scale));
+    c.height = Math.max(1, Math.round(sh * scale));
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, sx0, sy0, sw, sh, 0, 0, c.width, c.height);
+    const bx = (v)=> (v - ux0) * kx * scale;   // proc x -> canvas x
+    const by = (v)=> (v - uy0) * ky * scale;   // proc y -> canvas y
+    lines.forEach(l=>{
+      const b = l.box || [0,0,0,0];
+      if (!(b[2] > 2 && b[3] > 2)) return;
+      const x = bx(b[0]), y = by(b[1]);
+      const w = b[2]*kx*scale, h = b[3]*ky*scale;
+      ctx.strokeStyle = '#D4633A';                       // orange word box
+      ctx.lineWidth = Math.max(2, c.width / 450);
+      ctx.strokeRect(x, y, w, h);
+      ctx.strokeStyle = 'rgba(47,143,127,.9)';           // teal baseline
+      ctx.lineWidth = Math.max(1.5, c.width / 700);
+      ctx.beginPath(); ctx.moveTo(x, y + h); ctx.lineTo(x + w, y + h); ctx.stroke();
+    });
+    return c.toDataURL('image/jpeg', 0.74);
+  }catch(_e){ return null; }
 }
 
 const state = {
@@ -387,7 +453,7 @@ async function runPipeline(){
   // 1 load: rasterise the upload and show it as the sample
   stepState('load','active'); await sleep(300);
   const blob = await imageToBlob(img);
-  const detURL = await compressImageURL(img.src, 1100, 0.72);
+  let detURL = await compressImageURL(img.src, 1100, 0.72);
   showProcStagePreview(img);
   stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> uploaded`);
 
@@ -423,6 +489,10 @@ async function runPipeline(){
     regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
     factor_regions: pyReport.factor_regions || {},
   };
+  // Redraw the sample with the detected word boxes (orange) + baselines
+  // (teal) — the detection view shown on the report's first page.
+  const boxedURL = drawDetectionOverlay(img, pyReport);
+  if (boxedURL) detURL = boxedURL;
   const ctxTag = vlResult.document_context ? ' + context model' : '';
   stepState('ocr','done', 'Recognition server: <b>detect + recognise</b>' + ctxTag);
 
@@ -441,7 +511,7 @@ async function runPipeline(){
   const history = loadHistory(state.intake.writerName);
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
   if (vlResult){
-    const html = renderVLInsights(vlResult);
+    const html = renderVLInsights(vlResult, analysis && analysis.recognition);
     if (html) $('#report-host').insertAdjacentHTML('beforeend', html);
   }
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);

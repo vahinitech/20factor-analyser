@@ -64,7 +64,7 @@ function compute(analysis, imu, pipeline, baseline){
   let weeksToFluent = null;
   for (let w=0; w<=16; w++){ if (maturityAt(w) >= FLUENT){ weeksToFluent = w; break; } }
   const alreadyFluent = maturityNow >= FLUENT;
-  const matBand = (m)=> m>=80?'Fast & efficient' : m>=62?'Developing fluency' : m>=42?'Emerging' : 'Effortful — early';
+  const matBand = (m)=> m>=80?'Fast & easy' : m>=62?'Getting smoother' : m>=42?'Starting to flow' : 'Slow & careful — early days';
 
   // ---- writing speed estimate (wpm) --------------------------------------
   // maturity maps to fluency; fluent hands write faster & more automatically.
