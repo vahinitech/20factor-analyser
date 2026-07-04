@@ -30,6 +30,38 @@ A dual-IMU sensor pen additionally captures the **motion** behind the writing
 (16 axes: a 9-axis IMU + a 6-axis IMU + tip force), which the same engine turns
 into the dynamics factors (speed, pressure, pen-lifts).
 
+## Why deterministic computer vision, not an LLM
+
+We evaluated scoring handwriting with large language / vision-language models
+and deliberately chose classical, deterministic computer vision instead. The
+deciding factor is **accuracy that can be reproduced and defended**:
+
+- **LLM responses vary.** Ask a generative model to grade the same page twice
+  and the scores drift — across runs, across model versions, across prompt
+  phrasings. A child who re-scans an identical sample must get the identical
+  result, or the progress tracking (and the trust of a parent or teacher) is
+  meaningless.
+- **Vector/embedding similarity is approximate by design.** Embedding a
+  handwriting image and comparing (or merging) vectors gives a fuzzy
+  "closeness" number, not a measurement. It cannot tell you *why* a score
+  moved, and small model updates silently re-shape the whole vector space —
+  every historical score becomes incomparable.
+- **Measurements are auditable.** Each of the 20 factors is real geometry
+  computed from the uploaded pixels — baseline drift in degrees, letter-height
+  variance, gap ratios. Every score can be traced to the exact crop of the
+  page it was measured from (the reference images in the report), and the
+  reference ranges are published. An LLM's "7/10 neatness" has no such chain
+  of evidence.
+- **Bias and hallucination risk.** Generative models can be swayed by content
+  (what the words *say*) when judging form (how the words *look*), and can
+  assert findings that are not in the image at all. Geometry cannot
+  hallucinate.
+
+Where a model **is** the right tool — reading messy words — we use one, but
+only assistively: the pluggable OCR backends (PaddleOCR, TrOCR, Surya,
+Chandra) label *what* was written and never decide a factor score. If OCR is
+unavailable, the 20 factors are still measured from geometry alone.
+
 ---
 
 ## Quickstart

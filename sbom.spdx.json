@@ -3,30 +3,30 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-20260622",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-20260704",
   "creationInfo": {
-    "created": "2026-06-22T00:00:00Z",
+    "created": "2026-07-04T00:00:00Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: vahini-sbom-manual"
     ],
     "licenseListVersion": "3.22"
   },
-  "comment": "Software Bill of Materials for the Vahini 20-Factor Handwriting Analyser web application. The browser engine is 100% first-party JavaScript (no bundled third-party code libraries — no OpenCV, Tesseract, jQuery, React, etc.). Third-party components are limited to web fonts loaded at runtime, two optional/server-side or hosted services, and the deployment web server.",
+  "comment": "Software Bill of Materials for the Vahini 20-Factor Handwriting Analyser (this repository). The browser engine is 100% first-party JavaScript with no bundled third-party libraries; pdf.js is lazy-loaded from a CDN only when a PDF is uploaded, and web fonts load at runtime. The Python recognition server carries the third-party runtime dependencies listed here (core service + the default PaddleOCR engine); TrOCR/Surya/Chandra engine tiers are optional and not installed by default. Dev/test-only tooling is marked with DEV_DEPENDENCY_OF relationships and does not ship.",
   "packages": [
     {
       "SPDXID": "SPDXRef-Package-Vahini",
       "name": "vahini-20-factor-analyser",
-      "versionInfo": "3.1",
+      "versionInfo": "3.1.0",
       "supplier": "Organization: Vahini Technologies",
       "originator": "Organization: Vahini Technologies",
-      "downloadLocation": "NOASSERTION",
+      "downloadLocation": "https://github.com/vahinitech/20factor-analyser",
       "filesAnalyzed": false,
       "licenseConcluded": "AGPL-3.0-only",
       "licenseDeclared": "AGPL-3.0-only",
       "copyrightText": "Copyright (c) 2026 Vahini Technologies.",
       "primaryPackagePurpose": "APPLICATION",
-      "comment": "The Vahini 20-Factor Analyser: deterministic computer-vision engine (packed), report renderer, browser app, and pluggable Python OCR server. Free software under GNU AGPL-3.0-only; the dual-IMU handwriting-motion sensing method is the subject of Indian Patent No. 584433."
+      "comment": "The Vahini 20-Factor Analyser: deterministic computer-vision engine (packed browser bundle), report renderer, browser app, and pluggable Python OCR/20-factor server. Free software under GNU AGPL-3.0-only; the dual-IMU handwriting-motion sensing method is the subject of Indian Patent No. 584433."
     },
     {
       "SPDXID": "SPDXRef-Package-Spectral",
@@ -93,36 +93,180 @@
       "comment": "Beginner-handwriting model font used in practice/sample sheets."
     },
     {
-      "SPDXID": "SPDXRef-Package-PaddleOCR",
-      "name": "paddleocr",
-      "versionInfo": "PP-OCRv5 (server/optional)",
+      "SPDXID": "SPDXRef-Package-PdfJs",
+      "name": "pdf.js",
+      "versionInfo": "3.11.174",
+      "supplier": "Organization: Mozilla Foundation",
+      "downloadLocation": "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright Mozilla Foundation and pdf.js contributors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/pdfjs-dist@3.11.174" }
+      ],
+      "comment": "NOT bundled. Lazy-loaded in the browser from cdnjs only when a user uploads a PDF (renders page 1 to an image, matching the server). Never loaded for image uploads."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-FastAPI",
+      "name": "fastapi",
+      "versionInfo": ">=0.110",
+      "supplier": "Person: Sebastián Ramírez and FastAPI contributors",
+      "downloadLocation": "https://pypi.org/project/fastapi/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) 2018 Sebastián Ramírez",
+      "primaryPackagePurpose": "FRAMEWORK",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/fastapi" }
+      ],
+      "comment": "Server-side. HTTP framework for the /ocr, /analyze-vl, /report-python and /health endpoints (pulls in starlette and pydantic)."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Uvicorn",
+      "name": "uvicorn",
+      "versionInfo": ">=0.29",
+      "supplier": "Organization: Encode OSS Ltd.",
+      "downloadLocation": "https://pypi.org/project/uvicorn/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "Copyright (c) 2017-present, Encode OSS Ltd.",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/uvicorn" }
+      ],
+      "comment": "Server-side. ASGI server that runs the FastAPI service."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-PythonMultipart",
+      "name": "python-multipart",
+      "versionInfo": ">=0.0.9",
+      "supplier": "Person: Andrew Dunham and contributors",
+      "downloadLocation": "https://pypi.org/project/python-multipart/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright Andrew Dunham and python-multipart contributors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/python-multipart" }
+      ],
+      "comment": "Server-side. Parses the multipart/form-data image uploads."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Pillow",
+      "name": "pillow",
+      "versionInfo": ">=10.0.0",
+      "supplier": "Organization: Python Pillow contributors",
+      "downloadLocation": "https://pypi.org/project/pillow/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "HPND",
+      "licenseDeclared": "HPND",
+      "copyrightText": "Copyright (c) 2010 by Jeffrey A. Clark and contributors; PIL Copyright (c) 1995-2011 Fredrik Lundh and contributors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/pillow" }
+      ],
+      "comment": "Server-side. Image decode/resize and JPEG evidence-crop encoding."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-NumPy",
+      "name": "numpy",
+      "versionInfo": ">=1.24",
+      "supplier": "Organization: NumPy Developers",
+      "downloadLocation": "https://pypi.org/project/numpy/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "Copyright (c) 2005-2026, NumPy Developers",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/numpy" }
+      ],
+      "comment": "Server-side. Array maths for the 20-factor geometry features."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-OpenCV",
+      "name": "opencv-python-headless",
+      "versionInfo": ">=4.9.0",
+      "supplier": "Organization: OpenCV team / opencv-python maintainers",
+      "downloadLocation": "https://pypi.org/project/opencv-python-headless/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright OpenCV team",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/opencv-python-headless" }
+      ],
+      "comment": "Server-side. Thresholding, connected components, layout signals and the OCR-free fallback line detector. The server degrades gracefully if absent."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Httpx",
+      "name": "httpx",
+      "versionInfo": ">=0.27",
+      "supplier": "Organization: Encode OSS Ltd.",
+      "downloadLocation": "https://pypi.org/project/httpx/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "BSD-3-Clause",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "Copyright (c) 2019, Encode OSS Ltd.",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/httpx" }
+      ],
+      "comment": "Used by the starlette/fastapi TestClient in the regression suite; installed with the core tier."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-PaddlePaddle",
+      "name": "paddlepaddle",
+      "versionInfo": "3.1.1",
       "supplier": "Organization: PaddlePaddle (Baidu)",
-      "downloadLocation": "https://github.com/PaddlePaddle/PaddleOCR",
+      "downloadLocation": "https://pypi.org/project/paddlepaddle/",
       "filesAnalyzed": false,
       "licenseConcluded": "Apache-2.0",
       "licenseDeclared": "Apache-2.0",
       "copyrightText": "Copyright PaddlePaddle Authors",
       "primaryPackagePurpose": "LIBRARY",
       "externalRefs": [
-        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:github/PaddlePaddle/PaddleOCR" }
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/paddlepaddle@3.1.1" }
       ],
-      "comment": "OPTIONAL, server-side only. Text recognition (detect + read) used on the heavy server path to confirm which characters were attempted. It is NOT bundled in the browser app and is never the basis of a handwriting score. Not present unless a recognition server is configured."
+      "comment": "Server-side, default OCR engine tier. Deep-learning runtime for PaddleOCR (CPU wheel; swap for paddlepaddle-gpu on CUDA boxes)."
     },
     {
-      "SPDXID": "SPDXRef-Package-nginx",
-      "name": "nginx",
-      "versionInfo": "stable",
-      "supplier": "Organization: F5, Inc. / nginx authors",
-      "downloadLocation": "https://nginx.org/download/",
+      "SPDXID": "SPDXRef-Package-PaddleOCR",
+      "name": "paddleocr",
+      "versionInfo": ">=3.0.0 (PP-OCRv5 models)",
+      "supplier": "Organization: PaddlePaddle (Baidu)",
+      "downloadLocation": "https://pypi.org/project/paddleocr/",
       "filesAnalyzed": false,
-      "licenseConcluded": "BSD-2-Clause",
-      "licenseDeclared": "BSD-2-Clause",
-      "copyrightText": "Copyright (C) Igor Sysoev, Copyright (C) Nginx, Inc.",
-      "primaryPackagePurpose": "OTHER",
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright PaddlePaddle Authors",
+      "primaryPackagePurpose": "LIBRARY",
       "externalRefs": [
-        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:generic/nginx" }
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/paddleocr" }
       ],
-      "comment": "Deployment web server (see deploy/nginx.conf and Dockerfile). Used to serve static files; not part of the shipped client bundle."
+      "comment": "Server-side, default OCR engine (text detect + read). Model weights download on first use. Assistive only: it labels what was written and is never the basis of a handwriting factor score — if it cannot run, the scan still completes from CV geometry. Alternative engines (TrOCR via torch/transformers, Surya, Chandra, PaddleOCR-VL) are OPTIONAL tiers installed separately via requirements-trocr/surya/chandra.txt and are not part of the default install."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-Pypdfium2",
+      "name": "pypdfium2",
+      "versionInfo": ">=4",
+      "supplier": "Organization: pypdfium2-team (bindings) / PDFium authors (Google)",
+      "downloadLocation": "https://pypi.org/project/pypdfium2/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "(Apache-2.0 OR BSD-3-Clause)",
+      "licenseDeclared": "(Apache-2.0 OR BSD-3-Clause)",
+      "copyrightText": "Copyright pypdfium2-team; PDFium Copyright The PDFium Authors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/pypdfium2" }
+      ],
+      "comment": "OPTIONAL, server-side. Renders page 1 of an uploaded PDF to an image. Installed alongside the paddle tier; PDF uploads are rejected gracefully without it."
     },
     {
       "SPDXID": "SPDXRef-Package-goQR",
@@ -138,24 +282,49 @@
       "comment": "Hosted QR-image service (api.qrserver.com) called at runtime in the optional share flow to render a QR for a share link. No code is redistributed; the service is free for commercial and non-commercial use per goQR.me terms. Has a graceful offline fallback (link shown directly)."
     },
     {
-      "SPDXID": "SPDXRef-Package-GoogleAnalytics",
-      "name": "google-analytics-gtm",
-      "versionInfo": "GA4 / GTM",
-      "supplier": "Organization: Google LLC",
-      "downloadLocation": "https://www.googletagmanager.com/",
+      "SPDXID": "SPDXRef-Package-nginx",
+      "name": "nginx",
+      "versionInfo": "stable",
+      "supplier": "Organization: F5, Inc. / nginx authors",
+      "downloadLocation": "https://nginx.org/download/",
       "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Google-Terms",
-      "licenseDeclared": "LicenseRef-Google-Terms",
-      "copyrightText": "Copyright Google LLC",
+      "licenseConcluded": "BSD-2-Clause",
+      "licenseDeclared": "BSD-2-Clause",
+      "copyrightText": "Copyright (C) Igor Sysoev, Copyright (C) Nginx, Inc.",
       "primaryPackagePurpose": "OTHER",
-      "comment": "Proprietary hosted analytics service (Google Analytics 4 + Google Tag Manager) injected at runtime by site.js. Governed by Google's Terms of Service, not an open-source licence."
-    }
-  ],
-  "hasExtractedLicensingInfos": [
+      "comment": "OPTIONAL deployment reverse proxy (TLS termination in the staging/production layout described in docs/DEPLOY-STAG-PROD.md). Not required by docker-compose, which serves the app and APIs directly from the FastAPI/uvicorn container."
+    },
     {
-      "licenseId": "LicenseRef-Google-Terms",
-      "name": "Google APIs / Analytics Terms of Service",
-      "extractedText": "Use of Google Analytics and Google Tag Manager is governed by the Google Analytics Terms of Service and the Google APIs Terms of Service, not an open-source licence. See https://marketingplatform.google.com/about/analytics/terms/us/ ."
+      "SPDXID": "SPDXRef-Package-Playwright",
+      "name": "playwright",
+      "versionInfo": "^1.61.1",
+      "supplier": "Organization: Microsoft Corporation",
+      "downloadLocation": "https://www.npmjs.com/package/playwright",
+      "filesAnalyzed": false,
+      "licenseConcluded": "Apache-2.0",
+      "licenseDeclared": "Apache-2.0",
+      "copyrightText": "Copyright (c) Microsoft Corporation",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/playwright" }
+      ],
+      "comment": "DEV/TEST ONLY. Headless-Chrome test driver for the regression and recognition e2e suites. Not shipped."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-HttpServer",
+      "name": "http-server",
+      "versionInfo": "^14.1.1",
+      "supplier": "Organization: http-party contributors",
+      "downloadLocation": "https://www.npmjs.com/package/http-server",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "Copyright (c) 2011-2026 Charlie Robbins, Marak Squires, and the http-party contributors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:npm/http-server" }
+      ],
+      "comment": "DEV/TEST ONLY. Static file server used by the headless test harness. Not shipped."
     }
   ],
   "relationships": [
@@ -164,9 +333,20 @@
     { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-HankenGrotesk" },
     { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Caveat" },
     { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-EduSABeginner" },
-    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "OPTIONAL_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-PaddleOCR" },
-    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-goQR" },
-    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-GoogleAnalytics" },
-    { "spdxElementId": "SPDXRef-Package-nginx", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" }
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-FastAPI" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Uvicorn" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-PythonMultipart" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Pillow" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-NumPy" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-OpenCV" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-Httpx" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-PaddlePaddle" },
+    { "spdxElementId": "SPDXRef-Package-Vahini", "relationshipType": "DEPENDS_ON", "relatedSpdxElement": "SPDXRef-Package-PaddleOCR" },
+    { "spdxElementId": "SPDXRef-Package-PdfJs", "relationshipType": "OPTIONAL_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-Pypdfium2", "relationshipType": "OPTIONAL_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-goQR", "relationshipType": "RUNTIME_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-nginx", "relationshipType": "OPTIONAL_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-Playwright", "relationshipType": "DEV_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" },
+    { "spdxElementId": "SPDXRef-Package-HttpServer", "relationshipType": "DEV_DEPENDENCY_OF", "relatedSpdxElement": "SPDXRef-Package-Vahini" }
   ]
 }
