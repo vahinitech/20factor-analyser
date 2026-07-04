@@ -130,6 +130,91 @@ def _build_region_previews(arr: np.ndarray, lines, max_regions: int = 8):
     return out
 
 
+def fallback_line_regions(arr: np.ndarray, max_lines: int = 40):
+    """OCR-free text-line detection, used when NO OCR engine could run
+    (model weights unavailable/offline, engine init failure, missing
+    backend). The 20 factors are measured from the geometry of the writing
+    — not from reading the words — so a scan must still yield line regions
+    (with empty text) instead of failing outright. Returns lines in the
+    same shape the OCR backends produce."""
+    h, w = arr.shape[:2]
+    if h < 8 or w < 8:
+        return []
+
+    boxes = []
+    if cv2 is not None:
+        gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 5), 0)
+        ink = cv2.adaptiveThreshold(
+            blur,
+            255,
+            cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+            cv2.THRESH_BINARY_INV,
+            31,
+            9,
+        )
+        # Merge letters/words into line blobs: strong horizontal dilation.
+        kx = max(12, w // 40)
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (kx, 3))
+        blob = cv2.dilate(ink, kernel, iterations=1)
+        n_labels, _, stats, _ = cv2.connectedComponentsWithStats(
+            blob, connectivity=8
+        )
+        for i in range(1, n_labels):
+            x = float(stats[i, cv2.CC_STAT_LEFT])
+            y = float(stats[i, cv2.CC_STAT_TOP])
+            bw = float(stats[i, cv2.CC_STAT_WIDTH])
+            bh = float(stats[i, cv2.CC_STAT_HEIGHT])
+            area = float(stats[i, cv2.CC_STAT_AREA])
+            # Keep line-shaped regions; drop specks and page-scale blobs.
+            if bw < w * 0.03 or bh < 6 or area < 40:
+                continue
+            if bh > h * 0.5 or (bw > w * 0.98 and bh > h * 0.25):
+                continue
+            boxes.append([x, y, bw, bh])
+    else:
+        # No OpenCV: luminance threshold + row-projection line segmentation.
+        gray = np.dot(arr[..., :3], [0.299, 0.587, 0.114]).astype(np.float32)
+        ink = gray < float(np.mean(gray) - 15.0)
+        row_frac = ink.mean(axis=1)
+        thr = max(0.004, float(np.percentile(row_frac, 75)) * 0.5)
+        y0 = None
+        for y in range(h + 1):
+            on = y < h and row_frac[y] > thr
+            if on and y0 is None:
+                y0 = y
+            elif not on and y0 is not None:
+                if y - y0 >= 6:
+                    cols = np.where(ink[y0:y].any(axis=0))[0]
+                    if cols.size >= 2:
+                        boxes.append(
+                            [
+                                float(cols[0]),
+                                float(y0),
+                                float(cols[-1] - cols[0] + 1),
+                                float(y - y0),
+                            ]
+                        )
+                y0 = None
+
+    boxes.sort(key=lambda b: (b[1], b[0]))
+    out = []
+    for x, y, bw, bh in boxes[:max_lines]:
+        poly = [[x, y], [x + bw, y], [x + bw, y + bh], [x, y + bh]]
+        out.append(
+            {
+                "text": "",
+                "poly": poly,
+                "box": [x, y, bw, bh],
+                "score": 0.0,
+                "lang": "en",
+                "printed_hint": False,
+                "cv_fallback": True,
+            }
+        )
+    return out
+
+
 def _full_page_preview(arr: np.ndarray):
     h, w = arr.shape[:2]
     target_w = 900
@@ -276,7 +361,9 @@ def _factor_region_map(arr: np.ndarray, regions):
             url = fallback
         else:
             region = seq[int(max(0, min(idx, len(seq) - 1)))]
-            url = region.get("preview", fallback)
+            # Never emit an empty reference image: every factor must carry
+            # a usable crop, falling back to the whole-page preview.
+            url = region.get("preview") or fallback
         out[str(n)] = {
             "url": url,
             "caption": labels.get(n, "factor evidence"),

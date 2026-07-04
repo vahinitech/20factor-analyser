@@ -34,6 +34,7 @@
 import os
 import sys
 import time
+import threading
 
 # This module is sometimes loaded by file path (analyser-ocr-server.py uses
 # importlib), which does NOT put its own folder on sys.path. Add it so the
@@ -117,14 +118,23 @@ def _warm_startup_engines():
     # startup so the FIRST real request isn't slowed by model download/init —
     # which previously pushed the first /report-python past the reverse-proxy
     # read timeout. Only paddle is warmed here; other backends warm on demand.
+    # Runs in a background thread: on an offline/blocked network the model
+    # download can take minutes to fail, and the server must still answer
+    # /health and scans (via the CV fallback) while it warms.
     if os.environ.get("VAHINI_OCR_PRELOAD_ON_START", "1") != "1":
         return
-    for lg in OCR_LANGS or ["en"]:
-        try:
-            ocr_backends.get_engine(lg)
-            ocr_backends.get_engine_safe(lg)
-        except Exception:
-            pass
+
+    def _warm():
+        for lg in OCR_LANGS or ["en"]:
+            try:
+                ocr_backends.get_engine(lg)
+                ocr_backends.get_engine_safe(lg)
+            except Exception:
+                pass
+
+    threading.Thread(
+        target=_warm, name="vahini-engine-warmup", daemon=True
+    ).start()
 
 
 # decode_image/_pdf_first_page/to_numpy now live in computer_vision.py.
@@ -310,6 +320,15 @@ def _analyze_vl_process(arr, raw, lang):
         lines, hand_lines = recognizer.extract_hand_lines(
             arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
         )
+        if not hand_lines:
+            # No OCR engine could run (models unavailable, engine init
+            # failure). The layout/context/factor-region analysis is pure
+            # CV, so fall back to OCR-free line detection instead of
+            # failing the request.
+            hand_lines = computer_vision.fallback_line_regions(arr)
+            lines = lines or hand_lines
+            if hand_lines:
+                selected_backend = "cv-fallback"
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -411,6 +430,16 @@ def _report_python_process(arr, raw, lang, expected_text):
         lines, hand_lines = recognizer.extract_hand_lines(
             arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
         )
+        if not hand_lines:
+            # No OCR engine could run (models unavailable, engine init
+            # failure). The 20 factors are measured from GEOMETRY, not from
+            # reading the words, so score the scan from OCR-free CV line
+            # detection instead of failing it; recognition is reported as
+            # unavailable below.
+            hand_lines = computer_vision.fallback_line_regions(arr)
+            lines = lines or hand_lines
+            if hand_lines:
+                selected_backend = "cv-fallback"
         # Reference-passage alignment: if the writer copied a known passage,
         # correct the recognised text against it (consistent, dependable reading).
         align_info = recognizer.align_to_expected(hand_lines, expected_text)
@@ -472,11 +501,17 @@ def _report_python_process(arr, raw, lang, expected_text):
             )
         )
         passage_aligned = bool(align_info and align_info.get("aligned"))
+        has_read_text = any(
+            str(l.get("text") or "").strip() for l in hand_lines
+        )
         # Trust level the report should display. With a matched reference passage
         # recognition is dependable; otherwise it is honestly "assistive" and the
-        # report must make clear the 20 factors do NOT depend on it.
+        # report must make clear the 20 factors do NOT depend on it. When no OCR
+        # engine could run at all (cv-fallback path) say so outright.
         if passage_aligned:
             level = "passage-verified"
+        elif not has_read_text:
+            level = "unavailable"
         elif hand_conf >= 0.85:
             level = "high"
         elif hand_conf >= 0.70:
@@ -485,6 +520,7 @@ def _report_python_process(arr, raw, lang, expected_text):
             level = "low"
         analysis["recognition"] = {
             "backend": selected_backend,
+            "ocr_error": (last_err or None) if not has_read_text else None,
             "hand_lines": len(hand_lines),
             "printed_lines": int(
                 sum(1 for l in lines if l.get("printed_hint"))

@@ -97,6 +97,15 @@ class TestServerPipeline(unittest.TestCase):
             ]
             return lines, "", "paddle", {}
 
+        # recognizer is a sys.modules singleton shared with the other test
+        # files in this package: restore the real collect_lines when this
+        # class is done, or the stub leaks into every later test module.
+        cls.addClassCleanup(
+            setattr,
+            cls.mod.recognizer,
+            "collect_lines",
+            cls.mod.recognizer.collect_lines,
+        )
         cls.mod.recognizer.collect_lines = fake_collect
 
     def _post(self, url):

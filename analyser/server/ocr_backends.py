@@ -39,6 +39,7 @@ import io
 import os
 import re
 import html
+import time
 import threading
 import importlib.util
 import urllib.request
@@ -195,8 +196,30 @@ def _paddle_engine_kwargs(lang, safe=False):
     return kwargs
 
 
+# Engine construction can be very slow to FAIL (first use triggers a model
+# download that walks several hosters with long timeouts before giving up on
+# an offline/blocked network). Remember recent failures so every scan after
+# the first fails over to the CV fallback in milliseconds, and retry after a
+# cooldown in case the network recovered.
+_ENGINE_FAIL_TTL = max(
+    30.0, float(os.environ.get("VAHINI_OCR_ENGINE_RETRY_SEC", "300") or "300")
+)
+_ENGINE_FAIL_CACHE = {}  # (kind, lang) -> (monotonic_ts, error_str)
+
+
+def _engine_fail_cached(key):
+    hit = _ENGINE_FAIL_CACHE.get(key)
+    if not hit:
+        return None
+    ts, err = hit
+    if (time.monotonic() - ts) < _ENGINE_FAIL_TTL:
+        return err
+    _ENGINE_FAIL_CACHE.pop(key, None)
+    return None
+
+
 @lru_cache(maxsize=8)
-def get_engine(lang: str):
+def _build_engine_cached(lang: str):
     """One PaddleOCR instance per language, built lazily and cached.
     PP-OCRv5 is the default model family in PaddleOCR 3.x."""
     from paddleocr import PaddleOCR
@@ -214,7 +237,7 @@ def get_engine(lang: str):
 
 
 @lru_cache(maxsize=8)
-def get_engine_safe(lang: str):
+def _build_engine_safe_cached(lang: str):
     """Fallback engine with minimal pre/post modules for max compatibility."""
     from paddleocr import PaddleOCR
 
@@ -227,6 +250,30 @@ def get_engine_safe(lang: str):
             use_gpu=False,
             show_log=False,
         )
+
+
+def get_engine(lang: str):
+    """Cached engine builder with a failure memo (see _ENGINE_FAIL_TTL)."""
+    cached_err = _engine_fail_cached(("normal", lang))
+    if cached_err:
+        raise RuntimeError(cached_err)
+    try:
+        return _build_engine_cached(lang)
+    except Exception as e:
+        _ENGINE_FAIL_CACHE[("normal", lang)] = (time.monotonic(), str(e))
+        raise
+
+
+def get_engine_safe(lang: str):
+    """Cached safe-engine builder with the same failure memo."""
+    cached_err = _engine_fail_cached(("safe", lang))
+    if cached_err:
+        raise RuntimeError(cached_err)
+    try:
+        return _build_engine_safe_cached(lang)
+    except Exception as e:
+        _ENGINE_FAIL_CACHE[("safe", lang)] = (time.monotonic(), str(e))
+        raise
 
 
 def run(engine, arr: np.ndarray, lang: str):
@@ -330,16 +377,32 @@ def run(engine, arr: np.ndarray, lang: str):
 
 
 def _paddle_run_lang(arr: np.ndarray, lg: str):
-    """Single-language paddle recogniser over all preprocessing variants."""
-    engine = get_engine(lg)
-    engine_safe = get_engine_safe(lg)
+    """Single-language paddle recogniser over all preprocessing variants.
+    Engine construction happens lazily on first use (it can trigger a model
+    download) and must not raise out of here — a failed build of the normal
+    engine still leaves the safe engine usable, and vice versa."""
+    try:
+        engine = get_engine(lg)
+    except Exception:
+        engine = None
+    try:
+        engine_safe = get_engine_safe(lg)
+    except Exception:
+        engine_safe = None
     out = []
+    if engine is None and engine_safe is None:
+        return out
     for variant in detector.variants(
         arr, _PADDLE_CFG["max_variants"], _PADDLE_CFG["adv_preproc"]
     ):
-        try:
-            out.extend(run(engine, variant, lg))
-        except Exception:
+        got = False
+        if engine is not None:
+            try:
+                out.extend(run(engine, variant, lg))
+                got = True
+            except Exception:
+                pass
+        if not got and engine_safe is not None:
             try:
                 out.extend(run(engine_safe, variant, lg))
             except Exception:

@@ -545,7 +545,7 @@ function render(host, data){
   // Recognition trust line: keep the reader's confidence calibrated, and make
   // explicit that the 20 factors are geometric and do NOT depend on the reading.
   const rec = (analysis && analysis.recognition) ? analysis.recognition : null;
-  const recLevelLabel = rec ? ({ 'passage-verified':'Passage-verified','high':'High confidence','moderate':'Moderate confidence','low':'Low confidence' }[rec.level] || '') : '';
+  const recLevelLabel = rec ? ({ 'passage-verified':'Passage-verified','high':'High confidence','moderate':'Moderate confidence','low':'Low confidence','unavailable':'Recognition unavailable this scan' }[rec.level] || '') : '';
   const recCap = rec
     ? (rec.passage_aligned
         ? `Matched to your reference passage · ${Math.round((rec.passage_match||0)*100)}% match. The 20 factors are measured from geometry and don’t depend on reading the words.`

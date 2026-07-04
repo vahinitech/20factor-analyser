@@ -53,20 +53,42 @@ def resolve_langs(lang: str):
     return [req] if req in ocr_langs else ocr_langs or ["en"]
 
 
+def _build_engine(builder, lg: str):
+    """Build one paddle engine, returning (engine|None, error). Engine
+    construction can fail at REQUEST time — the first use of a language
+    triggers a model download, which dies on an offline/blocked network,
+    and an incompatible paddleocr build can refuse our kwargs. A scan must
+    survive that, so construction never raises out of here."""
+    try:
+        return builder(lg), ""
+    except Exception as e:
+        return None, f"paddle engine init failed for '{lg}': {e}"
+
+
 def collect_lines_paddle(arr: np.ndarray, lang: str):
     last_err = ""
     langs = resolve_langs(lang)
     lines = []
     for lg in langs:
-        engine = ocr_backends.get_engine(lg)
-        engine_safe = ocr_backends.get_engine_safe(lg)
+        engine, err = _build_engine(ocr_backends.get_engine, lg)
+        if err:
+            last_err = err
+        engine_safe, err_safe = _build_engine(ocr_backends.get_engine_safe, lg)
+        if err_safe:
+            last_err = err_safe
+        if engine is None and engine_safe is None:
+            continue  # try the next configured language
         for variant in detector.variants(
             arr, _CFG["max_variants"], _CFG["adv_preproc"]
         ):
-            try:
-                lines.extend(ocr_backends.run(engine, variant, lg))
-            except Exception as e:
-                last_err = str(e)
+            got = False
+            if engine is not None:
+                try:
+                    lines.extend(ocr_backends.run(engine, variant, lg))
+                    got = True
+                except Exception as e:
+                    last_err = str(e)
+            if not got and engine_safe is not None:
                 try:
                     lines.extend(ocr_backends.run(engine_safe, variant, lg))
                 except Exception as e2:
