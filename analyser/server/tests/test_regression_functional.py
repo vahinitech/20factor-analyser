@@ -366,6 +366,152 @@ class RegressionFunctionalTests(unittest.TestCase):
             str(fmap["20"]["url"]).startswith("data:image/jpeg;base64,")
         )
 
+    def test_factor_regions_reference_image_for_all_20(self):
+        # EVERY analysis must carry a usable reference image for each of
+        # the 20 factors (a line crop or the whole-page fallback).
+        files = {"image": ("sample.png", self.image_bytes, "image/png")}
+        r = self.client.post(
+            "/report-python",
+            files=files,
+            data={"lang": "en", "expected_text": "ref-image-check"},
+        )
+        self.assertEqual(r.status_code, 200)
+        j = r.json()
+        self.assertTrue(j.get("ok"), msg=j.get("error"))
+        fmap = j["factor_regions"]
+        self.assertEqual(len(fmap), 20)
+        for n in range(1, 21):
+            entry = fmap.get(str(n)) or {}
+            self.assertTrue(
+                str(entry.get("url", "")).startswith(
+                    "data:image/jpeg;base64,"
+                ),
+                msg=f"factor {n} has no reference image",
+            )
+            self.assertTrue(
+                str(entry.get("caption") or "").strip(),
+                msg=f"factor {n} has no caption",
+            )
+
+    def test_scan_survives_engine_init_failure(self):
+        # get_engine raising at request time (e.g. first-use model download
+        # on a blocked/offline network) previously killed the whole scan.
+        # The report must still be produced from CV geometry, with a
+        # reference image for every one of the 20 factors, and recognition
+        # honestly reported as unavailable.
+        ob = self.mod.ocr_backends
+        orig_engine = ob.get_engine
+        orig_safe = ob.get_engine_safe
+
+        def _boom(_lang):
+            raise RuntimeError("model download blocked (offline)")
+
+        ob.get_engine = _boom
+        ob.get_engine_safe = _boom
+        try:
+            files = {"image": ("sample.png", self.image_bytes, "image/png")}
+            r = self.client.post(
+                "/report-python",
+                files=files,
+                data={"lang": "en", "expected_text": "engine-init-failure"},
+            )
+            self.assertEqual(r.status_code, 200)
+            j = r.json()
+            self.assertTrue(j.get("ok"), msg=j.get("error"))
+            a = j["analysis"]
+            self.assertEqual(len(a.get("results", [])), 20)
+            self.assertEqual(
+                a.get("recognition", {}).get("level"), "unavailable"
+            )
+            self.assertEqual(j.get("selected_backend"), "cv-fallback")
+            fmap = j["factor_regions"]
+            self.assertEqual(len(fmap), 20)
+            for n in range(1, 21):
+                self.assertTrue(
+                    str((fmap.get(str(n)) or {}).get("url", "")).startswith(
+                        "data:image/jpeg;base64,"
+                    ),
+                    msg=f"factor {n} lost its reference image in fallback",
+                )
+        finally:
+            ob.get_engine = orig_engine
+            ob.get_engine_safe = orig_safe
+
+    def test_collect_lines_paddle_engine_failure_returns_error(self):
+        # The recognizer must catch engine-construction failures and hand
+        # back (no lines, reason) instead of raising.
+        ob = self.mod.ocr_backends
+        orig_engine = ob.get_engine
+        orig_safe = ob.get_engine_safe
+
+        def _boom(_lang):
+            raise RuntimeError("no model source available")
+
+        ob.get_engine = _boom
+        ob.get_engine_safe = _boom
+        try:
+            arr = np.full((120, 320, 3), 255, dtype=np.uint8)
+            lines, err = self.mod.recognizer.collect_lines_paddle(arr, "en")
+            self.assertEqual(lines, [])
+            self.assertIn("no model source available", err)
+        finally:
+            ob.get_engine = orig_engine
+            ob.get_engine_safe = orig_safe
+
+    def test_engine_failure_memo_fails_fast_until_ttl(self):
+        # A failed engine build (slow: the model download walks several
+        # hosters before giving up) must be remembered, so the next scan
+        # fails over to the CV fallback instantly instead of re-paying the
+        # download timeout — then retries after the cooldown.
+        ob = self.mod.ocr_backends
+        orig_build = ob._build_engine_cached
+        calls = {"n": 0}
+
+        def _boom_build(_lang):
+            calls["n"] += 1
+            raise RuntimeError("download timed out")
+
+        ob._build_engine_cached = _boom_build
+        ob._ENGINE_FAIL_CACHE.clear()
+        try:
+            for _ in range(3):
+                with self.assertRaises(RuntimeError):
+                    ob.get_engine("zz")
+            self.assertEqual(calls["n"], 1)  # only the first call builds
+
+            # After the TTL the build is attempted again.
+            ts, err = ob._ENGINE_FAIL_CACHE[("normal", "zz")]
+            ob._ENGINE_FAIL_CACHE[("normal", "zz")] = (
+                ts - ob._ENGINE_FAIL_TTL - 1,
+                err,
+            )
+            with self.assertRaises(RuntimeError):
+                ob.get_engine("zz")
+            self.assertEqual(calls["n"], 2)
+        finally:
+            ob._build_engine_cached = orig_build
+            ob._ENGINE_FAIL_CACHE.clear()
+
+    def test_fallback_line_regions_detects_synthetic_lines(self):
+        cvis = self.mod.computer_vision
+        arr = np.array(Image.open(io.BytesIO(self.image_bytes)))
+        got = cvis.fallback_line_regions(arr)
+        self.assertGreater(len(got), 0)
+        for l in got:
+            self.assertEqual(l.get("text"), "")
+            self.assertEqual(len(l.get("box", [])), 4)
+            self.assertEqual(len(l.get("poly", [])), 4)
+            self.assertFalse(l.get("printed_hint"))
+
+        # The OpenCV-free path must work too (cv2 can be missing).
+        orig_cv2 = cvis.cv2
+        cvis.cv2 = None
+        try:
+            got_np = cvis.fallback_line_regions(arr)
+            self.assertGreater(len(got_np), 0)
+        finally:
+            cvis.cv2 = orig_cv2
+
     def test_prefer_handwritten_filter(self):
         lines = [
             {
