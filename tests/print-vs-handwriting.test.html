@@ -149,9 +149,24 @@
     const fscores = host.querySelectorAll('.fscore');
     add(fscores.length === 20, 'All 20 factors rendered on the scoreboard', 'found='+fscores.length);
 
-    // 4) multiple report pages built (cover, scorecard, factor pages, forecast, ...)
+    // 4) compact field-launch report: at most 4 pages from a photo (5 with
+    //    the pen) so a young writer keeps interest — scorecard, where to
+    //    improve, reference values, practice & prediction.
     const pages = host.querySelectorAll('.page');
-    add(pages.length >= 8, 'Full multi-page report generated', 'pages='+pages.length);
+    add(pages.length >= 3 && pages.length <= 5, 'Compact report generated (3-5 pages)', 'pages='+pages.length);
+
+    // 4b) the published reference values appear for every factor (lab-report style)
+    const refPage = [...pages].find(p=>/Reference interval/i.test(p.textContent||''));
+    const refRows = refPage ? refPage.querySelectorAll('tbody tr').length : 0;
+    add(refRows === 20, 'Reference-values table lists all 20 factors', 'rows='+refRows);
+
+    // 4c) improvement cards pair the concept drawing with a reference slot
+    const improvePage = [...pages].find(p=>/Where exactly to improve/i.test(p.textContent||''));
+    add(!!improvePage && /The concept/.test(improvePage.textContent||'') && /Your reference/.test(improvePage.textContent||''),
+      'Improve cards show concept + reference');
+
+    // 4d) the how-many-tries prediction is present
+    add(/tries/i.test(host.textContent||''), 'How-many-tries prediction rendered');
 
     // 5) the overall score appears in the cover / rings
     const txt = host.textContent || '';
