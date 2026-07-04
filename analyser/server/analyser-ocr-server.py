@@ -56,6 +56,15 @@ app.mount(
 )
 
 
+@app.get("/", include_in_schema=False)
+def site_root():
+    # Typing just http://localhost:8080 must land in the app — nobody should
+    # have to know the full /analyser/Vahini%20Analyser.html path.
+    return RedirectResponse(
+        url="/analyser/Vahini%20Analyser.html", status_code=302
+    )
+
+
 @app.get("/analyser", include_in_schema=False)
 def analyser_root():
     return RedirectResponse(
