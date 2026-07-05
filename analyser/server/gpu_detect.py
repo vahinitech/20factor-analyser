@@ -64,6 +64,27 @@ def nvidia_gpu_present():
         return False
 
 
+def gpu_count():
+    """How many NVIDIA GPUs `nvidia-smi` reports on this machine. 0 if
+    nvidia-smi is missing, errors, or there simply is no GPU -- never
+    raises. Used for /health and benchmark_ocr.py diagnostics; not used to
+    pick a device (see nvidia_gpu_present's docstring for why)."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "-L"],
+            capture_output=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode != 0:
+            return 0
+        return len(
+            [ln for ln in result.stdout.decode().splitlines() if ln.strip()]
+        )
+    except Exception:
+        return 0
+
+
 def gpu_capable(engine="torch"):
     """True if this machine's installed `engine` build can use a GPU
     right now. `engine` is "paddle", "torch", or "any" (either)."""

@@ -19,16 +19,16 @@
 #
 # What "detection" vs "recognition" means below: PaddleOCR's high-level API
 # does detection + recognition in one call — there is no separate
-# detect-only fast path to time in isolation. So "detection (ms)" is the
+# detect-only fast path to time in isolation. So "detection (s)" is the
 # real cost of ONE standalone paddle.detect() call (the shared detector
 # every recogniser-only engine, trocr/surya, also depends on), and
-# "recognition (ms)" for trocr/surya is the remainder after subtracting
+# "recognition (s)" for trocr/surya is the remainder after subtracting
 # that shared detection cost from their own end-to-end time — an estimate,
-# clearly labelled as such, not a true isolated measurement. "Total (ms)"
+# clearly labelled as such, not a true isolated measurement. "Total (s)"
 # is always the real, directly measured, end-to-end wall time.
 import argparse
-import glob
 import os
+import platform
 import sys
 import time
 
@@ -39,8 +39,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 
+import gpu_detect  # noqa: E402
 import ocr_backends  # noqa: E402
 import recognizer  # noqa: E402
+
+_IMAGE_EXTS = (".png", ".jpg", ".jpeg")
 
 
 def _default_samples_dir():
@@ -50,10 +53,35 @@ def _default_samples_dir():
     )
 
 
-def _load_images(samples_dir, limit):
+def _find_image_paths(samples_dir):
+    """Every image file under samples_dir, walked recursively -- the same
+    files a `find DIR -type f \\( -iname "*.png" -o -iname "*.jpg" -o
+    -iname "*.jpeg" \\)` would list. A single source of truth for both the
+    raw "found" count and the images actually loaded below, so the two
+    numbers in the report can never drift apart."""
     paths = []
-    for ext in ("*.jpg", "*.jpeg", "*.png"):
-        paths.extend(sorted(glob.glob(os.path.join(samples_dir, ext))))
+    for root, _dirs, files in os.walk(samples_dir):
+        for fn in files:
+            if os.path.splitext(fn)[1].lower() in _IMAGE_EXTS:
+                paths.append(os.path.join(root, fn))
+    return sorted(paths)
+
+
+def _system_info():
+    """Real, measured host facts (never guessed) for the report header:
+    OS/CPU architecture, logical CPU count, and NVIDIA GPU count (0 if
+    there is none or nvidia-smi isn't installed -- CPU-only is the normal
+    case for this project)."""
+    return {
+        "os": platform.system(),
+        "arch": platform.machine(),
+        "cpu_count": os.cpu_count() or 0,
+        "gpu_count": gpu_detect.gpu_count(),
+    }
+
+
+def _load_images(samples_dir, limit):
+    paths = _find_image_paths(samples_dir)
     paths = paths[:limit] if limit else paths
     out = []
     for p in paths:
@@ -166,26 +194,55 @@ def bench_backend(name, images, lang, detect_ms_by_sample):
     return rows
 
 
-def to_markdown(rows):
+def _fmt_seconds(ms):
+    """Human-readable duration for the report: seconds to 2dp, or
+    "<minutes>m <seconds>s" once a single call runs a minute or longer
+    (paddle detection on a dense page can take well over 60s on a slow
+    CPU -- see the benchmark output this replaces)."""
+    if ms is None:
+        return "—"
+    secs = ms / 1000.0
+    if secs < 60:
+        return f"{secs:.2f}s"
+    minutes, rem = divmod(secs, 60)
+    return f"{int(minutes)}m {rem:.2f}s"
+
+
+def to_markdown(rows, info=None, image_count=None):
+    parts = []
+    if info is not None or image_count is not None:
+        meta = []
+        if info is not None:
+            meta.append(
+                f"- System: {info['os']} {info['arch']}, "
+                f"{info['cpu_count']} CPU(s), {info['gpu_count']} GPU(s)"
+            )
+        if image_count is not None:
+            meta.append(f"- Sample images found: {image_count}")
+        parts.append("\n".join(meta))
+        parts.append("")
+
     headers = [
         "Engine",
         "Sample",
         "Lines analysed",
-        "Detection (ms)",
-        "Recognition (ms)",
-        "Total (ms)",
+        "Detection (s)",
+        "Recognition (s)",
+        "Total (s)",
         "Mean confidence",
     ]
     lines = ["| " + " | ".join(headers) + " |", "|" + "---|" * len(headers)]
     for r in rows:
-        det = r["detect_ms"] if r["detect_ms"] is not None else "—"
-        rec = r["recognize_ms"] if r["recognize_ms"] is not None else "—"
+        det = _fmt_seconds(r["detect_ms"])
+        rec = _fmt_seconds(r["recognize_ms"])
+        total = _fmt_seconds(r["total_ms"])
         conf = r["mean_conf"] if r["mean_conf"] is not None else "—"
         lines.append(
             f"| {r['engine']} | {r['sample']} | {r['lines']} | {det} | "
-            f"{rec} | {r['total_ms']} | {conf} |"
+            f"{rec} | {total} | {conf} |"
         )
-    return "\n".join(lines)
+    parts.append("\n".join(lines))
+    return "\n".join(parts)
 
 
 def main():
@@ -195,11 +252,24 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="0 = all images")
     args = ap.parse_args()
 
+    info = _system_info()
+    print(
+        f"[benchmark] System: {info['os']} {info['arch']}, "
+        f"{info['cpu_count']} CPU(s), {info['gpu_count']} GPU(s)"
+    )
+
+    found = len(_find_image_paths(args.samples))
+    print(
+        f"[benchmark] {found} image file(s) found under {args.samples} "
+        '(same as: find DIR -type f \\( -iname "*.png" -o -iname "*.jpg" '
+        '-o -iname "*.jpeg" \\) | wc -l)'
+    )
+
     images = _load_images(args.samples, args.limit)
     if not images:
         print(f"[benchmark] no images found under {args.samples}")
         return
-    print(f"[benchmark] {len(images)} sample(s) from {args.samples}")
+    print(f"[benchmark] {len(images)} sample(s) loaded for benchmarking")
 
     _init(args.lang)
 
@@ -215,10 +285,10 @@ def main():
         )
 
     print()
-    print(to_markdown(all_rows))
+    print(to_markdown(all_rows, info=info, image_count=found))
     print()
     print(
-        "[benchmark] Recognition (ms) for trocr/surya is an ESTIMATE: total "
+        "[benchmark] Recognition (s) for trocr/surya is an ESTIMATE: total "
         "measured time minus the shared paddle detection cost measured "
         "separately above, not a true isolated measurement (PaddleOCR's API "
         "doesn't expose detection and recognition as separately callable "
