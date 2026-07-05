@@ -24,6 +24,15 @@ docker compose up -d --build
 # open http://localhost:8080
 ```
 
+After pulling changes or editing a Dockerfile/requirements file, rebuild
+clean instead of relying on cached layers:
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
 Check it: `curl http://localhost:8080/health` lists every engine and whether
 it can run on this machine.
 

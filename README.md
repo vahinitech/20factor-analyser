@@ -23,6 +23,15 @@ docker compose up -d --build
 That single container serves the app and the analysis APIs on one origin.
 The first run downloads the OCR models, so give it a few minutes.
 
+Pulled new code or changed a Dockerfile/requirements file? Rebuild from a
+clean slate so nothing stale (cached layer, old dependency) survives:
+
+```bash
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+```
+
 Use `http://`, not `https://`. The local server speaks plain HTTP; if the
 browser autocompletes `https://localhost:8080` the connection fails before
 the app can even redirect. Type `http://localhost:8080` and it lands on the
