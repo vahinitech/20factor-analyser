@@ -251,6 +251,69 @@ class TestServerPipeline(unittest.TestCase):
         finally:
             mod.ocr_backends.get_backend = orig
 
+    def test_recognition_summary_proves_which_engine_refined_lines(self):
+        # analysis.recognition.refined_by/refined_lines is the report's
+        # verifiable proof that a specialist engine actually touched a
+        # line -- not just that hybrid/trocr mode was requested. Setting
+        # VAHINI_OCR_BACKEND=hybrid alone proves nothing if the specialist
+        # was never installed or never accepted; this field is computed
+        # from hand_lines' real per-line "refined_by" markers.
+        mod = self.mod
+
+        def fake_collect_hybrid(_arr_in, _lang):
+            def rect(x, y, w, h):
+                return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+
+            lines = [
+                {
+                    "text": "garbled hand",
+                    "score": 0.60,
+                    "box": [10, 150, 360, 40],
+                    "poly": rect(10, 150, 360, 40),
+                    "lang": "en",
+                },
+            ]
+            return lines, "", "hybrid", {"strategy": "hybrid"}
+
+        class _Fake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return "clear word", 0.95
+
+        # /report-python caches by (image bytes, lang, expected_text,
+        # configured backend) -- reusing cls.png would return an earlier
+        # test's cached response instead of exercising this one, since none
+        # of those vary here. A one-pixel tweak gives a fresh cache key.
+        arr2 = self.arr.copy()
+        arr2[0, 0] = [254, 254, 254]
+        buf = io.BytesIO()
+        Image.fromarray(arr2).save(buf, format="PNG")
+        png2 = buf.getvalue()
+
+        orig_collect = mod.recognizer.collect_lines
+        orig_get_backend = mod.ocr_backends.get_backend
+        orig_memo = dict(mod.ocr_backends._SPEED_MEMO)
+        mod.ocr_backends._SPEED_MEMO.clear()
+        try:
+            mod.recognizer.collect_lines = fake_collect_hybrid
+            mod.ocr_backends.get_backend = lambda n: _Fake()
+            r = self.client.post(
+                "/report-python",
+                files={"image": ("page.png", png2, "image/png")},
+                data={"lang": "auto"},
+            )
+            j = r.json()
+            rec = j["analysis"]["recognition"]
+            self.assertEqual(rec["refined_by"], {"trocr": 1})
+            self.assertEqual(rec["refined_lines"], 1)
+        finally:
+            mod.recognizer.collect_lines = orig_collect
+            mod.ocr_backends.get_backend = orig_get_backend
+            mod.ocr_backends._SPEED_MEMO.clear()
+            mod.ocr_backends._SPEED_MEMO.update(orig_memo)
+
     def test_refinement_measures_speed_and_skips_a_slow_engine(self):
         # A real, measured latency on THIS machine decides whether hybrid
         # mode keeps using a specialist — not a synthetic benchmark. A

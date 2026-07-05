@@ -112,6 +112,19 @@ So `VAHINI_OCR_BACKEND=hybrid` is safe to set on any machine — check
 milliseconds per line and whether each engine is currently considered fast
 enough on this box.
 
+**Proof a specialist engine actually ran, not just that hybrid mode was
+requested:** `POST /report-python`'s response has
+`analysis.recognition.refined_by` — a count per engine of how many
+handwriting lines it actually refined this scan (e.g.
+`{"trocr": 4, "surya": 1}`), and `refined_lines` for the total. An empty
+`{}` means no specialist touched any line this scan — check three things
+in order: (1) `VAHINI_OCR_BACKEND` is actually `hybrid` or `trocr` (the
+default is `paddle`, which never refines anything); (2) `GET /health`
+lists `trocr`/`surya` as available, not skipped (they must be baked into
+the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3)
+`adaptive_engine_speed` hasn't marked the engine too slow on this machine
+(see above).
+
 ### Layout pre-filter (excludes photos, seals, charts — never handwriting)
 
 Before a page's detected lines reach the printed/handwriting classifier,

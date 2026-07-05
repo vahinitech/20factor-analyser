@@ -573,6 +573,16 @@ def _report_python_process(arr, raw, lang, expected_text):
                 if float(l.get("score", 0.0) or 0.0) >= 0.85
             )
         )
+        # Which specialist engine (if any) actually re-read each handwriting
+        # line in trocr/hybrid mode -- proof, not a claim, that e.g. TrOCR
+        # ran on this scan. hand_lines only carries "refined_by" on lines a
+        # specialist's re-read was accepted for (see
+        # recognizer.refine_handwriting_text); paddle-only lines have none.
+        refined_by = {}
+        for l in hand_lines:
+            engine = l.get("refined_by")
+            if engine:
+                refined_by[engine] = refined_by.get(engine, 0) + 1
         passage_aligned = bool(align_info and align_info.get("aligned"))
         has_read_text = any(
             str(l.get("text") or "").strip() for l in hand_lines
@@ -601,6 +611,8 @@ def _report_python_process(arr, raw, lang, expected_text):
             "reliable_lines": reliable_lines,
             "mean_confidence": round(hand_conf, 3),
             "confidence_pct": int(round(hand_conf * 100)),
+            "refined_by": refined_by,
+            "refined_lines": sum(refined_by.values()),
             "level": level,
             "assistive_only": not passage_aligned,
             "passage_aligned": passage_aligned,
