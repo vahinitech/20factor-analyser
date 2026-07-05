@@ -217,6 +217,62 @@ def _engine_fail_cached(key):
     return None
 
 
+# --------------------------------------------------------------------------- #
+# Adaptive engine speed (hybrid mode) — decide whether THIS machine's CPU can
+# afford a specialist's per-line cost from a REAL measured latency, not a
+# synthetic benchmark or a manual "is this machine fast?" env var. Every
+# refine call times itself and records the result here; once an engine is
+# measured too slow, recognizer.refine_handwriting_text skips calling it for
+# the rest of the page (and for VAHINI_HYBRID_RETRY_SEC afterwards) and keeps
+# paddle's own reading instead — the same fail-fast-then-retry-later shape as
+# _ENGINE_FAIL_CACHE above, so hybrid mode is safe to enable on any machine:
+# fast hardware gets the accuracy win, slow hardware quietly behaves like
+# plain paddle after one measurement instead of stalling every scan.
+# --------------------------------------------------------------------------- #
+_SPEED_TTL = max(30.0, float(_env("VAHINI_HYBRID_RETRY_SEC", "600") or "600"))
+_MAX_MS_PER_LINE = max(
+    200.0, float(_env("VAHINI_HYBRID_MAX_MS_PER_LINE", "2500") or "2500")
+)
+_SPEED_MEMO = {}  # engine name -> (monotonic_ts, measured_ms, fast_enough)
+
+
+def engine_speed_verdict(name):
+    """(measured_ms, fast_enough) for `name` from the last measurement within
+    VAHINI_HYBRID_RETRY_SEC, or None if never measured (or expired) — the
+    caller should measure this call and record it."""
+    hit = _SPEED_MEMO.get(name)
+    if not hit:
+        return None
+    ts, measured_ms, fast = hit
+    if (time.monotonic() - ts) < _SPEED_TTL:
+        return measured_ms, fast
+    _SPEED_MEMO.pop(name, None)
+    return None
+
+
+def record_engine_speed(name, elapsed_ms):
+    """Record one real recognize_crop() latency for `name` and return
+    whether it was fast enough (elapsed_ms <= VAHINI_HYBRID_MAX_MS_PER_LINE).
+    """
+    fast = elapsed_ms <= _MAX_MS_PER_LINE
+    _SPEED_MEMO[name] = (time.monotonic(), elapsed_ms, fast)
+    return fast
+
+
+def engine_speed_snapshot():
+    """{name: {measured_ms, fast_enough, age_sec}} — used by /health so a
+    slow-CPU fallback is visible and debuggable, not a silent guess."""
+    now = time.monotonic()
+    return {
+        name: {
+            "measured_ms": round(ms, 1),
+            "fast_enough": fast,
+            "age_sec": round(now - ts, 1),
+        }
+        for name, (ts, ms, fast) in _SPEED_MEMO.items()
+    }
+
+
 @lru_cache(maxsize=8)
 def _build_engine_cached(lang: str):
     """One PaddleOCR instance per language, built lazily and cached.

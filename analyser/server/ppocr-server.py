@@ -211,6 +211,10 @@ def health():
         "rec_model_map": REC_MODEL_MAP,
         "det_limit_side_len": TEXT_DET_LIMIT_SIDE_LEN,
         "printed_threshold": classify.PRINTED_THRESHOLD,
+        # Hybrid mode's real, measured per-engine speed on THIS machine, not
+        # a synthetic benchmark: empty until the first handwriting line has
+        # been re-read; see recognizer.refine_handwriting_text.
+        "hybrid_engine_speed": ocr_backends.engine_speed_snapshot(),
     }
 
 

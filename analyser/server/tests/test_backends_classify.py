@@ -60,6 +60,31 @@ class TestRegistry(unittest.TestCase):
                 ocr_backends.get_backend(name), f"missing backend {name}"
             )
 
+    def test_engine_speed_memo_marks_slow_and_fast_from_real_measurements(
+        self,
+    ):
+        # No measurement yet -> caller should measure and record.
+        ocr_backends._SPEED_MEMO.clear()
+        self.assertIsNone(ocr_backends.engine_speed_verdict("trocr"))
+
+        # A fast measurement is remembered as fast.
+        fast = ocr_backends.record_engine_speed("trocr", 400.0)
+        self.assertTrue(fast)
+        measured_ms, is_fast = ocr_backends.engine_speed_verdict("trocr")
+        self.assertAlmostEqual(measured_ms, 400.0)
+        self.assertTrue(is_fast)
+
+        # A slow measurement on a different engine is remembered as slow.
+        slow = ocr_backends.record_engine_speed("surya", 9000.0)
+        self.assertFalse(slow)
+        _measured_ms, is_fast = ocr_backends.engine_speed_verdict("surya")
+        self.assertFalse(is_fast)
+
+        snap = ocr_backends.engine_speed_snapshot()
+        self.assertTrue(snap["trocr"]["fast_enough"])
+        self.assertFalse(snap["surya"]["fast_enough"])
+        ocr_backends._SPEED_MEMO.clear()
+
     def test_vl_results_classic_shape(self):
         results = [
             {

@@ -251,6 +251,46 @@ class TestServerPipeline(unittest.TestCase):
         finally:
             mod.ocr_backends.get_backend = orig
 
+    def test_refinement_measures_speed_and_skips_a_slow_engine(self):
+        # A real, measured latency on THIS machine decides whether hybrid
+        # mode keeps using a specialist — not a synthetic benchmark. A
+        # fresh engine gets one real measurement; once it is slow, later
+        # lines (and later calls) skip it entirely without invoking it.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig_get_backend = mod.ocr_backends.get_backend
+        orig_memo = dict(mod.ocr_backends._SPEED_MEMO)
+        mod.ocr_backends._SPEED_MEMO.clear()
+
+        calls = []
+
+        class _SlowFake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                calls.append(1)
+                time.sleep(0.02)  # stand-in for a genuinely slow engine
+                return "corrected", 0.95
+
+        try:
+            mod.ocr_backends.get_backend = lambda n: _SlowFake()
+            # Force the "too slow" verdict directly (real hardware would
+            # take real elapsed time to prove this; the memo is what
+            # subsequent lines/calls actually consult).
+            mod.ocr_backends.record_engine_speed("trocr", 9000.0)
+            hl = [{"text": "manay ment", "box": [10, 10, 200, 30]}]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
+            self.assertEqual(hl[0]["text"], "manay ment")  # untouched
+            self.assertEqual(calls, [])  # engine was never even called
+        finally:
+            mod.ocr_backends.get_backend = orig_get_backend
+            mod.ocr_backends._SPEED_MEMO.clear()
+            mod.ocr_backends._SPEED_MEMO.update(orig_memo)
+
     def test_pdf_restricted_to_first_page(self):
         # A multi-page PDF must decode to page 1 ONLY. Page 1 is 200x120,
         # page 2 is a different 400x300, so the decoded size proves which page.
