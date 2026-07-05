@@ -32,6 +32,7 @@ import ocr_backends
 import classify
 import detector
 import computer_vision
+import layout_filter
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -342,12 +343,17 @@ def extract_hand_lines(
     raw_bytes: bytes = None,
     refine_backend: str = None,
 ):
-    """Shared post-processing: merge → region-filter → classify printed vs
-    handwriting → keep handwriting, minus OCR noise fragments → optionally refine
-    handwriting text with a stronger engine. Returns (all_lines, hand_lines).
+    """Shared post-processing: merge → region-filter → drop non-text-ink
+    layout regions (image/figure/chart/seal) → classify printed vs
+    handwriting → keep handwriting, minus OCR noise fragments → optionally
+    refine handwriting text with a stronger engine. Returns (all_lines,
+    hand_lines).
     """
     lines = detector.region_filter_lines(
         detector.merge_lines(raw_lines), arr.shape
+    )
+    lines = layout_filter.filter_excluded_regions(
+        lines, layout_filter.excluded_regions(arr)
     )
     classify.classify_lines(arr, lines)
     hand_lines = detector.prefer_handwritten(lines)

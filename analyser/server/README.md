@@ -43,6 +43,7 @@ words were not read.
 | `detector.py` | Preprocessing variants and candidate region filtering |
 | `recognizer.py` | Dispatches recognition across engines, refinement, passage alignment |
 | `classify.py` | Printed vs handwriting classifier |
+| `layout_filter.py` | Negative pre-filter dropping photos/seals/charts before classification |
 | `computer_vision.py` | Image decode, evidence crops, layout signals, OCR-free fallback |
 | `scoring.py` | The 20-factor model and reference values |
 | `cache.py`, `geometry.py`, `model_map.py`, `gpu_detect.py` | Small shared helpers |
@@ -94,9 +95,46 @@ scan tries the specialist again once the cooldown passes. A fast machine
 gets every handwriting line re-read; a slow one quietly behaves like plain
 `paddle` after the first slow measurement instead of stalling every scan.
 So `VAHINI_OCR_BACKEND=hybrid` is safe to set on any machine — check
-`GET /health`'s `hybrid_engine_speed` field to see the actual measured
+`GET /health`'s `adaptive_engine_speed` field to see the actual measured
 milliseconds per line and whether each engine is currently considered fast
 enough on this box.
+
+### Layout pre-filter (excludes photos, seals, charts — never handwriting)
+
+Before a page's detected lines reach the printed/handwriting classifier,
+an optional pass using PaddleOCR's own document-layout model (PP-DocLayout)
+drops anything that clearly isn't ink-on-paper content at all: photos,
+figures, charts, seals/stamps. It is a NEGATIVE filter only — it never
+restricts analysis to "text-labelled" regions, because that would also
+throw away genuine handwritten formulas and filled-in table cells, which
+PP-DocLayout tags `formula`/`table` regardless of whether a pen or a
+printer produced them. Those categories are always kept.
+
+This does not replace `classify.py`: PP-DocLayout's categories are
+document structure (title, text, table, formula, image, seal...), not a
+printed-vs-handwriting signal.
+
+Same speed-adaptive shape as hybrid mode, applied to picking a model
+size instead of an engine: tries the more accurate `PP-DocLayout-M` first,
+falls back to the cheaper `PP-DocLayout-S` if a real measured call is too
+slow, and disables filtering entirely (falls back to today's unfiltered
+behaviour) if even that is too slow — never a hard requirement. Building
+the model itself never blocks a request either: the first time it's
+needed, a background download starts and that request (and every one
+after it, until the download finishes) simply skips filtering for free.
+Run `python warmup_models.py` (or let the Docker image's startup warmup
+do it) so it's normally already built by the time real traffic arrives.
+Both model tiers are a few MB and download to the same model cache as
+PaddleOCR, so they persist across restarts the same way (see "Keep models
+on disk between deployments" below).
+
+| Env var | Default | What it does |
+|---|---|---|
+| `VAHINI_LAYOUT_FILTER` | `1` | turn the layout pre-filter off with `0` |
+| `VAHINI_LAYOUT_MAX_MS` | `800` | above this measured latency, drop from `PP-DocLayout-M` to `-S`, then to no filtering |
+
+Check `GET /health`'s `layout_filter` field for whether it's enabled and
+which model tier is actually built and ready on this machine.
 
 ## Common settings
 

@@ -48,6 +48,7 @@ import classify  # printed-vs-handwriting classifier
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
+import layout_filter  # negative pre-filter using PaddleOCR's layout model
 from gpu_detect import nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
@@ -211,10 +212,19 @@ def health():
         "rec_model_map": REC_MODEL_MAP,
         "det_limit_side_len": TEXT_DET_LIMIT_SIDE_LEN,
         "printed_threshold": classify.PRINTED_THRESHOLD,
-        # Hybrid mode's real, measured per-engine speed on THIS machine, not
-        # a synthetic benchmark: empty until the first handwriting line has
-        # been re-read; see recognizer.refine_handwriting_text.
-        "hybrid_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # Real, measured per-engine speed on THIS machine, not a synthetic
+        # benchmark: hybrid mode's trocr/surya refine calls (see
+        # recognizer.refine_handwriting_text) and the layout pre-filter's
+        # PP-DocLayout-M/S tier choice (see layout_filter.py) both record
+        # here. Empty until the first relevant call has actually run.
+        "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # Whether a layout model is built and ready yet (see layout_filter.py
+        # — the build never blocks a request, so this can be empty for a
+        # while after startup even with VAHINI_LAYOUT_FILTER=1).
+        "layout_filter": {
+            "enabled": layout_filter.is_enabled(),
+            "built_tiers": layout_filter.built_tiers(),
+        },
     }
 
 
