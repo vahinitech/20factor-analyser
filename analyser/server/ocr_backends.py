@@ -564,7 +564,16 @@ class TrOCRBackend(OCRBackend):
                 VisionEncoderDecoderModel,
             )
 
-            processor = TrOCRProcessor.from_pretrained(self.model_name)
+            # use_fast=False: microsoft/trocr-base-handwritten only ships a
+            # legacy (slow) tokenizer on the Hub -- recent transformers
+            # releases can't auto-convert that to a fast tokenizer at load
+            # time ("Couldn't instantiate the backend tokenizer"). The
+            # tokenizer only decodes a handful of output tokens per crop, so
+            # the slow-vs-fast speed difference here is immaterial next to
+            # the vision encoder's own cost.
+            processor = TrOCRProcessor.from_pretrained(
+                self.model_name, use_fast=False
+            )
             model = VisionEncoderDecoderModel.from_pretrained(self.model_name)
             model.to(self._device)
             model.eval()
