@@ -85,11 +85,17 @@ function renderVLInsights(vl, recInfo){
     return (r && r.score >= 0.8 && t) ? `“${esc(t.slice(0,42))}” (${sc}%)` : `handwriting region (${sc}%)`;
   };
   const recPct = (recInfo && Number.isFinite(recInfo.confidence_pct)) ? recInfo.confidence_pct : null;
+  const printedN = (recInfo && Number.isFinite(recInfo.printed_lines)) ? recInfo.printed_lines : 0;
   return `<section class="vl-insights" style="max-width:210mm;margin:18px auto 0;background:#fff;border:1px solid rgba(34,40,49,.12);border-radius:14px;padding:14px 16px;">
     <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;">
-      <h3 style="margin:0;font-family:Spectral,serif;font-size:20px;color:#1d2938;">Context-aware document understanding</h3>
+      <h3 style="margin:0;font-family:Spectral,serif;font-size:20px;color:#1d2938;">What kind of page is this?</h3>
       <span style="font-size:12px;font-weight:700;color:#075E63;background:#DCF3F4;border-radius:999px;padding:4px 10px;">${dt}${conf!=null?` · ${conf}%`:''}</span>
     </div>
+    <p style="margin:6px 0 0;font-size:11.5px;line-height:1.55;color:#4a5568;">
+      <b>Why this section:</b> before scoring, the analyser works out what your page is (a letter, an exam answer, a form) and which parts are pen handwriting.
+      That is how it keeps printed text out of your scores and compares your writing against the right kind of page.
+      ${printedN?`On this page it found and <b>excluded ${printedN} printed line${printedN>1?'s':''}</b> — only your handwriting was analysed.`:''}
+    </p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px;">${chips.map(c=>`<span style="font-size:11px;background:#F5F7FA;border:1px solid rgba(34,40,49,.1);border-radius:999px;padding:4px 9px;color:#354052;">${c}</span>`).join('')}</div>
     ${regions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">${regions.map(r=>`<figure style="margin:0;border:1px solid rgba(34,40,49,.12);border-radius:10px;overflow:hidden;background:#fafafa;">
       <img src="${r.preview||''}" alt="Detected region" style="display:block;width:100%;height:86px;object-fit:cover;background:#fff;" />
@@ -97,6 +103,7 @@ function renderVLInsights(vl, recInfo){
     </figure>`).join('')}</div>` : ''}
     <p style="margin:12px 0 0;font-size:11px;line-height:1.55;color:#4a5568;background:#F5F7FA;border-radius:9px;padding:9px 12px;">
       <b>Note · text recognition is under progress and will improve soon</b> — accuracy rises with every update, delivered in increments${recPct!=null?` (current reading confidence: ${recPct}%)`:''}. A wrong word here never changes the 20 factor scores: they are measured from the geometry of the writing, not from reading it.
+      Spotted a problem or have an idea? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:#075E63;font-weight:700;">github.com/vahinitech/20factor-analyser</a>.
     </p>
   </section>`;
 }
@@ -467,6 +474,23 @@ async function runPipeline(){
   let pyReport = null;
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
     pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
+  }
+  if (pyReport && pyReport.error_code === 'no_handwriting'){
+    // The server found text but ALL of it is printed. The analyser scores
+    // pen handwriting only — refusing here (instead of scoring machine
+    // type) is the whole credibility rule of the product.
+    const n = Number(pyReport.printed_lines) || 0;
+    showReject({
+      reason: 'No handwriting found on this page',
+      detail: 'This page looks fully printed' + (n ? ' (' + n + ' printed line' + (n>1?'s':'') + ' detected)' : '')
+        + '. The analyser measures pen handwriting only, so printed text is never analysed or scored.',
+      tips: [
+        'Upload a page written by hand with a pen or pencil',
+        'Mixed pages are fine: printed parts are detected and ignored, only the handwriting is scored',
+        'For best results photograph the page straight-on in good light',
+      ],
+    });
+    return;
   }
   if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';

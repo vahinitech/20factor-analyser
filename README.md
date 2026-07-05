@@ -23,6 +23,12 @@ docker compose up -d --build
 That single container serves the app and the analysis APIs on one origin.
 The first run downloads the OCR models, so give it a few minutes.
 
+Use `http://`, not `https://`. The local server speaks plain HTTP; if the
+browser autocompletes `https://localhost:8080` the connection fails before
+the app can even redirect. Type `http://localhost:8080` and it lands on the
+analyser automatically. For HTTPS in production, put the service behind a
+TLS reverse proxy such as nginx or Caddy.
+
 To run without Docker:
 
 ```bash

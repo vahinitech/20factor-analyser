@@ -44,13 +44,15 @@ jobs:
             analyser/server/config.py analyser/server/cache.py \
             analyser/server/tests/test_backends_classify.py \
             analyser/server/tests/test_server_pipeline.py \
-            analyser/server/tests/test_regression_functional.py
+            analyser/server/tests/test_regression_functional.py \
+            analyser/server/tests/test_handwriting_only.py
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \
             analyser.server.tests.test_backends_classify \
             analyser.server.tests.test_server_pipeline \
-            analyser.server.tests.test_regression_functional
+            analyser.server.tests.test_regression_functional \
+            analyser.server.tests.test_handwriting_only
 
   e2e:
     runs-on: ubuntu-latest
