@@ -85,6 +85,26 @@ def gpu_count():
         return 0
 
 
+def gpu_zero_caveat():
+    """A short, always-true caveat for reports/health checks whenever
+    gpu_count() is 0 -- a bare 0 reads as either "this check is broken" or
+    "this host has no GPU", when the real explanation is usually one of two
+    unrelated limits: this check only sees NVIDIA hardware (via
+    nvidia-smi), and, separately, Docker Desktop on macOS cannot pass ANY
+    host GPU -- NVIDIA or Apple -- through to a Linux container at all
+    (there is no Metal driver for Linux, and no passthrough path for it
+    even if there were). So 0 is expected and correct here even on a Mac
+    with a real GPU; it is not something this process can detect or fix
+    from inside a container."""
+    return (
+        "0 GPU(s) here only means no NVIDIA GPU is reachable from this "
+        "process, via nvidia-smi -- it does not mean the host machine has "
+        "no GPU. Docker Desktop on macOS cannot pass any GPU (NVIDIA or "
+        "Apple) through to a Linux container at all, so 0 is expected "
+        "there even on Apple Silicon."
+    )
+
+
 def gpu_capable(engine="torch"):
     """True if this machine's installed `engine` build can use a GPU
     right now. `engine` is "paddle", "torch", or "any" (either)."""

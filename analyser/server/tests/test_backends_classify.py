@@ -353,6 +353,15 @@ class TestGpuDetect(unittest.TestCase):
         # not throw.
         self.assertFalse(gpu_detect.nvidia_gpu_present())
 
+    def test_gpu_zero_caveat_mentions_docker_and_macos(self):
+        # This is the one place explaining WHY 0 GPUs is expected even on
+        # genuinely GPU-equipped hosts (Docker Desktop on macOS cannot pass
+        # any GPU into a Linux container) -- assert the substance survives
+        # any future wording edit, not the exact sentence.
+        note = gpu_detect.gpu_zero_caveat()
+        self.assertIn("Docker", note)
+        self.assertIn("macOS", note)
+
 
 class TestScoringDataclasses(unittest.TestCase):
     """to_dict() is the one place a camelCase-mapping bug could hide, since

@@ -49,7 +49,7 @@ import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
-from gpu_detect import nvidia_gpu_present
+from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -197,6 +197,7 @@ def health():
     backends = {}
     for name, (ok, reason) in ocr_backends.available_backends().items():
         backends[name] = {"ready": bool(ok), "reason": reason}
+    gpu_present = nvidia_gpu_present()
     return {
         "ok": True,
         "engine": "pp-ocrv5",
@@ -204,7 +205,8 @@ def health():
         "active_backend": OCR_BACKEND,
         "backends": backends,
         "gpu": USE_GPU,
-        "gpu_detected": nvidia_gpu_present(),
+        "gpu_detected": gpu_present,
+        "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
         "ocr_version": OCR_VERSION,

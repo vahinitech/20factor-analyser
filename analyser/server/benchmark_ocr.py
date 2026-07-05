@@ -217,6 +217,8 @@ def to_markdown(rows, info=None, image_count=None):
                 f"- System: {info['os']} {info['arch']}, "
                 f"{info['cpu_count']} CPU(s), {info['gpu_count']} GPU(s)"
             )
+            if info["gpu_count"] == 0:
+                meta.append(f"- Note: {gpu_detect.gpu_zero_caveat()}")
         if image_count is not None:
             meta.append(f"- Sample images found: {image_count}")
         parts.append("\n".join(meta))
@@ -257,6 +259,8 @@ def main():
         f"[benchmark] System: {info['os']} {info['arch']}, "
         f"{info['cpu_count']} CPU(s), {info['gpu_count']} GPU(s)"
     )
+    if info["gpu_count"] == 0:
+        print(f"[benchmark] Note: {gpu_detect.gpu_zero_caveat()}")
 
     found = len(_find_image_paths(args.samples))
     print(
