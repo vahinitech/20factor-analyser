@@ -9,6 +9,6 @@
 #   pip install -r requirements-surya.txt           # + multilingual/Indic
 #   pip install -r requirements-chandra.txt         # + local Chandra (GPU)
 #
-# Or just run setup.ps1 / setup.sh which does the venv + tiers + model download.
+# Or just run setup.sh, which creates the venv, installs the tiers you pick
 -r requirements-core.txt
 -r requirements-paddle.txt

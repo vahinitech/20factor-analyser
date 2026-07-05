@@ -62,7 +62,7 @@ RUN if [ -n "${VAHINI_OCR_PRELOAD_LANGS}" ]; then \
             VAHINI_OCR_PRELOAD_LANGS=${VAHINI_OCR_PRELOAD_LANGS} python /app/analyser/server/warmup_models.py; \
         fi
 
-ENV PORT=8868
-EXPOSE 8868
+ENV PORT=8080
+EXPOSE 8080
 
 CMD ["python", "/app/analyser/server/analyser-ocr-server.py"]

@@ -17,7 +17,7 @@
 const CANDIDATES = [
   window.VAHINI_OCR_ENDPOINT || null,
   '/ocr',
-  'http://127.0.0.1:8868/ocr',
+  'http://127.0.0.1:8080/ocr',
 ].filter(Boolean);
 
 const VL_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/analyze-vl'));
