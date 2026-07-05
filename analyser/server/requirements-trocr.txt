@@ -4,15 +4,28 @@
 # Default model: microsoft/trocr-base-handwritten (override VAHINI_TROCR_MODEL).
 # CPU torch wheels: pip install torch --index-url https://download.pytorch.org/whl/cpu
 #
-# transformers is capped below 5: microsoft/trocr-base-handwritten only ships
-# a legacy (slow) tokenizer on the Hub (vocab.json/merges.txt, no
-# pre-serialized tokenizer.json). transformers 5.x unified tokenizer loading
-# into a single TokenizersBackend class with no pure-Python fallback for that
-# format, so TrOCRProcessor.from_pretrained() fails with "Couldn't
-# instantiate the backend tokenizer" regardless of kwargs -- confirmed by a
-# real build failure against transformers 5.13.0. Lift this cap once
-# microsoft/trocr-base-handwritten's Hub repo ships a tokenizer.json, or once
-# a from_pretrained() override for this is confirmed working against 5.x.
+# transformers must be >=5.3.0: every version before it (which includes the
+# 4.44-4.x line this project pinned to previously) has a critical RCE
+# (GHSA/Dependabot alert) -- a crafted config.json's _attn_implementation_internal
+# field can make from_pretrained() download and execute arbitrary code from
+# an attacker-controlled Hub repo, bypassing trust_remote_code entirely.
+# Security takes priority over the tokenizer-loading issue below, and the
+# failure mode there is graceful, not a crash (see next paragraph), so this
+# is safe to ship even before that combination is confirmed working.
+#
+# Known risk this reopens: microsoft/trocr-base-handwritten only ships a
+# legacy (slow) tokenizer on the Hub (vocab.json/merges.txt, no
+# pre-serialized tokenizer.json), and transformers 5.13.0 was confirmed (real
+# build failure) to no longer load that format at all -- unified everything
+# into a single TokenizersBackend class with no pure-Python fallback. It is
+# NOT confirmed whether 5.3.0 specifically still has this problem or whether
+# it was introduced later in the 5.x line. If TrOCRProcessor.from_pretrained()
+# still fails at 5.3.0+: this is not a regression to route around by lowering
+# the floor again (that reopens the RCE) -- it needs a same-line fix, e.g.
+# vendoring a converted tokenizer.json for this checkpoint. Either way the
+# failure is graceful: TrOCRBackend.available() reports "not ready" and
+# hybrid mode falls back to paddle's own reading, same as when torch/
+# transformers aren't installed at all -- the server never crashes from this.
 torch>=2.2
-transformers>=4.44,<5
+transformers>=5.3.0
 sentencepiece>=0.2.0

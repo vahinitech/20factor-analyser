@@ -16,6 +16,16 @@ function qrURL(data, size){
   return 'https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&margin=8&data='+encodeURIComponent(data);
 }
 
+// Only http/https may ever reach a real DOM sink (href/src): a typed-in
+// "javascript:" or "data:" URL would otherwise execute in the page when the
+// link is opened. Returns '' for anything else, including unparseable input.
+function safeHttpUrl(raw){
+  try{
+    const u = new URL(raw, location.href);
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? u.href : '';
+  }catch(e){ return ''; }
+}
+
 function init(){
   const overlay = $('#share-overlay');
   if(!overlay) return;
@@ -30,7 +40,8 @@ function init(){
   $('#share-save').addEventListener('click', ()=>window.print());
 
   function generate(){
-    const link = ($('#share-link').value||'').trim();
+    const raw = ($('#share-link').value||'').trim();
+    const link = safeHttpUrl(raw);
     if(!link){ $('#share-link').focus(); return; }
     const img = $('#share-qr-img');
     img.onerror = ()=>{ img.alt='QR unavailable offline — share the link directly.'; };
