@@ -32,14 +32,16 @@ RUN if [ "$VAHINI_WITH_TROCR" = "1" ] || [ "$VAHINI_WITH_SURYA" = "1" ]; then \
     fi
 
 # TrOCR deps + pre-download the handwriting model so the first request is fast.
-# use_fast=False: microsoft/trocr-base-handwritten only ships a legacy (slow)
-# tokenizer on the Hub (vocab.json/merges.txt, no pre-serialized tokenizer.json),
-# and recent transformers releases no longer auto-convert that to a fast
-# tokenizer at load time, raising "Couldn't instantiate the backend tokenizer".
-# Forcing the slow tokenizer sidesteps that conversion entirely.
+# transformers is pinned below <5: microsoft/trocr-base-handwritten only ships
+# a legacy (slow) tokenizer on the Hub (vocab.json/merges.txt, no
+# pre-serialized tokenizer.json). transformers 5.x unified tokenizer loading
+# into a single TokenizersBackend class with no pure-Python fallback for that
+# format, so it fails with "Couldn't instantiate the backend tokenizer" no
+# matter what from_pretrained() kwargs are passed -- there is no in-process
+# workaround, only staying on the 4.x line that still has the legacy loader.
 RUN if [ "$VAHINI_WITH_TROCR" = "1" ]; then \
         pip install --no-cache-dir -r requirements-trocr.txt && \
-        python -c "from transformers import TrOCRProcessor, VisionEncoderDecoderModel; m='microsoft/trocr-base-handwritten'; TrOCRProcessor.from_pretrained(m, use_fast=False); VisionEncoderDecoderModel.from_pretrained(m)" ; \
+        python -c "from transformers import TrOCRProcessor, VisionEncoderDecoderModel; m='microsoft/trocr-base-handwritten'; TrOCRProcessor.from_pretrained(m); VisionEncoderDecoderModel.from_pretrained(m)" ; \
     fi
 
 # Surya deps + a source-built llama-server (its required CPU inference backend).
