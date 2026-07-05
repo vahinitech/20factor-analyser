@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
 # Pure-Python tests for the pluggable OCR registry and the printed-vs-handwriting
-# classifier. These DO NOT require paddle/torch/surya/chandra — only numpy,
+# classifier. These DO NOT require paddle/torch/surya — only numpy,
 # pillow and (optionally) opencv. Run:
 #     python -m unittest -v analyser/server/tests/test_backends_classify.py
 import os
@@ -55,7 +55,7 @@ def _hand_strip(w=240, h=40):
 class TestRegistry(unittest.TestCase):
     def test_registry_has_all_engines(self):
         ocr_backends.init_registry()
-        for name in ("paddle", "trocr", "surya", "chandra", "paddleocr-vl"):
+        for name in ("paddle", "trocr", "surya", "paddleocr-vl"):
             self.assertIsNotNone(
                 ocr_backends.get_backend(name), f"missing backend {name}"
             )

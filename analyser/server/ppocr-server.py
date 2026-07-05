@@ -43,7 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
-import ocr_backends  # pluggable engine adapters (paddle/trocr/surya/chandra)
+import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
@@ -68,16 +68,13 @@ import numpy as np
 
 app = FastAPI(title="Vahini PP-OCRv5 service", version="1.0")
 
-# Every VAHINI_OCR_*/VAHINI_CHANDRA_* env var is parsed once in config.py;
-# these module-level names are thin aliases so the rest of this file (and
-# the tests, which patch several of them directly) keep their existing
-# short names.
+# Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
+# names are thin aliases so the rest of this file (and the tests, which
+# patch several of them directly) keep their existing short names.
 SETTINGS = config.SETTINGS
 USE_GPU = SETTINGS.use_gpu
 OCR_LANGS = SETTINGS.ocr_langs
 OCR_BACKEND = SETTINGS.ocr_backend
-CHANDRA_METHOD = SETTINGS.chandra_method
-CHANDRA_MAX_TOKENS = SETTINGS.chandra_max_tokens
 MAX_VARIANTS = SETTINGS.max_variants
 ADV_PREPROC = SETTINGS.adv_preproc
 USE_DOC_ORIENTATION = SETTINGS.use_doc_orientation
@@ -161,6 +158,7 @@ recognizer.configure(
     auto_min_lines=AUTO_MIN_LINES,
     variant_min_lines=VARIANT_MIN_LINES,
     refine_min_sim=SETTINGS.refine_min_sim,
+    refine_min_conf=SETTINGS.refine_min_conf,
 )
 ocr_backends.init_registry(
     resolve_langs=recognizer.resolve_langs,
@@ -292,7 +290,7 @@ async def ocr(
         "ocr",
         raw,
         lang,
-        f"det={det}|rec={rec}|backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"det={det}|rec={rec}|backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -401,7 +399,7 @@ async def analyze_vl(
         "analyze-vl",
         raw,
         lang,
-        f"backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -577,7 +575,7 @@ async def report_python(
         "report-python",
         raw,
         lang,
-        f"{expected_text or ''}|backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"{expected_text or ''}|backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:

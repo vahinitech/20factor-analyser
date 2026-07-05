@@ -3,9 +3,9 @@
 # Third-party: PaddleOCR (Apache-2.0). See /THIRD-PARTY-NOTICES.md and server/README.md
 #
 # config.py — server-wide settings, parsed from environment variables once
-# at import time. Single source of truth for every VAHINI_OCR_*/
-# VAHINI_CHANDRA_* env var; ppocr-server.py exposes these as module-level
-# constants (under their existing names) for the rest of the file to use.
+# at import time. Single source of truth for every VAHINI_OCR_* env var;
+# ppocr-server.py exposes these as module-level constants (under their
+# existing names) for the rest of the file to use.
 
 import os
 from dataclasses import dataclass
@@ -19,8 +19,6 @@ class Settings:
     use_gpu: bool
     ocr_langs: list
     ocr_backend: str
-    chandra_method: str
-    chandra_max_tokens: int
     max_variants: int
     adv_preproc: bool
     use_doc_orientation: bool
@@ -39,6 +37,7 @@ class Settings:
     resp_cache_max_items: int
     allowed_origins: list
     refine_min_sim: float
+    refine_min_conf: float
 
 
 def load() -> Settings:
@@ -63,15 +62,6 @@ def load() -> Settings:
             (os.environ.get("VAHINI_OCR_BACKEND", "paddle") or "paddle")
             .strip()
             .lower()
-        ),
-        chandra_method=(
-            (os.environ.get("VAHINI_CHANDRA_METHOD", "api") or "api")
-            .strip()
-            .lower()
-        ),
-        chandra_max_tokens=max(
-            512,
-            int(os.environ.get("VAHINI_CHANDRA_MAX_OUTPUT_TOKENS", "6144")),
         ),
         # A mobile detector is several times faster than the server detector
         # on CPU, with negligible real-world accuracy loss on handwriting
@@ -127,10 +117,18 @@ def load() -> Settings:
             16, int(os.environ.get("VAHINI_OCR_CACHE_MAX_ITEMS", "128"))
         ),
         allowed_origins=os.environ.get("VAHINI_OCR_ORIGINS", "*").split(","),
-        # Accept a stronger engine's refinement of paddle's reading only
-        # when it is at least this similar (0.70 cleanly separates real
-        # refinements from VLM hallucinations; see recognizer.py).
+        # Accept a stronger engine's refinement of paddle's reading of a
+        # handwriting crop when EITHER holds (see recognizer.py):
+        #  - it is at least this similar to paddle's own reading (0.70
+        #    cleanly separates real refinements from VLM hallucinations), or
+        #  - the specialist engine's OWN confidence is at least this high,
+        #    which lets a confident handwriting-specialist reading override
+        #    paddle even when paddle (not a handwriting specialist) read
+        #    something quite different.
         refine_min_sim=float(os.environ.get("VAHINI_REFINE_MIN_SIM", "0.70")),
+        refine_min_conf=float(
+            os.environ.get("VAHINI_REFINE_MIN_CONF", "0.75")
+        ),
     )
 
 

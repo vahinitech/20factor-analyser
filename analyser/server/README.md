@@ -56,21 +56,32 @@ Pick the engine with one env var: `VAHINI_OCR_BACKEND`.
 | `paddle` (default) | PaddleOCR PP-OCRv5 | printed text, fast private default | 1 to 3 s | `requirements-paddle.txt` |
 | `trocr` | TrOCR (Microsoft) | English handwriting | 1 to 4 s/line | `requirements-trocr.txt` |
 | `surya` | Surya 2 (Datalab) | multilingual and Indic handwriting | slow | `requirements-surya.txt` |
-| `chandra` | Chandra 2 (Datalab) | best accuracy, needs GPU or API key | impractical | `requirements-chandra.txt` |
+| `hybrid` | paddle + trocr + surya | mixed pages: printed AND handwriting, any of the languages above | 1 to 4 s/handwriting line | `requirements-trocr.txt` + `requirements-surya.txt` |
 | `paddleocr-vl` | PaddleOCR-VL | strong handwriting, needs GPU | impractical | ships in `paddleocr` |
 | `auto` | best of the installed engines | | | |
 
 Every engine maps to the same response shape, so the app never changes when
-you switch. In `trocr` mode, paddle still detects and classifies; TrOCR
-re-reads each handwriting crop and its text is accepted only when it agrees
-with paddle's reading at least 70% (`VAHINI_REFINE_MIN_SIM`). That keeps real
-corrections and rejects hallucinations.
+you switch. In `trocr` and `hybrid` mode, paddle still detects and classifies
+every line (that decision stays centralised in `classify.py`); only the
+*handwriting* lines get re-read by a specialist, and paddle keeps doing what
+it's already good at on the printed ones. `trocr` mode always re-reads with
+TrOCR; `hybrid` mode picks the specialist per line by script — English to
+TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya — so a mixed-language
+page gets the right engine for each line instead of one engine for the whole
+page.
+
+The re-read text is accepted when EITHER it agrees with paddle's own reading
+at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
+at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
+Paddle is not a handwriting specialist — that's the whole reason to re-read
+— so on genuinely hard handwriting requiring agreement with paddle's own
+(possibly wrong) reading would throw away real corrections; a confident
+specialist reading is trusted on its own. The agreement path still guards
+against hallucination on low-confidence, made-up text.
 
 To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
 `docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
-llama.cpp). Chandra on CPU works through the hosted API: set
-`VAHINI_CHANDRA_METHOD=api` and `DATALAB_API_KEY` (images leave the machine,
-get consent first).
+llama.cpp). `hybrid` mode needs both.
 
 ## Common settings
 
@@ -84,9 +95,11 @@ get consent first).
 | `VAHINI_PRINTED_THRESHOLD` | `0.58` | printed vs handwriting split; higher keeps more as handwriting |
 | `VAHINI_OCR_ENGINE_RETRY_SEC` | `300` | how long a failed engine build is remembered before retrying |
 | `VAHINI_OCR_ORIGINS` | `*` | CORS allowlist for cross-origin deployments |
+| `VAHINI_REFINE_MIN_SIM` | `0.70` | in `trocr`/`hybrid` mode, accept a re-read line if it's at least this similar to paddle's reading |
+| `VAHINI_REFINE_MIN_CONF` | `0.75` | in `trocr`/`hybrid` mode, accept a re-read line if the specialist's own confidence is at least this high, even if it disagrees with paddle |
 
 GPU is auto-detected per engine; force it per engine with `VAHINI_OCR_GPU`,
-`VAHINI_TROCR_GPU`, `VAHINI_SURYA_GPU`, `VAHINI_CHANDRA_GPU`.
+`VAHINI_TROCR_GPU`, `VAHINI_SURYA_GPU`.
 
 ## Pointing a website at it
 

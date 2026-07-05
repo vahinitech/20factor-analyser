@@ -2,7 +2,7 @@
 # (c) 2026 Vahini Technologies.
 """Auto-detect whether an OCR engine should run on GPU or CPU.
 
-Each pluggable backend (paddle, trocr, surya, chandra) picks its device
+Each pluggable backend (paddle, trocr, surya) picks its device
 through resolve_use_gpu() below: an explicit VAHINI_*_GPU=1/0 env var
 always wins (existing deploys that set VAHINI_OCR_GPU=0 keep working
 unchanged); left unset, the engine's own installed build is checked for
@@ -23,7 +23,7 @@ import subprocess
 
 def _torch_cuda_available():
     """True if the installed torch build can actually reach a CUDA GPU.
-    Covers trocr, surya and chandra's "hf" method, which all sit on torch."""
+    Covers trocr and surya, which both sit on torch."""
     try:
         import torch
 

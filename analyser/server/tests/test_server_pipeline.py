@@ -136,7 +136,7 @@ class TestServerPipeline(unittest.TestCase):
     def test_health_lists_all_backends(self):
         j = self.client.get("/health").json()
         self.assertIn("backends", j)
-        for name in ("paddle", "trocr", "surya", "chandra"):
+        for name in ("paddle", "trocr", "surya"):
             self.assertIn(name, j["backends"])
         self.assertIn("printed_threshold", j)
 
@@ -146,8 +146,9 @@ class TestServerPipeline(unittest.TestCase):
         self.assertEqual(j.get("proc_h"), self.H)
 
     def test_guarded_refinement_accepts_similar_rejects_hallucination(self):
-        # The refiner must accept a stronger engine's text only when it agrees
-        # with paddle (real correction) and reject divergent hallucinations.
+        # The refiner must accept a stronger engine's text when it agrees
+        # with paddle (real correction) or is itself confident, and reject
+        # a divergent, low-confidence hallucination.
         mod = self.mod
         proc = np.full((100, 300, 3), 255, np.uint8)
         buf = io.BytesIO()
@@ -156,14 +157,15 @@ class TestServerPipeline(unittest.TestCase):
         orig = mod.ocr_backends.get_backend
 
         class _Fake:
-            def __init__(self, out):
+            def __init__(self, out, conf=0.0):
                 self._out = out
+                self._conf = conf
 
             def available(self):
                 return True, ""
 
             def recognize_crop(self, _crop):
-                return self._out
+                return self._out, self._conf
 
         try:
             mod.ocr_backends.get_backend = lambda n: _Fake("management")
@@ -174,13 +176,78 @@ class TestServerPipeline(unittest.TestCase):
             )  # similar -> accepted
 
             mod.ocr_backends.get_backend = lambda n: _Fake(
-                "Transportation legislation"
+                "Transportation legislation", conf=0.2
             )
             hl = [{"text": "Hypothyoidum", "box": [10, 10, 200, 30]}]
             mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
             self.assertEqual(
                 hl[0]["text"], "Hypothyoidum"
-            )  # divergent -> rejected
+            )  # divergent + low confidence -> rejected
+        finally:
+            mod.ocr_backends.get_backend = orig
+
+    def test_refinement_trusts_a_confident_specialist_over_paddle(self):
+        # Paddle is not a handwriting specialist: on genuinely hard writing
+        # its own reading can itself be wrong, so requiring agreement with a
+        # wrong baseline would throw away a real correction. A confident
+        # specialist reading is accepted even when it disagrees with paddle.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig = mod.ocr_backends.get_backend
+
+        class _Fake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return "ambulance", 0.92  # disagrees with paddle, but sure
+
+        try:
+            mod.ocr_backends.get_backend = lambda n: _Fake()
+            hl = [{"text": "anhulane", "box": [10, 10, 200, 30]}]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
+            self.assertEqual(hl[0]["text"], "ambulance")
+        finally:
+            mod.ocr_backends.get_backend = orig
+
+    def test_hybrid_mode_routes_by_script_trocr_english_surya_indic(self):
+        # Hybrid mode must route each handwriting line to the
+        # script-appropriate specialist: English -> trocr, Telugu -> surya.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig = mod.ocr_backends.get_backend
+
+        class _Fake:
+            def __init__(self, out, conf):
+                self._out, self._conf = out, conf
+
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return self._out, self._conf
+
+        backends = {
+            "trocr": _Fake("english word", 0.9),
+            "surya": _Fake("తెలుగు పదం", 0.9),
+        }
+        try:
+            mod.ocr_backends.get_backend = backends.get
+            hl = [
+                {"text": "garbled en", "box": [10, 10, 200, 30], "lang": "en"},
+                {"text": "garbled te", "box": [10, 50, 200, 30], "lang": "te"},
+            ]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "hybrid")
+            self.assertEqual(hl[0]["text"], "english word")
+            self.assertEqual(hl[0]["refined_by"], "trocr")
+            self.assertEqual(hl[1]["text"], "తెలుగు పదం")
+            self.assertEqual(hl[1]["refined_by"], "surya")
         finally:
             mod.ocr_backends.get_backend = orig
 
