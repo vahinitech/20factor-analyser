@@ -466,6 +466,12 @@
   .vgate__thanks{text-align:center; padding:8px 4px 4px;}
   .vgate__check{width:58px; height:58px; border-radius:50%; background:#DCF1E8; color:#0F6E56; display:grid; place-items:center; margin:0 auto 16px;}
   .vgate__check svg{width:30px; height:30px;}
+  /* window.print() fires 850ms after submit() while this modal is still
+     showing its "Thank you!" panel (see the setTimeout below) so the
+     browser can paint it before print — but that means it's still in the
+     DOM when the print snapshot is taken. Without this, every printed/PDF
+     page shows the modal on top of the report. */
+  @media print{ .vgate{ display:none !important; } }
 </style>
 <div class="vgate" id="vgate" role="dialog" aria-modal="true" aria-labelledby="vgate-title">
   <div class="vgate__card">
