@@ -27,6 +27,10 @@ docker compose up -d --build
 Check it: `curl http://localhost:8080/health` lists every engine and whether
 it can run on this machine.
 
+The server speaks plain HTTP. `https://localhost:8080` cannot work (the TLS
+handshake fails before any redirect could run), so make sure the address bar
+says `http://`. Terminate TLS in a reverse proxy if you need HTTPS.
+
 Model weights download automatically on the first request for each language
 and are cached under `~/.paddlex`. If the machine is offline the scan still
 completes: the 20 factors are measured from geometry and the report says that
@@ -121,12 +125,15 @@ pip install -r analyser/server/requirements-core.txt
 python -m unittest -v \
   analyser.server.tests.test_backends_classify \
   analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional
+  analyser.server.tests.test_regression_functional \
+  analyser.server.tests.test_handwriting_only
 ```
 
 The suite covers the response contracts, the printed/handwriting split, the
-20-factor pipeline, engine failure recovery and the reference-image
-guarantees. It does not need paddle or torch installed.
+20-factor pipeline, engine failure recovery, the reference-image guarantees
+and the handwriting-only rule (printed text is never analysed; fully printed
+pages are refused with `no_handwriting`). It does not need paddle or torch
+installed.
 
 ## One honest note
 

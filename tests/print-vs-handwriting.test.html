@@ -110,7 +110,7 @@
       topWeak: ranked.slice(0,3),
       topStrong: [...rs].sort((a,b)=>b.score-a.score).slice(0,4),
       source:'python',
-      recognition:{ backend:'paddle', hand_lines:5, printed_lines:0, reliable_lines:4,
+      recognition:{ backend:'paddle', hand_lines:5, printed_lines:3, reliable_lines:4,
         mean_confidence:0.91, confidence_pct:91, level:'high', assistive_only:true,
         passage_aligned:false, note:'The 20 factors are measured from geometry.' },
     };
@@ -195,6 +195,14 @@
     const focusChip = host.querySelectorAll('.fscore.focus').length;
     const strongChip = host.querySelectorAll('.fscore.strong').length;
     add(focusChip >= 1 && strongChip >= 1, 'Factor bands rendered (focus + strong present)', 'focus='+focusChip+' strong='+strongChip);
+
+    // 9) printed text on the page is disclosed as EXCLUDED, never scored
+    add(/3 printed lines on the page were excluded/i.test(txt),
+      'Printed-lines-excluded disclosure rendered (handwriting-only rule)');
+
+    // 10) the report invites bug reports / feature ideas on GitHub
+    add(/github\.com\/vahinitech\/20factor-analyser/i.test(host.innerHTML||''),
+      'GitHub issues note present');
 
     finish();
   }

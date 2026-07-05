@@ -216,6 +216,34 @@ def health():
     }
 
 
+def _no_handwriting_payload(engine, lang, lines, extra=None):
+    """Refusal payload for a page where text was detected but ALL of it is
+    printed. The analyser's rule of thumb: printed text is never analysed,
+    never scored, never shown as evidence. Scoring a printed page would be
+    fabrication, so the honest answer is a clear refusal the app can show."""
+    printed = int(sum(1 for l in lines if l.get("printed_hint")))
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "no_handwriting",
+        "error": (
+            "No handwriting found on this page. It looks fully printed "
+            f"({printed} printed line{'s' if printed != 1 else ''} "
+            "detected). This analyser measures pen handwriting only; "
+            "printed text is always excluded from the analysis."
+        ),
+        "printed_lines": printed,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -231,6 +259,10 @@ def _ocr_process(arr, raw, lang):
         lines, hand_lines = recognizer.extract_hand_lines(
             arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
         )
+        if lines and not hand_lines:
+            # Text was detected but every line is printed: refuse rather
+            # than return machine type as "recognised handwriting".
+            return _no_handwriting_payload("pp-ocrv5", lang, lines)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -320,6 +352,20 @@ def _analyze_vl_process(arr, raw, lang):
         lines, hand_lines = recognizer.extract_hand_lines(
             arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
         )
+        if lines and not hand_lines:
+            # Every detected line is printed: refuse to analyse the page
+            # (printed text is never scored or shown as evidence).
+            return _no_handwriting_payload(
+                "pp-ocrv5+vl",
+                lang,
+                lines,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                },
+            )
         if not hand_lines:
             # No OCR engine could run (models unavailable, engine init
             # failure). The layout/context/factor-region analysis is pure
@@ -430,6 +476,21 @@ def _report_python_process(arr, raw, lang, expected_text):
         lines, hand_lines = recognizer.extract_hand_lines(
             arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
         )
+        if lines and not hand_lines:
+            # Every detected line is printed. Scoring machine type as
+            # handwriting would fabricate a report, so refuse clearly.
+            return _no_handwriting_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                lines,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                },
+            )
         if not hand_lines:
             # No OCR engine could run (models unavailable, engine init
             # failure). The 20 factors are measured from GEOMETRY, not from

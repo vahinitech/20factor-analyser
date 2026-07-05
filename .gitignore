@@ -1,8 +1,9 @@
 # ---- Vahini repo ignores ----
 
 # PRIVACY: real user-supplied sample images (may contain personal/medical data).
-# These must never be published. Synthetic CI fixtures live in tests/fixtures/.
-samples/
+# These must never be published. Personal-data-free CI fixtures live in
+# tests/fixtures/ (including tests/fixtures/samples/, which IS committed).
+/samples/
 
 # Dead / superseded duplicates kept only for local reference, not for release.
 archive/

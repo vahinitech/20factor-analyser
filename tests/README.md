@@ -11,11 +11,16 @@ pip install -r analyser/server/requirements-core.txt
 python -m unittest -v \
   analyser.server.tests.test_backends_classify \
   analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional
+  analyser.server.tests.test_regression_functional \
+  analyser.server.tests.test_handwriting_only
 ```
 
 Covers the API contracts, the printed/handwriting classifier, the 20-factor
-pipeline, engine failure recovery and the reference-image guarantees.
+pipeline, engine failure recovery, the reference-image guarantees, and the
+handwriting-only rule: printed text never enters a report. The
+handwriting-only suite runs against the real pages in `fixtures/samples/`
+(pure handwriting, pure print, mixed print + pen) and asserts that mixed
+pages score only the pen entries and fully printed pages are refused.
 
 ## 2. Headless report checks
 
