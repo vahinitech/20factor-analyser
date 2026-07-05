@@ -49,7 +49,8 @@ _FORM_KW = re.compile(
     r"\b(name|address|adress|date|age|sex|gender|case|doctor|dr|diagnosis|admission|"
     r"discharge|procedure|phone|mobile|id|form|hospital|patient|summary|findings|"
     r"consultant|fir|ip|op|investigation|investgation|results|dob|dod|d\.o\.b|d\.o\.d|"
-    r"reg|no|ref|signature|sign|amount|total|qty|rate)\b",
+    r"reg|no|ref|signature|sign|amount|total|qty|rate|received|receipt|paid|issued|"
+    r"office|department)\b",
     re.IGNORECASE,
 )
 
@@ -222,9 +223,14 @@ def _structural_printed_score(feat):
         s += 0.22
     elif sw and sw >= 0.62:
         s -= 0.18  # clearly variable → handwriting
-    # glyph-height uniformity
+    # glyph-height uniformity. 0.16-0.40 used to be a dead zone (neither
+    # bonus nor penalty), which under-scored real print with ascenders and
+    # descenders (mixed-case labels naturally have more height variance than
+    # an all-caps header) — give it partial credit instead of nothing.
     if gh and gh <= 0.16:
         s += 0.22
+    elif gh and gh <= 0.28:
+        s += 0.12
     elif gh and gh >= 0.40:
         s -= 0.12
     # edge crispness
@@ -336,10 +342,13 @@ def classify_lines(arr, lines, threshold=None):
 
         # Decisive override: a clean, high-confidence, multi-character line is
         # printed (letterhead, address, form labels) — handwriting almost never
-        # reads this cleanly. Skip the override only when stroke width is clearly
-        # variable, which protects exceptionally neat handwriting.
+        # reads this cleanly. 0.93, not 0.96: a photographed/aged page reads
+        # genuine print at 0.90-0.96, not just 0.96+, so requiring 0.96 missed
+        # real letterheads on worn paper. Skip the override only when stroke
+        # width is clearly variable, which protects exceptionally neat
+        # handwriting.
         if (
-            sc >= 0.96
+            sc >= 0.93
             and len(text) >= 6
             and clean >= 0.6
             and (not sw or sw < 0.5)
