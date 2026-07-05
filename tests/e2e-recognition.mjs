@@ -38,9 +38,18 @@ async function main() {
     fail('OCR backend reachable', String(e));
   }
 
+  // browser is declared outside the try so the finally below can always
+  // close it -- previously browser.close() sat at the end of the try block,
+  // so any failure above it (e.g. a selector timeout) jumped straight to
+  // catch and left the Chromium child process running. An orphaned browser
+  // process keeps Node's event loop non-empty, so the script never exited
+  // on its own: it hung until the CI runner's own multi-hour job timeout
+  // killed it, instead of failing within seconds like the printed timeouts
+  // below imply.
+  let browser;
   try {
     const { chromium } = await import('playwright');
-    const browser = await chromium.launch({ headless: true });
+    browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
@@ -77,10 +86,10 @@ async function main() {
     else fail('recognised text contains expected words', info.recText.slice(0, 120));
 
     if (pageErrors.length === 0) ok('no page errors'); else fail('no page errors', pageErrors.join('|').slice(0, 160));
-
-    await browser.close();
   } catch (err) {
     fail('harness', String(err && err.message ? err.message : err));
+  } finally {
+    if (browser) await browser.close().catch(() => {});
   }
 
   let passed = 0;
@@ -89,4 +98,7 @@ async function main() {
   if (passed !== results.length || results.length === 0) process.exitCode = 1;
 }
 
-main();
+// Explicit exit as a backstop even with the browser.close() fix above: a
+// CI test runner hanging past its own printed summary must never rely on
+// every last handle (a stray CDP socket, etc.) closing itself.
+main().finally(() => process.exit(process.exitCode ?? 0));

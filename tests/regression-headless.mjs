@@ -44,18 +44,23 @@ async function waitForServer() {
 async function runHeadlessChecks() {
   const { chromium } = await import('playwright');
   const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage();
+  try {
+    const page = await browser.newPage();
 
-  await page.goto(TEST_URL, { waitUntil: 'load' });
+    await page.goto(TEST_URL, { waitUntil: 'load' });
 
-  await page.waitForFunction(() => {
-    const t = window.__testResults;
-    return !!(t && typeof t.total === 'number' && t.total > 0);
-  }, { timeout: 120000 });
+    await page.waitForFunction(() => {
+      const t = window.__testResults;
+      return !!(t && typeof t.total === 'number' && t.total > 0);
+    }, { timeout: 120000 });
 
-  const result = await page.evaluate(() => window.__testResults);
-  await browser.close();
-  return result;
+    return await page.evaluate(() => window.__testResults);
+  } finally {
+    // Always close, not just on the success path -- an unclosed browser
+    // process (e.g. after a waitForFunction timeout) keeps Node's event
+    // loop alive and the script hangs instead of exiting on failure.
+    await browser.close().catch(() => {});
+  }
 }
 
 async function main() {
@@ -100,4 +105,7 @@ async function main() {
   }
 }
 
-main();
+// Explicit exit as a backstop: a lingering handle must never make this
+// hang past its own printed summary (see runHeadlessChecks' browser.close
+// fix above).
+main().finally(() => process.exit(process.exitCode ?? 0));
