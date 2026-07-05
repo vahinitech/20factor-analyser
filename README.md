@@ -72,6 +72,76 @@ Where a model is the right tool, reading messy words, we use one assistively:
 the pluggable OCR backends label what was written and never decide a score.
 If OCR is unavailable the 20 factors are still measured from geometry alone.
 
+## What the geometry actually checks
+
+"Deterministic computer vision" is a claim, not a black box — here is what
+that means at each level, from a single stroke up to the whole page. The
+report shows a small diagram of exactly this next to a crop of your own
+writing, for every factor.
+
+**One character.** The page is thresholded to an ink mask (Otsu:
+pen/print marks vs paper). Two measurements come straight from that mask:
+
+- *Stroke width.* A distance transform gives every ink pixel its distance
+  to the nearest background pixel; the ridge of that map is roughly half
+  the stroke's width at that point. Printed type holds this width nearly
+  constant end to end (low variance). A pen's width wanders with speed and
+  pressure (higher variance) — that variance, not the width itself, is
+  the signal, and it's the main structural cue behind Letter Formation and
+  the printed-vs-handwriting split.
+- *Edge crispness.* Canny edges divided by ink area. Print has sharp,
+  mostly straight contours; a drawn line has soft, curved ones.
+- *Loop closure* (Structure factor 3, for letters like a/o/d/p/e/g/q)
+  is currently a proxy, not per-letter contour tracing: it's the share of
+  loop-shaped letters among everything the OCR engine actually read on the
+  page. Worth knowing plainly, since it's the one factor here that leans
+  on reading the words rather than pure pixels.
+
+**One word.** A word's own bounding box, and its neighbours on the same
+line, give two more measurements: the gaps between adjacent letters
+(their consistency is Letter Spacing, factor 9) and the word's width
+divided by its own letter count (an average character width, feeding
+Stroke Order and Size Consistency). None of this needs the word read
+correctly — it only needs the boxes OCR detection already draws around
+each cluster of ink, the same orange boxes shown on your page in the
+report.
+
+**One line.** A detected line carries a polygon, not just a box, so its
+tilt is measurable directly (the angle between its first two corner
+points). The *average* tilt across every line on the page is what
+Baseline and Line Straightness measure; how much that tilt *varies* from
+line to line, not its average, is what Vertical Alignment and Slant
+measure instead — a page where one line suddenly veers scores worse here
+than a page that leans the same modest amount throughout. (Worth being
+plain about: Slant here is that page-level tilt-variability signal, not
+a per-letter cursive-lean angle — a simplification, like loop closure
+above.) The line's own bounding-box height and width, compared against
+every other line's, give Size Consistency and Line Quality. Each line's
+left edge, collected down the whole page, gives Margins: an edge that
+steps in and out scores lower than one that holds steady. The vertical
+gap between consecutive lines' centres feeds line-spacing rhythm.
+
+**The whole page.** A few factors are not measured directly — they are
+weighted blends of the ones above. Overall Neatness, for example, is
+30% Size Consistency + 20% Word Spacing + 20% Margins + 15% Line
+Straightness + 15% Slant. Legibility leans similarly on Letter Formation,
+Size Consistency, Word Spacing and Baseline. Character Distinction is the
+one factor that uses OCR's own confidence directly (a confident, easy
+read implies clearly distinct letterforms) alongside how digit-heavy the
+text is.
+
+**What never depends on reading the words correctly:** stroke width,
+glyph height, edge crispness, letter/word spacing, baseline tilt, line
+straightness, margins, line spacing — every one of these comes from
+pixel geometry and detected boxes, not from what the OCR engine thought
+the letters said. **What does lean on it, as a secondary signal only:**
+loop closure and the ascender/descender proxy (factor 6, the share of
+tall/descending letters like b/d/f/h/k/l/t/g/j/p/q/y in the recognised
+text), plus Character Distinction's confidence term. When OCR can't read
+a page at all (see the cv-fallback path above), those specific
+sub-signals fall back to a neutral default rather than failing the scan
+— the geometry-only factors are unaffected either way.
+
 ## Repository layout
 
 ```

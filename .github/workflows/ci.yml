@@ -29,7 +29,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r analyser/server/requirements-core.txt
       - name: Syntax-check server modules
-        run: python -m py_compile analyser/server/ppocr-server.py analyser/server/ocr_backends.py analyser/server/classify.py analyser/server/layout_filter.py analyser/server/analyser-ocr-server.py analyser/server/warmup_models.py analyser/server/geometry.py analyser/server/model_map.py analyser/server/gpu_detect.py analyser/server/computer_vision.py analyser/server/scoring.py analyser/server/detector.py analyser/server/recognizer.py analyser/server/config.py analyser/server/cache.py
+        run: python -m py_compile analyser/server/ppocr-server.py analyser/server/ocr_backends.py analyser/server/classify.py analyser/server/layout_filter.py analyser/server/analyser-ocr-server.py analyser/server/warmup_models.py analyser/server/benchmark_ocr.py analyser/server/geometry.py analyser/server/model_map.py analyser/server/gpu_detect.py analyser/server/computer_vision.py analyser/server/scoring.py analyser/server/detector.py analyser/server/recognizer.py analyser/server/config.py analyser/server/cache.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 analyser/build_bundle.py analyser/server/*.py analyser/server/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -37,7 +37,7 @@ jobs:
           pylint --fail-under=9.0 analyser/build_bundle.py \
             analyser/server/analyser-ocr-server.py analyser/server/classify.py \
             analyser/server/ocr_backends.py analyser/server/ppocr-server.py \
-            analyser/server/layout_filter.py \
+            analyser/server/layout_filter.py analyser/server/benchmark_ocr.py \
             analyser/server/warmup_models.py analyser/server/geometry.py \
             analyser/server/model_map.py analyser/server/gpu_detect.py \
             analyser/server/computer_vision.py analyser/server/scoring.py \

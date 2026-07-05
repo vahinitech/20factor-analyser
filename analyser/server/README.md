@@ -186,6 +186,33 @@ docker run --rm -p 8080:8080 \
 
 `docker-compose.yml` already does this with a named volume.
 
+## Benchmarks
+
+Real, measured numbers only — this project's whole premise is auditable
+geometry over guesswork, so a made-up speed table would contradict that.
+Run it yourself and paste the output here (or open a PR):
+
+```bash
+pip install -r analyser/server/requirements-core.txt   # + whichever engine tiers you want measured
+python analyser/server/benchmark_ocr.py
+```
+
+It runs the SAME production code path (`recognizer.collect_lines_paddle` /
+`recognizer.backend_recognize`) against the pages already committed under
+`tests/fixtures/samples/`, times every call, and prints a Markdown table:
+engine, sample, lines found, detection/recognition/total time, mean
+confidence. Engines you haven't installed are skipped with a note, not an
+error. See the script's own header comment for exactly what "detection"
+vs "recognition" means for a recogniser-only engine like TrOCR or Surya
+(PaddleOCR's API doesn't expose them as separately timeable steps, so one
+of the two is an estimate — clearly labelled as such in the output).
+
+`--samples <dir>` points it at a different folder of images, `--limit N`
+caps how many it runs, `--lang en|te|hi|...` picks the language.
+
+_No results are published here yet — be the first to run it on real
+hardware and send a PR with your table and CPU/GPU details._
+
 ## Tests
 
 ```bash
