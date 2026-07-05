@@ -5,16 +5,26 @@
 # recognizer.py — orchestrates recognition across OCR backends.
 #
 # Resolves the language list, dispatches to the configured backend
-# (paddle/trocr/surya/chandra/auto, falling back to paddle when an
+# (paddle/trocr/surya/hybrid/auto, falling back to paddle when an
 # alternative engine is unavailable or empty), and post-processes the
 # result: merge/filter candidate regions, classify printed vs handwriting,
 # optionally refine handwriting text with a stronger engine, and align
 # recognised lines to a known reference passage. Nothing here decodes
 # images or computes the 20-factor score; it only turns OCR backends into
 # a clean list of handwriting lines.
+#
+# Why "hybrid": paddle (PP-OCRv5) reads printed text very well but is not a
+# handwriting specialist, while trocr (English) and surya (Indic scripts)
+# are. Rather than pick ONE engine for a whole page (which forfeits paddle's
+# strength on the printed parts of a mixed page), hybrid mode always uses
+# paddle to detect lines and classify printed vs handwriting, then re-reads
+# ONLY the handwriting lines with the script-appropriate specialist — so a
+# typical mixed form pays the specialist's per-line cost only on the
+# smaller handwriting subset, not the whole page.
 
 import difflib
 import re
+import time
 
 import numpy as np
 
@@ -22,6 +32,7 @@ import ocr_backends
 import classify
 import detector
 import computer_vision
+import layout_filter
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -31,7 +42,13 @@ _CFG = {
     "auto_min_lines": 3,
     "variant_min_lines": 3,
     "refine_min_sim": 0.70,
+    "refine_min_conf": 0.75,
 }
+
+# Languages Surya is documented to handle well (Indic + English); anything
+# else routes to TrOCR, which is an English-only handwriting checkpoint
+# (microsoft/trocr-base-handwritten).
+_INDIC_LANGS = {"te", "hi", "ta", "kn", "ml"}
 
 
 def configure(**kwargs):
@@ -125,7 +142,7 @@ def backend_recognize(name: str, arr: np.ndarray, lang: str):
 def collect_lines(arr: np.ndarray, lang: str):
     """Dispatch recognition to the configured backend.
 
-    VAHINI_OCR_BACKEND = paddle | trocr | surya | chandra | auto
+    VAHINI_OCR_BACKEND = paddle | trocr | surya | hybrid | paddleocr-vl | auto
     Any non-paddle engine that is unavailable or returns nothing falls back to
     paddle, so the caller ALWAYS gets a usable result on this CPU-only box.
     """
@@ -133,7 +150,7 @@ def collect_lines(arr: np.ndarray, lang: str):
     mode = (
         ocr_backend
         if ocr_backend
-        in ("paddle", "trocr", "surya", "chandra", "paddleocr-vl", "auto")
+        in ("paddle", "trocr", "surya", "hybrid", "paddleocr-vl", "auto")
         else "paddle"
     )
     compare = {}
@@ -142,20 +159,22 @@ def collect_lines(arr: np.ndarray, lang: str):
     if mode == "paddle":
         return paddle_lines, paddle_err, "paddle", compare
 
-    if mode == "trocr":
-        # TrOCR is a recogniser, not a detector/classifier. Keep paddle's
-        # detection + printed/handwriting classification (which we trust), and
-        # let TrOCR REFINE the handwriting text downstream (see
-        # refine_handwriting_text). This avoids feeding the classifier TrOCR's
-        # uncalibrated scores and confines TrOCR to what it's good at.
-        return (
-            paddle_lines,
-            paddle_err,
-            "trocr",
-            {"strategy": "paddle-detect+classify, trocr-refine"},
+    if mode in ("trocr", "hybrid"):
+        # TrOCR/Surya are recognisers, not detectors/classifiers. Keep
+        # paddle's detection + printed/handwriting classification (which we
+        # trust), and let the specialist engine(s) REFINE the handwriting
+        # text downstream (see refine_handwriting_text). This avoids feeding
+        # the classifier an uncalibrated engine's scores and confines each
+        # specialist to what it's good at. "trocr" mode always refines with
+        # TrOCR; "hybrid" mode also routes Indic-script lines to Surya.
+        strategy = (
+            "paddle-detect+classify, trocr-refine"
+            if mode == "trocr"
+            else "paddle-detect+classify, trocr/surya-refine-by-script"
         )
+        return paddle_lines, paddle_err, mode, {"strategy": strategy}
 
-    if mode in ("surya", "chandra", "paddleocr-vl"):
+    if mode in ("surya", "paddleocr-vl"):
         alt_lines, alt_err = backend_recognize(mode, arr, lang)
         if alt_lines:
             return alt_lines, alt_err, mode, compare
@@ -164,7 +183,7 @@ def collect_lines(arr: np.ndarray, lang: str):
 
     # auto: score paddle against every available alternative, keep the best.
     candidates = [("paddle", paddle_lines, paddle_err)]
-    for name in ("trocr", "surya", "chandra", "paddleocr-vl"):
+    for name in ("trocr", "surya", "paddleocr-vl"):
         be = ocr_backends.get_backend(name)
         if be is None:
             continue
@@ -198,29 +217,55 @@ def collect_lines(arr: np.ndarray, lang: str):
     return paddle_lines, paddle_err, "paddle", compare
 
 
+def _refine_engine_for_line(line_lang: str, backend_name: str) -> str:
+    """Which registered engine should re-read a handwriting line.
+
+    In "hybrid" mode, route by script: Surya is documented to handle Indic
+    scripts well; TrOCR's checkpoint (microsoft/trocr-base-handwritten) is
+    English-only, so anything else goes to TrOCR. Only Telugu is currently
+    auto-detected per line (see ocr_backends._TELUGU); other Indic scripts
+    route to Surya when the request itself was made with that `lang=`. Any
+    other mode (e.g. "trocr") uses that single named engine for every line,
+    unchanged from before.
+    """
+    if backend_name != "hybrid":
+        return backend_name
+    return "surya" if (line_lang or "en") in _INDIC_LANGS else "trocr"
+
+
 def refine_handwriting_text(
     raw_bytes: bytes, proc_arr: np.ndarray, hand_lines, backend_name: str
 ):
-    """Re-recognise each handwriting crop with a stronger engine (TrOCR) and
-    accept its text ONLY when it roughly agrees with paddle's reading.
+    """Re-recognise each handwriting crop with a stronger, script-appropriate
+    engine and accept its text when EITHER holds:
+      - it roughly agrees with paddle's reading, or
+      - the specialist engine's OWN confidence is high.
 
-    Why the agreement guard: TrOCR is a language-model recogniser that produces
-    excellent text on clear English words ("manay ment" -> "management") but
-    HALLUCINATES on out-of-distribution medical/Indic content ("Hypothyoidum" ->
-    "Transportation legislation"). Requiring a minimum string similarity to
-    paddle's reading keeps the wins and rejects the hallucinations. Crops are
-    taken from the FULL-RESOLUTION original (paddle's working image is
-    downscaled), which materially improves recognition.
+    Why two acceptance paths, not just agreement: TrOCR/Surya are
+    language-model recognisers that produce excellent text on clear input
+    ("manay ment" -> "management") but HALLUCINATE on out-of-distribution
+    content ("Hypothyoidum" -> "Transportation legislation") — the agreement
+    gate catches that. But paddle is not a handwriting specialist (that's
+    the whole reason we're re-reading), so on genuinely hard handwriting its
+    own reading can be badly wrong too; requiring the specialist to also
+    agree with a wrong baseline would throw away real corrections. A
+    confident specialist reading is trusted even when it disagrees with
+    paddle. (The agreement check is Latin-only — non-Latin scripts strip to
+    an empty string and always score 0 — so Indic refinements rely on the
+    confidence path.) Crops are taken from the FULL-RESOLUTION original
+    (paddle's working image is downscaled), which materially improves
+    recognition.
+
+    Adaptive to CPU speed: every call is timed and recorded via
+    ocr_backends.record_engine_speed(). Once an engine measures slower than
+    VAHINI_HYBRID_MAX_MS_PER_LINE, it is skipped for the rest of THIS page
+    (keeping paddle's reading) and for VAHINI_HYBRID_RETRY_SEC afterwards —
+    a real measured latency on this exact machine, not a synthetic
+    benchmark or a manual "is this box fast?" setting. This is what makes
+    hybrid mode safe to enable everywhere: a fast machine gets every
+    handwriting line re-read, a slow one quietly behaves like plain paddle
+    after the first slow measurement instead of stalling every scan.
     """
-    be = ocr_backends.get_backend(backend_name)
-    if be is None or not hasattr(be, "recognize_crop"):
-        return
-    try:
-        ok, _reason = be.available()
-    except Exception:
-        ok = False
-    if not ok:
-        return
     try:
         full = np.array(computer_vision.decode_image(raw_bytes))
     except Exception:
@@ -231,7 +276,28 @@ def refine_handwriting_text(
     oh, ow = full.shape[0], full.shape[1]
     sx, sy = ow / pw, oh / ph
 
+    ready = {}  # engine name -> backend, or None if unavailable (cached)
+
+    def _get_ready(name):
+        if name not in ready:
+            be = ocr_backends.get_backend(name)
+            ok = False
+            if be is not None and hasattr(be, "recognize_crop"):
+                try:
+                    ok, _reason = be.available()
+                except Exception:
+                    ok = False
+            ready[name] = be if ok else None
+        return ready[name]
+
     for l in hand_lines[:40]:
+        engine_name = _refine_engine_for_line(l.get("lang"), backend_name)
+        verdict = ocr_backends.engine_speed_verdict(engine_name)
+        if verdict is not None and not verdict[1]:
+            continue  # measured too slow on this machine recently; skip
+        be = _get_ready(engine_name)
+        if be is None:
+            continue
         box = l.get("box") or [0, 0, 0, 0]
         if len(box) < 4:
             continue
@@ -245,10 +311,18 @@ def refine_handwriting_text(
         if x1 <= x0 or y1 <= y0:
             continue
         crop = full[y0:y1, x0:x1]
+        t0 = time.perf_counter()
         try:
-            cand = (be.recognize_crop(crop) or "").strip()
+            cand, conf = be.recognize_crop(crop)
         except Exception:
             continue
+        # Only a successful call counts as a speed measurement — an
+        # exception is a reliability problem, not a latency one, and
+        # recording it here would let an instant crash look "fast".
+        ocr_backends.record_engine_speed(
+            engine_name, (time.perf_counter() - t0) * 1000.0
+        )
+        cand = (cand or "").strip()
         # TrOCR often appends a stray " ." — drop trailing isolated punctuation.
         cand = re.sub(r"\s*[.·,]+\s*$", "", cand).strip()
         if not cand:
@@ -257,9 +331,10 @@ def refine_handwriting_text(
         a = re.sub(r"[^a-z0-9]", "", base.lower())
         b = re.sub(r"[^a-z0-9]", "", cand.lower())
         sim = difflib.SequenceMatcher(None, a, b).ratio() if (a and b) else 0.0
-        if sim >= _CFG["refine_min_sim"]:
+        conf = float(conf or 0.0)
+        if sim >= _CFG["refine_min_sim"] or conf >= _CFG["refine_min_conf"]:
             l["text"] = cand
-            l["refined_by"] = backend_name
+            l["refined_by"] = engine_name
 
 
 def extract_hand_lines(
@@ -268,12 +343,17 @@ def extract_hand_lines(
     raw_bytes: bytes = None,
     refine_backend: str = None,
 ):
-    """Shared post-processing: merge → region-filter → classify printed vs
-    handwriting → keep handwriting, minus OCR noise fragments → optionally refine
-    handwriting text with a stronger engine. Returns (all_lines, hand_lines).
+    """Shared post-processing: merge → region-filter → drop non-text-ink
+    layout regions (image/figure/chart/seal) → classify printed vs
+    handwriting → keep handwriting, minus OCR noise fragments → optionally
+    refine handwriting text with a stronger engine. Returns (all_lines,
+    hand_lines).
     """
     lines = detector.region_filter_lines(
         detector.merge_lines(raw_lines), arr.shape
+    )
+    lines = layout_filter.filter_excluded_regions(
+        lines, layout_filter.excluded_regions(arr)
     )
     classify.classify_lines(arr, lines)
     hand_lines = detector.prefer_handwritten(lines)
@@ -281,7 +361,7 @@ def extract_hand_lines(
     # Fail-open: never empty the set just because noise filtering was strict.
     if cleaned:
         hand_lines = cleaned
-    if refine_backend == "trocr" and raw_bytes:
+    if refine_backend in ("trocr", "hybrid") and raw_bytes:
         refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
     return lines, hand_lines
 

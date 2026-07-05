@@ -3,6 +3,16 @@
 # detector for text-line boxes, so install requirements-paddle.txt too.
 # Default model: microsoft/trocr-base-handwritten (override VAHINI_TROCR_MODEL).
 # CPU torch wheels: pip install torch --index-url https://download.pytorch.org/whl/cpu
+#
+# transformers is capped below 5: microsoft/trocr-base-handwritten only ships
+# a legacy (slow) tokenizer on the Hub (vocab.json/merges.txt, no
+# pre-serialized tokenizer.json). transformers 5.x unified tokenizer loading
+# into a single TokenizersBackend class with no pure-Python fallback for that
+# format, so TrOCRProcessor.from_pretrained() fails with "Couldn't
+# instantiate the backend tokenizer" regardless of kwargs -- confirmed by a
+# real build failure against transformers 5.13.0. Lift this cap once
+# microsoft/trocr-base-handwritten's Hub repo ships a tokenizer.json, or once
+# a from_pretrained() override for this is confirmed working against 5.x.
 torch>=2.2
-transformers>=4.44
+transformers>=4.44,<5
 sentencepiece>=0.2.0

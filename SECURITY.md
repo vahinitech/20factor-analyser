@@ -28,7 +28,6 @@ This project processes handwriting images, which can be sensitive.
 
 - Do not commit real user images. `samples/` is git-ignored; CI fixtures are
   synthetic.
-- The OCR `chandra` backend in **API mode** (`DATALAB_API_KEY`) sends images to a
-  hosted service — use it only with user consent. The default `paddle` backend
-  runs locally.
+- Every supported OCR backend (`paddle`, `trocr`, `surya`, `hybrid`) runs
+  locally; no image data leaves the machine.
 - Never put personal data or secrets in URLs, logs, issues, or commits.

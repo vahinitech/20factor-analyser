@@ -136,7 +136,7 @@ class TestServerPipeline(unittest.TestCase):
     def test_health_lists_all_backends(self):
         j = self.client.get("/health").json()
         self.assertIn("backends", j)
-        for name in ("paddle", "trocr", "surya", "chandra"):
+        for name in ("paddle", "trocr", "surya"):
             self.assertIn(name, j["backends"])
         self.assertIn("printed_threshold", j)
 
@@ -146,8 +146,9 @@ class TestServerPipeline(unittest.TestCase):
         self.assertEqual(j.get("proc_h"), self.H)
 
     def test_guarded_refinement_accepts_similar_rejects_hallucination(self):
-        # The refiner must accept a stronger engine's text only when it agrees
-        # with paddle (real correction) and reject divergent hallucinations.
+        # The refiner must accept a stronger engine's text when it agrees
+        # with paddle (real correction) or is itself confident, and reject
+        # a divergent, low-confidence hallucination.
         mod = self.mod
         proc = np.full((100, 300, 3), 255, np.uint8)
         buf = io.BytesIO()
@@ -156,14 +157,15 @@ class TestServerPipeline(unittest.TestCase):
         orig = mod.ocr_backends.get_backend
 
         class _Fake:
-            def __init__(self, out):
+            def __init__(self, out, conf=0.0):
                 self._out = out
+                self._conf = conf
 
             def available(self):
                 return True, ""
 
             def recognize_crop(self, _crop):
-                return self._out
+                return self._out, self._conf
 
         try:
             mod.ocr_backends.get_backend = lambda n: _Fake("management")
@@ -174,15 +176,183 @@ class TestServerPipeline(unittest.TestCase):
             )  # similar -> accepted
 
             mod.ocr_backends.get_backend = lambda n: _Fake(
-                "Transportation legislation"
+                "Transportation legislation", conf=0.2
             )
             hl = [{"text": "Hypothyoidum", "box": [10, 10, 200, 30]}]
             mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
             self.assertEqual(
                 hl[0]["text"], "Hypothyoidum"
-            )  # divergent -> rejected
+            )  # divergent + low confidence -> rejected
         finally:
             mod.ocr_backends.get_backend = orig
+
+    def test_refinement_trusts_a_confident_specialist_over_paddle(self):
+        # Paddle is not a handwriting specialist: on genuinely hard writing
+        # its own reading can itself be wrong, so requiring agreement with a
+        # wrong baseline would throw away a real correction. A confident
+        # specialist reading is accepted even when it disagrees with paddle.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig = mod.ocr_backends.get_backend
+
+        class _Fake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return "ambulance", 0.92  # disagrees with paddle, but sure
+
+        try:
+            mod.ocr_backends.get_backend = lambda n: _Fake()
+            hl = [{"text": "anhulane", "box": [10, 10, 200, 30]}]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
+            self.assertEqual(hl[0]["text"], "ambulance")
+        finally:
+            mod.ocr_backends.get_backend = orig
+
+    def test_hybrid_mode_routes_by_script_trocr_english_surya_indic(self):
+        # Hybrid mode must route each handwriting line to the
+        # script-appropriate specialist: English -> trocr, Telugu -> surya.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig = mod.ocr_backends.get_backend
+
+        class _Fake:
+            def __init__(self, out, conf):
+                self._out, self._conf = out, conf
+
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return self._out, self._conf
+
+        backends = {
+            "trocr": _Fake("english word", 0.9),
+            "surya": _Fake("తెలుగు పదం", 0.9),
+        }
+        try:
+            mod.ocr_backends.get_backend = backends.get
+            hl = [
+                {"text": "garbled en", "box": [10, 10, 200, 30], "lang": "en"},
+                {"text": "garbled te", "box": [10, 50, 200, 30], "lang": "te"},
+            ]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "hybrid")
+            self.assertEqual(hl[0]["text"], "english word")
+            self.assertEqual(hl[0]["refined_by"], "trocr")
+            self.assertEqual(hl[1]["text"], "తెలుగు పదం")
+            self.assertEqual(hl[1]["refined_by"], "surya")
+        finally:
+            mod.ocr_backends.get_backend = orig
+
+    def test_recognition_summary_proves_which_engine_refined_lines(self):
+        # analysis.recognition.refined_by/refined_lines is the report's
+        # verifiable proof that a specialist engine actually touched a
+        # line -- not just that hybrid/trocr mode was requested. Setting
+        # VAHINI_OCR_BACKEND=hybrid alone proves nothing if the specialist
+        # was never installed or never accepted; this field is computed
+        # from hand_lines' real per-line "refined_by" markers.
+        mod = self.mod
+
+        def fake_collect_hybrid(_arr_in, _lang):
+            def rect(x, y, w, h):
+                return [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+
+            lines = [
+                {
+                    "text": "garbled hand",
+                    "score": 0.60,
+                    "box": [10, 150, 360, 40],
+                    "poly": rect(10, 150, 360, 40),
+                    "lang": "en",
+                },
+            ]
+            return lines, "", "hybrid", {"strategy": "hybrid"}
+
+        class _Fake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return "clear word", 0.95
+
+        # /report-python caches by (image bytes, lang, expected_text,
+        # configured backend) -- reusing cls.png would return an earlier
+        # test's cached response instead of exercising this one, since none
+        # of those vary here. A one-pixel tweak gives a fresh cache key.
+        arr2 = self.arr.copy()
+        arr2[0, 0] = [254, 254, 254]
+        buf = io.BytesIO()
+        Image.fromarray(arr2).save(buf, format="PNG")
+        png2 = buf.getvalue()
+
+        orig_collect = mod.recognizer.collect_lines
+        orig_get_backend = mod.ocr_backends.get_backend
+        orig_memo = dict(mod.ocr_backends._SPEED_MEMO)
+        mod.ocr_backends._SPEED_MEMO.clear()
+        try:
+            mod.recognizer.collect_lines = fake_collect_hybrid
+            mod.ocr_backends.get_backend = lambda n: _Fake()
+            r = self.client.post(
+                "/report-python",
+                files={"image": ("page.png", png2, "image/png")},
+                data={"lang": "auto"},
+            )
+            j = r.json()
+            rec = j["analysis"]["recognition"]
+            self.assertEqual(rec["refined_by"], {"trocr": 1})
+            self.assertEqual(rec["refined_lines"], 1)
+        finally:
+            mod.recognizer.collect_lines = orig_collect
+            mod.ocr_backends.get_backend = orig_get_backend
+            mod.ocr_backends._SPEED_MEMO.clear()
+            mod.ocr_backends._SPEED_MEMO.update(orig_memo)
+
+    def test_refinement_measures_speed_and_skips_a_slow_engine(self):
+        # A real, measured latency on THIS machine decides whether hybrid
+        # mode keeps using a specialist — not a synthetic benchmark. A
+        # fresh engine gets one real measurement; once it is slow, later
+        # lines (and later calls) skip it entirely without invoking it.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig_get_backend = mod.ocr_backends.get_backend
+        orig_memo = dict(mod.ocr_backends._SPEED_MEMO)
+        mod.ocr_backends._SPEED_MEMO.clear()
+
+        calls = []
+
+        class _SlowFake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                calls.append(1)
+                time.sleep(0.02)  # stand-in for a genuinely slow engine
+                return "corrected", 0.95
+
+        try:
+            mod.ocr_backends.get_backend = lambda n: _SlowFake()
+            # Force the "too slow" verdict directly (real hardware would
+            # take real elapsed time to prove this; the memo is what
+            # subsequent lines/calls actually consult).
+            mod.ocr_backends.record_engine_speed("trocr", 9000.0)
+            hl = [{"text": "manay ment", "box": [10, 10, 200, 30]}]
+            mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
+            self.assertEqual(hl[0]["text"], "manay ment")  # untouched
+            self.assertEqual(calls, [])  # engine was never even called
+        finally:
+            mod.ocr_backends.get_backend = orig_get_backend
+            mod.ocr_backends._SPEED_MEMO.clear()
+            mod.ocr_backends._SPEED_MEMO.update(orig_memo)
 
     def test_pdf_restricted_to_first_page(self):
         # A multi-page PDF must decode to page 1 ONLY. Page 1 is 200x120,

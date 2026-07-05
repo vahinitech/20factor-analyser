@@ -10,8 +10,13 @@
 # It warms whichever engines are installed; missing engines are skipped with a
 # note (never an error). Control what to warm:
 #   VAHINI_OCR_PRELOAD_LANGS   paddle languages (default "en,te")
-#   VAHINI_WARMUP_ENGINES      comma list of paddle,trocr,surya (default: all installed)
+#   VAHINI_WARMUP_ENGINES      comma list of paddle,trocr,surya,layout (default: all installed)
 #   VAHINI_TROCR_MODEL         TrOCR model id (default microsoft/trocr-base-handwritten)
+#
+# "layout" warms BOTH PP-DocLayout-S and PP-DocLayout-M (a few MB each) —
+# layout_filter.py picks between them at runtime from measured speed on this
+# machine, so both need to be warm; which one actually gets used isn't known
+# ahead of time.
 #
 # Usage:
 #   python warmup_models.py
@@ -125,10 +130,28 @@ def warm_surya():
         print(f"[warmup] surya: detection load failed: {e}")
 
 
+def warm_layout():
+    if not _wanted("layout"):
+        return
+    try:
+        from paddleocr import LayoutDetection
+    except Exception as e:
+        print(f"[warmup] layout: skipped (not installed: {e})")
+        return
+    for model_name in ("PP-DocLayout-S", "PP-DocLayout-M"):
+        print(f"[warmup] layout: loading {model_name}")
+        try:
+            LayoutDetection(model_name=model_name)
+        except Exception as e:
+            print(f"[warmup] layout: {model_name} failed: {e}")
+    print("[warmup] layout: done")
+
+
 def main():
     warm_paddle()
     warm_trocr()
     warm_surya()
+    warm_layout()
     print("[warmup] completed")
 
 

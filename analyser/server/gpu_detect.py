@@ -2,7 +2,7 @@
 # (c) 2026 Vahini Technologies.
 """Auto-detect whether an OCR engine should run on GPU or CPU.
 
-Each pluggable backend (paddle, trocr, surya, chandra) picks its device
+Each pluggable backend (paddle, trocr, surya) picks its device
 through resolve_use_gpu() below: an explicit VAHINI_*_GPU=1/0 env var
 always wins (existing deploys that set VAHINI_OCR_GPU=0 keep working
 unchanged); left unset, the engine's own installed build is checked for
@@ -23,7 +23,7 @@ import subprocess
 
 def _torch_cuda_available():
     """True if the installed torch build can actually reach a CUDA GPU.
-    Covers trocr, surya and chandra's "hf" method, which all sit on torch."""
+    Covers trocr and surya, which both sit on torch."""
     try:
         import torch
 
@@ -62,6 +62,47 @@ def nvidia_gpu_present():
         return result.returncode == 0 and bool(result.stdout.strip())
     except Exception:
         return False
+
+
+def gpu_count():
+    """How many NVIDIA GPUs `nvidia-smi` reports on this machine. 0 if
+    nvidia-smi is missing, errors, or there simply is no GPU -- never
+    raises. Used for /health and benchmark_ocr.py diagnostics; not used to
+    pick a device (see nvidia_gpu_present's docstring for why)."""
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "-L"],
+            capture_output=True,
+            timeout=2,
+            check=False,
+        )
+        if result.returncode != 0:
+            return 0
+        return len(
+            [ln for ln in result.stdout.decode().splitlines() if ln.strip()]
+        )
+    except Exception:
+        return 0
+
+
+def gpu_zero_caveat():
+    """A short, always-true caveat for reports/health checks whenever
+    gpu_count() is 0 -- a bare 0 reads as either "this check is broken" or
+    "this host has no GPU", when the real explanation is usually one of two
+    unrelated limits: this check only sees NVIDIA hardware (via
+    nvidia-smi), and, separately, Docker Desktop on macOS cannot pass ANY
+    host GPU -- NVIDIA or Apple -- through to a Linux container at all
+    (there is no Metal driver for Linux, and no passthrough path for it
+    even if there were). So 0 is expected and correct here even on a Mac
+    with a real GPU; it is not something this process can detect or fix
+    from inside a container."""
+    return (
+        "0 GPU(s) here only means no NVIDIA GPU is reachable from this "
+        "process, via nvidia-smi -- it does not mean the host machine has "
+        "no GPU. Docker Desktop on macOS cannot pass any GPU (NVIDIA or "
+        "Apple) through to a Linux container at all, so 0 is expected "
+        "there even on Apple Silicon."
+    )
 
 
 def gpu_capable(engine="torch"):

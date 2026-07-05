@@ -43,12 +43,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
-import ocr_backends  # pluggable engine adapters (paddle/trocr/surya/chandra)
+import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
-from gpu_detect import nvidia_gpu_present
+import layout_filter  # negative pre-filter using PaddleOCR's layout model
+from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -68,16 +69,13 @@ import numpy as np
 
 app = FastAPI(title="Vahini PP-OCRv5 service", version="1.0")
 
-# Every VAHINI_OCR_*/VAHINI_CHANDRA_* env var is parsed once in config.py;
-# these module-level names are thin aliases so the rest of this file (and
-# the tests, which patch several of them directly) keep their existing
-# short names.
+# Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
+# names are thin aliases so the rest of this file (and the tests, which
+# patch several of them directly) keep their existing short names.
 SETTINGS = config.SETTINGS
 USE_GPU = SETTINGS.use_gpu
 OCR_LANGS = SETTINGS.ocr_langs
 OCR_BACKEND = SETTINGS.ocr_backend
-CHANDRA_METHOD = SETTINGS.chandra_method
-CHANDRA_MAX_TOKENS = SETTINGS.chandra_max_tokens
 MAX_VARIANTS = SETTINGS.max_variants
 ADV_PREPROC = SETTINGS.adv_preproc
 USE_DOC_ORIENTATION = SETTINGS.use_doc_orientation
@@ -161,6 +159,7 @@ recognizer.configure(
     auto_min_lines=AUTO_MIN_LINES,
     variant_min_lines=VARIANT_MIN_LINES,
     refine_min_sim=SETTINGS.refine_min_sim,
+    refine_min_conf=SETTINGS.refine_min_conf,
 )
 ocr_backends.init_registry(
     resolve_langs=recognizer.resolve_langs,
@@ -198,6 +197,7 @@ def health():
     backends = {}
     for name, (ok, reason) in ocr_backends.available_backends().items():
         backends[name] = {"ready": bool(ok), "reason": reason}
+    gpu_present = nvidia_gpu_present()
     return {
         "ok": True,
         "engine": "pp-ocrv5",
@@ -205,7 +205,8 @@ def health():
         "active_backend": OCR_BACKEND,
         "backends": backends,
         "gpu": USE_GPU,
-        "gpu_detected": nvidia_gpu_present(),
+        "gpu_detected": gpu_present,
+        "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
         "ocr_version": OCR_VERSION,
@@ -213,6 +214,19 @@ def health():
         "rec_model_map": REC_MODEL_MAP,
         "det_limit_side_len": TEXT_DET_LIMIT_SIDE_LEN,
         "printed_threshold": classify.PRINTED_THRESHOLD,
+        # Real, measured per-engine speed on THIS machine, not a synthetic
+        # benchmark: hybrid mode's trocr/surya refine calls (see
+        # recognizer.refine_handwriting_text) and the layout pre-filter's
+        # PP-DocLayout-M/S tier choice (see layout_filter.py) both record
+        # here. Empty until the first relevant call has actually run.
+        "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # Whether a layout model is built and ready yet (see layout_filter.py
+        # — the build never blocks a request, so this can be empty for a
+        # while after startup even with VAHINI_LAYOUT_FILTER=1).
+        "layout_filter": {
+            "enabled": layout_filter.is_enabled(),
+            "built_tiers": layout_filter.built_tiers(),
+        },
     }
 
 
@@ -324,7 +338,7 @@ async def ocr(
         "ocr",
         raw,
         lang,
-        f"det={det}|rec={rec}|backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"det={det}|rec={rec}|backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -447,7 +461,7 @@ async def analyze_vl(
         "analyze-vl",
         raw,
         lang,
-        f"backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -561,6 +575,16 @@ def _report_python_process(arr, raw, lang, expected_text):
                 if float(l.get("score", 0.0) or 0.0) >= 0.85
             )
         )
+        # Which specialist engine (if any) actually re-read each handwriting
+        # line in trocr/hybrid mode -- proof, not a claim, that e.g. TrOCR
+        # ran on this scan. hand_lines only carries "refined_by" on lines a
+        # specialist's re-read was accepted for (see
+        # recognizer.refine_handwriting_text); paddle-only lines have none.
+        refined_by = {}
+        for l in hand_lines:
+            engine = l.get("refined_by")
+            if engine:
+                refined_by[engine] = refined_by.get(engine, 0) + 1
         passage_aligned = bool(align_info and align_info.get("aligned"))
         has_read_text = any(
             str(l.get("text") or "").strip() for l in hand_lines
@@ -589,6 +613,8 @@ def _report_python_process(arr, raw, lang, expected_text):
             "reliable_lines": reliable_lines,
             "mean_confidence": round(hand_conf, 3),
             "confidence_pct": int(round(hand_conf * 100)),
+            "refined_by": refined_by,
+            "refined_lines": sum(refined_by.values()),
             "level": level,
             "assistive_only": not passage_aligned,
             "passage_aligned": passage_aligned,
@@ -638,7 +664,7 @@ async def report_python(
         "report-python",
         raw,
         lang,
-        f"{expected_text or ''}|backend={OCR_BACKEND}|chandra={CHANDRA_METHOD}",
+        f"{expected_text or ''}|backend={OCR_BACKEND}",
     )
     cached = _cache_get(ckey)
     if cached is not None:

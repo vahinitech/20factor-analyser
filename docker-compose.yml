@@ -8,8 +8,10 @@
 #   open http://localhost:8080
 #   docker compose down
 #
-# Switch OCR engine with VAHINI_OCR_BACKEND (paddle|trocr|surya|chandra|auto).
-# The default image ships PaddleOCR only; trocr/surya need their build args.
+# Switch OCR engine with VAHINI_OCR_BACKEND (paddle|trocr|surya|hybrid|auto).
+# The default image ships PaddleOCR only; trocr/surya need their build args
+# (hybrid mode needs both — it routes handwriting to whichever fits the
+# script, English to trocr, Indic scripts to surya).
 services:
   analyser:
     container_name: vahini-20factor

@@ -12,7 +12,7 @@
     ],
     "licenseListVersion": "3.22"
   },
-  "comment": "Software Bill of Materials for the Vahini 20-Factor Handwriting Analyser (this repository). The browser engine is 100% first-party JavaScript with no bundled third-party libraries; pdf.js is lazy-loaded from a CDN only when a PDF is uploaded, and web fonts load at runtime. The Python recognition server carries the third-party runtime dependencies listed here (core service + the default PaddleOCR engine); TrOCR/Surya/Chandra engine tiers are optional and not installed by default. Dev/test-only tooling is marked with DEV_DEPENDENCY_OF relationships and does not ship.",
+  "comment": "Software Bill of Materials for the Vahini 20-Factor Handwriting Analyser (this repository). The browser engine is 100% first-party JavaScript with no bundled third-party libraries; pdf.js is lazy-loaded from a CDN only when a PDF is uploaded, and web fonts load at runtime. The Python recognition server carries the third-party runtime dependencies listed here (core service + the default PaddleOCR engine); TrOCR/Surya engine tiers are optional and not installed by default. Dev/test-only tooling is marked with DEV_DEPENDENCY_OF relationships and does not ship.",
   "packages": [
     {
       "SPDXID": "SPDXRef-Package-Vahini",
@@ -250,7 +250,7 @@
       "externalRefs": [
         { "referenceCategory": "PACKAGE-MANAGER", "referenceType": "purl", "referenceLocator": "pkg:pypi/paddleocr" }
       ],
-      "comment": "Server-side, default OCR engine (text detect + read). Model weights download on first use. Assistive only: it labels what was written and is never the basis of a handwriting factor score — if it cannot run, the scan still completes from CV geometry. Alternative engines (TrOCR via torch/transformers, Surya, Chandra, PaddleOCR-VL) are OPTIONAL tiers installed separately via requirements-trocr/surya/chandra.txt and are not part of the default install."
+      "comment": "Server-side, default OCR engine (text detect + read). Model weights download on first use. Assistive only: it labels what was written and is never the basis of a handwriting factor score — if it cannot run, the scan still completes from CV geometry. Alternative engines (TrOCR via torch/transformers, Surya, PaddleOCR-VL) are OPTIONAL tiers installed separately via requirements-trocr/surya.txt and are not part of the default install."
     },
     {
       "SPDXID": "SPDXRef-Package-Pypdfium2",

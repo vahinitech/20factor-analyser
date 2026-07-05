@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
 # Pure-Python tests for the pluggable OCR registry and the printed-vs-handwriting
-# classifier. These DO NOT require paddle/torch/surya/chandra — only numpy,
+# classifier. These DO NOT require paddle/torch/surya — only numpy,
 # pillow and (optionally) opencv. Run:
 #     python -m unittest -v analyser/server/tests/test_backends_classify.py
 import os
@@ -55,10 +55,35 @@ def _hand_strip(w=240, h=40):
 class TestRegistry(unittest.TestCase):
     def test_registry_has_all_engines(self):
         ocr_backends.init_registry()
-        for name in ("paddle", "trocr", "surya", "chandra", "paddleocr-vl"):
+        for name in ("paddle", "trocr", "surya", "paddleocr-vl"):
             self.assertIsNotNone(
                 ocr_backends.get_backend(name), f"missing backend {name}"
             )
+
+    def test_engine_speed_memo_marks_slow_and_fast_from_real_measurements(
+        self,
+    ):
+        # No measurement yet -> caller should measure and record.
+        ocr_backends._SPEED_MEMO.clear()
+        self.assertIsNone(ocr_backends.engine_speed_verdict("trocr"))
+
+        # A fast measurement is remembered as fast.
+        fast = ocr_backends.record_engine_speed("trocr", 400.0)
+        self.assertTrue(fast)
+        measured_ms, is_fast = ocr_backends.engine_speed_verdict("trocr")
+        self.assertAlmostEqual(measured_ms, 400.0)
+        self.assertTrue(is_fast)
+
+        # A slow measurement on a different engine is remembered as slow.
+        slow = ocr_backends.record_engine_speed("surya", 9000.0)
+        self.assertFalse(slow)
+        _measured_ms, is_fast = ocr_backends.engine_speed_verdict("surya")
+        self.assertFalse(is_fast)
+
+        snap = ocr_backends.engine_speed_snapshot()
+        self.assertTrue(snap["trocr"]["fast_enough"])
+        self.assertFalse(snap["surya"]["fast_enough"])
+        ocr_backends._SPEED_MEMO.clear()
 
     def test_vl_results_classic_shape(self):
         results = [
@@ -327,6 +352,15 @@ class TestGpuDetect(unittest.TestCase):
         # No nvidia-smi on this box (or any CI box) — must resolve to False,
         # not throw.
         self.assertFalse(gpu_detect.nvidia_gpu_present())
+
+    def test_gpu_zero_caveat_mentions_docker_and_macos(self):
+        # This is the one place explaining WHY 0 GPUs is expected even on
+        # genuinely GPU-equipped hosts (Docker Desktop on macOS cannot pass
+        # any GPU into a Linux container) -- assert the substance survives
+        # any future wording edit, not the exact sentence.
+        note = gpu_detect.gpu_zero_caveat()
+        self.assertIn("Docker", note)
+        self.assertIn("macOS", note)
 
 
 class TestScoringDataclasses(unittest.TestCase):

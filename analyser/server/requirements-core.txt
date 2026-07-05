@@ -3,7 +3,6 @@
 #   requirements-paddle.txt   (default, fast, private)
 #   requirements-trocr.txt    (English handwriting)
 #   requirements-surya.txt    (multilingual/Indic handwriting)
-#   requirements-chandra.txt  (best accuracy; GPU/local — API needs no deps)
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9

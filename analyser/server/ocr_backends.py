@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies. Pluggable OCR backends for the Vahini analyser.
 # Third-party engines: PaddleOCR (Apache-2.0), TrOCR/transformers (MIT/Apache-2.0),
-# Surya (datalab, GPL/commercial — see their licence), Chandra (OpenRAIL).
+# Surya (datalab, GPL/commercial — see their licence).
 # See /THIRD-PARTY-NOTICES.md and server/README.md.
 #
 # ocr_backends.py — one adapter per recognition engine behind a common interface.
@@ -26,24 +26,23 @@
 #
 # Design rules
 # ------------
-# 1. Heavy deps (paddlepaddle / torch / transformers / surya / chandra) are
-#    imported LAZILY inside each adapter's methods. Importing this module costs
+# 1. Heavy deps (paddlepaddle / torch / transformers / surya) are imported
+#    LAZILY inside each adapter's methods. Importing this module costs
 #    nothing and never fails just because an engine is not installed.
 # 2. `available()` returns (ok, reason) so the server / /health can report which
 #    engines are actually runnable on this machine without crashing.
 # 3. Switch engine with the env var VAHINI_OCR_BACKEND = paddle|trocr|surya|
-#    chandra|auto (default paddle). `auto` runs the installed candidates and
-#    keeps the highest-quality result.
+#    hybrid|auto (default paddle). `auto` runs the installed candidates and
+#    keeps the highest-quality result; `hybrid` always detects+classifies with
+#    paddle and re-reads handwriting with trocr (English) or surya (Indic
+#    scripts) — see recognizer.refine_handwriting_text.
 
-import io
 import os
 import re
 import html
 import time
 import threading
 import importlib.util
-import urllib.request
-import urllib.parse
 from functools import lru_cache
 
 import numpy as np
@@ -216,6 +215,62 @@ def _engine_fail_cached(key):
         return err
     _ENGINE_FAIL_CACHE.pop(key, None)
     return None
+
+
+# --------------------------------------------------------------------------- #
+# Adaptive engine speed (hybrid mode) — decide whether THIS machine's CPU can
+# afford a specialist's per-line cost from a REAL measured latency, not a
+# synthetic benchmark or a manual "is this machine fast?" env var. Every
+# refine call times itself and records the result here; once an engine is
+# measured too slow, recognizer.refine_handwriting_text skips calling it for
+# the rest of the page (and for VAHINI_HYBRID_RETRY_SEC afterwards) and keeps
+# paddle's own reading instead — the same fail-fast-then-retry-later shape as
+# _ENGINE_FAIL_CACHE above, so hybrid mode is safe to enable on any machine:
+# fast hardware gets the accuracy win, slow hardware quietly behaves like
+# plain paddle after one measurement instead of stalling every scan.
+# --------------------------------------------------------------------------- #
+_SPEED_TTL = max(30.0, float(_env("VAHINI_HYBRID_RETRY_SEC", "600") or "600"))
+_MAX_MS_PER_LINE = max(
+    200.0, float(_env("VAHINI_HYBRID_MAX_MS_PER_LINE", "2500") or "2500")
+)
+_SPEED_MEMO = {}  # engine name -> (monotonic_ts, measured_ms, fast_enough)
+
+
+def engine_speed_verdict(name):
+    """(measured_ms, fast_enough) for `name` from the last measurement within
+    VAHINI_HYBRID_RETRY_SEC, or None if never measured (or expired) — the
+    caller should measure this call and record it."""
+    hit = _SPEED_MEMO.get(name)
+    if not hit:
+        return None
+    ts, measured_ms, fast = hit
+    if (time.monotonic() - ts) < _SPEED_TTL:
+        return measured_ms, fast
+    _SPEED_MEMO.pop(name, None)
+    return None
+
+
+def record_engine_speed(name, elapsed_ms):
+    """Record one real recognize_crop() latency for `name` and return
+    whether it was fast enough (elapsed_ms <= VAHINI_HYBRID_MAX_MS_PER_LINE).
+    """
+    fast = elapsed_ms <= _MAX_MS_PER_LINE
+    _SPEED_MEMO[name] = (time.monotonic(), elapsed_ms, fast)
+    return fast
+
+
+def engine_speed_snapshot():
+    """{name: {measured_ms, fast_enough, age_sec}} — used by /health so a
+    slow-CPU fallback is visible and debuggable, not a silent guess."""
+    now = time.monotonic()
+    return {
+        name: {
+            "measured_ms": round(ms, 1),
+            "fast_enough": fast,
+            "age_sec": round(now - ts, 1),
+        }
+        for name, (ts, ms, fast) in _SPEED_MEMO.items()
+    }
 
 
 @lru_cache(maxsize=8)
@@ -556,14 +611,16 @@ class TrOCRBackend(OCRBackend):
         return out
 
     def recognize_crop(self, crop_rgb):
-        """Recognise a single pre-cropped line image → text. Used by the
-        refinement path (paddle detects + classifies handwriting; TrOCR re-reads
-        each handwriting crop for better text)."""
+        """Recognise a single pre-cropped line image → (text, confidence).
+        Used by the refinement path (paddle detects + classifies
+        handwriting; TrOCR re-reads each handwriting crop for better text).
+        The confidence is TrOCR's own mean per-token softmax probability, so
+        the caller can trust a confident reading even when it disagrees with
+        paddle's (paddle is not a handwriting specialist)."""
         self._ensure_model()
-        text, _score = self._read_crop(
+        return self._read_crop(
             Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB")
         )
-        return text
 
     def _read_crop(self, pil_img):
         import torch
@@ -654,7 +711,10 @@ class SuryaBackend(OCRBackend):
             self._rec = rec
 
     def recognize_crop(self, crop_rgb):
-        """Recognise a single pre-cropped line image → text (refinement path)."""
+        """Recognise a single pre-cropped line image → (text, confidence)
+        (refinement path). The confidence is Surya's own per-line score, so
+        the caller can trust a confident Indic-script reading even when it
+        disagrees with paddle (paddle is not a handwriting specialist)."""
         self._ensure()
         img = Image.fromarray(crop_rgb.astype(np.uint8), mode="RGB")
         with self._lock:
@@ -663,11 +723,17 @@ class SuryaBackend(OCRBackend):
             except TypeError:
                 preds = self._rec([img], [["en"]], self._det)
         if not preds:
-            return ""
+            return "", 0.0
         lines = getattr(preds[0], "text_lines", None) or []
-        return " ".join(
+        text = " ".join(
             (getattr(ln, "text", "") or "").strip() for ln in lines
         ).strip()
+        if not lines:
+            return text, 0.0
+        conf = sum(
+            float(getattr(ln, "confidence", 0.0) or 0.0) for ln in lines
+        ) / len(lines)
+        return text, conf
 
     def recognize(self, arr, lang, langs, detect_fn=None):
         self._ensure()
@@ -698,170 +764,6 @@ class SuryaBackend(OCRBackend):
             score = float(getattr(ln, "confidence", 0.0) or 0.0) or 0.85
             out.append(make_line(text, poly, score, lang))
         return out
-
-
-# --------------------------------------------------------------------------- #
-# Chandra 2 (datalab) — 4B VLM, best handwriting/Indic accuracy.
-# Three ways to run, picked by VAHINI_CHANDRA_METHOD:
-#   - "api"  : Datalab hosted API  (set DATALAB_API_KEY)  — works on any machine
-#   - "vllm" : local vLLM server   (needs GPU)            — VLLM_API_BASE
-#   - "hf"   : local transformers  (GPU strongly advised; CPU is impractical)
-# On this CPU-only laptop, "api" is the only usable option.
-# --------------------------------------------------------------------------- #
-class ChandraBackend(OCRBackend):
-    name = "chandra"
-
-    def __init__(self):
-        self.method = (_env("VAHINI_CHANDRA_METHOD", "api") or "api").lower()
-        self.max_tokens = max(
-            512,
-            int(_env("VAHINI_CHANDRA_MAX_OUTPUT_TOKENS", "6144") or "6144"),
-        )
-        self._manager = None
-        # Guards building the local (hf/vllm) manager and its generate()
-        # call: this backend is a registry singleton shared by every
-        # concurrent analysis. The hosted API path (_recognize_api) is a
-        # plain HTTP call and needs no lock.
-        self._lock = threading.Lock()
-
-    def available(self):
-        if self.method == "api":
-            if _env("DATALAB_API_KEY"):
-                return True, ""
-            return False, "chandra api: set DATALAB_API_KEY"
-        if self.method == "hf":
-            missing = [
-                name
-                for name in ("torch", "transformers")
-                if importlib.util.find_spec(name) is None
-            ]
-            if missing:
-                return (
-                    False,
-                    f"chandra hf deps missing: no {', '.join(missing)}",
-                )
-            if gpu_capable("torch"):
-                return True, "chandra hf ready (GPU detected)"
-            return (
-                True,
-                "chandra hf ready (no GPU detected: CPU run is very slow)",
-            )
-        # vllm: probe the server quickly.
-        base = _env("VLLM_API_BASE", "http://localhost:8000/v1")
-        try:
-            u = urllib.parse.urlparse(base)
-            url = f"{u.scheme}://{u.netloc}/v1/models"
-            with urllib.request.urlopen(url, timeout=0.6) as r:
-                if 200 <= r.status < 300:
-                    return True, ""
-            return False, f"vllm non-2xx at {url}"
-        except Exception as e:
-            return False, f"vllm unreachable: {e}"
-
-    # --- hosted Datalab API ------------------------------------------------- #
-    def _recognize_api(self, arr, lang):
-        import json
-        import base64
-
-        api_key = _env("DATALAB_API_KEY")
-        base = _env("DATALAB_API_BASE", "https://api.datalab.to/v1")
-        buf = io.BytesIO()
-        Image.fromarray(arr.astype(np.uint8), mode="RGB").save(
-            buf, format="PNG"
-        )
-        b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-        body = json.dumps(
-            {"image": b64, "model": _env("DATALAB_OCR_MODEL", "chandra")}
-        ).encode()
-        req = urllib.request.Request(
-            f"{base}/ocr",
-            data=body,
-            headers={"Content-Type": "application/json", "X-Api-Key": api_key},
-            method="POST",
-        )
-        with urllib.request.urlopen(req, timeout=60) as r:
-            payload = json.loads(r.read().decode("utf-8"))
-        return self._chunks_to_lines(
-            payload.get("chunks") or payload.get("results") or [], lang
-        )
-
-    # --- local model (vllm / hf) via the chandra package -------------------- #
-    def _get_manager(self):
-        if self._manager is not None:
-            return self._manager
-        with self._lock:
-            if (
-                self._manager is not None
-            ):  # a concurrent call may have built it
-                return self._manager
-            # "hf" runs on torch directly and reads TORCH_DEVICE the same way
-            # surya does; "vllm" targets an already-running external server,
-            # whose own device was chosen when that server started.
-            if self.method == "hf" and "TORCH_DEVICE" not in os.environ:
-                use_gpu = resolve_use_gpu("VAHINI_CHANDRA_GPU")
-                os.environ["TORCH_DEVICE"] = "cuda" if use_gpu else "cpu"
-            from chandra.model import InferenceManager
-
-            method = self.method if self.method in ("vllm", "hf") else "vllm"
-            self._manager = InferenceManager(method=method)
-        return self._manager
-
-    def _recognize_local(self, arr, lang):
-        from chandra.model.schema import BatchInputItem
-
-        manager = self._get_manager()
-        img = Image.fromarray(arr.astype(np.uint8), mode="RGB")
-        batch = [BatchInputItem(image=img, prompt_type="ocr_layout")]
-        with self._lock:
-            out = manager.generate(
-                batch,
-                max_output_tokens=self.max_tokens,
-                max_retries=0,
-                max_failure_retries=0,
-                include_images=False,
-                include_headers_footers=False,
-            )
-        if not out:
-            return []
-        return self._chunks_to_lines(out[0].chunks or [], lang)
-
-    def _chunks_to_lines(self, chunks, lang):
-        out = []
-        for ch in chunks:
-            label = (
-                str(
-                    (ch.get("label", "") if isinstance(ch, dict) else "") or ""
-                )
-                .strip()
-                .lower()
-            )
-            if label in (
-                "image",
-                "figure",
-                "page-header",
-                "page-footer",
-                "blank-page",
-            ):
-                continue
-            content = ch.get("content", "") if isinstance(ch, dict) else ""
-            txt = _html_to_text(content)
-            if not txt:
-                continue
-            bbox = (ch.get("bbox") if isinstance(ch, dict) else None) or [
-                0,
-                0,
-                1,
-                1,
-            ]
-            x0, y0, x1, y1 = [float(v) for v in bbox[:4]]
-            poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
-            out.append(make_line(txt, poly, 0.82, lang))
-        return out
-
-    def recognize(self, arr, lang, langs, detect_fn=None):
-        if self.method == "api":
-            return self._recognize_api(arr, lang)
-        return self._recognize_local(arr, lang)
 
 
 def _html_to_text(s):
@@ -1037,6 +939,5 @@ def init_registry(resolve_langs=None, paddle_config=None):
     register(PaddleBackend(resolve_langs=resolve_langs))
     register(TrOCRBackend())
     register(SuryaBackend())
-    register(ChandraBackend())
     register(PaddleVLBackend())
     return _REGISTRY

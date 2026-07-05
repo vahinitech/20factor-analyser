@@ -14,7 +14,8 @@ WORKDIR /app/analyser/server
 
 # Copy ALL requirement tiers (requirements.txt references the core/paddle tiers
 # via -r, so they must be present before install). Default image = core+paddle;
-# add trocr/surya/chandra tiers by extending this build if you need them.
+# add trocr/surya tiers by extending this build if you need them (both are
+# needed for hybrid mode).
 COPY server/requirements*.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -31,6 +32,13 @@ RUN if [ "$VAHINI_WITH_TROCR" = "1" ] || [ "$VAHINI_WITH_SURYA" = "1" ]; then \
     fi
 
 # TrOCR deps + pre-download the handwriting model so the first request is fast.
+# transformers is pinned below <5: microsoft/trocr-base-handwritten only ships
+# a legacy (slow) tokenizer on the Hub (vocab.json/merges.txt, no
+# pre-serialized tokenizer.json). transformers 5.x unified tokenizer loading
+# into a single TokenizersBackend class with no pure-Python fallback for that
+# format, so it fails with "Couldn't instantiate the backend tokenizer" no
+# matter what from_pretrained() kwargs are passed -- there is no in-process
+# workaround, only staying on the 4.x line that still has the legacy loader.
 RUN if [ "$VAHINI_WITH_TROCR" = "1" ]; then \
         pip install --no-cache-dir -r requirements-trocr.txt && \
         python -c "from transformers import TrOCRProcessor, VisionEncoderDecoderModel; m='microsoft/trocr-base-handwritten'; TrOCRProcessor.from_pretrained(m); VisionEncoderDecoderModel.from_pretrained(m)" ; \
