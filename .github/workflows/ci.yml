@@ -11,6 +11,12 @@ on:
   push:
   pull_request:
 
+# Least-privilege default: every job here only checks out code, runs tests,
+# and builds a local Docker image -- none needs to write to the repo, open
+# issues/PRs, or publish packages.
+permissions:
+  contents: read
+
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
