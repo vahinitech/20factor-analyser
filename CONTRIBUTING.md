@@ -8,12 +8,18 @@ same terms, and that you have the right to contribute it.
 
 - **No personal data in the repo.** Never commit real handwriting samples that
   contain personal, medical, or otherwise identifying information. `samples/` is
-  git-ignored. Test fixtures under `tests/fixtures/` must be **synthetic**.
+  git-ignored. Test fixtures under `tests/fixtures/` must be synthetic or
+  contain **no personal data** (e.g. historical or stock pages).
 - **No secrets.** API keys (e.g. `DATALAB_API_KEY`), tokens or passwords belong
   in environment variables, never in code, commits, or issues.
 - Keep the engine **deterministic and explainable**: scores are real geometry
   computed from pixels/motion, never random or inferred personality traits.
-- Match the surrounding code style. House style for prose: no em dashes.
+- **Handwriting only.** Printed text must never reach the factor
+  measurements, the reference crops, or the recognised text. If a change
+  could leak printed content into a report, add a regression to
+  `analyser/server/tests/test_handwriting_only.py` first.
+- Match the surrounding code style. House style for prose: no em dashes, no
+  AI-isms. The full checklist is in [skills.md](skills.md).
 
 ## Development setup
 
@@ -38,7 +44,8 @@ python analyser/build_bundle.py          # then `git diff --exit-code` the bundl
 python -m unittest -v \
   analyser.server.tests.test_backends_classify \
   analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional
+  analyser.server.tests.test_regression_functional \
+  analyser.server.tests.test_handwriting_only
 npm ci && npx playwright install --with-deps chromium
 npm run test:regression:headless
 ```

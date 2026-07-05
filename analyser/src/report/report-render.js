@@ -359,7 +359,8 @@ function render(host, data){
     'moderate':'Words read with moderate confidence',
     'low':'Word reading is assistive on this scan',
     'unavailable':'Words were not read this scan — the scores are unaffected',
-  }[rec.level] || 'Word reading is assistive') + (recPct!=null?` (${recPct}%)`:'') + '.') : '';
+  }[rec.level] || 'Word reading is assistive') + (recPct!=null?` (${recPct}%)`:'') + '.'
+    + (rec.printed_lines>0?` <b>${rec.printed_lines} printed line${rec.printed_lines>1?'s':''} on the page ${rec.printed_lines>1?'were':'was'} excluded</b> — only handwriting is analysed.`:'')) : '';
   // Document checks — like the stamp on a lab report: parsed fully, and the
   // recognised words run through the spelling/grammar rules when reading was
   // dependable. Never claim a clean sheet off a low-confidence reading.
@@ -564,6 +565,7 @@ function render(host, data){
       <h4><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Important — please read</h4>
       <p>This report is intended <b>solely for handwriting improvement, education and skill-building</b>. It is <b>not a medical, psychological, neurological or diagnostic assessment</b> and must not be used to diagnose, screen for, or rule out any condition (including dysgraphia or learning differences) — if you have such concerns, please consult a qualified professional. Results can vary with the writing sample, pen, surface and lighting.</p>
     </div>
+    <div style="margin-top:8px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;">Found a mistake, a bug, or have an idea for a new feature? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:var(--accent-deep);font-weight:700;">github.com/vahinitech/20factor-analyser</a> — every report makes the analyser better.</div>
     <div class="patent-strip"><span>© ${new Date().getFullYear()} Vahini Technologies</span><span class="ps-dot"></span><span>IMU Sensor Pen · Patent No. 584433</span><span class="ps-dot"></span><span>info@vahinitech.com · vahinitech.com</span></div>
     ${foot(pg,'Questions about this report: info@vahinitech.com')}
   </section>`);

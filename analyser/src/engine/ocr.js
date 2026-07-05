@@ -199,6 +199,14 @@ async function serverPythonReport(blob, expectedText){
         j._timing = { network_ms: netMs, backend_ms: backendMs, wiring_ms: Math.max(0, netMs - backendMs) };
         return j;
       }
+      // A refusal with an error_code (e.g. no_handwriting: the page is fully
+      // printed) is a DEFINITIVE server answer, not a connectivity failure —
+      // return it so the app can explain, instead of trying other endpoints.
+      if (j && j.ok === false && j.error_code){
+        lastServerError = j.error || j.error_code;
+        return j;
+      }
+      if (j && j.ok === false && j.error) lastServerError = j.error;
     }catch(_e){ /* try next */ }
   }
   return null;

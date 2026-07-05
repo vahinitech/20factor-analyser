@@ -519,10 +519,13 @@ class TestDetector(unittest.TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["text"], "written")
 
-    def test_prefer_handwritten_fails_open_when_all_printed(self):
+    def test_prefer_handwritten_is_strict_when_all_printed(self):
+        # The rule of thumb: printed text is NEVER analysed. A fully printed
+        # page yields no handwriting lines (the server then refuses with a
+        # no_handwriting error instead of scoring machine type).
         lines = [{"text": "x", "printed_hint": True} for _ in range(5)]
         out = detector.prefer_handwritten(lines)
-        self.assertEqual(len(out), 5)
+        self.assertEqual(out, [])
 
     def test_is_noise_line_flags_single_char_and_punctuation(self):
         self.assertTrue(detector.is_noise_line({"text": "e"}))

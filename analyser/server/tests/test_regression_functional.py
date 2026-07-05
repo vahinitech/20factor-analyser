@@ -51,7 +51,11 @@ class _FakePaddleEngine:
                         [10.0, 76.0],
                     ],
                 ],
-                "rec_scores": [0.99, 0.97],
+                # Handwriting-typical confidences. Machine type reads at
+                # 0.96+, and the classifier (correctly) refuses pages where
+                # everything reads that cleanly — these fakes simulate PEN
+                # writing, so they must read like pen writing.
+                "rec_scores": [0.78, 0.72],
             }
         ]
 

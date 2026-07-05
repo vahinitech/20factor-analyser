@@ -227,20 +227,21 @@ def region_filter_lines(lines, arr_shape):
 
 
 def prefer_handwritten(lines):
-    """Keep handwriting, drop printed text.
+    """Keep handwriting, drop printed text. Strictly.
 
-    The printed/handwriting decision now comes from classify.classify_lines
+    The printed/handwriting decision comes from classify.classify_lines
     (real stroke-width / glyph-height / edge / confidence CV features), set on
-    each line as `printed_hint`. This replaces the old brittle keyword rules.
-    Fail-open: if classification would remove almost everything (a fully printed
-    scan, or a misfire on faint pen), keep all lines rather than emit nothing.
+    each line as `printed_hint`. The analyser's rule of thumb is that printed
+    text is NEVER analysed: it must not reach the factor measurements, the
+    reference crops, or the recognition showcase. A page that is entirely
+    printed therefore returns an empty list, and the server reports that no
+    handwriting was found instead of quietly scoring machine type. (The old
+    fail-open that kept every line when handwriting was scarce is exactly how
+    printed forms polluted real reports.)
     """
     if not lines:
         return []
-    hand = [l for l in lines if not bool(l.get("printed_hint"))]
-    if len(hand) < max(1, int(0.15 * len(lines))):
-        return lines
-    return hand
+    return [l for l in lines if not bool(l.get("printed_hint"))]
 
 
 def lines_quality(lines):

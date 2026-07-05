@@ -46,6 +46,7 @@ jobs:
             analyser/server/tests/test_backends_classify.py \
             analyser/server/tests/test_server_pipeline.py \
             analyser/server/tests/test_regression_functional.py \
+            analyser/server/tests/test_handwriting_only.py \
             analyser/server/tests/test_layout_filter.py
       - name: Run server unit + integration tests
         run: |
@@ -53,6 +54,7 @@ jobs:
             analyser.server.tests.test_backends_classify \
             analyser.server.tests.test_server_pipeline \
             analyser.server.tests.test_regression_functional \
+            analyser.server.tests.test_handwriting_only \
             analyser.server.tests.test_layout_filter
 
   e2e:
