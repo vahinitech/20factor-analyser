@@ -35,8 +35,24 @@ import numpy as np
 import ocr_backends
 
 # Categories that are never ink/text content (see module docstring for why
-# "formula" and "table" are deliberately NOT here).
-_EXCLUDE_LABELS = {"image", "figure", "chart", "seal"}
+# "formula" and "table" are deliberately NOT here). "header_image" and
+# "footer_image" (e.g. a printed letterhead crest, a decorative footer
+# graphic) are two of the 23 categories PP-DocLayout-L/M/S — the exact
+# tiers this module runs — are documented to emit; they were missing here
+# before, so a letterhead crest could previously slip through as an
+# unfiltered "image" region. Deliberately NOT added: "figure_caption",
+# "table_caption", "figure_title" (a student's own handwritten caption or
+# title is real text, not decoration) or "header"/"footer" without
+# "_image" (a page header/footer can be a student's own handwritten name
+# or page number).
+_EXCLUDE_LABELS = {
+    "image",
+    "figure",
+    "chart",
+    "seal",
+    "header_image",
+    "footer_image",
+}
 
 _MAX_MS = max(
     50.0, float(os.environ.get("VAHINI_LAYOUT_MAX_MS", "800") or "800")
@@ -143,6 +159,13 @@ def excluded_regions(arr: np.ndarray):
         for res in results:
             for box in (res.get("boxes") if hasattr(res, "get") else []) or []:
                 label = str(box.get("label", "")).strip().lower()
+                # Docs describe multi-word categories in prose ("header
+                # image") while the real API returns snake_case label
+                # strings (e.g. "figure_title", confirmed from PaddleOCR's
+                # own example output) — normalize both space and hyphen
+                # variants to underscore so the match doesn't depend on an
+                # exact, unverifiable-in-this-sandbox string format.
+                label = label.replace("-", "_").replace(" ", "_")
                 if label in _EXCLUDE_LABELS:
                     boxes.append([float(v) for v in box["coordinate"][:4]])
     except Exception:

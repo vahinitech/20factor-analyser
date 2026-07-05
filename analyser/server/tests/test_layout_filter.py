@@ -151,6 +151,64 @@ class TestExcludedRegionsIntegration(unittest.TestCase):
             [(20.0, 20.0, 50.0, 50.0), (60.0, 60.0, 80.0, 80.0)],
         )
 
+    def test_excludes_header_and_footer_images_any_label_format(self):
+        # PP-DocLayout-L/M/S (the tiers this module runs) document "header
+        # image" and "footer image" as two of their 23 categories, alongside
+        # "figure caption"/"figure title" which are genuine text and must
+        # stay unfiltered. Docs describe categories in prose with spaces;
+        # the real API returns snake_case (confirmed from PaddleOCR's own
+        # example JSON) — cover a hyphen variant too since that exact
+        # runtime format can't be verified without a live model.
+        class _FakeModel:
+            def predict(
+                self, _arr, batch_size=1
+            ):  # pylint: disable=unused-argument
+                return [
+                    {
+                        "boxes": [
+                            {
+                                "label": "header_image",
+                                "coordinate": [0, 0, 10, 10],
+                            },
+                            {
+                                "label": "footer image",
+                                "coordinate": [20, 20, 30, 30],
+                            },
+                            {
+                                "label": "Footer-Image",
+                                "coordinate": [40, 40, 50, 50],
+                            },
+                            {
+                                "label": "figure_caption",
+                                "coordinate": [60, 60, 70, 70],
+                            },
+                            {
+                                "label": "figure_title",
+                                "coordinate": [80, 80, 90, 90],
+                            },
+                        ]
+                    }
+                ]
+
+        with mock.patch.object(
+            layout_filter, "_build", return_value=_FakeModel()
+        ), mock.patch.object(
+            layout_filter, "available", return_value=(True, "")
+        ):
+            import numpy as np
+
+            regions = layout_filter.excluded_regions(
+                np.zeros((100, 100, 3), dtype=np.uint8)
+            )
+        self.assertEqual(
+            sorted(tuple(r) for r in regions),
+            [
+                (0.0, 0.0, 10.0, 10.0),
+                (20.0, 20.0, 30.0, 30.0),
+                (40.0, 40.0, 50.0, 50.0),
+            ],
+        )
+
     def test_disabled_returns_empty_without_building_model(self):
         with mock.patch.object(layout_filter, "_ENABLED", False):
             with mock.patch.object(layout_filter, "_build") as build_mock:

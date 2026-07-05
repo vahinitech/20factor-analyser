@@ -108,11 +108,14 @@ enough on this box.
 Before a page's detected lines reach the printed/handwriting classifier,
 an optional pass using PaddleOCR's own document-layout model (PP-DocLayout)
 drops anything that clearly isn't ink-on-paper content at all: photos,
-figures, charts, seals/stamps. It is a NEGATIVE filter only — it never
+figures, charts, seals/stamps, and decorative header/footer images (e.g. a
+printed letterhead crest). It is a NEGATIVE filter only — it never
 restricts analysis to "text-labelled" regions, because that would also
 throw away genuine handwritten formulas and filled-in table cells, which
 PP-DocLayout tags `formula`/`table` regardless of whether a pen or a
-printer produced them. Those categories are always kept.
+printer produced them. Those categories, along with captions and titles
+(a student's own handwritten caption is real text, not decoration), are
+always kept.
 
 This does not replace `classify.py`: PP-DocLayout's categories are
 document structure (title, text, table, formula, image, seal...), not a
