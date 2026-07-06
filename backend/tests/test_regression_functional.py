@@ -1,5 +1,6 @@
 import io
 import importlib.util
+import math
 import sys
 import types
 import unittest
@@ -408,6 +409,69 @@ class RegressionFunctionalTests(unittest.TestCase):
             cv._crop_rgb(arr, [5.0, 400.0, 40.0, 20.0]), quality=90
         )
         self.assertEqual(fmap["10"]["url"], leftmost_crop)
+
+    def test_margin_score_survives_camera_tilt_on_a_straight_margin(self):
+        # Regression for a real bug report: Margin Discipline scored a
+        # visually-fine left margin as "Needs support" on a page photographed
+        # at an angle. Root cause: left_cv measured each line's raw pixel
+        # left-x, which drifts across the page under a uniform camera tilt
+        # even when the physical margin is perfectly straight, because
+        # rotating a point shifts its x by an amount that grows with how
+        # far down the page it is.
+        #
+        # This builds 8 lines whose TRUE (pre-photo) left edge is identical
+        # (local x=200 at 8 different heights), then rotates each line's
+        # reference point AND its own poly slope by a shared 6 degree tilt
+        # around the image centre, simulating exactly that kind of photo.
+        # Before the fix, left_cv on the rotated positions is large; after
+        # it, the detilt correction should recover the original, near-zero
+        # variance.
+        w, h = 1000, 1000
+        cx, cy = w / 2.0, h / 2.0
+        tilt_deg = 6.0
+        rad = math.radians(tilt_deg)
+        cos_t, sin_t = math.cos(rad), math.sin(rad)
+
+        def rotate(x, y):
+            dx, dy = x - cx, y - cy
+            return (
+                cx + dx * cos_t - dy * sin_t,
+                cy + dx * sin_t + dy * cos_t,
+            )
+
+        true_left = 200.0
+        line_len = 300.0
+        box_h = 30.0
+        lines = []
+        raw_lefts = []
+        for true_y in (150.0, 250.0, 350.0, 450.0, 550.0, 650.0, 750.0, 850.0):
+            rx0, ry0 = rotate(true_left, true_y)
+            rx1, ry1 = rotate(true_left + line_len, true_y)
+            raw_lefts.append(rx0 / w)
+            lines.append(
+                {
+                    "box": [rx0, ry0 - box_h / 2.0, line_len, box_h],
+                    "poly": [[rx0, ry0], [rx1, ry1]],
+                    "text": "tilted line",
+                    "score": 0.9,
+                }
+            )
+
+        scoring = self.mod.scoring
+        arr = np.full((h, w, 3), 255, dtype=np.uint8)
+        fx = scoring._extract_features(arr, lines, {})
+
+        # The setup must actually reproduce a tilt-inflated raw CV, or this
+        # test isn't exercising the bug it guards against.
+        raw_cv = scoring._cv(raw_lefts)
+        self.assertGreater(
+            raw_cv,
+            0.1,
+            "test setup didn't reproduce tilt-inflated left_cv; fix the fixture",
+        )
+
+        self.assertLess(fx["left_cv"], 0.02)
+        self.assertGreaterEqual(scoring._score_factor_map(fx)[10], 9.5)
 
     def test_factor_regions_reference_image_for_all_20(self):
         # EVERY analysis must carry a usable reference image for each of

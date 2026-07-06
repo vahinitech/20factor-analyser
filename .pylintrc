@@ -50,6 +50,11 @@ max-module-lines=2300
 # with hidden behavior, so a higher attribute count is the accurate model
 # rather than a design smell.
 max-attributes=23
+# backend/tests/test_regression_functional.py's single TestCase class
+# accumulates one test_* method per regression fixed against the server;
+# that is the normal shape of a growing regression suite, not a sign the
+# class needs splitting.
+max-public-methods=40
 
 [MESSAGES CONTROL]
 disable=
