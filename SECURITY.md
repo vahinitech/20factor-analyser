@@ -17,10 +17,9 @@ disclosure.
 
 ## Scope
 
-- The browser engine and Analyser app (`analyser/`).
+- The browser engine and app (`frontend/`).
 - The Python OCR / 20-factor server (`backend/`).
-- The marketing site (`site/`) and deployment config (`deploy/`,
-  `docker-compose.yml`).
+- Deployment config (`deployment/`, `docker-compose.yml`).
 
 ## Handling user data
 

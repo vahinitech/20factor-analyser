@@ -51,8 +51,8 @@ earlier modules, so it must come last. The canonical list lives in `frontend/bui
 3. Commit the regenerated bundle. CI (`e2e` job) re-runs `build_bundle.py` and fails if the
    committed `engine.bundle.js` is stale.
 4. With the recognition server running (`docker compose up -d`), open
-   `analyser/analyser.html`, upload a sample, and confirm a report renders with no console
-   errors.
+   `http://localhost:8080/analyser/analyser.html`, upload a sample, and confirm a report renders
+   with no console errors.
 
 > The bundle is self-contained: moving the `frontend/src/` files does not affect the already-built
 > bundle; only a **rebuild** reads from `frontend/src/`.
