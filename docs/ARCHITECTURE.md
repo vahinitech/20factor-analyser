@@ -516,7 +516,7 @@ It then labels the upload and sets an honest accuracy expectation:
 | Sparse / very short | Indicative | Too little writing for a confident read. |
 
 **Why it matters:** a reader instantly sees whether the score is a confident assessment or a rough read
-of an unusual page. (Full discussion in `Vahini Accuracy & Document Types.html`.)
+of an unusual page. (Full discussion in `vahini-accuracy-and-document-types.html`.)
 
 ---
 
@@ -628,7 +628,7 @@ To remove sensor "jitter" in real time so the motion scores reflect your hand, n
 Yes. The analysis runs on the Python recognition server, which uses **OpenCV** (via
 `opencv-python-headless`, with NumPy fallbacks) for the image steps and **PaddleOCR** for recognition.
 The browser sends the photo to the server and renders the returned scores, so a running server is
-required for a report. (See `Vahini Accuracy & Document Types.html`.)
+required for a report. (See `vahini-accuracy-and-document-types.html`.)
 
 **Q. Why not just use AI / machine learning / a neural network for everything?**
 Because most factors are **measurements, not predictions**: a distance, slope, ratio or count, where

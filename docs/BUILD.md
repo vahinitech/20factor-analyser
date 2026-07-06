@@ -51,7 +51,7 @@ earlier modules, so it must come last. The canonical list lives in `analyser/bui
 3. Commit the regenerated bundle. CI (`e2e` job) re-runs `build_bundle.py` and fails if the
    committed `engine.bundle.js` is stale.
 4. With the recognition server running (`docker compose up -d`), open
-   `analyser/Vahini Analyser.html`, upload a sample, and confirm a report renders with no console
+   `analyser/analyser.html`, upload a sample, and confirm a report renders with no console
    errors.
 
 > The bundle is self-contained: moving the `analyser/src/` files does not affect the already-built

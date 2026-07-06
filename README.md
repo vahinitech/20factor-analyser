@@ -96,7 +96,7 @@ page, is in `docs/computer-vision-algorithms.md`.
 
 ```
 analyser/
-  Vahini Analyser.html    the app (loads the packed engine bundle)
+  analyser.html    the app (loads the packed engine bundle)
   src/                    browser client source. Edit here, then rebuild.
   scripts/core/           packed build (engine.bundle.js) + runtime helpers
   server/                 Python OCR + 20-factor scoring server and its tests

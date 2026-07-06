@@ -1,6 +1,6 @@
 # Persistence: uploads, reports, feedback
 
-`Vahini Analyser.html` will optionally post three kinds of record to a
+`analyser.html` will optionally post three kinds of record to a
 `/persist` service, if one is deployed in front of it: the uploaded image,
 the generated report, and lead-capture feedback. None of this lives in this
 repo. `ppocr-server.py` does not implement `/persist/*`, and
@@ -23,7 +23,7 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
     "mimeType": "image/jpeg",
     "dataUrl": "data:image/jpeg;base64,...",
     "source": "upload",
-    "meta": { "size": 123456, "modified": 0, "page": "/analyser/Vahini%20Analyser.html" }
+    "meta": { "size": 123456, "modified": 0, "page": "/analyser/analyser.html" }
   }
   ```
   Fires once per upload, before analysis runs. The image travels as a data
@@ -33,7 +33,7 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
   ```json
   {
     "trigger": "print-click",
-    "url": "http://localhost:8080/analyser/Vahini%20Analyser.html",
+    "url": "http://localhost:8080/analyser/analyser.html",
     "lead": { "name": "...", "email": "...", "ts": 0 },
     "upload": { "ok": true },
     "reportHtml": "<section class=\"page\">...",
@@ -54,7 +54,7 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
   { "kind": "report_pdf_lead", "ts": "2026-07-05T12:00:00.000Z", "data": { "name": "...", "email": "..." } }
   ```
   Fires once, right after the lead-capture form in the PDF download dialog
-  is submitted (see the `vgate` script in `Vahini Analyser.html`). This call
+  is submitted (see the `vgate` script in `analyser.html`). This call
   is hard-coded to `/persist/feedback`, not `VAHINI_PERSIST_ENDPOINT`, so a
   deployment that moves the base path needs to update both.
 

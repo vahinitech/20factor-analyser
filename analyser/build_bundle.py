@@ -16,7 +16,7 @@
 #
 #     python analyser/build_bundle.py
 #
-# Then open  analyser/Vahini Analyser.html?demo=report  and confirm a report
+# Then open  analyser/analyser.html?demo=report  and confirm a report
 # renders with no console errors.
 
 import base64

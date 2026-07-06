@@ -33,7 +33,7 @@ async def _revalidate_analyser_assets(request, call_next):
     """Force the browser to REVALIDATE analyser assets on every load instead of
     silently serving a long-cached copy. StaticFiles sends ETag/Last-Modified,
     so this is cheap (304 when unchanged) but guarantees a fresh engine bundle
-    after any rebuild — preventing 'the page won't load' from a stale/broken
+    after any rebuild, preventing 'the page won't load' from a stale/broken
     cached bundle."""
     response = await call_next(request)
     path = request.url.path
@@ -58,18 +58,14 @@ app.mount(
 
 @app.get("/", include_in_schema=False)
 def site_root():
-    # Typing just http://localhost:8080 must land in the app — nobody should
-    # have to know the full /analyser/Vahini%20Analyser.html path.
-    return RedirectResponse(
-        url="/analyser/Vahini%20Analyser.html", status_code=302
-    )
+    # Typing just http://localhost:8080 must land in the app: nobody should
+    # have to know the full /analyser/analyser.html path.
+    return RedirectResponse(url="/analyser/analyser.html", status_code=302)
 
 
 @app.get("/analyser", include_in_schema=False)
 def analyser_root():
-    return RedirectResponse(
-        url="/analyser/Vahini%20Analyser.html", status_code=302
-    )
+    return RedirectResponse(url="/analyser/analyser.html", status_code=302)
 
 
 @app.get("/ocr/health", include_in_schema=False)

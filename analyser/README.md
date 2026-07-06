@@ -7,7 +7,7 @@ The live app, its source, and the Python server that computes every report.
 
 ## Layout
 
-- `Vahini Analyser.html` is the app entrypoint.
+- `analyser.html` is the app entrypoint.
 - `src/` is the browser client source (app flow, OCR client, report renderer).
   Edit here, then rebuild the bundle.
 - `scripts/core/` holds the packed build (`engine.bundle.js`) and `protect.js`,
