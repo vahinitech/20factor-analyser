@@ -473,6 +473,58 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertLess(fx["left_cv"], 0.02)
         self.assertGreaterEqual(scoring._score_factor_map(fx)[10], 9.5)
 
+    @staticmethod
+    def _print_style_line_image(w=600, h=80, n_blobs=14):
+        # Disconnected letters: separate blobs with real gaps between them,
+        # one blob per (simulated) letter.
+        img = Image.new("RGB", (w, h), "white")
+        d = ImageDraw.Draw(img)
+        blob_w, gap, x = 20, 15, 20
+        for _ in range(n_blobs):
+            d.rectangle([x, 20, x + blob_w, 60], fill="black")
+            x += blob_w + gap
+        return np.array(img)
+
+    @staticmethod
+    def _cursive_style_line_image(w=600, h=80):
+        # Joined letters: one continuous zigzag stroke end to end, so the
+        # whole "word" is a single connected ink blob.
+        img = Image.new("RGB", (w, h), "white")
+        d = ImageDraw.Draw(img)
+        pts = [(20 + i * 25, 20 if i % 2 == 0 else 60) for i in range(23)]
+        d.line(pts, fill="black", width=10, joint="curve")
+        return np.array(img)
+
+    def test_writing_style_print_vs_cursive_from_ink_connectivity(self):
+        # Regression/feature check: writing style is read from how many
+        # separate ink blobs a line's letters actually form (many blobs
+        # close to the letter count = print; few blobs = letters are
+        # joined = cursive), never from asking an OCR/VLM engine to guess
+        # and never scored, only shown as descriptive context.
+        cv = self.mod.computer_vision
+        fourteen_letters = "abcdefghijklmn"
+
+        print_arr = self._print_style_line_image()
+        print_style = cv.infer_writing_style(
+            print_arr, [{"box": [0, 0, 600, 80], "text": fourteen_letters}]
+        )
+        self.assertEqual(print_style["style"], "print")
+
+        cursive_arr = self._cursive_style_line_image()
+        cursive_style = cv.infer_writing_style(
+            cursive_arr, [{"box": [0, 0, 600, 80], "text": fourteen_letters}]
+        )
+        self.assertEqual(cursive_style["style"], "cursive")
+
+    def test_writing_style_withholds_a_verdict_without_enough_evidence(self):
+        cv = self.mod.computer_vision
+        arr = np.full((80, 400, 3), 255, dtype=np.uint8)
+        style = cv.infer_writing_style(
+            arr, [{"box": [0, 0, 400, 80], "text": "hi"}]
+        )
+        self.assertIsNone(style["style"])
+        self.assertEqual(style["confidence"], 0.0)
+
     def test_factor_regions_reference_image_for_all_20(self):
         # EVERY analysis must carry a usable reference image for each of
         # the 20 factors (a line crop or the whole-page fallback).

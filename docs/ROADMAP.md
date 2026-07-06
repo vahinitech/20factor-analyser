@@ -24,7 +24,8 @@ checks for each, and the condition under which it runs.
 | Homophones (your/you're, its/it's) | Done | `craft.js` rules | needs recognised text |
 | Missing apostrophe, comma, full stop | Done | `craft.js` | needs recognised text |
 | Letter formatting, sign-off | Done | `craft.js` | letter-type documents only |
-| Mixed cursive and print, stray capitals, per-letter shape variance | Not done | was a browser-side pass (`letters.js`), removed when scoring moved server-side | — |
+| Cursive / semi-cursive / print style | Done | `computer_vision.infer_writing_style`, from ink-blob connectivity per line, shown as descriptive context, never scored (no curriculum treats one style as more "correct") | needs Latin-letter OCR text, ≥12 letters read |
+| Stray capitals, per-letter shape variance | Not done | was part of the same retired browser-side pass (`letters.js`) | — |
 | Spelling mistakes | Not done | same as above | — |
 | Telugu, Hindi letter reading | Partial | the recognition server, engine and accuracy vary by script | needs recognition server |
 
@@ -55,6 +56,10 @@ OCR text as a secondary signal.
   with a printed logo does not get scored on the logo.
 - **Document-type detection.** Prose, short-answer, numeric, figures,
   sparse, each with its own accuracy expectation.
+- **Writing style detection.** Print, semi-cursive or cursive, from how
+  many separate ink blobs a line's letters actually form. Shown as
+  descriptive context next to document type, never scored: no curriculum
+  treats one style as more "correct" than another.
 - **Sample-quality gate.** Good, usable or limited, with retake tips.
   Rejects a page with no detectable handwriting.
 - **Writing-craft layer** (`craft.js`). Grammar, homophones, formatting,
@@ -70,7 +75,7 @@ OCR text as a secondary signal.
 
 | Gap | Impact | Fix |
 |---|---|---|
-| Letter-level findings retired | Style mix, stray capitals, letterform variance and punctuation audit no longer run; these were a browser-side pass (`letters.js`) with no server equivalent | Reimplement server-side once there is budget for it |
+| Letter-level findings partially retired | Cursive/print style detection is back (server-side, see "What works today"); stray capitals, letterform variance and punctuation audit still don't run: these were part of the same retired browser-side pass (`letters.js`) with no server equivalent yet | Reimplement the remaining checks server-side once there is budget for it |
 | No spelling check | Spelling mistakes are not flagged at all | Same rewrite as above, or a dictionary pass on recognised text |
 | Feedback endpoint not centralised | Lead-capture data from the PDF download dialog is stored in the browser's local storage and posted to `/persist/feedback`, but nothing in this repo implements that service | Deploy a feedback-capture backend and point the deployment's reverse proxy at it; see `docs/PERSISTENCE-VOLUMES.md` |
 | No real IMU pen data | The four Dynamics factors are estimated from a photo, not measured from pen motion | Capture from the dual-IMU sensor pen |
@@ -87,9 +92,10 @@ OCR text as a secondary signal.
    real numbers here instead of estimates.
 2. Deploy the feedback endpoint so lead-capture data is centralised
    instead of living only in the browser.
-3. Reimplement a server-side pass for the retired letter-level findings
-   (style mix, stray capitals, spelling), the single biggest gap against
-   what a human coach checks.
+3. Reimplement a server-side pass for the remaining retired letter-level
+   findings (stray capitals, letterform variance, spelling; style mix is
+   done, see "What works today"), the single biggest gap against what a
+   human coach checks.
 
 ### Mid-term
 4. Refit geometry reference bands on Indic samples.

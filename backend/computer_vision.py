@@ -476,6 +476,119 @@ def _layout_features(arr: np.ndarray):
     }
 
 
+# --------------------------------------------------------------------------- #
+# Writing style: print / semi-cursive / cursive (descriptive, never scored)
+# --------------------------------------------------------------------------- #
+# Deliberately not a graded factor: no curriculum treats cursive as more
+# "correct" than print (many schools teach print-first and rarely touch
+# cursive), so this is shown as context only, the same way document_type is,
+# never as a target a page can fall short of. See docs/ARCHITECTURE.md.
+_STYLE_MIN_LETTERS = 12  # below this much Latin-letter evidence, say nothing
+_STYLE_CURSIVE_MAX = 0.45
+_STYLE_PRINT_MIN = 0.75
+
+
+def _line_ink_component_count(arr, box):
+    """Connected ink blobs inside one detected line's box. A word where
+    every letter is joined by connecting strokes collapses toward one blob
+    per word; a word in disconnected print stays close to one blob per
+    letter (or a little over, from a dotted i or crossed t). No merging
+    dilation is applied here, unlike fallback_line_regions: that function
+    MERGES letters into line blobs on purpose, which would destroy the
+    very connectivity signal this one depends on."""
+    if cv2 is None:
+        return None
+    crop = _crop_rgb(arr, box)
+    if crop is None or crop.size == 0:
+        return None
+    gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+    h, w = gray.shape[:2]
+    # Below this, individual letter strokes are only a few pixels wide, so
+    # any fixed-size threshold window merges neighbouring print letters
+    # into one blob and reads as falsely "joined". Too little resolution
+    # to say anything reliable, so this line contributes no evidence
+    # rather than a wrong guess.
+    if h < 16 or w < 6:
+        return None
+    blur = cv2.GaussianBlur(gray, (3, 3), 0)
+    # Threshold window scales with the line's own height instead of a
+    # fixed pixel count, so this behaves the same whether the source photo
+    # was scaled to 800px or 2200px wide, or the line is short or tall.
+    block = max(9, int(round(h * 0.6)) | 1)
+    ink = cv2.adaptiveThreshold(
+        blur,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY_INV,
+        block,
+        9,
+    )
+    n_labels, _, stats, _ = cv2.connectedComponentsWithStats(
+        ink, connectivity=8
+    )
+    min_area = max(2.0, (h * w) * 0.0006)
+    count = 0
+    for i in range(1, n_labels):
+        if float(stats[i, cv2.CC_STAT_AREA]) >= min_area:
+            count += 1
+    return count
+
+
+def infer_writing_style(arr, lines):
+    """Print, semi-cursive or cursive, from how many separate ink blobs
+    each line's letters actually form, not from asking an OCR/VLM to
+    guess. Requires enough Latin-letter text to have real evidence (see
+    docs/ROADMAP.md: letterform-based signals in this codebase assume
+    Latin script); returns confidence=0.0/style=None rather than a guess
+    when there isn't enough."""
+    total_letters = 0
+    total_components = 0
+    for l in lines:
+        text = str(l.get("text", "") or "")
+        n_letters = len(re.findall(r"[A-Za-z]", text))
+        if n_letters < 3:
+            continue
+        box = l.get("box") or [0, 0, 0, 0]
+        n_comp = _line_ink_component_count(arr, box)
+        if n_comp is None:
+            continue
+        total_letters += n_letters
+        total_components += n_comp
+
+    if total_letters < _STYLE_MIN_LETTERS:
+        return {
+            "style": None,
+            "confidence": 0.0,
+            "joined_ratio": None,
+            "basis_letters": total_letters,
+        }
+
+    ratio = float(total_components) / float(total_letters)
+    if ratio <= _STYLE_CURSIVE_MAX:
+        style = "cursive"
+    elif ratio >= _STYLE_PRINT_MIN:
+        style = "print"
+    else:
+        style = "semi_cursive"
+
+    # More letters sampled and a ratio further from either boundary both
+    # raise confidence; this is a starting calibration, not a claim of
+    # measured accuracy, see docs/ROADMAP.md.
+    evidence_conf = min(1.0, total_letters / 60.0)
+    boundary_dist = min(
+        abs(ratio - _STYLE_CURSIVE_MAX), abs(ratio - _STYLE_PRINT_MIN)
+    )
+    clarity_conf = min(1.0, boundary_dist / 0.15)
+    confidence = round(0.35 + 0.65 * min(evidence_conf, clarity_conf), 2)
+
+    return {
+        "style": style,
+        "confidence": confidence,
+        "joined_ratio": round(ratio, 3),
+        "basis_letters": total_letters,
+    }
+
+
 def _infer_doc_context(lines, layout):
     n_lines = len(lines)
     texts = [
@@ -572,6 +685,7 @@ def _infer_doc_context(lines, layout):
 def vl_analyze(arr: np.ndarray, lines):
     layout = _layout_features(arr)
     context = _infer_doc_context(lines, layout)
+    context["writing_style"] = infer_writing_style(arr, lines)
     regions = _build_region_previews(arr, lines)
     factor_regions = _factor_region_map(arr, regions, lines)
     return {

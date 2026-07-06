@@ -68,7 +68,13 @@ function renderVLInsights(vl, recInfo){
     : null;
   const layout = vl.layout || {};
   const regions = Array.isArray(vl.regions) ? vl.regions.slice(0, 6) : [];
+  // Descriptive only, never scored: no curriculum treats cursive as more
+  // "correct" than print, so this is shown as context the same way
+  // document type is, not as a target a page can fall short of.
+  const STYLE_LABEL = { cursive: 'Cursive', semi_cursive: 'Semi-cursive', print: 'Print' };
+  const style = doc.writing_style && doc.writing_style.style;
   const chips = [
+    style ? `Writing style: ${STYLE_LABEL[style] || style}` : '',
     doc.purpose ? `Purpose: ${doc.purpose}` : '',
     doc.intended_audience ? `Audience: ${doc.intended_audience}` : '',
     Number.isFinite(doc.formality_level) ? `Formality: ${Math.round(doc.formality_level*100)}%` : '',
@@ -95,6 +101,7 @@ function renderVLInsights(vl, recInfo){
       <b>Why this section:</b> before scoring, the analyser works out what your page is (a letter, an exam answer, a form) and which parts are pen handwriting.
       That is how it keeps printed text out of your scores and compares your writing against the right kind of page.
       ${printedN?`On this page it found and <b>excluded ${printedN} printed line${printedN>1?'s':''}</b>: only your handwriting was analysed.`:''}
+      ${style?' Writing style is shown for information only: cursive, semi-cursive and print are not scored differently, since schools teach them differently.':''}
     </p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px;">${chips.map(c=>`<span style="font-size:11px;background:#F5F7FA;border:1px solid rgba(34,40,49,.1);border-radius:999px;padding:4px 9px;color:#354052;">${c}</span>`).join('')}</div>
     ${regions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">${regions.map(r=>`<figure style="margin:0;border:1px solid rgba(34,40,49,.12);border-radius:10px;overflow:hidden;background:#fafafa;">
