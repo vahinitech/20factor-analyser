@@ -13,6 +13,8 @@
   --accent-soft:   #DCF3F4;
   --grow:          #1F9D74;   /* growth green */
   --grow-soft:     #DCF1E8;
+  --good:          #3A6EA5;   /* "good" band blue, between developing and strong */
+  --good-soft:     #DCE7F3;
   --gold:          #C29A45;
   --gold-soft:     #F3E9CF;
   --hot:           #C0080B;   /* Vahini logo crimson — hover/highlight */
@@ -32,6 +34,7 @@
 
   /* Score bands */
   --band-strong:   var(--grow);
+  --band-good:     var(--good);
   --band-dev:      var(--gold);
   --band-focus:    #C0392B;
 
@@ -307,6 +310,7 @@ p{ line-height:1.58; }
 .factor .f-name small{ display:block; font-weight:500; font-size:10px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; margin-top:3px; }
 .factor .f-band{ font-size:8.5px; font-weight:800; letter-spacing:.07em; text-transform:uppercase; padding:3px 7px; border-radius:99px; flex:0 0 auto; }
 .f-band.strong{ background:var(--grow-soft); color:var(--grow); }
+.f-band.good{ background:var(--good-soft); color:var(--good); }
 .f-band.dev{ background:var(--gold-soft); color:#9A7B25; }
 .f-band.focus{ background:var(--accent-soft); color:var(--accent-deep); }
 
@@ -358,6 +362,7 @@ p{ line-height:1.58; }
 .fscore .fs-nm{ flex:1; color:var(--ink); font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .fscore i{ font-style:normal; font-weight:800; font-variant-numeric:tabular-nums; }
 .fscore.strong{ background:var(--grow-soft); border-color:#BFE0D7; } .fscore.strong b{ background:var(--grow); } .fscore.strong i{ color:var(--grow); }
+.fscore.good{ background:var(--good-soft); border-color:#BFD3E8; } .fscore.good b{ background:var(--good); } .fscore.good i{ color:var(--good); }
 .fscore.dev{ background:var(--gold-soft); border-color:#E4CF92; } .fscore.dev b{ background:var(--gold); } .fscore.dev i{ color:#9A7B25; }
 .fscore.focus{ background:var(--accent-soft); border-color:#EFCDBC; } .fscore.focus b{ background:var(--band-focus); } .fscore.focus i{ color:var(--accent-deep); }
 

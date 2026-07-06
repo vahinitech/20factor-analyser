@@ -13,8 +13,15 @@
    inlined here to keep the report self-contained. */
 const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' : o>=50?'Emerging: clear focus areas' : 'Early: lots to build on';
 
-const BAND_LABEL = { strong:'Strong', dev:'Developing', focus:'Focus area' };
-const BAND_COLOR = { strong:'var(--grow)', dev:'var(--gold)', focus:'var(--band-focus)' };
+/* Single source of truth for the 4 score bands, read by every report page
+   that shows a band (scorecard section rows via bandOf(), factor cards and
+   the reference-values table via the server-assigned f.band) so the
+   thresholds, wording and colour never drift apart between pages again.
+   Must track backend/scoring.py's _band(). */
+const bandOf = (score)=> score>=8.5?'strong' : score>=7.0?'good' : score>=4.5?'dev' : 'focus';
+const BAND_LABEL = { strong:'Strong', good:'Good', dev:'Developing', focus:'Needs support' };
+const BAND_COLOR = { strong:'var(--grow)', good:'var(--band-good)', dev:'var(--gold)', focus:'var(--band-focus)' };
+const BAND_STARS = { strong:'★★★★', good:'★★★☆', dev:'★★☆☆', focus:'★☆☆☆' };
 const SEC_ICON = {
   structure:'<path d="M4 20 L9 4 M9 20 L14 4 M14 20 L19 4" />',
   spatial:'<path d="M5 6v12M19 6v12M9 12h6"/><path d="M9 12l2-2M9 12l2 2"/>',
@@ -22,8 +29,9 @@ const SEC_ICON = {
   style:'<path d="M4 19h16M7 19l5-12 5 12"/>',
 };
 /* Published reference bands (the "normal ranges" printed on the report's
-   reference-values table: same convention as a medical lab report). */
-const REF_BANDS = { strong:[7.5,10.0], dev:[5.0,7.4], focus:[0.0,4.9] };
+   reference-values table: same convention as a medical lab report).
+   Must track backend/scoring.py's _band() thresholds. */
+const REF_BANDS = { strong:[8.5,10.0], good:[7.0,8.4], dev:[4.5,6.9], focus:[0.0,4.4] };
 
 function ringSVG(score){
   const r=78, c=2*Math.PI*r, off=c*(1-score/100);
@@ -334,7 +342,7 @@ function render(host, data){
   /* ---------- PAGE 1 · SCORECARD ---------- */
   pg=P();
   const scSecRows = analysis.sections.map(s=>{
-    const b = s.avg>=7.5?'strong':s.avg>=5?'dev':'focus';
+    const b = bandOf(s.avg);
     if (s.avg100==null) return `<div class="cat-row" style="padding:10px 14px;">
       <span class="ci" style="color:var(--accent-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SEC_ICON[s.id]}</svg></span>
       <span class="ct">${s.name}<small>${s.id==='dynamics'?'measured by the Vahini pen: not scored from a photo':'couldn’t be measured reliably: re-scan'}</small></span>
@@ -482,9 +490,7 @@ function render(host, data){
   /* ---------- PAGE · REFERENCE VALUES (read like a lab report) ---------- */
   pg=P();
   const td = 'padding:4px 8px;border-bottom:1px solid var(--hair);font-size:10.5px;text-align:center;vertical-align:middle;';
-  const flagOf = (f)=> f.band==='strong' ? `<span style="color:var(--grow);font-weight:800;">✓ in range</span>`
-    : f.band==='dev' ? `<span style="color:#9A7B25;font-weight:800;">△ below range</span>`
-    : `<span style="color:var(--accent-deep);font-weight:800;">▲ well below</span>`;
+  const flagOf = (f)=> `<span style="color:${BAND_COLOR[f.band]};font-weight:800;">${BAND_STARS[f.band]} ${BAND_LABEL[f.band]}</span>`;
   const refRows = analysis.results.map(f=>{
     const live = isLive(f);
     const noteTxt = f.conf==='imu' && !f.imuMeasured && !imu ? 'measured by the pen' : 'not read this scan';
