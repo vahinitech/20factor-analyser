@@ -233,7 +233,14 @@ def _full_page_preview(arr: np.ndarray):
     return _to_data_url(small, quality=78)
 
 
-def _factor_region_map(arr: np.ndarray, regions):
+def _factor_region_map(arr: np.ndarray, regions, lines=None):
+    # `regions` is the shared, area-ranked preview pool built by
+    # _build_region_previews (capped for response size), used for every
+    # factor's evidence pick below. `lines` is the FULL, unranked
+    # handwriting-only line set _extract_features scores from; factor 10
+    # (margin) needs it directly, see the override near the end of this
+    # function, because a page with more lines than the pool cap can have
+    # its true left-most line excluded from `regions` by the area ranking.
     # Keep captions aligned to the current 20-factor language while letting
     # backend vision provide the concrete evidence crop.
     labels = {
@@ -341,7 +348,7 @@ def _factor_region_map(arr: np.ndarray, regions):
         9: pick(wordish, key=lambda f: (-abs(f["text_len"] - 7), f["score"])),
         10: pick(
             None, key=lambda f: -f["x"], reverse=True
-        ),  # left margin evidence
+        ),  # left margin evidence: fallback only, see the override below
         11: pick(None, key=lambda f: (f["w"], f["score"])),
         12: pick(None, key=lambda f: (f["h"], -f["w"], f["score"])),
         13: pick(None, key=lambda f: (f["score"], f["text_len"])),
@@ -354,8 +361,33 @@ def _factor_region_map(arr: np.ndarray, regions):
         20: None,  # whole-page neatness
     }
 
+    # Margin evidence (factor 10) must show the page's actual left-most
+    # line. Picking within `seq` alone is wrong on any page with more lines
+    # than _build_region_previews' pool cap: the true left-most line can be
+    # short (small area) and never make it into that area-ranked pool, so
+    # the "left-most in the pool" pick silently becomes an arbitrary large
+    # line instead. Search the full, unranked, already handwriting-only
+    # `lines` directly when available.
+    margin_url = None
+    if lines:
+        leftmost = min(
+            lines,
+            key=lambda l: float((l.get("box") or [1e9, 0, 0, 0])[0]),
+            default=None,
+        )
+        if leftmost is not None:
+            crop = _crop_rgb(arr, leftmost.get("box") or [0, 0, 0, 0])
+            if crop is not None and crop.size:
+                margin_url = _to_data_url(crop, quality=90)
+
     out = {}
     for n in range(1, 21):
+        if n == 10 and margin_url:
+            out["10"] = {
+                "url": margin_url,
+                "caption": labels.get(10, "factor evidence"),
+            }
+            continue
         idx = picks.get(n)
         if idx is None:
             url = fallback
@@ -541,7 +573,7 @@ def vl_analyze(arr: np.ndarray, lines):
     layout = _layout_features(arr)
     context = _infer_doc_context(lines, layout)
     regions = _build_region_previews(arr, lines)
-    factor_regions = _factor_region_map(arr, regions)
+    factor_regions = _factor_region_map(arr, regions, lines)
     return {
         "document_context": context,
         "layout": layout,

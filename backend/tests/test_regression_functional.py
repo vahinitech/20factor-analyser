@@ -370,6 +370,38 @@ class RegressionFunctionalTests(unittest.TestCase):
             str(fmap["20"]["url"]).startswith("data:image/jpeg;base64,")
         )
 
+    def test_margin_evidence_uses_true_leftmost_line_not_area_ranked_pool(self):
+        # Regression for a real bug report: on a busy page (more lines than
+        # _build_region_previews' area-ranked pool cap of 8), the actual
+        # left-most line can be short and get excluded from that pool before
+        # factor 10's "left-most in the pool" pick ever runs, so the shown
+        # evidence silently becomes an arbitrary large line instead of the
+        # true margin. 9 wide lines all start at x=100; one short line
+        # starts at x=5, the true left margin, but its small area guarantees
+        # it sorts last and is dropped by the pool's max_regions=8 cap.
+        arr = np.full((450, 700, 3), 255, dtype=np.uint8)
+        lines = [
+            {"box": [100.0, 20.0 + i * 40.0, 500.0, 30.0], "text": "wide line", "score": 0.9}
+            for i in range(9)
+        ]
+        lines.append(
+            {"box": [5.0, 400.0, 40.0, 20.0], "text": "hi", "score": 0.9}
+        )
+
+        cv = self.mod.computer_vision
+        regions = cv._build_region_previews(arr, lines)
+        # Confirms the setup actually reproduces the exclusion this test guards against.
+        self.assertNotIn(
+            5.0, [r["bbox"][0] for r in regions],
+            "test setup didn't reproduce the pool exclusion; fix the fixture",
+        )
+
+        fmap = cv._factor_region_map(arr, regions, lines)
+        leftmost_crop = cv._to_data_url(
+            cv._crop_rgb(arr, [5.0, 400.0, 40.0, 20.0]), quality=90
+        )
+        self.assertEqual(fmap["10"]["url"], leftmost_crop)
+
     def test_factor_regions_reference_image_for_all_20(self):
         # EVERY analysis must carry a usable reference image for each of
         # the 20 factors (a line crop or the whole-page fallback).

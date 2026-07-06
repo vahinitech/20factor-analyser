@@ -57,8 +57,6 @@ OCR text as a secondary signal.
   sparse, each with its own accuracy expectation.
 - **Sample-quality gate.** Good, usable or limited, with retake tips.
   Rejects a page with no detectable handwriting.
-- **Auto-deskew.** Removes the median line tilt, which mostly comes from
-  photographing at an angle rather than the writing itself.
 - **Writing-craft layer** (`craft.js`). Grammar, homophones, formatting,
   sign-offs, completeness, on the recognised text only.
 - **Personalised drills.** Up to three, chosen from the lowest-scoring
@@ -79,7 +77,7 @@ OCR text as a secondary signal.
 | Indic geometry thresholds tuned on Latin samples | Telugu and Hindi quality scores are less reliable than English | Refit the reference bands on Indic handwriting samples |
 | Letter-shape factors assume Latin letterforms | Loop closure and ascender/descender proxies (a/o/e/g, b/d/f/h/k/l/t/g/j/p/q/y) are not meaningful for Telugu | Script-aware letter models |
 | No calibration against human coach ratings | Two blended factors use fixed weights, not a model fit to how a coach would actually score them | Collect rated samples, fit a regression |
-| No perspective correction to real-world units | Sizes and margins are relative to the page image, not millimetres | Page-quad unwarp on the server |
+| No rotation or perspective correction at all | A page photographed at even a slight angle has each line's pixel position drift across the page from camera geometry alone, not the handwriting. Margin Discipline (factor 10) is the most exposed, since it is the only factor scored from an absolute page-position coordinate rather than a local or relative one; a physically straight left margin can score as inconsistent on an angled photo. Sizes and margins are also relative to the page image, not millimetres | Page-quad unwarp (or at minimum a rotation-only deskew) on the server, before feature extraction |
 
 ## Priorities
 
