@@ -17,22 +17,22 @@ same terms, and that you have the right to contribute it.
 - **Handwriting only.** Printed text must never reach the factor
   measurements, the reference crops, or the recognised text. If a change
   could leak printed content into a report, add a regression to
-  `analyser/server/tests/test_handwriting_only.py` first.
+  `backend/tests/test_handwriting_only.py` first.
 - Match the surrounding code style. House style for prose: no em dashes, no
   AI-isms. The full checklist is in [skills.md](skills.md).
 
 ## Development setup
 
 ```bash
-# Browser engine: edit analyser/src/, then ALWAYS rebuild the bundle
-python analyser/build_bundle.py
+# Browser engine: edit frontend/src/, then ALWAYS rebuild the bundle
+python frontend/build_bundle.py
 
 # Python OCR/20-factor server
-pip install -r analyser/server/requirements-core.txt
+pip install -r backend/requirements-core.txt
 ```
 
-The packed bundle `analyser/scripts/core/engine.bundle.js` is generated from
-`analyser/src/`. CI fails if it is out of sync, so commit the rebuilt bundle
+The packed bundle `frontend/scripts/core/engine.bundle.js` is generated from
+`frontend/src/`. CI fails if it is out of sync, so commit the rebuilt bundle
 together with your `src/` changes.
 
 ## Before you open a PR
@@ -40,12 +40,12 @@ together with your `src/` changes.
 Run what CI runs:
 
 ```bash
-python analyser/build_bundle.py          # then `git diff --exit-code` the bundle
+python frontend/build_bundle.py          # then `git diff --exit-code` the bundle
 python -m unittest -v \
-  analyser.server.tests.test_backends_classify \
-  analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional \
-  analyser.server.tests.test_handwriting_only
+  backend.tests.test_backends_classify \
+  backend.tests.test_server_pipeline \
+  backend.tests.test_regression_functional \
+  backend.tests.test_handwriting_only
 npm ci && npx playwright install --with-deps chromium
 npm run test:regression:headless
 ```

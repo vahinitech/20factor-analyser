@@ -1,7 +1,7 @@
 # Sample pages for the handwriting-only regression suite
 
 Real pages of three kinds, used by
-`analyser/server/tests/test_handwriting_only.py` to enforce the analyser's
+`backend/tests/test_handwriting_only.py` to enforce the analyser's
 rule of thumb: printed text is never analysed.
 
 | File | Content | Expected behaviour |

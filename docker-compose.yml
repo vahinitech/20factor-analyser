@@ -10,14 +10,14 @@
 #
 # Switch OCR engine with VAHINI_OCR_BACKEND (paddle|trocr|surya|hybrid|auto).
 # The default image ships PaddleOCR only; trocr/surya need their build args
-# (hybrid mode needs both — it routes handwriting to whichever fits the
+# (hybrid mode needs both, it routes handwriting to whichever fits the
 # script, English to trocr, Indic scripts to surya).
 services:
   analyser:
     container_name: vahini-20factor
     build:
-      context: ./analyser
-      dockerfile: server/Dockerfile.analyser
+      context: .
+      dockerfile: deployment/Dockerfile
       args:
         # Set to "1" to bake the English handwriting refiner (TrOCR) or the
         # multilingual/Indic engine (Surya). Both add CPU latency.

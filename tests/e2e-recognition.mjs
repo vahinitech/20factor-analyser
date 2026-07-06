@@ -31,7 +31,7 @@ async function main() {
 
   // Confirm the OCR backend is reachable before driving the UI.
   try {
-    const h = await fetch(`${BASE}/ocr/health`).catch(() => fetch(`${BASE}/analyser/Vahini%20Analyser.html`, { method: 'HEAD' }));
+    const h = await fetch(`${BASE}/ocr/health`).catch(() => fetch(`${BASE}/analyser/analyser.html`, { method: 'HEAD' }));
     if (h && (h.ok || h.status === 405)) ok('OCR backend reachable', `${BASE}`);
     else fail('OCR backend reachable', `status ${h && h.status}`);
   } catch (e) {
@@ -54,7 +54,7 @@ async function main() {
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
-    await page.goto(`${BASE}/analyser/Vahini%20Analyser.html`, { waitUntil: 'load', timeout: 30000 });
+    await page.goto(`${BASE}/analyser/analyser.html`, { waitUntil: 'load', timeout: 30000 });
     await page.setInputFiles('#file-input', FIXTURE);
     await page.waitForSelector('#go-process:not([disabled])', { timeout: 15000 });
 

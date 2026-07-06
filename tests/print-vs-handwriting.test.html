@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="only light">
 <title>Vahini: Report Render Tests</title>
-<link rel="stylesheet" href="../analyser/styles/report.css">
+<link rel="stylesheet" href="../frontend/styles/report.css">
 <style>
   body{ font-family:system-ui,sans-serif; margin:0; padding:24px; background:#EEEEEE; color:#222831; }
   h1{ font-size:22px; margin:0 0 4px; }
@@ -43,7 +43,7 @@
   <img id="dz-preview"><div id="dz-prompt"></div><div id="passage-list"></div>
 </div>
 
-<script src="../analyser/scripts/core/engine.bundle.js"></script>
+<script src="../frontend/scripts/core/engine.bundle.js"></script>
 <script>
 (function(){
   const results = [];
@@ -150,7 +150,7 @@
     add(fscores.length === 20, 'All 20 factors rendered on the scoreboard', 'found='+fscores.length);
 
     // 4) compact field-launch report: at most 4 pages from a photo (5 with
-    //    the pen) so a young writer keeps interest — scorecard, where to
+    //    the pen) so a young writer keeps interest: scorecard, where to
     //    improve, reference values, practice & prediction.
     const pages = host.querySelectorAll('.page');
     add(pages.length >= 3 && pages.length <= 5, 'Compact report generated (3-5 pages)', 'pages='+pages.length);

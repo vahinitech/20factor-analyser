@@ -1,0 +1,10 @@
+# Build context is the repo root (deployment/Dockerfile copies from
+# frontend/ and backend/). Keep the image lean.
+.git/
+node_modules/
+**/__pycache__/
+*.pyc
+backend/tests/
+docs/
+tests/
+*.md
