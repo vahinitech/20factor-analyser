@@ -159,6 +159,15 @@ network service you must offer its users the modified source.
 - Third-party components keep their own licenses, see
   [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) and [sbom.spdx.json](sbom.spdx.json).
 
+### Commercial licensing
+
+As the copyright holder, Vahini Technologies also offers this software under
+a separate commercial license for organizations that need terms AGPL-3.0
+does not give them, most commonly embedding it in a proprietary product or
+service without publishing their own modified source. The AGPL edition in
+this repository stays free and unrestricted either way. For commercial
+license terms, contact **info@vahinitech.com**.
+
 ## Contact
 
 [vahinitech.com](https://vahinitech.com) · info@vahinitech.com
