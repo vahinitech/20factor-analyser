@@ -370,7 +370,9 @@ class RegressionFunctionalTests(unittest.TestCase):
             str(fmap["20"]["url"]).startswith("data:image/jpeg;base64,")
         )
 
-    def test_margin_evidence_uses_true_leftmost_line_not_area_ranked_pool(self):
+    def test_margin_evidence_uses_true_leftmost_line_not_area_ranked_pool(
+        self,
+    ):
         # Regression for a real bug report: on a busy page (more lines than
         # _build_region_previews' area-ranked pool cap of 8), the actual
         # left-most line can be short and get excluded from that pool before
@@ -381,7 +383,11 @@ class RegressionFunctionalTests(unittest.TestCase):
         # it sorts last and is dropped by the pool's max_regions=8 cap.
         arr = np.full((450, 700, 3), 255, dtype=np.uint8)
         lines = [
-            {"box": [100.0, 20.0 + i * 40.0, 500.0, 30.0], "text": "wide line", "score": 0.9}
+            {
+                "box": [100.0, 20.0 + i * 40.0, 500.0, 30.0],
+                "text": "wide line",
+                "score": 0.9,
+            }
             for i in range(9)
         ]
         lines.append(
@@ -392,7 +398,8 @@ class RegressionFunctionalTests(unittest.TestCase):
         regions = cv._build_region_previews(arr, lines)
         # Confirms the setup actually reproduces the exclusion this test guards against.
         self.assertNotIn(
-            5.0, [r["bbox"][0] for r in regions],
+            5.0,
+            [r["bbox"][0] for r in regions],
             "test setup didn't reproduce the pool exclusion; fix the fixture",
         )
 
