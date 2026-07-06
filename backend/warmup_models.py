@@ -124,7 +124,7 @@ def warm_surya():
         DetectionPredictor()
         print(
             "[warmup] surya: detection ready (recognition needs the inference "
-            "backend running — see server/README.md)"
+            "backend running, see backend/README.md)"
         )
     except Exception as e:
         print(f"[warmup] surya: detection load failed: {e}")

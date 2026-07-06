@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies. Document-layout pre-filter for the recognition
 # pipeline. Third-party: PaddleOCR / PaddleX (Apache-2.0). See
-# /THIRD-PARTY-NOTICES.md and server/README.md.
+# /THIRD-PARTY-NOTICES.md and backend/README.md.
 #
 # layout_filter.py — a NEGATIVE pre-filter using PaddleOCR's own document
 # layout model (PP-DocLayout), run before text-line detection results reach

@@ -2,7 +2,7 @@
 # (c) 2026 Vahini Technologies. Pluggable OCR backends for the Vahini analyser.
 # Third-party engines: PaddleOCR (Apache-2.0), TrOCR/transformers (MIT/Apache-2.0),
 # Surya (datalab, GPL/commercial — see their licence).
-# See /THIRD-PARTY-NOTICES.md and server/README.md.
+# See /THIRD-PARTY-NOTICES.md and backend/README.md.
 #
 # ocr_backends.py — one adapter per recognition engine behind a common interface.
 #

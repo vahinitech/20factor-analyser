@@ -15,8 +15,8 @@ not change the neatness or spacing scores.
 
 | Job | What it answers | Where it runs | Needs OCR |
 |---|---|---|---|
-| Quality measurement (the 20 factors) | How neat, even, straight and well-spaced is the writing | The server's computer-vision pipeline (`analyser/server/scoring.py`, `geometry.py`, `computer_vision.py`) | No |
-| Reading (words, spelling, craft) | Which letters and words are these, and are there spelling or grammar issues | The OCR backend registry (`analyser/server/ocr_backends.py`) | Yes |
+| Quality measurement (the 20 factors) | How neat, even, straight and well-spaced is the writing | The server's computer-vision pipeline (`backend/scoring.py`, `geometry.py`, `computer_vision.py`) | No |
+| Reading (words, spelling, craft) | Which letters and words are these, and are there spelling or grammar issues | The OCR backend registry (`backend/ocr_backends.py`) | Yes |
 
 Everything below is about the second job.
 
@@ -78,7 +78,7 @@ revisiting then.
 2. Turn on hybrid mode (`VAHINI_OCR_BACKEND=hybrid`, built with
    `VAHINI_WITH_TROCR=1` and `VAHINI_WITH_SURYA=1`) once English or Indic
    handwriting reading quality matters more than the extra CPU cost of
-   the specialist recognisers. See `analyser/server/README.md`.
+   the specialist recognisers. See `backend/README.md`.
 3. Collect real Telugu and English handwriting samples and measure actual
    per-line accuracy. This is the basis for deciding whether the current
    engines are good enough, not a guess.

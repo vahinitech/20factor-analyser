@@ -7,12 +7,12 @@ Three suites, smallest first. CI runs all of them on every push and PR.
 Server logic without the heavy paddle/torch install:
 
 ```bash
-pip install -r analyser/server/requirements-core.txt
+pip install -r backend/requirements-core.txt
 python -m unittest -v \
-  analyser.server.tests.test_backends_classify \
-  analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional \
-  analyser.server.tests.test_handwriting_only
+  backend.tests.test_backends_classify \
+  backend.tests.test_server_pipeline \
+  backend.tests.test_regression_functional \
+  backend.tests.test_handwriting_only
 ```
 
 Covers the API contracts, the printed/handwriting classifier, the 20-factor
@@ -42,8 +42,8 @@ npm run test:regression:serve
 # open http://127.0.0.1:4173/tests/print-vs-handwriting.test.html
 ```
 
-Rebuild the bundle first after editing anything under `analyser/src/`:
-`python analyser/build_bundle.py`.
+Rebuild the bundle first after editing anything under `frontend/src/`:
+`python frontend/build_bundle.py`.
 
 ## 3. Recognition end to end
 

@@ -13,15 +13,15 @@ If you only read two sections, read the **Glossary** and the **FAQ**.
 
 **Where the code lives** (for developers): the CV pipeline and the 20-factor scoring run
 **server-side** in Python; the browser is the recognition client + report renderer.
-- `analyser/server/ppocr-server.py`: the thin FastAPI layer serving `POST /report-python` and the
+- `backend/ppocr-server.py`: the thin FastAPI layer serving `POST /report-python` and the
   other recognition endpoints; the CV, OCR and scoring logic itself lives in sibling modules:
   `computer_vision.py` (image decode/crop/layout), `detector.py` + `recognizer.py` (finding and
   reading handwriting across the pluggable `ocr_backends.py` engines), and `scoring.py`
   (`_extract_features` → `_score_factor_map` → `build_analysis`, the 20-factor scorer).
-- `analyser/src/report/report-render.js`: renders the report from the server's `analysis`.
-- `analyser/src/app/app.js`: capture → upload → render flow (calls `/report-python`).
-- `analyser/src/engine/imu.js`: the **IMU pen** (smart pen) live-capture simulation.
-- `analyser/src/engine/forecast.js`: projects future improvement from the returned scores.
+- `frontend/src/report/report-render.js`: renders the report from the server's `analysis`.
+- `frontend/src/app/app.js`: capture → upload → render flow (calls `/report-python`).
+- `frontend/src/engine/imu.js`: the **IMU pen** (smart pen) live-capture simulation.
+- `frontend/src/engine/forecast.js`: projects future improvement from the returned scores.
 
 The algorithm descriptions below explain *what* each step computes; they now run in the server.
 

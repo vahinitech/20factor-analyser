@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies. Server-side handwriting/print recognition.
-# Third-party: PaddleOCR (Apache-2.0). See /THIRD-PARTY-NOTICES.md and server/README.md
+# Third-party: PaddleOCR (Apache-2.0). See /THIRD-PARTY-NOTICES.md and backend/README.md
 #
 # benchmark_ocr.py — measure REAL engine speed and yield on THIS machine
 # against the repo's own sample fixtures, and print a Markdown table you
@@ -14,8 +14,8 @@
 # note, not an error — same convention as warmup_models.py.
 #
 # Usage:
-#   python analyser/server/benchmark_ocr.py
-#   python analyser/server/benchmark_ocr.py --samples path/to/dir --format md
+#   python backend/benchmark_ocr.py
+#   python backend/benchmark_ocr.py --samples path/to/dir --format md
 #
 # What "detection" vs "recognition" means below: PaddleOCR's high-level API
 # does detection + recognition in one call — there is no separate
@@ -36,7 +36,7 @@ import numpy as np
 from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(os.path.dirname(HERE))
+REPO_ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 
 import gpu_detect  # noqa: E402

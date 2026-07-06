@@ -6,10 +6,10 @@
 #
 # Creates .venv at the REPO ROOT, installs the core service + chosen engine
 # tiers, then pre-downloads models. Examples:
-#   ./analyser/server/setup.sh                  # core + paddle (default)
-#   ./analyser/server/setup.sh paddle trocr     # + English handwriting
-#   ./analyser/server/setup.sh all              # paddle + trocr + surya
-#   NO_DOWNLOAD=1 ./analyser/server/setup.sh    # skip model warm-up
+#   ./backend/setup.sh                  # core + paddle (default)
+#   ./backend/setup.sh paddle trocr     # + English handwriting
+#   ./backend/setup.sh all              # paddle + trocr + surya
+#   NO_DOWNLOAD=1 ./backend/setup.sh    # skip model warm-up
 #
 # Chandra on a CPU-only box: use the hosted API (no install) —
 #   export VAHINI_OCR_BACKEND=chandra VAHINI_CHANDRA_METHOD=api DATALAB_API_KEY=...

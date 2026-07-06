@@ -12,8 +12,8 @@ returned report.
 
 ```bash
 # from the repo root
-./analyser/server/setup.sh            # venv + core deps + PaddleOCR (default)
-python analyser/server/analyser-ocr-server.py
+./backend/setup.sh            # venv + core deps + PaddleOCR (default)
+python backend/analyser-ocr-server.py
 # open http://localhost:8080
 ```
 
@@ -218,8 +218,8 @@ geometry over guesswork, so a made-up speed table would contradict that.
 Run it yourself and paste the output here (or open a PR):
 
 ```bash
-pip install -r analyser/server/requirements-core.txt   # + whichever engine tiers you want measured
-python analyser/server/benchmark_ocr.py
+pip install -r backend/requirements-core.txt   # + whichever engine tiers you want measured
+python backend/benchmark_ocr.py
 ```
 
 It runs the SAME production code path (`recognizer.collect_lines_paddle` /
@@ -241,12 +241,12 @@ hardware and send a PR with your table and CPU/GPU details._
 ## Tests
 
 ```bash
-pip install -r analyser/server/requirements-core.txt
+pip install -r backend/requirements-core.txt
 python -m unittest -v \
-  analyser.server.tests.test_backends_classify \
-  analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional \
-  analyser.server.tests.test_handwriting_only
+  backend.tests.test_backends_classify \
+  backend.tests.test_server_pipeline \
+  backend.tests.test_regression_functional \
+  backend.tests.test_handwriting_only
 ```
 
 The suite covers the response contracts, the printed/handwriting split, the

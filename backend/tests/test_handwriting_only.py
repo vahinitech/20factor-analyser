@@ -25,7 +25,7 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
-REPO_ROOT = os.path.dirname(os.path.dirname(SERVER_DIR))
+REPO_ROOT = os.path.dirname(SERVER_DIR)
 SAMPLES_DIR = os.path.join(REPO_ROOT, "tests", "fixtures", "samples")
 sys.path.insert(0, SERVER_DIR)
 

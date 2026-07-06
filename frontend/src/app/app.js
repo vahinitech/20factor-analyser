@@ -307,7 +307,7 @@ async function checkService(){
   if (detail){
     detail.textContent = serviceUp
       ? 'Connected.'
-      : 'Start it with docker compose up -d, or python analyser/server/ppocr-server.py. It reconnects automatically.';
+      : 'Start it with docker compose up -d, or python backend/ppocr-server.py. It reconnects automatically.';
   }
   applyServiceGate();
 }
@@ -450,7 +450,7 @@ async function runPipeline(){
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
       tips: [
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python analyser/server/ppocr-server.py',
+        'Or start it directly: python backend/ppocr-server.py',
         'Then reload this page and upload the photo again',
       ],
     });
@@ -500,7 +500,7 @@ async function runPipeline(){
         + (why ? ' (' + why + ')' : '') + '. Start the server and try again.',
       tips: [
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python analyser/server/ppocr-server.py',
+        'Or start it directly: python backend/ppocr-server.py',
         'Then reload this page and upload the photo again',
       ],
     });
@@ -630,7 +630,7 @@ async function finishIMU(){
       detail: 'The pen report is computed on the Vahini recognition server, which isn’t responding right now. Start the server and capture again.',
       tips: [
         'Run the server: docker compose up -d',
-        'Or start it directly: python analyser/server/ppocr-server.py',
+        'Or start it directly: python backend/ppocr-server.py',
       ],
     });
     return;

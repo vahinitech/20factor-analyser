@@ -33,35 +33,35 @@ jobs:
       - name: Install light server deps (no paddle/torch)
         run: |
           python -m pip install --upgrade pip
-          pip install -r analyser/server/requirements-core.txt
+          pip install -r backend/requirements-core.txt
       - name: Syntax-check server modules
-        run: python -m py_compile analyser/server/ppocr-server.py analyser/server/ocr_backends.py analyser/server/classify.py analyser/server/layout_filter.py analyser/server/analyser-ocr-server.py analyser/server/warmup_models.py analyser/server/benchmark_ocr.py analyser/server/geometry.py analyser/server/model_map.py analyser/server/gpu_detect.py analyser/server/computer_vision.py analyser/server/scoring.py analyser/server/detector.py analyser/server/recognizer.py analyser/server/config.py analyser/server/cache.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 analyser/build_bundle.py analyser/server/*.py analyser/server/tests/*.py
+        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
         run: |
-          pylint --fail-under=9.0 analyser/build_bundle.py \
-            analyser/server/analyser-ocr-server.py analyser/server/classify.py \
-            analyser/server/ocr_backends.py analyser/server/ppocr-server.py \
-            analyser/server/layout_filter.py analyser/server/benchmark_ocr.py \
-            analyser/server/warmup_models.py analyser/server/geometry.py \
-            analyser/server/model_map.py analyser/server/gpu_detect.py \
-            analyser/server/computer_vision.py analyser/server/scoring.py \
-            analyser/server/detector.py analyser/server/recognizer.py \
-            analyser/server/config.py analyser/server/cache.py \
-            analyser/server/tests/test_backends_classify.py \
-            analyser/server/tests/test_server_pipeline.py \
-            analyser/server/tests/test_regression_functional.py \
-            analyser/server/tests/test_handwriting_only.py \
-            analyser/server/tests/test_layout_filter.py
+          pylint --fail-under=9.0 frontend/build_bundle.py \
+            backend/analyser-ocr-server.py backend/classify.py \
+            backend/ocr_backends.py backend/ppocr-server.py \
+            backend/layout_filter.py backend/benchmark_ocr.py \
+            backend/warmup_models.py backend/geometry.py \
+            backend/model_map.py backend/gpu_detect.py \
+            backend/computer_vision.py backend/scoring.py \
+            backend/detector.py backend/recognizer.py \
+            backend/config.py backend/cache.py \
+            backend/tests/test_backends_classify.py \
+            backend/tests/test_server_pipeline.py \
+            backend/tests/test_regression_functional.py \
+            backend/tests/test_handwriting_only.py \
+            backend/tests/test_layout_filter.py
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \
-            analyser.server.tests.test_backends_classify \
-            analyser.server.tests.test_server_pipeline \
-            analyser.server.tests.test_regression_functional \
-            analyser.server.tests.test_handwriting_only \
-            analyser.server.tests.test_layout_filter
+            backend.tests.test_backends_classify \
+            backend.tests.test_server_pipeline \
+            backend.tests.test_regression_functional \
+            backend.tests.test_handwriting_only \
+            backend.tests.test_layout_filter
 
   e2e:
     runs-on: ubuntu-latest
@@ -81,9 +81,9 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Verify the packed bundle is in sync with src/
         run: |
-          python3 analyser/build_bundle.py
-          if ! git diff --quiet -- analyser/scripts/core/engine.bundle.js; then
-            echo "::error::engine.bundle.js is stale. Run 'python analyser/build_bundle.py' and commit it."
+          python3 frontend/build_bundle.py
+          if ! git diff --quiet -- frontend/scripts/core/engine.bundle.js; then
+            echo "::error::engine.bundle.js is stale. Run 'python frontend/build_bundle.py' and commit it."
             exit 1
           fi
       - name: Headless print/handwriting checks
@@ -99,8 +99,8 @@ jobs:
       - name: Build analyser image (cached paddle layer)
         uses: docker/build-push-action@v6
         with:
-          context: ./analyser
-          file: ./analyser/server/Dockerfile.analyser
+          context: .
+          file: ./deployment/Dockerfile
           tags: vahini/20factor-analyser:local
           load: true
           cache-from: type=gha,scope=analyser

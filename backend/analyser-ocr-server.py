@@ -17,7 +17,7 @@ from pathlib import Path
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
-ROOT_DIR = Path(__file__).resolve().parents[2]
+ROOT_DIR = Path(__file__).resolve().parents[1]
 PP_OCR_SERVER_PATH = Path(__file__).resolve().parent / "ppocr-server.py"
 
 spec = util.spec_from_file_location("ppocr_server", str(PP_OCR_SERVER_PATH))
@@ -45,13 +45,15 @@ async def _revalidate_analyser_assets(request, call_next):
     return response
 
 
-ANALYSER_DIR = ROOT_DIR / "analyser"
-if not ANALYSER_DIR.exists():
-    raise RuntimeError(f"Analyser directory not found: {ANALYSER_DIR}")
+# Served at the URL path "/analyser" for backward compatibility with
+# existing links/bookmarks, even though the folder itself is "frontend/".
+FRONTEND_DIR = ROOT_DIR / "frontend"
+if not FRONTEND_DIR.exists():
+    raise RuntimeError(f"Frontend directory not found: {FRONTEND_DIR}")
 
 app.mount(
     "/analyser",
-    StaticFiles(directory=str(ANALYSER_DIR), html=False),
+    StaticFiles(directory=str(FRONTEND_DIR), html=False),
     name="analyser",
 )
 

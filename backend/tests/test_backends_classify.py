@@ -3,7 +3,7 @@
 # Pure-Python tests for the pluggable OCR registry and the printed-vs-handwriting
 # classifier. These DO NOT require paddle/torch/surya — only numpy,
 # pillow and (optionally) opencv. Run:
-#     python -m unittest -v analyser/server/tests/test_backends_classify.py
+#     python -m unittest -v backend/tests/test_backends_classify.py
 import os
 import sys
 import unittest

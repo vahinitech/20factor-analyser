@@ -6,7 +6,7 @@ and a tiny pseudocode sketch. No prior CV knowledge assumed.
 
 > **Computer Vision (CV)** = software that "looks at" an image and extracts facts from it.
 > Vahini's CV is **deterministic**: fixed maths, no randomness: so the same photo always
-> produces the same measurements. Code: `analyser/server/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
+> produces the same measurements. Code: `backend/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
 
 ---
 

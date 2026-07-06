@@ -41,8 +41,8 @@ TLS reverse proxy such as nginx or Caddy.
 To run without Docker:
 
 ```bash
-pip install -r analyser/server/requirements.txt
-python analyser/server/analyser-ocr-server.py
+pip install -r backend/requirements.txt
+python backend/analyser-ocr-server.py
 # open http://localhost:8080
 ```
 
@@ -95,36 +95,37 @@ page, is in `docs/computer-vision-algorithms.md`.
 ## Repository layout
 
 ```
-analyser/
-  analyser.html    the app (loads the packed engine bundle)
+frontend/
+  analyser.html           the app (loads the packed engine bundle)
   src/                    browser client source. Edit here, then rebuild.
   scripts/core/           packed build (engine.bundle.js) + runtime helpers
-  server/                 Python OCR + 20-factor scoring server and its tests
   styles/, static/        report CSS and printable pages
+backend/                  Python OCR + 20-factor scoring server and its tests
+deployment/               Dockerfile (docker-compose.yml stays at the root)
 docs/                     architecture, build, CV algorithms, OCR notes
 tests/                    headless Chrome e2e + fixtures
 ```
 
 ## Development
 
-The client ships as one packed file. After editing anything in `analyser/src/`,
+The client ships as one packed file. After editing anything in `frontend/src/`,
 rebuild it (CI fails if it is out of date):
 
 ```bash
-python analyser/build_bundle.py
+python frontend/build_bundle.py
 ```
 
 Run the tests:
 
 ```bash
 # Python server tests (no heavy paddle/torch install needed)
-pip install -r analyser/server/requirements-core.txt
+pip install -r backend/requirements-core.txt
 python -m unittest -v \
-  analyser.server.tests.test_backends_classify \
-  analyser.server.tests.test_server_pipeline \
-  analyser.server.tests.test_regression_functional \
-  analyser.server.tests.test_handwriting_only \
-  analyser.server.tests.test_layout_filter
+  backend.tests.test_backends_classify \
+  backend.tests.test_server_pipeline \
+  backend.tests.test_regression_functional \
+  backend.tests.test_handwriting_only \
+  backend.tests.test_layout_filter
 
 # Headless Chrome report checks
 npm ci && npx playwright install --with-deps chromium

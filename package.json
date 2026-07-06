@@ -9,7 +9,7 @@
     "url": "https://github.com/vahinitech/20factor-analyser.git"
   },
   "scripts": {
-    "build:bundle": "python analyser/build_bundle.py",
+    "build:bundle": "python frontend/build_bundle.py",
     "test:regression:serve": "./node_modules/.bin/http-server . -p 4173 -c-1",
     "test:regression:headless": "node tests/regression-headless.mjs",
     "test:recognition": "node tests/e2e-recognition.mjs",
