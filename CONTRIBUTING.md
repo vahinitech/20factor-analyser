@@ -1,8 +1,33 @@
 # Contributing to the Vahini 20-Factor Analyser
 
 Thanks for your interest! This project is free software under the
-**GNU AGPL-3.0**. By submitting a contribution you agree it is licensed under the
-same terms, and that you have the right to contribute it.
+**GNU AGPL-3.0**.
+
+## Contributor license agreement
+
+By submitting a contribution (a pull request, patch, or code in an issue)
+you agree that:
+
+1. You wrote the contribution yourself, or you have the right to submit it.
+2. Your contribution is licensed to everyone under **AGPL-3.0-only**, the
+   same license as the project.
+3. You additionally grant **Vahini Technologies** a perpetual, worldwide,
+   non-exclusive, royalty-free right to use, modify, and distribute your
+   contribution under other license terms, including in commercial and
+   proprietary versions of this software.
+
+Point 3 is what lets the project offer a hosted or pro edition without
+chasing every past contributor for permission. Your contribution always
+stays AGPL in this repository; nothing is taken away from the community
+version. If you cannot accept this grant, say so in the PR and we will
+discuss it before merging.
+
+## Feature requests
+
+- Have an idea? [Open an issue](https://github.com/vahinitech/20factor-analyser/issues)
+  describing the problem it solves and who it helps.
+- Need a specific feature for your school, coaching centre, or product,
+  or prefer to discuss privately? Email **info@vahinitech.com**.
 
 ## Ground rules
 

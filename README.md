@@ -140,9 +140,14 @@ CI runs all three suites on every push and pull request.
 
 ## Contributing and license
 
-Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Please do
-not commit real handwriting samples containing personal data; the CI fixtures
-are synthetic.
+Contributions are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md), which
+includes a short contributor license agreement. Please do not commit real
+handwriting samples containing personal data; the CI fixtures are synthetic.
+
+Want a feature? [Open an issue](https://github.com/vahinitech/20factor-analyser/issues)
+describing the problem it solves and who it helps. For features specific to
+your school or coaching centre, or anything you'd rather discuss privately,
+email **info@vahinitech.com**.
 
 Copyright (c) 2026 Vahini Technologies. Free software under
 **AGPL-3.0-only**, see [LICENSE](LICENSE). If you run a modified version as a
