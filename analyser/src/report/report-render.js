@@ -2,7 +2,7 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Vahini report renderer — builds the data-driven report from
+   Vahini report renderer: builds the data-driven report from
    { intake, analysis, expectedText, actualCanvas, detCanvas, pipeline }.
    Reuses report.css classes (Ink & Paper).
    ========================================================================= */
@@ -11,7 +11,7 @@
 /* Overall-score label. Previously imported from VahiniFactors (factors.js); the
    scoring engine now lives server-side, so this trivial rendering helper is
    inlined here to keep the report self-contained. */
-const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' : o>=50?'Emerging — clear focus areas' : 'Early — lots to build on';
+const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' : o>=50?'Emerging: clear focus areas' : 'Early: lots to build on';
 
 const BAND_LABEL = { strong:'Strong', dev:'Developing', focus:'Focus area' };
 const BAND_COLOR = { strong:'var(--grow)', dev:'var(--gold)', focus:'var(--band-focus)' };
@@ -22,7 +22,7 @@ const SEC_ICON = {
   style:'<path d="M4 19h16M7 19l5-12 5 12"/>',
 };
 /* Published reference bands (the "normal ranges" printed on the report's
-   reference-values table — same convention as a medical lab report). */
+   reference-values table: same convention as a medical lab report). */
 const REF_BANDS = { strong:[7.5,10.0], dev:[5.0,7.4], focus:[0.0,4.9] };
 
 function ringSVG(score){
@@ -270,13 +270,13 @@ function focusSVG(f){
 }
 
 /* ===================== MAIN RENDER ===================================== */
-/* Compact field-launch report — at most 4 pages from a photo (5 with the
+/* Compact field-launch report: at most 4 pages from a photo (5 with the
    pen) so a young writer keeps interest:
-     1. Scorecard        — overall, sections, all 20 factors at a glance
-     2. Where to improve — concept drawing + a reference crop from THEIR page
-     3. Reference values — the published ranges for all 20 factors, read
+     1. Scorecard       : overall, sections, all 20 factors at a glance
+     2. Where to improve: concept drawing + a reference crop from THEIR page
+     3. Reference values: the published ranges for all 20 factors, read
                            like a medical lab report
-     4. Practice & tries — the drills, and how many tries to the milestone */
+     4. Practice & tries: the drills, and how many tries to the milestone */
 function render(host, data){
   const { intake, analysis, recognizedText, ocrEngine, detURL, pipeline, imu, crops, history } = data;
   const rc = roleConfig('individual');
@@ -337,7 +337,7 @@ function render(host, data){
     const b = s.avg>=7.5?'strong':s.avg>=5?'dev':'focus';
     if (s.avg100==null) return `<div class="cat-row" style="padding:10px 14px;">
       <span class="ci" style="color:var(--accent-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SEC_ICON[s.id]}</svg></span>
-      <span class="ct">${s.name}<small>${s.id==='dynamics'?'measured by the Vahini pen — not scored from a photo':'couldn’t be measured reliably — re-scan'}</small></span>
+      <span class="ct">${s.name}<small>${s.id==='dynamics'?'measured by the Vahini pen: not scored from a photo':'couldn’t be measured reliably: re-scan'}</small></span>
       <span class="cmeter"><span class="meter"><i style="width:0%"></i></span><span class="cval" style="color:var(--muted)">—</span></span>
     </div>`;
     return `<div class="cat-row" style="padding:10px 14px;">
@@ -358,10 +358,10 @@ function render(host, data){
     'high':'Words read with high confidence',
     'moderate':'Words read with moderate confidence',
     'low':'Word reading is assistive on this scan',
-    'unavailable':'Words were not read this scan — the scores are unaffected',
+    'unavailable':'Words were not read this scan: the scores are unaffected',
   }[rec.level] || 'Word reading is assistive') + (recPct!=null?` (${recPct}%)`:'') + '.'
-    + (rec.printed_lines>0?` <b>${rec.printed_lines} printed line${rec.printed_lines>1?'s':''} on the page ${rec.printed_lines>1?'were':'was'} excluded</b> — only handwriting is analysed.`:'')) : '';
-  // Document checks — like the stamp on a lab report: parsed fully, and the
+    + (rec.printed_lines>0?` <b>${rec.printed_lines} printed line${rec.printed_lines>1?'s':''} on the page ${rec.printed_lines>1?'were':'was'} excluded</b>: only handwriting is analysed.`:'')) : '';
+  // Document checks: like the stamp on a lab report: parsed fully, and the
   // recognised words run through the spelling/grammar rules when reading was
   // dependable. Never claim a clean sheet off a low-confidence reading.
   let checksLine = '';
@@ -372,7 +372,7 @@ function render(host, data){
       const craft = window.VahiniCraft.analyze(readText, pipeline.docType && pipeline.docType.key);
       if (craft && craft.runGrammar){
         checksLine = craft.count
-          ? `Document parsed fully ✓ · spelling &amp; grammar: <b>${craft.count} thing${craft.count>1?'s':''} to check</b> — ${esc(craft.findings.slice(0,1).map(x=>x.msg).join(''))}`
+          ? `Document parsed fully ✓ · spelling &amp; grammar: <b>${craft.count} thing${craft.count>1?'s':''} to check</b>: ${esc(craft.findings.slice(0,1).map(x=>x.msg).join(''))}`
           : `Document parsed fully ✓ · <b style="color:var(--grow);">no spelling mistakes ✓ · no grammar mistakes ✓</b> in the recognised text`;
       }
     } else {
@@ -386,10 +386,10 @@ function render(host, data){
       <div class="score-card">
         <div class="ring">${ringSVG(overall)}<div class="ring-num"><b>${overall}</b><span>out of 100</span></div></div>
         <div class="band-pill">${overallBand(overall)}</div>
-        <div class="sc-note">${imu?'All 20 factors measured (pen + image).':`Measured from the photo — ${measuredCount} of 20 factors${unmeasuredCount?'; '+unmeasuredCount+' couldn’t be read':''}.${penPending?` The ${penPending} motion factors await the Vahini pen.`:''}`}</div>
+        <div class="sc-note">${imu?'All 20 factors measured (pen + image).':`Measured from the photo: ${measuredCount} of 20 factors${unmeasuredCount?'; '+unmeasuredCount+' couldn’t be read':''}.${penPending?` The ${penPending} motion factors await the Vahini pen.`:''}`}</div>
       </div>
       <div class="cat-list">${scSecRows}
-        <div class="sc2-goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span><b>Next milestone: ${MILESTONE}/100</b> — reachable by lifting ${esc(topWeakNames.join(' and '))}.${tries?` Our estimate: about <b>${tries.sessions} practice tries</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week).`:''}</span></div>
+        <div class="sc2-goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span><b>Next milestone: ${MILESTONE}/100</b>: reachable by lifting ${esc(topWeakNames.join(' and '))}.${tries?` Our estimate: about <b>${tries.sessions} practice tries</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week).`:''}</span></div>
       </div>
     </div>
     ${scoreboard}
@@ -401,11 +401,11 @@ function render(host, data){
       ${pipeline.docType ? docTypeChip(pipeline.docType) : ''}
       ${checksLine?`<span>${checksLine}</span>`:''}
     </div>
-    ${recLine?`<div style="margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5;">${recLine} Text recognition is <b>under progress and will improve soon</b> — accuracy rises with every update, delivered in increments. The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</div>`:''}
+    ${recLine?`<div style="margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5;">${recLine} Text recognition is <b>under progress and will improve soon</b>: accuracy rises with every update, delivered in increments. The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</div>`:''}
     ${foot(pg,'One-page scorecard · improvement plan follows')}
   </section>`);
 
-  /* ---------- IMU CAPTURE & SIGNALS (pen mode only — page 2) ---------- */
+  /* ---------- IMU CAPTURE & SIGNALS (pen mode only: page 2) ---------- */
   if (imu){
     pg=P();
     const groups = (window.VahiniIMU? window.VahiniIMU.SENSOR_GROUPS : []);
@@ -418,7 +418,7 @@ function render(host, data){
     pages.push(`<section class="page" data-screen-label="IMU Capture">
       ${head('Battu · Live Capture')}
       <div class="sec-title"><div><div class="eyebrow">${imu.axes}-axis sensor fusion · Kalman-filtered</div><h2>What the pen felt</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-      <p class="lead" style="max-width:84%;margin-bottom:16px;">The IMU pen streamed at <b>${imu.fs} Hz</b> while ${esc(name)} wrote — capturing the <b>process</b> a photo cannot see. A 9-axis IMU, a 6-axis IMU and a tip force sensor were fused and de-noised with a Kalman filter, then read out as the four Dynamics factors.</p>
+      <p class="lead" style="max-width:84%;margin-bottom:16px;">The IMU pen streamed at <b>${imu.fs} Hz</b> while ${esc(name)} wrote: capturing the <b>process</b> a photo cannot see. A 9-axis IMU, a 6-axis IMU and a tip force sensor were fused and de-noised with a Kalman filter, then read out as the four Dynamics factors.</p>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--hair);border-radius:13px;overflow:hidden;background:var(--card);margin-bottom:16px;">
         ${stat('Duration', imu.dur.toFixed(1)+' s')}${stat('Samples', imu.nSamp.toLocaleString())}${stat('Strokes', imu.strokes)}<div style="padding:12px 14px;"><div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;">Pen-lifts</div><div style="font-family:var(--serif);font-size:18px;margin-top:4px;color:var(--ink);">${imu.lifts}</div></div>
       </div>
@@ -450,12 +450,12 @@ function render(host, data){
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;margin:8px 0 4px;">
         <figure style="margin:0;">
           <div class="f-focus" style="height:64px;margin:0;">${fx.svg}</div>
-          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>The concept</b> — we look at ${esc(fx.look)}</figcaption>
+          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>The concept</b>: we look at ${esc(fx.look)}</figcaption>
         </figure>
         <figure style="margin:0;">
           ${cr?`<img class="f-crop" src="${cr.url}" alt="from your writing" style="width:100%;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--paper-edge);background:#fff;display:block;">`
               :`<div class="f-focus" style="height:64px;margin:0;display:grid;place-items:center;color:var(--muted);font-size:10.5px;">reference crop appears when the recognition server maps your page</div>`}
-          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>Your reference</b> — ${cr?esc(cr.caption):'measured from your own page'}</figcaption>
+          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>Your reference</b>: ${cr?esc(cr.caption):'measured from your own page'}</figcaption>
         </figure>
       </div>
       <div class="f-scorebar"><i style="width:${f.score100}%;background:${BAND_COLOR[f.band]}"></i></div>
@@ -465,15 +465,15 @@ function render(host, data){
   }).join('');
   pages.push(`<section class="page" data-screen-label="Where to improve">
     ${head('Where exactly to improve')}
-    <div class="sec-title"><div><div class="eyebrow">${maintenance?'Nothing is weak — the three to keep polishing':'Your top '+focusFactors.length+' issues — where the score grows fastest'}</div><h2>Where exactly to improve</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+    <div class="sec-title"><div><div class="eyebrow">${maintenance?'Nothing is weak: the three to keep polishing':'Your top '+focusFactors.length+' issues: where the score grows fastest'}</div><h2>Where exactly to improve</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
     ${detURL?`<div class="ea-panel" style="margin-bottom:12px;">
       <div class="ea-head act"><span class="t">Your page, as detected</span><span class="tag" style="background:var(--accent-deep);color:#fff;">orange = detected writing</span></div>
       <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center;padding:10px 14px;background:#fff;">
         <img src="${detURL}" alt="detected sample" style="display:block;width:100%;max-height:235px;object-fit:contain;background:#fff;border:1px solid var(--paper-edge);border-radius:8px;">
-        <div style="font-size:11px;color:var(--ink-2);line-height:1.6;">Each <b style="color:var(--accent-deep);">orange box</b> is a piece of writing the engine found and measured — that is the evidence behind every score in this report. The <b style="color:var(--grow);">teal line</b> under a box is the baseline the writing sits on.</div>
+        <div style="font-size:11px;color:var(--ink-2);line-height:1.6;">Each <b style="color:var(--accent-deep);">orange box</b> is a piece of writing the engine found and measured: that is the evidence behind every score in this report. The <b style="color:var(--grow);">teal line</b> under a box is the baseline the writing sits on.</div>
       </div>
     </div>`:''}
-    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b> — so you can see exactly what was measured and where to aim next.</p>
+    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b>: so you can see exactly what was measured and where to aim next.</p>
     <div style="display:grid;gap:12px;">${improveCards}</div>
     <div style="margin-top:10px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:9px 13px;">We show the <b>top 3 issues</b> so practice stays focused. Want the full 20-factor deep-dive report? Email <a href="mailto:info@vahinitech.com" style="color:var(--accent-deep);font-weight:700;">info@vahinitech.com</a>.</div>
     ${foot(pg,'Top 3 issues · full 20-factor deep-dive: info@vahinitech.com')}
@@ -501,8 +501,8 @@ function render(host, data){
   const th = 'padding:6px 8px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--ink);text-align:center;';
   pages.push(`<section class="page" data-screen-label="Reference Values">
     ${head('Reference values · every factor, published')}
-    <div class="sec-title"><div><div class="eyebrow">Read it like a lab report — result · reference interval · flag</div><h2>The reference values</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <p class="lead" style="max-width:88%;margin-bottom:12px;">Every Vahini report scores against the <b>same fixed, published reference values</b> — so a result means the same thing on every scan, for every writer. A factor is <b>in reference</b> at ${REF_BANDS.strong[0].toFixed(1)}–${REF_BANDS.strong[1].toFixed(1)} points, <b>developing</b> at ${REF_BANDS.dev[0].toFixed(1)}–${REF_BANDS.dev[1].toFixed(1)}, and a <b>focus area</b> below ${REF_BANDS.dev[0].toFixed(1)}. Overall: ${overall}/100 (strong zone: 80–100).</p>
+    <div class="sec-title"><div><div class="eyebrow">Read it like a lab report: result · reference interval · flag</div><h2>The reference values</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+    <p class="lead" style="max-width:88%;margin-bottom:12px;">Every Vahini report scores against the <b>same fixed, published reference values</b>: so a result means the same thing on every scan, for every writer. A factor is <b>in reference</b> at ${REF_BANDS.strong[0].toFixed(1)}–${REF_BANDS.strong[1].toFixed(1)} points, <b>developing</b> at ${REF_BANDS.dev[0].toFixed(1)}–${REF_BANDS.dev[1].toFixed(1)}, and a <b>focus area</b> below ${REF_BANDS.dev[0].toFixed(1)}. Overall: ${overall}/100 (strong zone: 80–100).</p>
     <table style="width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--hair);border-radius:12px;overflow:hidden;">
       <thead><tr>
         <th style="${th}">#</th><th style="${th}text-align:left;">Factor</th><th style="${th}">Result</th><th style="${th}">Unit</th><th style="${th}">Reference interval</th><th style="${th}text-align:left;">Measured target (how it’s judged)</th><th style="${th}">Flag</th>
@@ -512,7 +512,7 @@ function render(host, data){
     <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.55;background:var(--paper-2);border-radius:10px;padding:10px 14px;">
       <b style="color:var(--ink-2);">How these reference values are set:</b> each factor is real geometry measured from the page (e.g. Size Consistency = letter-height variation, in reference when CV ≤ 0.12). The thresholds come from established document-analysis methods and handwriting-coaching practice (see <i>docs/computer-vision-algorithms.md</i> in the open-source engine) and are identical in every report, so scans are comparable over time. “—” means the factor needs the Vahini pen (motion) or couldn’t be read from this photo; it never silently defaults to a made-up value.
     </div>
-    ${foot(pg,'Fixed, published reference values — comparable across scans')}
+    ${foot(pg,'Fixed, published reference values: comparable across scans')}
   </section>`);
 
   /* ---------- PAGE · PRACTICE PLAN + HOW MANY TRIES ---------- */
@@ -537,13 +537,13 @@ function render(host, data){
   let predictHTML = '';
   if (fc){
     const fluentLine = fc.fluency.imageOnly
-      ? 'estimated from the photo — the pen measures it exactly'
+      ? 'estimated from the photo: the pen measures it exactly'
       : (fc.fluency.alreadyFluent ? 'Already fast &amp; easy'
         : (fc.fluency.weeksToFluent!=null ? `~${fc.fluency.weeksToFluent} weeks to fast, easy writing` : 'with steady practice'));
     predictHTML = `
       <div class="cat-band" style="margin-top:14px;"><span class="cb-no" style="color:var(--accent-deep)">PREDICTION</span><span class="cb-name" style="font-size:17px;">How many tries to the milestone</span><span class="cb-rule"></span></div>
       <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
-        ${card('How many tries?', tries?`≈ ${tries.sessions} tries`:'keep going', tries?`about <b>${tries.sessions} short practice sessions</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week) to reach <b>${MILESTONE}/100</b>`:`the milestone of ${MILESTONE}/100 sits beyond an 8-week projection — practise the drills and re-scan every 2 weeks`, 'var(--grow)')}
+        ${card('How many tries?', tries?`≈ ${tries.sessions} tries`:'keep going', tries?`about <b>${tries.sessions} short practice sessions</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week) to reach <b>${MILESTONE}/100</b>`:`the milestone of ${MILESTONE}/100 sits beyond an 8-week projection: practise the drills and re-scan every 2 weeks`, 'var(--grow)')}
         ${card('Projected score', `${fc.overallNow} <span style="color:var(--muted);font-size:16px;">→</span> ${fc.projLow}–${fc.projHigh}`, `over ${fc.horizon} weeks of steady practice`, 'var(--ink)')}
         ${card('Writing flow &amp; speed', fc.fluency.bandNow, `${fluentLine}`, 'var(--accent-deep)')}
       </div>
@@ -551,21 +551,21 @@ function render(host, data){
         <div class="ea-head act"><span class="t">Projected score · each dot is one week of practice</span><span class="tag">estimate</span></div>
         <div style="padding:8px 12px 2px;">${trajectoryChart(fc.curve, fc.overallNow, fc.overallProj)}</div>
       </div>
-      <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5;">Projections assume ~10 minutes of the prescribed drills, 3× a week, along a normal learning curve — a motivational estimate, not a guarantee. Re-scan to track the real curve.</div>`;
+      <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5;">Projections assume ~10 minutes of the prescribed drills, 3× a week, along a normal learning curve: a motivational estimate, not a guarantee. Re-scan to track the real curve.</div>`;
   }
   const stars = Math.max(1, Math.min(5, Math.round(overall/20)));
   const starRow = [1,2,3,4,5].map(i=>`<svg viewBox="0 0 24 24" width="22" height="22" ${i<=stars?'fill="#C29A45"':'fill="none" stroke="#C29A45" stroke-width="2"'}><path d="M12 2l3 6.5 7 .7-5.2 4.7 1.5 6.9L12 17l-6.3 3.8L7.2 14 2 9.2l7-.7z"/></svg>`).join('');
   pages.push(`<section class="page ex-page" data-screen-label="Practice & Prediction">
     ${head('Practice plan · Prediction')}
-    <div class="sec-title"><div><div class="eyebrow">Chosen from ${esc(name)}’s own results — nothing generic</div><h2>Your drill prescription</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+    <div class="sec-title"><div><div class="eyebrow">Chosen from ${esc(name)}’s own results: nothing generic</div><h2>Your drill prescription</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
     <div class="ex-list">${exCards}</div>
     ${predictHTML}
     <div class="mascot-strip" style="margin-top:12px;"><div style="display:flex;gap:3px;align-items:center;">${starRow}</div><div><h4>${stars} star${stars>1?'s':''} earned! ✏️</h4><p>Practise just ${drills.length===1?'this drill':'these '+drills.length+' drills'} for a few fun minutes, 3× a week, and re-scan in 2–4 weeks to earn more stars and watch the score climb.</p></div></div>
     <div class="disclaimer" style="margin-top:12px;">
-      <h4><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Important — please read</h4>
-      <p>This report is intended <b>solely for handwriting improvement, education and skill-building</b>. It is <b>not a medical, psychological, neurological or diagnostic assessment</b> and must not be used to diagnose, screen for, or rule out any condition (including dysgraphia or learning differences) — if you have such concerns, please consult a qualified professional. Results can vary with the writing sample, pen, surface and lighting.</p>
+      <h4><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Important: please read</h4>
+      <p>This report is intended <b>solely for handwriting improvement, education and skill-building</b>. It is <b>not a medical, psychological, neurological or diagnostic assessment</b> and must not be used to diagnose, screen for, or rule out any condition (including dysgraphia or learning differences): if you have such concerns, please consult a qualified professional. Results can vary with the writing sample, pen, surface and lighting.</p>
     </div>
-    <div style="margin-top:8px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;">Found a mistake, a bug, or have an idea for a new feature? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:var(--accent-deep);font-weight:700;">github.com/vahinitech/20factor-analyser</a> — every report makes the analyser better.</div>
+    <div style="margin-top:8px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;">Found a mistake, a bug, or have an idea for a new feature? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:var(--accent-deep);font-weight:700;">github.com/vahinitech/20factor-analyser</a>: every report makes the analyser better.</div>
     <div class="patent-strip"><span>© ${new Date().getFullYear()} Vahini Technologies</span><span class="ps-dot"></span><span>IMU Sensor Pen · Patent No. 584433</span><span class="ps-dot"></span><span>info@vahinitech.com · vahinitech.com</span></div>
     ${foot(pg,'Questions about this report: info@vahinitech.com')}
   </section>`);

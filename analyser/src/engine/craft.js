@@ -2,9 +2,9 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Vahini Writing Craft — content-level guidance that ADAPTS to what was
+   Vahini Writing Craft: content-level guidance that ADAPTS to what was
    actually written. The upload may be an English letter, an essay, maths,
-   science notes, or another language entirely — so the section reshapes
+   science notes, or another language entirely: so the section reshapes
    itself instead of always assuming a formal letter.
    Rule-based + high-precision: a flagged issue is almost always real.
    ========================================================================= */
@@ -23,7 +23,7 @@ const RULES = [
     fix:(m)=>`“${m[1]} to ${m[2]}” → “${m[1]} ${m[2]}”` },
   { cat:'Grammar & phrasing', sev:'check',
     re:/\b(it was|it is)\s+(pleasure|honour|honor|privilege)\b/i,
-    msg:'A missing article — add “a”.',
+    msg:'A missing article: add “a”.',
     fix:(m)=>`“${m[1]} ${m[2]}” → “${m[1]} a ${m[2]}”` },
   { cat:'Homophones', sev:'check',
     re:/\byour\s+(welcome|going|doing|right|wrong|the best)\b/i,
@@ -39,7 +39,7 @@ const RULES = [
     fix:(m)=>`“their ${m[1]}” → “there ${m[1]}”` },
   { cat:'Formatting & tone', sev:'check',
     re:/\b(u|ur|cu|thru|gonna|wanna|gotta|pls|plz|asap|btw|lol|idk|tbh)\b/i,
-    msg:'Informal abbreviation — spell it out in formal writing.',
+    msg:'Informal abbreviation: spell it out in formal writing.',
     fix:(m)=>`“${m[1]}” → write it in full` },
   { cat:'Closings & sign-offs', sev:'fix',
     re:/\b(Yours|Best|Kind|Warm)\s+(Sincerely|Regards|Wishes|Faithfully|Truly)\b/,
@@ -55,7 +55,7 @@ const RULES = [
 const GUIDES = {
   letter:[
     { title:'Formatting & tone', icon:'format', items:[
-      ['Mixing styles','Informal “U”, “cu” in a formal letter — or stiff language in a casual note.'],
+      ['Mixing styles','Informal “U”, “cu” in a formal letter, or stiff language in a casual note.'],
       ['Missing elements','Forgetting the date, sender’s address, or clear contact details.'],
       ['Block text','One huge paragraph. Break it into intro · body · conclusion.'] ]},
     { title:'Grammar & phrasing', icon:'grammar', items:[
@@ -129,13 +129,13 @@ const GUIDES = {
 
 const KINDS = {
   letter:{ label:'a letter', title:'The craft of your letter',
-    intro:'This reads like a letter, so beyond the handwriting we check the things that make a letter clear and credible — its structure, grammar and sign-off.',
+    intro:'This reads like a letter, so beyond the handwriting we check the things that make a letter clear and credible: its structure, grammar and sign-off.',
     runGrammar:true, runCompleteness:true, guide:'letter' },
   prose:{ label:'prose / an essay', title:'The craft of your writing',
-    intro:'This reads like continuous writing, so we check the craft that makes prose easy to read — capitalisation, punctuation, grammar and clarity.',
+    intro:'This reads like continuous writing, so we check the craft that makes prose easy to read: capitalisation, punctuation, grammar and clarity.',
     runGrammar:true, runCompleteness:false, guide:'prose' },
   math:{ label:'maths working', title:'Making your maths readable',
-    intro:'This looks like maths. Letter-writing rules don’t apply — instead, clear digits, aligned working and well-formed symbols are what make it easy to follow and mark.',
+    intro:'This looks like maths. Letter-writing rules don’t apply: instead, clear digits, aligned working and well-formed symbols are what make it easy to follow and mark.',
     runGrammar:false, runCompleteness:false, guide:'math' },
   science:{ label:'science notes', title:'Making your notes clear',
     intro:'This looks like subject notes with labels or diagrams. The craft here is clear labelling, correct units and tidy, consistent terms.',
@@ -144,7 +144,7 @@ const KINDS = {
     intro:'This page mixes printed text with handwriting (like a form or prescription). We only assess the handwritten notes, with light writing-craft guidance.',
     runGrammar:true, runCompleteness:false, guide:'prose' },
   nonlatin:{ label:'non-English script', title:'Writing-craft (English) not applied',
-    intro:'The writing appears to be in a non-English script. Our shape and quality factors still apply, but the language-craft checks below currently support English (Latin script) only — so they were not run on this sample.',
+    intro:'The writing appears to be in a non-English script. Our shape and quality factors still apply, but the language-craft checks below currently support English (Latin script) only: so they were not run on this sample.',
     runGrammar:false, runCompleteness:false, guide:null },
 };
 
@@ -182,9 +182,9 @@ function analyze(text, docKey){
       closing:    /\b(sincerely|regards|faithfully|best wishes|warm regards|yours|thank you)\b/i.test(t),
       signature:  /\n\s*[A-Z][a-z]+(\s+[A-Z][a-z]+)?\s*$/.test(t),
     };
-    if (!present.salutation) missing.push(['Salutation','Open with a greeting — “Dear …,”.']);
+    if (!present.salutation) missing.push(['Salutation','Open with a greeting: “Dear …,”.']);
     if (!present.date)       missing.push(['Date','Add the date so the letter is on record.']);
-    if (!present.closing)    missing.push(['Closing','End with a sign-off — “Yours sincerely,”.']);
+    if (!present.closing)    missing.push(['Closing','End with a sign-off: “Yours sincerely,”.']);
     if (!present.signature)  missing.push(['Signature','Sign your name under the closing.']);
     completeness = Object.values(present).filter(Boolean).length;
   }

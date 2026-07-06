@@ -2,12 +2,12 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Vahini Growth Forecast — innovative, transparent prediction layer.
+   Vahini Growth Forecast: innovative, transparent prediction layer.
    From the measured factor scores (+ optional IMU dynamics) it projects:
      • expected score uplift after the prescribed practice (8-week curve)
      • time to "fast & efficient / fluent" handwriting
      • a writing-speed (wpm) estimate, now vs projected
-   All outputs are ESTIMATES that assume consistent practice — framed as such.
+   All outputs are ESTIMATES that assume consistent practice: framed as such.
    Model: each factor approaches a realistic ceiling along an exponential
    learning curve s(w) = s0 + (ceiling - s0)·(1 - e^(-r·w)).
    ========================================================================= */
@@ -28,7 +28,7 @@ function compute(analysis, imu, pipeline, baseline){
   const byId = {}; analysis.results.forEach(f=>byId[f.n]=f);
   const score = (n)=> byId[n] ? byId[n].score : 6;
   // single source of truth: forecast is baselined off the SAME corrected overall
-  // the rest of the report shows (Fix-Spec #6) — not a divergent internal number.
+  // the rest of the report shows (Fix-Spec #6): not a divergent internal number.
   const base = (baseline!=null ? baseline : analysis.overall);
 
   // ---- projected OVERALL curve (recompute weighted overall each week) ----
@@ -64,7 +64,7 @@ function compute(analysis, imu, pipeline, baseline){
   let weeksToFluent = null;
   for (let w=0; w<=16; w++){ if (maturityAt(w) >= FLUENT){ weeksToFluent = w; break; } }
   const alreadyFluent = maturityNow >= FLUENT;
-  const matBand = (m)=> m>=80?'Fast & easy' : m>=62?'Getting smoother' : m>=42?'Starting to flow' : 'Slow & careful — early days';
+  const matBand = (m)=> m>=80?'Fast & easy' : m>=62?'Getting smoother' : m>=42?'Starting to flow' : 'Slow & careful: early days';
 
   // ---- writing speed estimate (wpm) --------------------------------------
   // maturity maps to fluency; fluent hands write faster & more automatically.

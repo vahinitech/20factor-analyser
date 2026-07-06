@@ -2,7 +2,7 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Vahini — Share / QR (demo only)
+   Vahini: Share / QR (demo only)
    Turns a Google Drive share link into a scannable QR. Because uploading to
    Drive already requires internet, the QR image is fetched from a public QR
    service; the link is shown as a fallback if it can't load.
@@ -44,7 +44,7 @@ function init(){
     const link = safeHttpUrl(raw);
     if(!link){ $('#share-link').focus(); return; }
     const img = $('#share-qr-img');
-    img.onerror = ()=>{ img.alt='QR unavailable offline — share the link directly.'; };
+    img.onerror = ()=>{ img.alt='QR unavailable offline: share the link directly.'; };
     img.src = qrURL(link, 300);
     $('#share-open').href = link;
     $('#share-qr').hidden = false;

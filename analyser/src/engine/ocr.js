@@ -4,7 +4,7 @@
 /* =========================================================================
    Vahini OCR / analysis server client.
    Recognition AND the 20-factor scoring run on the PP-OCRv5 server (see
-   ppocr-server.py — PaddleOCR v5, runs fully on your own machine), or any
+   ppocr-server.py: PaddleOCR v5, runs fully on your own machine), or any
    endpoint set via window.VAHINI_OCR_ENDPOINT. The browser only sends the
    image and renders the returned analysis; there is no in-browser scorer.
    ========================================================================= */
@@ -93,7 +93,7 @@ async function tryEndpoint(url, blob){
   fd.append('image', blob, 'sample.png');
   fd.append('det', 'true'); fd.append('rec', 'true');
   fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
-  // NB: do NOT pin a language — let the server run every script it has loaded
+  // NB: do NOT pin a language: let the server run every script it has loaded
   // (English + Telugu by default) and merge, so mixed pages read fully.
   const ctrl = new AbortController();
   const attempt = (endpointAttempts[url] || 0) + 1;
@@ -146,7 +146,7 @@ async function serverOCR(blob){
       if (out && out.error) lastServerError = out.error;
     }catch(e){ lastServerError = (e && e.message) ? e.message : 'request failed'; }
   }
-  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable — using on-device detector (run ppocr-server.py for PP-OCRv5 recognition)', lastServerError || '');
+  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable: using on-device detector (run ppocr-server.py for PP-OCRv5 recognition)', lastServerError || '');
   return null;
 }
 
@@ -200,8 +200,8 @@ async function serverPythonReport(blob, expectedText){
         return j;
       }
       // A refusal with an error_code (e.g. no_handwriting: the page is fully
-      // printed) is a DEFINITIVE server answer, not a connectivity failure —
-      // return it so the app can explain, instead of trying other endpoints.
+      // printed) is a DEFINITIVE server answer, not a connectivity failure.
+      // Return it so the app can explain, instead of trying other endpoints.
       if (j && j.ok === false && j.error_code){
         lastServerError = j.error || j.error_code;
         return j;

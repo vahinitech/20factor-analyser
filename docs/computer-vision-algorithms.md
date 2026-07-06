@@ -379,7 +379,7 @@ Every finding ships with a crop of the writer's own ink as evidence.
 | 16 | Velocity minima | "Where does each stroke start/end?" | F13–F16 (pen) |
 | 17 | Letter crops | "Show me MY letters as proof" | factor cards |
 | 18 | Learning curve | "Where is this heading?" | forecast page |
-| 19 | Expected-text alignment | "Which letter is which: and is it right?" | letter-level findings |
+| 19 | Expected-text alignment | "Which letter is which, and is it right?" | letter-level findings |
 
 ---
 

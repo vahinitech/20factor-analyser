@@ -2,8 +2,8 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Battu — IMU sensor simulation & live capture.
-   NOTE: no training dataset yet — this STREAMS a physically-plausible
+   Battu: IMU sensor simulation & live capture.
+   NOTE: no training dataset yet: this STREAMS a physically-plausible
    simulation of the 16-axis pen so the UX, signal processing (Kalman),
    and dynamics-factor formulas (§4C F13–F16) can be demonstrated live.
    16 axes = 9-axis IMU (accel+gyro+mag, 9) + 6-axis IMU (accel+gyro, 6) + tip force (1).
@@ -61,7 +61,7 @@ function Ring(n){ const b=new Float32Array(n); let i=0,full=false;
    Session controller
    ========================================================================= */
 function createSession(){
-  const FS = 208;                 // sample rate (Hz) — spec
+  const FS = 208;                 // sample rate (Hz): spec
   const SUB = 7;                  // samples generated per tick
   let t = 0;                      // simulated seconds
   let timer = null, running = false;
@@ -185,7 +185,7 @@ function createSession(){
      Detect those minima with the classic 5-point test (calc_vbs): a sample is
      a segmentation point when it is a local minimum across its 2 neighbours
      each side. Each interval between minima is one physical stroke, whose peak
-     velocity is its ballistic amplitude — a far more meaningful unit than a
+     velocity is its ballistic amplitude: a far more meaningful unit than a
      fixed time-grid. Ref: Schomaker (1993); Schomaker & Teulings (1990). */
   function velocityMinima(v){
     const idx=[]; const n=v.length;

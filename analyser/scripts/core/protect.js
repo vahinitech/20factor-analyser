@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
-/* Vahini — access deterrent for the analyser.
+/* Vahini access deterrent for the analyser.
    Discourages casual inspection of the packed engine: disables the context
    menu and the common view-source / devtools keyboard shortcuts.
    NOTE: client-side code can never be fully hidden from a determined user;

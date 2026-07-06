@@ -2,7 +2,7 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Vahini Studio — flow controller (intake → upload → process → report)
+   Vahini Studio: flow controller (intake → upload → process → report)
    ========================================================================= */
 (function(){
 'use strict';
@@ -77,7 +77,7 @@ function renderVLInsights(vl, recInfo){
   ].filter(Boolean);
   // Caption honesty: garbled low-confidence readings under each crop erode
   // trust. Show the recognised text only when the engine was actually
-  // confident in it; otherwise label the region neutrally — always with the
+  // confident in it; otherwise label the region neutrally: always with the
   // confidence percentage in brackets.
   const regionCaption = (r)=>{
     const sc = Math.round(((r && r.score) || 0) * 100);
@@ -94,7 +94,7 @@ function renderVLInsights(vl, recInfo){
     <p style="margin:6px 0 0;font-size:11.5px;line-height:1.55;color:#4a5568;">
       <b>Why this section:</b> before scoring, the analyser works out what your page is (a letter, an exam answer, a form) and which parts are pen handwriting.
       That is how it keeps printed text out of your scores and compares your writing against the right kind of page.
-      ${printedN?`On this page it found and <b>excluded ${printedN} printed line${printedN>1?'s':''}</b> — only your handwriting was analysed.`:''}
+      ${printedN?`On this page it found and <b>excluded ${printedN} printed line${printedN>1?'s':''}</b>: only your handwriting was analysed.`:''}
     </p>
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px;">${chips.map(c=>`<span style="font-size:11px;background:#F5F7FA;border:1px solid rgba(34,40,49,.1);border-radius:999px;padding:4px 9px;color:#354052;">${c}</span>`).join('')}</div>
     ${regions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">${regions.map(r=>`<figure style="margin:0;border:1px solid rgba(34,40,49,.12);border-radius:10px;overflow:hidden;background:#fafafa;">
@@ -102,14 +102,14 @@ function renderVLInsights(vl, recInfo){
       <figcaption style="padding:6px 8px;font-size:10.5px;color:#4a5568;line-height:1.35;">${regionCaption(r)}</figcaption>
     </figure>`).join('')}</div>` : ''}
     <p style="margin:12px 0 0;font-size:11px;line-height:1.55;color:#4a5568;background:#F5F7FA;border-radius:9px;padding:9px 12px;">
-      <b>Note · text recognition is under progress and will improve soon</b> — accuracy rises with every update, delivered in increments${recPct!=null?` (current reading confidence: ${recPct}%)`:''}. A wrong word here never changes the 20 factor scores: they are measured from the geometry of the writing, not from reading it.
+      <b>Note · text recognition is under progress and will improve soon</b>: accuracy rises with every update, delivered in increments${recPct!=null?` (current reading confidence: ${recPct}%)`:''}. A wrong word here never changes the 20 factor scores: they are measured from the geometry of the writing, not from reading it.
       Spotted a problem or have an idea? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:#075E63;font-weight:700;">github.com/vahinitech/20factor-analyser</a>.
     </p>
   </section>`;
 }
 
 /* Draw the server-detected word boxes (orange) and their fitted baselines
-   (teal) over the uploaded photo — the detection view users know from
+   (teal) over the uploaded photo: the detection view users know from
    earlier releases. Boxes arrive in the server's processing resolution
    (proc_w × proc_h) and are scaled onto the canvas. */
 function drawDetectionOverlay(img, pyReport, maxW){
@@ -189,7 +189,7 @@ function go(name){
   window.scrollTo(0,0);
 }
 
-/* ---------- role selection (personas removed — always the individual) ---------- */
+/* ---------- role selection (personas removed: always the individual) ---------- */
 function selectRole(){ state.role = 'individual'; }
 
 /* ---------- intake (no personal details collected) ---------- */
@@ -263,7 +263,7 @@ function handleSample(file){
       showSample(img, url);
       if (pages > 1){
         const p = $('#dz-prompt');
-        if (p){ p.style.display='block'; p.textContent = 'PDF has ' + pages + ' pages — only page 1 is analysed.'; }
+        if (p){ p.style.display='block'; p.textContent = 'PDF has ' + pages + ' pages: only page 1 is analysed.'; }
       }
     }).catch(err=>{
       const p = $('#dz-prompt'); if (p){ p.style.display='block'; p.textContent = (err && err.message) ? err.message : 'Could not read this PDF.'; }
@@ -366,7 +366,7 @@ function saveHistory(name, overall, sections){
 const STEPS = [
   { id:'load', t:'Capture & normalise', d:'Decoding photo, downscaling for analysis' },
   { id:'gray', t:'Grayscale + denoise', d:'Luminance conversion (§4 step 1)' },
-  { id:'bin',  t:'Binarization', d:'Otsu / adaptive threshold — ink vs paper' },
+  { id:'bin',  t:'Binarization', d:'Otsu / adaptive threshold: ink vs paper' },
   { id:'seg',  t:'Segment lines & words', d:'Connected components + gap thresholding' },
   { id:'ocr',  t:'Text detect + recognise', d:'Detection boxes & recognition' },
   { id:'meas', t:'Measure 20 factors', d:'Deterministic CV geometry (§4C)' },
@@ -477,7 +477,7 @@ async function runPipeline(){
   }
   if (pyReport && pyReport.error_code === 'no_handwriting'){
     // The server found text but ALL of it is printed. The analyser scores
-    // pen handwriting only — refusing here (instead of scoring machine
+    // pen handwriting only: refusing here (instead of scoring machine
     // type) is the whole credibility rule of the product.
     const n = Number(pyReport.printed_lines) || 0;
     showReject({
@@ -514,7 +514,7 @@ async function runPipeline(){
     factor_regions: pyReport.factor_regions || {},
   };
   // Redraw the sample with the detected word boxes (orange) + baselines
-  // (teal) — the detection view shown on the report's first page.
+  // (teal): the detection view shown on the report's first page.
   const boxedURL = drawDetectionOverlay(img, pyReport);
   if (boxedURL) detURL = boxedURL;
   const ctxTag = vlResult.document_context ? ' + context model' : '';
@@ -669,7 +669,7 @@ function setupLogo(){
 /* ---------- wire up ---------- */
 function init(){
   setupUploadDrop(); setupPassages(); setupLogo();
-  // upload is step 1 — straight to analysis
+  // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', runPipeline);
   // optional: capture live with the sensor pen instead
   const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; collectIntake(); startIMU(); });

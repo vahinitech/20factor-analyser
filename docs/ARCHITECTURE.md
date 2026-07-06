@@ -194,7 +194,7 @@ lighting is uneven → use **Adaptive**; otherwise → use **Otsu**. The report 
 ### Step 4: Connected components (find the letters)
 
 > **What it is:** after binarizing, we have a sea of black "ink" pixels. **Connected components** are
-> clusters of ink pixels that **touch each other**: and a cluster of touching ink is, usually, one
+> clusters of ink pixels that **touch each other**, and a cluster of touching ink is, usually, one
 > letter or mark. **How it works (intuition):** start on an ink pixel and "flood" outward to every ink
 > pixel it touches (including diagonals), labelling them all as one group; repeat until every ink pixel
 > belongs to a group. **Why we need it:** this is how the engine goes from "raw dots" to "here are the
@@ -293,7 +293,7 @@ average of that up-and-down wobble.)
 gaps = word gaps measured in x-heights (ideal ≈ 1.0)
 score = half from "is the gap about right" + half from "are the gaps even"
 ```
-*In plain words:* are the spaces between words about one letter-width: and consistent?
+*In plain words:* are the spaces between words about one letter-width, and consistent?
 
 **F9 · Letter Spacing**: *Measured*
 `score = score_from_consistency(letter gaps, 0.30, 0.90)`
@@ -339,7 +339,7 @@ slant (§12.1); falls back to per-pixel angles with a wider band (11, 40) for ve
 
 **F18 · Legibility Score**: *Estimated*
 `score = 0.4·sizeEvenness + 0.3·spacingEvenness + 0.3·sittingOnTheLine` (the report names the weakest part)
-*In plain words:* an overall "how easy to read" built transparently from the basics: and it tells you
+*In plain words:* an overall "how easy to read" built transparently from the basics, and it tells you
 which basic is holding it back.
 
 **F19 · Character Distinction**: *Estimated*
@@ -352,7 +352,7 @@ which basic is holding it back.
 
 ---
 
-## 5. Why OpenCV-first: and would ML / Deep Learning / LLMs improve it?
+## 5. Why OpenCV first, and would ML, deep learning or LLMs improve it?
 
 A fair question: handwriting AI usually means neural networks. So why does Vahini lean on **OpenCV /
 computer vision (measurement)** for most factors, and use machine learning only sparingly? And if we
