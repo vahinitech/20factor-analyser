@@ -145,9 +145,10 @@ against. Tighten a band and scores get stricter; loosen it and they get more gen
 
 ### Turning a 0–10 score into a label
 
-- **7.5 and above → "Strong"**
-- **5.0 to 7.4 → "Developing"**
-- **below 5.0 → "Focus area"** (this is what the practice drills target)
+- **8.5 and above → "Strong"**
+- **7.0 to 8.4 → "Good"**
+- **4.5 to 6.9 → "Developing"**
+- **below 4.5 → "Needs support"** (this is what the practice drills target)
 
 ---
 

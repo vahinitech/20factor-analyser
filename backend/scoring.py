@@ -311,9 +311,11 @@ def _clamp10(v):
 
 
 def _band(score):
-    if score >= 7.5:
+    if score >= 8.5:
         return "strong"
-    if score >= 5.0:
+    if score >= 7.0:
+        return "good"
+    if score >= 4.5:
         return "dev"
     return "focus"
 
