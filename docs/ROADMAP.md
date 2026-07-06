@@ -60,6 +60,12 @@ OCR text as a secondary signal.
   many separate ink blobs a line's letters actually form. Shown as
   descriptive context next to document type, never scored: no curriculum
   treats one style as more "correct" than another.
+- **Ambiguous word spacing.** Flags a specific word whose internal
+  spacing (an over-wide letter gap in print, or an unplanned pen lift in
+  cursive) grew as wide as a real word-to-word gap elsewhere on the same
+  page, so it risks reading as two words instead of one (`computer_vision.
+  find_ambiguous_word_gaps`). A fixable mistake, shown with evidence like
+  a grammar finding, not a style judgement.
 - **Sample-quality gate.** Good, usable or limited, with retake tips.
   Rejects a page with no detectable handwriting.
 - **Writing-craft layer** (`craft.js`). Grammar, homophones, formatting,

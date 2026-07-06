@@ -488,14 +488,17 @@ _STYLE_CURSIVE_MAX = 0.45
 _STYLE_PRINT_MIN = 0.75
 
 
-def _line_ink_component_count(arr, box):
-    """Connected ink blobs inside one detected line's box. A word where
-    every letter is joined by connecting strokes collapses toward one blob
-    per word; a word in disconnected print stays close to one blob per
-    letter (or a little over, from a dotted i or crossed t). No merging
-    dilation is applied here, unlike fallback_line_regions: that function
-    MERGES letters into line blobs on purpose, which would destroy the
-    very connectivity signal this one depends on."""
+def _line_ink_components(arr, box):
+    """Connected ink blobs inside one detected line's box, left to right,
+    as (x, y, w, h) boxes in full-image coordinates. A word where every
+    letter is joined by connecting strokes collapses toward one blob per
+    word; a word in disconnected print stays close to one blob per letter
+    (or a little over, from a dotted i or crossed t). No merging dilation
+    is applied here, unlike fallback_line_regions: that function MERGES
+    letters into line blobs on purpose, which would destroy the very
+    connectivity signal this one depends on. Returns None when the crop
+    is too small to say anything reliable (see the height guard below),
+    rather than a wrong guess."""
     if cv2 is None:
         return None
     crop = _crop_rgb(arr, box)
@@ -505,9 +508,7 @@ def _line_ink_component_count(arr, box):
     h, w = gray.shape[:2]
     # Below this, individual letter strokes are only a few pixels wide, so
     # any fixed-size threshold window merges neighbouring print letters
-    # into one blob and reads as falsely "joined". Too little resolution
-    # to say anything reliable, so this line contributes no evidence
-    # rather than a wrong guess.
+    # into one blob and reads as falsely "joined".
     if h < 16 or w < 6:
         return None
     blur = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -527,11 +528,26 @@ def _line_ink_component_count(arr, box):
         ink, connectivity=8
     )
     min_area = max(2.0, (h * w) * 0.0006)
-    count = 0
+    ox, oy = float(box[0]), float(box[1])
+    comps = []
     for i in range(1, n_labels):
-        if float(stats[i, cv2.CC_STAT_AREA]) >= min_area:
-            count += 1
-    return count
+        if float(stats[i, cv2.CC_STAT_AREA]) < min_area:
+            continue
+        comps.append(
+            (
+                ox + float(stats[i, cv2.CC_STAT_LEFT]),
+                oy + float(stats[i, cv2.CC_STAT_TOP]),
+                float(stats[i, cv2.CC_STAT_WIDTH]),
+                float(stats[i, cv2.CC_STAT_HEIGHT]),
+            )
+        )
+    comps.sort(key=lambda c: c[0])
+    return comps
+
+
+def _line_ink_component_count(arr, box):
+    comps = _line_ink_components(arr, box)
+    return None if comps is None else len(comps)
 
 
 def infer_writing_style(arr, lines):
@@ -587,6 +603,106 @@ def infer_writing_style(arr, lines):
         "joined_ratio": round(ratio, 3),
         "basis_letters": total_letters,
     }
+
+
+# --------------------------------------------------------------------------- #
+# Ambiguous word spacing: a fixable mistake, never a style judgement
+# --------------------------------------------------------------------------- #
+# Both failure modes a handwriting coach watches for reduce to the same
+# measurable event once ink is reduced to connected ink blobs: a gap INSIDE
+# one word that grew close to the size of a real word-to-word gap. In
+# disconnected (print) writing that is a letter-to-letter gap stretched too
+# wide; in joined (cursive) writing it is an unplanned pen lift splitting
+# one word's single blob into two. Either way the word risks reading as two
+# separate words. This is a concrete, fixable mistake, unlike writing style
+# itself, so it is reported as a finding (like a grammar check), not folded
+# into a factor score and not judging print vs cursive.
+_AMBIGUOUS_GAP_FRACTION = 0.55
+
+
+def find_ambiguous_word_gaps(arr, lines, max_findings=3):
+    """Flags specific words whose internal spacing looks like it could be
+    misread as two words. Needs at least 3 genuine word-to-word gaps
+    somewhere on the page to know what a real word gap looks like here;
+    returns no findings rather than guessing when there isn't enough."""
+    per_line = []
+    all_word_gap_sizes = []
+    for l in lines:
+        text = str(l.get("text", "") or "")
+        words = [w for w in re.split(r"\s+", text.strip()) if w]
+        box = l.get("box") or [0, 0, 0, 0]
+        comps = _line_ink_components(arr, box)
+        if not comps or len(comps) < 2:
+            continue
+        gaps = [
+            comps[i + 1][0] - (comps[i][0] + comps[i][2])
+            for i in range(len(comps) - 1)
+        ]
+        # A line with only ONE recognised word (or none) has no word-break
+        # of its own to exclude: every gap in it is a same-word candidate,
+        # exactly the "manage" case this whole check exists for. It just
+        # can't ALSO contribute a reference word-gap size, since it has no
+        # genuine word boundary to measure.
+        n_word_breaks = min(max(0, len(words) - 1), len(gaps))
+        if n_word_breaks > 0:
+            order = sorted(
+                range(len(gaps)), key=gaps.__getitem__, reverse=True
+            )
+            word_break_idx = set(order[:n_word_breaks])
+            all_word_gap_sizes.extend(gaps[i] for i in word_break_idx)
+        else:
+            word_break_idx = set()
+        intra_idx = [i for i in range(len(gaps)) if i not in word_break_idx]
+        if intra_idx:
+            per_line.append(
+                {"comps": comps, "gaps": gaps, "intra_idx": intra_idx}
+            )
+
+    if len(all_word_gap_sizes) < 3:
+        return []
+
+    ref = float(np.median(all_word_gap_sizes))
+    if ref <= 1.0:
+        return []
+
+    candidates = []
+    for entry in per_line:
+        comps, gaps = entry["comps"], entry["gaps"]
+        for i in entry["intra_idx"]:
+            g = gaps[i]
+            if g < _AMBIGUOUS_GAP_FRACTION * ref:
+                continue
+            x0, x1 = comps[i][0], comps[i + 1][0] + comps[i + 1][2]
+            y0 = min(comps[i][1], comps[i + 1][1])
+            y1 = max(
+                comps[i][1] + comps[i][3], comps[i + 1][1] + comps[i + 1][3]
+            )
+            pad = max(4.0, (y1 - y0) * 0.15)
+            candidates.append(
+                {
+                    "gap_ratio": round(g / ref, 2),
+                    "box": [
+                        x0 - pad,
+                        y0 - pad,
+                        (x1 - x0) + 2 * pad,
+                        (y1 - y0) + 2 * pad,
+                    ],
+                }
+            )
+
+    candidates.sort(key=lambda c: c["gap_ratio"], reverse=True)
+    findings = []
+    for c in candidates[:max_findings]:
+        crop = _crop_rgb(arr, c["box"])
+        if crop is None or crop.size == 0:
+            continue
+        findings.append(
+            {
+                "gap_ratio": c["gap_ratio"],
+                "crop_url": _to_data_url(crop, quality=88),
+            }
+        )
+    return findings
 
 
 def _infer_doc_context(lines, layout):
@@ -693,4 +809,5 @@ def vl_analyze(arr: np.ndarray, lines):
         "layout": layout,
         "regions": regions,
         "factor_regions": factor_regions,
+        "ambiguous_word_gaps": find_ambiguous_word_gaps(arr, lines),
     }

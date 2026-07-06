@@ -525,6 +525,80 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertIsNone(style["style"])
         self.assertEqual(style["confidence"], 0.0)
 
+    @staticmethod
+    def _draw_word_blobs(d, x, y, n_letters, gaps, letter_w=15, blob_h=30):
+        # One filled rectangle per (simulated) letter, with the given
+        # per-gap list between consecutive letters (len(gaps) ==
+        # n_letters - 1). Returns the x just past the last letter.
+        cur = x
+        for i in range(n_letters):
+            d.rectangle([cur, y, cur + letter_w, y + blob_h], fill="black")
+            cur += letter_w
+            if i < n_letters - 1:
+                cur += gaps[i]
+        return cur
+
+    def test_ambiguous_word_gap_flagged_against_the_pages_own_word_spacing(
+        self,
+    ):
+        # Regression for the exact scenario reported: a single word (e.g.
+        # "manage") whose internal spacing grew close to how far apart two
+        # separate words are on this same page, so it risks reading as two
+        # words ("man age") instead of one. Build 3 reference lines with
+        # normal spacing (letter gap 8px, word gap 45px) to establish what
+        # a real word gap looks like here, then one line with a single
+        # word whose middle gap is widened to 40px, close to that 45px
+        # word gap, while every other gap in it stays at a normal 8px.
+        w, h = 900, 260
+        img = Image.new("RGB", (w, h), "white")
+        d = ImageDraw.Draw(img)
+        normal_gaps_3 = [8, 8]
+        for y in (20, 70, 120):
+            end = self._draw_word_blobs(d, 20, y, 3, normal_gaps_3)
+            self._draw_word_blobs(d, end + 45, y, 3, normal_gaps_3)
+        problem_y = 170
+        self._draw_word_blobs(d, 20, problem_y, 6, [8, 8, 40, 8, 8])
+        arr = np.array(img)
+
+        lines = [
+            {"box": [0, 15, w, 40], "text": "abc def"},
+            {"box": [0, 65, w, 40], "text": "ghi jkl"},
+            {"box": [0, 115, w, 40], "text": "mno pqr"},
+            {"box": [0, problem_y - 5, w, 40], "text": "manage"},
+        ]
+
+        cv = self.mod.computer_vision
+        findings = cv.find_ambiguous_word_gaps(arr, lines)
+        self.assertEqual(len(findings), 1)
+        self.assertGreaterEqual(findings[0]["gap_ratio"], 0.55)
+        self.assertTrue(
+            findings[0]["crop_url"].startswith("data:image/jpeg;base64,")
+        )
+
+    def test_ambiguous_word_gap_not_flagged_when_spacing_is_even(self):
+        # Same page shape, but every line has normal, even spacing: no
+        # word's internal gap approaches the real word-gap size, so
+        # nothing should be flagged.
+        w, h = 900, 210
+        img = Image.new("RGB", (w, h), "white")
+        d = ImageDraw.Draw(img)
+        normal_gaps_3 = [8, 8]
+        for y in (20, 70, 120, 170):
+            end = self._draw_word_blobs(d, 20, y, 3, normal_gaps_3)
+            self._draw_word_blobs(d, end + 45, y, 3, normal_gaps_3)
+        arr = np.array(img)
+
+        lines = [
+            {"box": [0, 15, w, 40], "text": "abc def"},
+            {"box": [0, 65, w, 40], "text": "ghi jkl"},
+            {"box": [0, 115, w, 40], "text": "mno pqr"},
+            {"box": [0, 165, w, 40], "text": "stu vwx"},
+        ]
+
+        cv = self.mod.computer_vision
+        findings = cv.find_ambiguous_word_gaps(arr, lines)
+        self.assertEqual(findings, [])
+
     def test_factor_regions_reference_image_for_all_20(self):
         # EVERY analysis must carry a usable reference image for each of
         # the 20 factors (a line crop or the whole-page fallback).
