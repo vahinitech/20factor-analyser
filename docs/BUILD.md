@@ -1,4 +1,4 @@
-# Build — producing `engine.bundle.js`
+# Build: producing `engine.bundle.js`
 
 The browser only ever loads **`analyser/scripts/core/engine.bundle.js`** (packed + base64-encoded). The readable
 sources live in **`analyser/src/`** and are never shipped. This doc explains how the bundle is
@@ -41,7 +41,7 @@ earlier modules, so it must come last. The canonical list lives in `analyser/bui
    writes the self-decoding loader to **`analyser/scripts/core/engine.bundle.js`**:
 
    ```js
-   /* Vahini engine — packed build. */
+   /* Vahini engine: packed build. */
    (function(){ try {
      var _v = "<BASE64>";
      (0, eval)(decodeURIComponent(escape(atob(_v))));
@@ -61,5 +61,5 @@ earlier modules, so it must come last. The canonical list lives in `analyser/bui
 
 Shipping raw sources puts every algorithm in the browser's Sources panel. Packing removes them
 from casual inspection; `analyser/scripts/core/protect.js` blocks the context menu and view-source / devtools shortcuts.
-Neither is encryption — client code is ultimately inspectable — but together they raise the bar
+Neither is encryption: client code is ultimately inspectable: but together they raise the bar
 well beyond copy-paste.

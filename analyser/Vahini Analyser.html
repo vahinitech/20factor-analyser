@@ -38,7 +38,7 @@
   }
   .upload-note{ text-align:center; font-size:12.5px; color:var(--muted); margin:16px auto 0; max-width:560px; line-height:1.5; }
 
-  /* "what to upload" guidance — collapsed by default, opens on click */
+  /* "what to upload" guidance: collapsed by default, opens on click */
   .upload-help{ max-width:760px; margin:16px auto 0; border:1px solid var(--rule,rgba(34,40,49,.14)); border-radius:14px; background:var(--surface,#fff); overflow:hidden; }
   .upload-help > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:14px 18px; font-size:13.5px; color:var(--ink,#222831); font-weight:500; user-select:none; }
   .upload-help > summary::-webkit-details-marker{ display:none; }
@@ -117,33 +117,33 @@
         <div class="uh-grid">
           <div class="uh-card">
             <div class="uh-h"><span class="uh-n">1</span>What to write</div>
-            <p>Write <b>4–6 full lines</b> of normal joined or print handwriting on plain or ruled paper. A short paragraph beats a single word — the more real letters, words and lines, the more the 20 factors have to measure.</p>
+            <p>Write <b>4–6 full lines</b> of normal joined or print handwriting on plain or ruled paper. A short paragraph beats a single word: the more real letters, words and lines, the more the 20 factors have to measure.</p>
             <p class="uh-try">No idea what to write? Copy any of these:</p>
             <ul class="uh-samples">
               <li>“The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs.” <span>(every letter of the alphabet)</span></li>
               <li>“The sun is bright today. We play in the green garden. Birds sing in the tall trees.” <span>(easy primary practice)</span></li>
-              <li>A few lines from a book, a diary entry, or a letter to a friend — anything in your natural hand.</li>
+              <li>A few lines from a book, a diary entry, or a letter to a friend, anything in your natural hand.</li>
             </ul>
           </div>
           <div class="uh-card">
             <div class="uh-h"><span class="uh-n">2</span>Taking the photo</div>
             <ul class="uh-list">
-              <li><b>Fill the frame</b> with the writing — get close, leave little background.</li>
+              <li><b>Fill the frame</b> with the writing: get close, leave little background.</li>
               <li><b>Flat &amp; straight-on.</b> Hold the phone parallel to the page, not at an angle (we auto-correct small tilt, but flat is best).</li>
               <li><b>Even light, no shadow</b> from your hand or phone across the page.</li>
-              <li><b>Sharp focus</b> — tap the screen on the text before you shoot.</li>
+              <li><b>Sharp focus:</b> tap the screen on the text before you shoot.</li>
               <li>Plain or single-ruled paper; avoid busy grids or coloured backgrounds.</li>
             </ul>
           </div>
         </div>
         <div class="uh-note">
-          <b>How Vahini reads your page — so the score makes sense:</b>
+          <b>How Vahini reads your page, so the score makes sense:</b>
           <ul class="uh-list">
-            <li><b>Handwriting only.</b> Printed text — a letterhead, a form’s printed labels, a textbook line — is detected and <b>left out</b> of scoring; only your handwriting is measured.</li>
+            <li><b>Handwriting only.</b> Printed text (a letterhead, a form's printed labels, a textbook line) is detected and <b>left out</b> of scoring; only your handwriting is measured.</li>
             <li><b>English &amp; Telugu / Hindi.</b> The shape, spacing and neatness factors work on any script. The letter-by-letter and spelling checks are sharpest for English today; Indic scripts are supported and improving.</li>
             <li><b>Always measured (any photo):</b> size evenness, spacing, baseline, slant, loop closure, line straightness, neatness.</li>
             <li><b>Read line-by-line when the words are recognised:</b> spelling, punctuation, mixed cursive/print, stray capitals, repeated-letter consistency.</li>
-            <li><b>Needs the Battu pen:</b> speed, pressure, pen-lifts and flow — a photo can only estimate these, so they’re shown honestly as pen-pending.</li>
+            <li><b>Needs the Battu pen:</b> speed, pressure, pen-lifts and flow. A photo can only estimate these, so they are shown honestly as pen-pending.</li>
           </ul>
         </div>
       </div>
@@ -161,7 +161,7 @@
       <div class="video-frame">
         <iframe src="20%20Factors%20Explained.html" title="How the 20 factors work" loading="lazy"></iframe>
       </div>
-      <p class="video-cap">See how Vahini turns one vague word — “messy” — into twenty things you can actually measure and fix.</p>
+      <p class="video-cap">See how Vahini turns one vague word, "messy", into twenty things you can actually measure and fix.</p>
      </aside>
     </div>
   </div>
@@ -468,8 +468,8 @@
   .vgate__check svg{width:30px; height:30px;}
   /* window.print() fires 850ms after submit() while this modal is still
      showing its "Thank you!" panel (see the setTimeout below) so the
-     browser can paint it before print — but that means it's still in the
-     DOM when the print snapshot is taken. Without this, every printed/PDF
+     browser can paint it before print. That means it's still in the DOM
+     when the print snapshot is taken. Without this, every printed/PDF
      page shows the modal on top of the report. */
   @media print{ .vgate{ display:none !important; } }
 </style>
@@ -517,7 +517,7 @@
     <div class="vgate__thanks" id="vgate-thanks" style="display:none;">
       <div class="vgate__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
       <h2>Thank you!</h2>
-      <p class="vgate__sub" style="margin-bottom:18px;">Your report is opening in the print dialog — choose <b>“Save as PDF”</b> to download it. We'll be in touch with ways to keep improving.</p>
+      <p class="vgate__sub" style="margin-bottom:18px;">Your report is opening in the print dialog. Choose <b>"Save as PDF"</b> to download it. We'll be in touch with ways to keep improving.</p>
       <button class="vgate__btn vgate__btn--ghost" id="vg-close2" type="button" style="width:100%;">Done</button>
     </div>
   </div>

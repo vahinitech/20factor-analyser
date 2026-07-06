@@ -10,7 +10,8 @@ The live app, its source, and the Python server that computes every report.
 - `Vahini Analyser.html` is the app entrypoint.
 - `src/` is the browser client source (app flow, OCR client, report renderer).
   Edit here, then rebuild the bundle.
-- `scripts/core/` holds the packed build (`engine.bundle.js`) and runtime helpers.
+- `scripts/core/` holds the packed build (`engine.bundle.js`) and `protect.js`,
+  a small runtime helper loaded directly (not part of the bundle).
 - `scripts/video/` holds the JSX scene files used by the two explainer pages.
 - `styles/` has the report, studio and nav CSS.
 - `static/` has the printable and informational pages.

@@ -79,19 +79,19 @@ you switch. In `trocr` and `hybrid` mode, paddle still detects and classifies
 every line (that decision stays centralised in `classify.py`); only the
 *handwriting* lines get re-read by a specialist, and paddle keeps doing what
 it's already good at on the printed ones. `trocr` mode always re-reads with
-TrOCR; `hybrid` mode picks the specialist per line by script — English to
-TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya — so a mixed-language
+TrOCR; `hybrid` mode picks the specialist per line by script: English to
+TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya: so a mixed-language
 page gets the right engine for each line instead of one engine for the whole
 page.
 
 The re-read text is accepted when EITHER it agrees with paddle's own reading
 at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
 at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
-Paddle is not a handwriting specialist — that's the whole reason to re-read
-— so on genuinely hard handwriting requiring agreement with paddle's own
-(possibly wrong) reading would throw away real corrections; a confident
-specialist reading is trusted on its own. The agreement path still guards
-against hallucination on low-confidence, made-up text.
+Paddle is not a handwriting specialist, which is the whole reason to
+re-read. On genuinely hard handwriting, requiring agreement with paddle's
+own possibly wrong reading would throw away real corrections, so a
+confident specialist reading is trusted on its own. The agreement path
+still guards against hallucination on low-confidence, made-up text.
 
 To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
 `docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
@@ -103,21 +103,21 @@ There's no manual "is this box fast enough?" setting. Every re-read is
 timed, and the elapsed time is what decides: once an engine measures
 slower than `VAHINI_HYBRID_MAX_MS_PER_LINE` (default 2.5s), it's skipped
 for the rest of that page and for `VAHINI_HYBRID_RETRY_SEC` (default 10
-minutes) afterwards — paddle's own reading is kept instead, and the next
+minutes) afterwards: paddle's own reading is kept instead, and the next
 scan tries the specialist again once the cooldown passes. A fast machine
 gets every handwriting line re-read; a slow one quietly behaves like plain
 `paddle` after the first slow measurement instead of stalling every scan.
-So `VAHINI_OCR_BACKEND=hybrid` is safe to set on any machine — check
+So `VAHINI_OCR_BACKEND=hybrid` is safe to set on any machine: check
 `GET /health`'s `adaptive_engine_speed` field to see the actual measured
 milliseconds per line and whether each engine is currently considered fast
 enough on this box.
 
 **Proof a specialist engine actually ran, not just that hybrid mode was
 requested:** `POST /report-python`'s response has
-`analysis.recognition.refined_by` — a count per engine of how many
+`analysis.recognition.refined_by`: a count per engine of how many
 handwriting lines it actually refined this scan (e.g.
 `{"trocr": 4, "surya": 1}`), and `refined_lines` for the total. An empty
-`{}` means no specialist touched any line this scan — check three things
+`{}` means no specialist touched any line this scan: check three things
 in order: (1) `VAHINI_OCR_BACKEND` is actually `hybrid` or `trocr` (the
 default is `paddle`, which never refines anything); (2) `GET /health`
 lists `trocr`/`surya` as available, not skipped (they must be baked into
@@ -125,13 +125,13 @@ the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3)
 `adaptive_engine_speed` hasn't marked the engine too slow on this machine
 (see above).
 
-### Layout pre-filter (excludes photos, seals, charts — never handwriting)
+### Layout pre-filter (excludes photos, seals, charts: never handwriting)
 
 Before a page's detected lines reach the printed/handwriting classifier,
 an optional pass using PaddleOCR's own document-layout model (PP-DocLayout)
 drops anything that clearly isn't ink-on-paper content at all: photos,
 figures, charts, seals/stamps, and decorative header/footer images (e.g. a
-printed letterhead crest). It is a NEGATIVE filter only — it never
+printed letterhead crest). It is a NEGATIVE filter only: it never
 restricts analysis to "text-labelled" regions, because that would also
 throw away genuine handwritten formulas and filled-in table cells, which
 PP-DocLayout tags `formula`/`table` regardless of whether a pen or a
@@ -147,7 +147,7 @@ Same speed-adaptive shape as hybrid mode, applied to picking a model
 size instead of an engine: tries the more accurate `PP-DocLayout-M` first,
 falls back to the cheaper `PP-DocLayout-S` if a real measured call is too
 slow, and disables filtering entirely (falls back to today's unfiltered
-behaviour) if even that is too slow — never a hard requirement. Building
+behaviour) if even that is too slow: never a hard requirement. Building
 the model itself never blocks a request either: the first time it's
 needed, a background download starts and that request (and every one
 after it, until the download finishes) simply skips filtering for free.
@@ -213,7 +213,7 @@ docker run --rm -p 8080:8080 \
 
 ## Benchmarks
 
-Real, measured numbers only — this project's whole premise is auditable
+Real, measured numbers only: this project's whole premise is auditable
 geometry over guesswork, so a made-up speed table would contradict that.
 Run it yourself and paste the output here (or open a PR):
 
@@ -230,12 +230,12 @@ confidence. Engines you haven't installed are skipped with a note, not an
 error. See the script's own header comment for exactly what "detection"
 vs "recognition" means for a recogniser-only engine like TrOCR or Surya
 (PaddleOCR's API doesn't expose them as separately timeable steps, so one
-of the two is an estimate — clearly labelled as such in the output).
+of the two is an estimate: clearly labelled as such in the output).
 
 `--samples <dir>` points it at a different folder of images, `--limit N`
 caps how many it runs, `--lang en|te|hi|...` picks the language.
 
-_No results are published here yet — be the first to run it on real
+_No results are published here yet: be the first to run it on real
 hardware and send a PR with your table and CPU/GPU details._
 
 ## Tests

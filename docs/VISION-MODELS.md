@@ -1,129 +1,111 @@
-# Vahini — Vision & OCR Models: Options, Accuracy & Recommendation
+# Vision and OCR models: options and what shipped
 
-*Plain-language comparison of the recognition engines Vahini can use, what each is good at,
-how accurate they are on **handwriting** and **Indic scripts (Telugu/Hindi)**, and the honest
-verdict on whether switching engines would improve Vahini's results. Last reviewed June 2026.*
+Plain-language comparison of the recognition engines Vahini can use, what
+each is good at, and how accurate they are on handwriting and on Telugu
+and Hindi specifically. Last reviewed July 2026.
 
-> **Read this first — the one thing that surprises everyone.**
-> OCR / vision models in Vahini are **auxiliary**. They power the *reading* layer (which words
-> were written, spelling, the writing-craft checks). They do **NOT** compute the 20 handwriting
-> **quality** scores — those come from geometry (size, spacing, baseline, slant, loops…), which
-> needs no OCR at all. So a better OCR engine makes the **spelling / word / letter-ID layer**
-> better; it does **not** change the neatness/legibility/spacing scores. Keep that split in mind
-> through everything below.
+Read this first: OCR in Vahini is auxiliary. It powers the reading layer,
+which words were written, spelling, the writing-craft checks. It does not
+compute the 20 handwriting quality scores. Those come from geometry
+(size, spacing, baseline, slant, loops) and need no OCR at all. A better
+OCR engine improves the spelling and word-identification layer. It does
+not change the neatness or spacing scores.
 
----
+## The two jobs, kept separate
 
-## 0. The two jobs, kept separate
-
-| Job | What it answers | Engine used | Needs OCR? |
+| Job | What it answers | Where it runs | Needs OCR |
 |---|---|---|---|
-| **Quality measurement** (the 20 factors) | "How neat, even, straight, well-spaced is the writing?" | Vahini CV pipeline (`engine.js`) | ❌ No |
-| **Reading** (words, spelling, craft) | "*Which* letters/words are these? Any spelling/grammar/punctuation issues?" | An OCR / vision model | ✅ Yes |
+| Quality measurement (the 20 factors) | How neat, even, straight and well-spaced is the writing | The server's computer-vision pipeline (`analyser/server/scoring.py`, `geometry.py`, `computer_vision.py`) | No |
+| Reading (words, spelling, craft) | Which letters and words are these, and are there spelling or grammar issues | The OCR backend registry (`analyser/server/ocr_backends.py`) | Yes |
 
-Everything in this document is about the **second** job.
+Everything below is about the second job.
 
----
+## What is deployed today
 
-## 1. The candidates
+**PaddleOCR (PP-OCRv5, optionally PP-OCRv6) is the default engine and
+always runs.** It detects every line on the page and reads it, and its own
+classifier separates printed from handwritten lines. It is CPU-only, self-hosted,
+and free (Apache-2.0). Public Telugu and Devanagari handwriting training
+sets are small, a few thousand line images, so its Indic handwriting
+accuracy is usable but modest, not the strongest available.
 
-### A. PaddleOCR — PP-OCRv5 (what Vahini is wired for today)
-- **Type:** classic two-stage OCR — a **detector** (finds text boxes) + a **recognizer** (reads each line). Lightweight CNN/CRNN models.
-- **Languages:** 100+ including **English, Telugu, Hindi (Devanagari), Tamil, Kannada**; explicitly supports **handwriting**.
-- **Footprint:** tiny — mobile recognizer is ~2M parameters; **runs on a CPU**, even in-browser (PaddleOCR.js). No GPU required.
-- **Cost / licence:** free, Apache-2.0, **fully self-hostable** → images never leave your server.
-- **Accuracy notes:** PP-OCRv5 is ~30% better than v3 on multilingual text and adds real handwriting support; **but the public Indic training sets are small** (Telugu ≈ 2,478 line-images, Devanagari ≈ 3,611), so Telugu/Hindi **handwriting** accuracy is usable-but-modest, not stellar.
-- **Best for:** privacy-sensitive, zero-cost, offline/edge use — exactly Vahini's children's-handwriting setting.
+**Hybrid mode adds two recognisers for handwriting specifically.** Paddle's
+detection and printed-vs-handwriting split are kept either way; only lines
+paddle already classified as handwriting get a second read. TrOCR
+(Microsoft, `microsoft/trocr-base-handwritten`) handles English. Surya
+handles Telugu, Hindi, Tamil, Kannada and Malayalam. Both are CPU-capable,
+free, and self-hosted, at the cost of extra CPU time per line, which is
+why a per-machine speed check can turn either one off automatically on a
+slow box rather than stalling every scan.
 
-### B. Chandra OCR 2 (Datalab) — the vision-language model you asked about
-- **Type:** **yes, it is a vision model** — a 4-billion-parameter **vision-language model (VLM)** that "looks" at the whole page and outputs Markdown/HTML/JSON **with layout**, not just plain text.
-- **Accuracy:** **state-of-the-art among open OCR** — 85.9% on the olmOCR benchmark (hosted variant 86.7%); 77.8% on Datalab's 43-language multilingual benchmark.
-- **Indic scripts:** this is its standout vs v1 — **Telugu +39.1, Kannada +42.6, Tamil +26.9, Malayalam +46.2, Bengali +27.2** points of improvement. Strong on **cursive/messy handwriting**, tables, forms, math.
-- **Footprint:** heavy — needs a **GPU (≈H100-class) with vLLM** to self-host, or Datalab's **paid hosted API**.
-- **Cost / licence:** open weights under **OpenRAIL** (broader commercial use needs a licence); hosted API is paid (small free credit to trial).
-- **Best for:** maximum accuracy on hard handwriting + Indic scripts — **if** you can run a GPU, or accept sending images to a third party.
+**Reference-passage alignment is the single biggest accuracy win, and it
+costs nothing extra.** When a writer copies a known passage, the
+recognised text is matched against the expected text directly. A close
+match replaces the raw OCR output with the known-correct text and yields
+a real per-line accuracy score. This works with any of the engines above.
 
-### C. Cloud vision APIs (Google Cloud Vision / Document AI, AWS Textract, Azure AI Vision)
-- **Type:** managed OCR/handwriting APIs.
-- **Accuracy:** very good on English handwriting and forms; Indic-handwriting support varies and is generally weaker than Chandra 2.
-- **Cost / privacy:** per-page fees, and **images leave your infrastructure** to a third party — a real concern for children's/patient data.
-- **Best for:** quick English-only pilots where privacy and cost are not constraints.
+## Why Chandra OCR is not in the deployed set
 
-### D. TrOCR / Qwen-VL / other open VLMs (research-grade)
-- **Type:** transformer OCR (TrOCR) or general vision-language models.
-- **Accuracy:** TrOCR is strong on English handwriting lines; weak/none on Telugu out-of-the-box. General VLMs vary and can **hallucinate** text.
-- **Best for:** research and English-line experiments; not a turnkey Indic solution.
+Chandra OCR 2 (Datalab) was evaluated: a vision-language model with
+strong accuracy on Indic-script handwriting, including large reported
+gains over its previous version on Telugu, Kannada, Tamil, Malayalam and
+Bengali. It needs a GPU (roughly H100-class) to self-host, or Datalab's
+paid hosted API. This deployment has neither: no GPU in the target
+environment, and a hosted API means handwriting images, often children's
+handwriting, leave the server. Given that constraint it was removed
+entirely rather than kept as a dead, unusable option. If a GPU budget or
+an acceptable hosted-API privacy review ever exists, it remains the
+strongest known option for Indic handwriting specifically and worth
+revisiting then.
 
----
+## Side by side
 
-## 2. Side-by-side
+| | PaddleOCR (PP-OCRv5/v6) | TrOCR | Surya | Chandra OCR 2 | Cloud APIs |
+|---|---|---|---|---|---|
+| English print | Very good | Good | Good | Excellent | Excellent |
+| English handwriting | Good | Strong | Good | Excellent | Very good |
+| Telugu/Hindi print | Good | Weak/none | Good | Excellent | Mixed |
+| Telugu/Hindi handwriting | Modest | Weak/none | Good | Best available | Weak to mixed |
+| Runs offline on CPU | Yes | Yes | Yes, but slower | No, needs a GPU | No, cloud only |
+| Keeps data on your server | Yes | Yes | Yes | Self-host only | No |
+| Cost | Free | Free | Free | Free weights or paid API | Per page |
+| Deployed in this repo | Yes, default | Yes, opt-in build arg | Yes, opt-in build arg | No, removed | No |
 
-| | **PaddleOCR PP-OCRv5** | **Chandra OCR 2** | **Cloud APIs** | **TrOCR / VLMs** |
-|---|---|---|---|---|
-| English print | Very good | Excellent | Excellent | Good |
-| **English handwriting** | Good | **Excellent** | Very good | Good |
-| **Telugu / Hindi print** | Good | **Excellent** | Mixed | Weak |
-| **Telugu / Hindi handwriting** | Modest | **Best available** | Weak–mixed | Very weak |
-| Layout / tables / forms | Basic | **Excellent** | Good | Basic |
-| Runs offline / on CPU | ✅ Yes | ❌ Needs GPU | ❌ Cloud only | ❌ Usually GPU |
-| Keeps data on your server | ✅ Yes | ✅ (self-host) / ❌ (API) | ❌ No | ✅ (self-host) |
-| Cost | Free | Free weights*/paid API | Per-page | Free weights |
-| Setup effort | Low | High (GPU/vLLM) | Low | High |
-| Privacy fit for kids' data | **Strong** | Strong (self-host) | Weak | Strong (self-host) |
+## Recommendation, in order
 
-*Open weights under OpenRAIL; broader commercial use needs a Datalab licence.
+1. PaddleOCR self-hosted is the baseline and always on. Free, CPU-friendly,
+   handles English, Telugu and Hindi, and data never leaves the server.
+2. Turn on hybrid mode (`VAHINI_OCR_BACKEND=hybrid`, built with
+   `VAHINI_WITH_TROCR=1` and `VAHINI_WITH_SURYA=1`) once English or Indic
+   handwriting reading quality matters more than the extra CPU cost of
+   the specialist recognisers. See `analyser/server/README.md`.
+3. Collect real Telugu and English handwriting samples and measure actual
+   per-line accuracy. This is the basis for deciding whether the current
+   engines are good enough, not a guess.
+4. Revisit Chandra OCR only if a GPU budget exists and Indic handwriting
+   accuracy is still the bottleneck after real measurement. Trial on
+   non-personal samples first if using the hosted API.
+5. Keep building the sensor-pen dataset regardless. Every capture is
+   labelled Indic-handwriting motion data, the asset that eventually lets
+   Vahini fine-tune any of these engines for its own users. See the "data
+   moat" section in `ROADMAP.md`.
 
----
+Privacy guardrail: Vahini's promise is that handwriting images are
+processed and not retained. Every engine listed as deployed upholds that.
+Any cloud API or hosted model means images leave the server; only adopt
+one with explicit consent and a privacy review first.
 
-## 3. "Will switching engines improve Vahini's accuracy?" — the honest answer
+## Glossary
 
-**For the 20 handwriting-quality scores: NO.** Those are geometric measurements (height variance,
-gap consistency, baseline RMS, slant spread, loop topology). They don't use OCR, so no OCR engine —
-not even Chandra 2 — changes them. A ruler doesn't get more accurate by adding a language model.
+- OCR: optical character recognition, software that turns an image of
+  text into characters.
+- Vision-language model (VLM): a neural model that looks at an image and
+  produces text or structure directly. Chandra 2 is one. Heavier and more
+  capable than classic OCR, usually needs a GPU.
+- Detector vs recogniser: classic OCR finds where text is first, the
+  detector, then reads each line, the recogniser. PaddleOCR, TrOCR and
+  Surya all work this way in this deployment (paddle detects, whichever
+  engine reads). A VLM like Chandra does both at once.
+- Self-host: run the model on your own machine, so data never leaves it.
 
-**For the reading layer (spelling, word audit, letter ID, craft checks): YES, materially —
-especially for Telugu/Hindi handwriting.** This is where engine choice matters:
-- Today, with **no OCR server**, the reading layer only works when the writer copied a **known
-  passage** we can align to. On a free-form upload it falls back to geometry-only hints.
-- **PaddleOCR self-hosted** turns on real reading for English + Indic at zero cost, on a CPU, with
-  data staying on your server — the right **first** step.
-- **Chandra 2** would push Indic-handwriting reading from "modest" to "best available" — the right
-  step **later**, once you have a GPU budget or are comfortable with the hosted API's privacy/cost
-  trade-offs.
-
-**Net:** engine upgrades improve *what Vahini can read*, not *how it scores neatness*. Both matter,
-but they're different products inside the report.
-
----
-
-## 4. Recommendation for Vahini (in order)
-
-1. **Deployed — PaddleOCR PP-OCRv5 self-hosted** (`analyser/server/ppocr-server.py`).
-   Free, CPU-friendly, English + Telugu + Hindi, **data never leaves your server**. It now also
-   computes the 20-factor analysis itself, not just recognition.
-2. **Measure on real samples.** Collect a small set of real Telugu/English handwriting and record
-   line-accuracy. This tells you whether PaddleOCR is *good enough* before spending on a GPU.
-3. **If Indic handwriting accuracy is the bottleneck — pilot Chandra 2.** Trial via the hosted API's
-   free credits on **non-personal** samples first; if it clearly wins and you need it in production,
-   either license + self-host on a GPU (keeps data private) or use the API with explicit consent.
-4. **Build the dataset regardless.** Every Battu-pen capture is labelled Indic-handwriting motion
-   data — the asset that, in time, lets Vahini fine-tune *any* of these engines for its own users.
-   (This is the "data moat" story; see `ROADMAP.md`.)
-
-> **Privacy guardrail:** Vahini's promise is that handwriting images are processed and **not
-> retained**. PaddleOCR self-hosted upholds that literally. Any cloud API or hosted VLM means images
-> leave your infrastructure — only adopt with explicit consent and a privacy review.
-
----
-
-## 5. Glossary
-
-- **OCR** — Optical Character Recognition: software that turns an image of text into characters.
-- **VLM (vision-language model)** — a neural model that "sees" an image and produces text/structure;
-  Chandra 2 is one. Heavier and more capable than classic OCR, but needs a GPU.
-- **olmOCR benchmark** — a widely used document-OCR accuracy test; higher % = better.
-- **Detector vs recognizer** — classic OCR finds *where* text is (detector), then reads each line
-  (recognizer). PaddleOCR works this way; VLMs do both at once.
-- **Self-host** — run the model on your own machine, so data never leaves it.
-
-© 2026 Vahini Technologies · companion to ARCHITECTURE.md and ROADMAP.md
+Companion to `ARCHITECTURE.md` and `ROADMAP.md`.

@@ -1,12 +1,12 @@
-# Computer Vision Algorithms in Vahini — How Each One Works
+# Computer Vision Algorithms in Vahini: How Each One Works
 
 A plain-language walkthrough of **every computer-vision (CV) algorithm** the Vahini engine uses,
 in the order they run. For each one: **what it is, why Vahini needs it, how it works step by step**,
 and a tiny pseudocode sketch. No prior CV knowledge assumed.
 
 > **Computer Vision (CV)** = software that "looks at" an image and extracts facts from it.
-> Vahini's CV is **deterministic** — fixed maths, no randomness — so the same photo always
-> produces the same measurements. Code: `engine.js` (image), `imu.js` (pen motion).
+> Vahini's CV is **deterministic**: fixed maths, no randomness: so the same photo always
+> produces the same measurements. Code: `analyser/server/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
 
 ---
 
@@ -29,7 +29,7 @@ brightness = 0.299·R + 0.587·G + 0.114·B      # green looks brightest to the 
 **What:** automatically picks the single best brightness cut-off separating **ink** from **paper**.
 **Why:** we must label every pixel "ink or paper". A fixed cut-off (say 128) fails on dark photos or
 faint pencil. Otsu finds the right cut-off *for this photo* with zero user settings.
-**How (intuition):** a handwriting photo's brightness histogram has two humps — dark ink, light
+**How (intuition):** a handwriting photo's brightness histogram has two humps: dark ink, light
 paper. Otsu tries every possible cut-off (0–255) and keeps the one that best separates the two humps
 (maximises the *between-group variance*):
 
@@ -50,7 +50,7 @@ ink(pixel) = brightness(pixel) < threshold
 **What:** a *local* ink/paper cut-off that adjusts across the page.
 **Why:** if a shadow falls over half the page, one global cut-off calls the whole shadow "ink".
 A local cut-off follows the lighting and stays correct everywhere.
-**How:** for each pixel, compare it to the **average brightness of its neighbourhood** — ink must be
+**How:** for each pixel, compare it to the **average brightness of its neighbourhood**: ink must be
 noticeably darker than its surroundings. Computing thousands of neighbourhood averages is made
 instant by an **integral image** (a running-total table where any rectangle's sum is 4 lookups):
 
@@ -68,7 +68,7 @@ light), it picks Adaptive, otherwise Otsu. The report states which ran.
 
 ## 4. Connected components (finding the letters)
 
-**What:** groups touching ink pixels into blobs — in practice, individual letters and marks.
+**What:** groups touching ink pixels into blobs: in practice, individual letters and marks.
 **Why:** every later measurement (size, spacing, lines) needs to know where each letter is.
 **How:** flood fill. Start at any unlabelled ink pixel, spread to all touching ink pixels
 (including diagonals = "8-connectivity"), label them as one component; repeat:
@@ -123,7 +123,7 @@ known objects the spacing/margin factors can measure.
 
 **What:** re-discovers the invisible line each row of writing sits on.
 **Why:** the baseline is the reference for straightness, drift, zone heights and "do letters sit on
-the line?" — five factors depend on it.
+the line?": five factors depend on it.
 **How:** take the **bottom point of every letter** in the line and fit the straight line that
 minimises the squared distances to them (ordinary least squares):
 
@@ -133,14 +133,14 @@ drift_angle = atan(m)                               # F11 line straightness
 wobble = RMS distance of letter bottoms off the line, ÷ x-height   # F7 baseline
 ```
 
-(**RMS** = root-mean-square — a fair average of deviations that treats above/below equally.)
+(**RMS** = root-mean-square: a fair average of deviations that treats above/below equally.)
 
 ---
 
 ## 9. x-height & zone analysis
 
 **What:** the height of a normal lowercase letter body (the height of "x"), used as the natural
-ruler so all measurements work at any writing size; plus the three vertical **zones** —
+ruler so all measurements work at any writing size, plus the three vertical **zones**:
 upper (l, h, t), middle (a, o, e), lower (g, y, p).
 **How:** x-height = median letter height. A letter reaching well above the body band counts as
 upper-zone; below the fitted baseline, lower-zone. The balance of the three gives F6.
@@ -149,7 +149,7 @@ upper-zone; below the fitted baseline, lower-zone. The balance of the three give
 
 ## 10. Shear-search deslanting (slant measurement)
 
-**What:** finds each word's dominant slant — robustly.
+**What:** finds each word's dominant slant: robustly.
 **Why:** per-pixel angle estimates are noisy on cursive. This classic method gives one clean slant
 per word, so the spread across words is a true consistency measure (F17).
 **How:** *try un-slanting the word at several candidate angles; the angle that makes the vertical
@@ -171,7 +171,7 @@ pre-processing.
 
 **What:** checks whether round letters (a, o, e, g) are properly **closed**.
 **How:** flood-fill the *background* inward from the image border. Any background pocket that the
-flood could **not** reach must be fully enclosed by ink — i.e. a closed loop:
+flood could **not** reach must be fully enclosed by ink: i.e. a closed loop:
 
 ```
 flood background from all four borders
@@ -193,7 +193,7 @@ samples where shear-search lacks words to work on.
 
 ## 13. Document-type classification (layout only)
 
-**What:** labels the upload — prose / short answers / equations / diagrams / mixed printed —
+**What:** labels the upload: prose, short answers, equations, diagrams, mixed printed,
 with an honest accuracy expectation printed on the report.
 **How:** pure layout statistics (it never reads the words): number of lines and words, average
 token length, presence of large non-text blobs, printed-line count, ink density. Rule-based and
@@ -210,10 +210,10 @@ retake tip ("fill the frame", "face a window") on the report's sample page.
 
 ---
 
-## 15. Kalman filtering (pen signals — `imu.js`)
+## 15. Kalman filtering (pen signals: `imu.js`)
 
 **What:** removes electrical jitter from the pen's 208 Hz sensor streams in real time.
-**How:** a predict-then-correct loop per signal — predict where the value should be, then nudge
+**How:** a predict-then-correct loop per signal: predict where the value should be, then nudge
 toward the new reading in proportion to how trustworthy it is (the **Kalman gain**):
 
 ```
@@ -228,15 +228,15 @@ p *= (1 − k)            # uncertainty shrinks after using the reading
 ## 16. Velocity-minima stroke segmentation (pen)
 
 **What:** cuts the pen's continuous motion into individual **ballistic strokes** at the moments the
-pen-tip speed dips to a minimum — the natural "joints" of handwriting in motor-control research.
+pen-tip speed dips to a minimum: the natural "joints" of handwriting in motor-control research.
 **Why:** per-stroke peak velocity and per-stroke force feed the Dynamics factors (F13, F14).
-**Reference:** Schomaker & Teulings (1990); Schomaker (1993) — the handwriting motor-model school.
+**Reference:** Schomaker & Teulings (1990); Schomaker (1993): the handwriting motor-model school.
 
 ---
 
 ## 17. Letter-crop evidence (annotated examples)
 
-**What:** crops the writer's **own** letters from the photo as visual proof on factor cards — the
+**What:** crops the writer's **own** letters from the photo as visual proof on factor cards: the
 shortest vs tallest letter (size), the wobbliest line with its fitted baseline drawn in, the widest
 word gap shaded, the closest letter pair boxed, and the left-margin dot plot.
 **How:** the bounding boxes from step 4 plus the fits from step 8 directly identify each example;
@@ -253,7 +253,7 @@ the crop is drawn on a small canvas with the annotation overlaid and embedded as
 projected(start, weeks) = start + (ceiling − start) · (1 − e^(−0.30·weeks))
 ```
 
-Clearly labelled an estimate that assumes ~10 min practice, 3×/week — never a guarantee.
+Clearly labelled an estimate that assumes ~10 min practice, 3×/week: never a guarantee.
 
 ---
 
@@ -261,7 +261,7 @@ Clearly labelled an estimate that assumes ~10 min practice, 3×/week — never a
 
 **What:** lines up the letters of the **known reference passage** with the detected ink blobs, so
 the engine can reason about *specific letters* the way a coach does.
-**Why:** coaches don't stop at "spacing is uneven" — they say "your r changes shape", "that capital
+**Why:** coaches don't stop at "spacing is uneven": they say "your r changes shape", "that capital
 doesn't belong mid-word", "where are your full stops?". Alignment makes those checks computable
 without full handwriting recognition.
 **How:** the writer copies a known passage, so expected word *k* of line *i* corresponds to detected
@@ -280,7 +280,7 @@ punctuation: expected marks counted vs dot-sized ink marks
 word audit: piece count vs letter count (offline) or OCR word match (server)
 ```
 
-Joined words are **excluded** from per-letter checks rather than guessed — conservative by design.
+Joined words are **excluded** from per-letter checks rather than guessed: conservative by design.
 Every finding ships with a crop of the writer's own ink as evidence.
 
 ---
@@ -307,7 +307,7 @@ Every finding ships with a crop of the writer's own ink as evidence.
 | 16 | Velocity minima | "Where does each stroke start/end?" | F13–F16 (pen) |
 | 17 | Letter crops | "Show me MY letters as proof" | factor cards |
 | 18 | Learning curve | "Where is this heading?" | forecast page |
-| 19 | Expected-text alignment | "Which letter is which — and is it right?" | letter-level findings |
+| 19 | Expected-text alignment | "Which letter is which: and is it right?" | letter-level findings |
 
 ---
 

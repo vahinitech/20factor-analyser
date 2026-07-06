@@ -510,7 +510,7 @@ function render(host, data){
       <tbody>${refRows}</tbody>
     </table>
     <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.55;background:var(--paper-2);border-radius:10px;padding:10px 14px;">
-      <b style="color:var(--ink-2);">How these reference values are set:</b> each factor is real geometry measured from the page (e.g. Size Consistency = letter-height variation, in reference when CV ≤ 0.12). The thresholds come from established document-analysis methods and handwriting-coaching practice (see <i>docs/Computer Vision Algorithms.md</i> in the open-source engine) and are identical in every report, so scans are comparable over time. “—” means the factor needs the Vahini pen (motion) or couldn’t be read from this photo; it never silently defaults to a made-up value.
+      <b style="color:var(--ink-2);">How these reference values are set:</b> each factor is real geometry measured from the page (e.g. Size Consistency = letter-height variation, in reference when CV ≤ 0.12). The thresholds come from established document-analysis methods and handwriting-coaching practice (see <i>docs/computer-vision-algorithms.md</i> in the open-source engine) and are identical in every report, so scans are comparable over time. “—” means the factor needs the Vahini pen (motion) or couldn’t be read from this photo; it never silently defaults to a made-up value.
     </div>
     ${foot(pg,'Fixed, published reference values — comparable across scans')}
   </section>`);
