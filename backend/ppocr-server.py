@@ -378,6 +378,7 @@ def _analyze_vl_process(arr, raw, lang):
                     "layout": {},
                     "regions": [],
                     "factor_regions": {},
+                    "ambiguous_word_gaps": [],
                 },
             )
         if not hand_lines:
@@ -409,6 +410,7 @@ def _analyze_vl_process(arr, raw, lang):
             "layout": {},
             "regions": [],
             "factor_regions": {},
+            "ambiguous_word_gaps": [],
         }
 
     if not texts and last_err:
@@ -424,6 +426,7 @@ def _analyze_vl_process(arr, raw, lang):
             "layout": {},
             "regions": [],
             "factor_regions": {},
+            "ambiguous_word_gaps": [],
         }
 
     return {
@@ -447,6 +450,7 @@ def _analyze_vl_process(arr, raw, lang):
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
         "factor_regions": vl.get("factor_regions", {}),
+        "ambiguous_word_gaps": vl.get("ambiguous_word_gaps", []),
     }
 
 
@@ -503,6 +507,7 @@ def _report_python_process(arr, raw, lang, expected_text):
                     "layout": {},
                     "regions": [],
                     "factor_regions": {},
+                    "ambiguous_word_gaps": [],
                 },
             )
         if not hand_lines:
@@ -542,6 +547,7 @@ def _report_python_process(arr, raw, lang, expected_text):
             "layout": {},
             "regions": [],
             "factor_regions": {},
+            "ambiguous_word_gaps": [],
         }
 
     if not texts and last_err:
@@ -558,6 +564,7 @@ def _report_python_process(arr, raw, lang, expected_text):
             "layout": {},
             "regions": [],
             "factor_regions": {},
+            "ambiguous_word_gaps": [],
         }
 
     # Recognition transparency: which engine read the page, how many handwriting
@@ -649,6 +656,7 @@ def _report_python_process(arr, raw, lang, expected_text):
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
         "factor_regions": vl.get("factor_regions", {}),
+        "ambiguous_word_gaps": vl.get("ambiguous_word_gaps", []),
     }
 
 
