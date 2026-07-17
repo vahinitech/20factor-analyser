@@ -473,6 +473,10 @@ class TestScoringDataclasses(unittest.TestCase):
                 "topWeak",
                 "topStrong",
                 "source",
+                "plainGroups",
+                "coachView",
+                "baselineDrift",
+                "zoneProfile",
             },
         )
         self.assertEqual(d["source"], "python")

@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from plain_groups import build_coach_view, build_plain_groups
+
 try:
     import cv2
 except Exception:
@@ -96,6 +98,10 @@ class AnalysisResult:
     top_weak: list
     top_strong: list
     source: str = "python"
+    plain_groups: list = None
+    coach_view: dict = None
+    baseline_drift: dict = None
+    zone_profile: dict = None
 
     def to_dict(self) -> dict:
         return {
@@ -107,6 +113,10 @@ class AnalysisResult:
             "topWeak": [r.to_dict() for r in self.top_weak],
             "topStrong": [r.to_dict() for r in self.top_strong],
             "source": self.source,
+            "plainGroups": self.plain_groups,
+            "coachView": self.coach_view,
+            "baselineDrift": self.baseline_drift,
+            "zoneProfile": self.zone_profile,
         }
 
 
@@ -426,13 +436,16 @@ def _extract_features(arr: np.ndarray, lines, layout):
         line_spacing = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
 
     slopes = []
+    signed_slopes = []
     for l in lines:
         poly = l.get("poly") or []
         if len(poly) >= 2:
             x0, y0 = float(poly[0][0]), float(poly[0][1])
             x1, y1 = float(poly[1][0]), float(poly[1][1])
             dx = max(1e-6, x1 - x0)
-            slopes.append(abs(math.degrees(math.atan2(y1 - y0, dx))))
+            ang = math.degrees(math.atan2(y1 - y0, dx))
+            slopes.append(abs(ang))
+            signed_slopes.append(ang)
         else:
             slopes.append(0.0)
 
@@ -492,6 +505,11 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "left_cv": _cv(lefts),
         "line_slope_abs": mean(slopes),
         "line_slope_std": _std(slopes),
+        # median SIGNED line angle: >0 means lines descend left-to-right
+        # (image y grows downward), i.e. the writing sinks below the rule
+        "line_slope_signed_med": (
+            float(np.median(signed_slopes)) if signed_slopes else 0.0
+        ),
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
         "digits_ratio": digits_ratio,
@@ -641,6 +659,53 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         :4
     ]
 
+    # Baseline drift DIRECTION (issue #21): coaches teach climbing vs
+    # sinking, not just "misaligned". Positive signed angle = the lines
+    # descend left-to-right (sinking below the rule). A tilted photo
+    # shows the same signature, so the wording carries that caveat.
+    drift_deg = float(fx.get("line_slope_signed_med", 0.0))
+    if drift_deg > 0.8:
+        drift_dir = "sinking"
+    elif drift_deg < -0.8:
+        drift_dir = "climbing"
+    else:
+        drift_dir = "level"
+    baseline_drift = {
+        "direction": drift_dir,
+        "degrees": round(abs(drift_deg), 1),
+        "note": (
+            "Lines stay level across the page."
+            if drift_dir == "level"
+            else (
+                f"Lines tend to keep {drift_dir} by about "
+                f"{abs(drift_deg):.1f} degrees left to right. "
+                "(A tilted photo shows the same sign: scan flat to be sure.)"
+            )
+        ),
+    }
+    for r in results:
+        if r.n == 7 and drift_dir != "level":
+            r.evidence = (
+                f"{r.evidence} Direction: {drift_dir} "
+                f"~{abs(drift_deg):.1f} deg across the page."
+            )
+
+    # Zone profile (issue #21): factor 6 split into the two things a
+    # coach actually checks, from the same proxies that score it.
+    zone_profile = {
+        "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+        "middleStability": round(float(scores.get(5, 0.0)), 1),
+        "method": (
+            "proxy from tall-letter share and letter-height statistics; "
+            "per-zone geometry lands with character segmentation"
+        ),
+    }
+
+    # Plain-language layer (issue #12) + the coaches' eight-aspect view
+    # (issue #21). Presentation only: nothing above rescored.
+    plain = build_plain_groups(results)
+    coach = build_coach_view(plain)
+
     return AnalysisResult(
         results=results,
         sections=sections,
@@ -649,4 +714,8 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         measured_count=len(results),
         top_weak=top_weak,
         top_strong=top_strong,
+        plain_groups=plain,
+        coach_view=coach,
+        baseline_drift=baseline_drift,
+        zone_profile=zone_profile,
     )
