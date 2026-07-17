@@ -77,11 +77,11 @@ def test_unmeasured_members_listed_but_not_averaged():
             r["score"] = 0.0
     groups = build_plain_groups(results)
     pen = next(g for g in groups if g["id"] == "pen")
-    assert pen["score"] == 8.0            # the 0.0 never dilutes the mean
+    assert pen["score"] == 8.0  # the 0.0 never dilutes the mean
     assert pen["measuredCount"] == 4
     member = next(m for m in pen["factors"] if m["n"] == 14)
     assert member["unmeasured"] is True
-    assert member["score"] is None        # never a made-up value
+    assert member["score"] is None  # never a made-up value
 
 
 def test_estimated_flag_bubbles_up():
@@ -107,12 +107,12 @@ def test_coach_view_has_eight_rows_six_measurable():
     assert {r["id"] for r in unmeasurable} == {"posture", "pages"}
     for r in unmeasurable:
         assert r["score"] is None
-        assert r["note"]                  # honest note, never a number
+        assert r["note"]  # honest note, never a number
 
 
 def test_coach_view_total_covers_measured_aspects_only():
     view = build_coach_view(build_plain_groups(_full_results(score=8.0)))
-    assert view["measuredOutOf"] == 60    # 6 aspects x 10
+    assert view["measuredOutOf"] == 60  # 6 aspects x 10
     assert view["measuredTotal"] == 48.0
 
 
@@ -125,9 +125,7 @@ def test_coach_extra_aspects_are_the_protocol_gaps():
 
 
 def _pages(*page_scores):
-    return [
-        build_plain_groups(_full_results(score=s)) for s in page_scores
-    ]
+    return [build_plain_groups(_full_results(score=s)) for s in page_scores]
 
 
 def test_endurance_needs_two_pages():
@@ -147,7 +145,7 @@ def test_endurance_detects_degradation_and_onset():
     e = build_endurance(_pages(8.0, 7.8, 5.5))
     assert e["overallTrend"] in ("drifting", "degrading")
     dropping = [g for g in e["groups"] if g["dropsFromPage"] == 3]
-    assert dropping                        # the onset page is named
+    assert dropping  # the onset page is named
     assert e["worstGroup"] is not None
 
 

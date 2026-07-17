@@ -21,7 +21,6 @@
 # The report renderer mirrors PLAIN_GROUPS in a fallback table
 # (frontend/src/report/report-render.js). Change one, change both.
 
-import math
 
 # Every factor number 1..20 appears in exactly one group
 # (pinned by backend/tests/test_plain_groups.py).
@@ -81,6 +80,7 @@ COACH_EXTRA_ASPECTS = [
         "note": "Scan 2-3 pages as one assessment to measure this (endurance).",
     },
 ]
+
 
 # Must track scoring.py's _band() thresholds.
 def _band(score):
@@ -285,5 +285,9 @@ def build_endurance(page_plain_groups):
         "overallTrend": _classify(overall_slope),
         "overallSlopePerPage": round(overall_slope, 2),
         "groups": per_group,
-        "worstGroup": worst["id"] if worst["trend"] in ("drifting", "degrading") else None,
+        "worstGroup": (
+            worst["id"]
+            if worst["trend"] in ("drifting", "degrading")
+            else None
+        ),
     }
