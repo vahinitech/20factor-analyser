@@ -121,3 +121,44 @@ def test_a_broken_tip_never_breaks_the_report():
         assert all(t["id"] != "explodes" for t in selected)
     finally:
         TIP_LIBRARY.remove(bad)
+
+
+# --- the fun track (graphology) ---------------------------------------------
+
+
+def _english_ctx(scores=None):
+    return _ctx(
+        scores=scores or {},
+    ) | {"text": "running down nine lanes when nothing went wrong"}
+
+
+def test_graphology_card_appears_on_english_pages_only():
+    selected, _ = select_tips(_english_ctx())
+    ids = [t["id"] for t in selected]
+    assert "graphology-n" in ids
+    card = [t for t in selected if t["id"] == "graphology-n"][0]
+    assert card["kind"] == "fun"
+    assert "folklore, not science" in card["text"]
+
+    telugu = _ctx() | {"text": "చేతిరాత అందம" * 10}
+    ids = [t["id"] for t in select_tips(telugu)[0]]
+    assert "graphology-n" not in ids
+
+
+def test_fun_card_never_displaces_coaching():
+    # weakest possible page: every coaching tip fires at high priority
+    ctx = _english_ctx(scores={1: 1.0, 13: 1.0, 15: 1.0})
+    ctx["style"] = MIXED_STYLE
+    ctx["finishing"] = FINISHING
+    selected, _ = select_tips(ctx)
+    coaching = [t for t in selected if t["kind"] == "coach"]
+    fun = [t for t in selected if t["kind"] == "fun"]
+    assert len(coaching) == MAX_TIPS  # full coaching allocation intact
+    assert len(fun) == 1  # the fun card rides its own slot
+    assert selected[-1]["id"] == "graphology-n"  # after the coaching
+
+
+def test_magic_strokes_floats_on_weak_formation():
+    selected, _ = select_tips(_ctx(scores={1: 2.0, 13: 9.0}))
+    assert selected[0]["id"] == "magic-strokes"
+    assert "circle drills rebuild it" in selected[0]["why"]

@@ -861,6 +861,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             "scores": {r.n: r.score for r in results},
             "style": style,
             "finishing": finishing,
+            "text": " ".join(str(l.get("text", "") or "") for l in lines),
         }
     )
 

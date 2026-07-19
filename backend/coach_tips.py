@@ -18,6 +18,15 @@ earned it a slot - the reader always knows a tip was chosen for them,
 not pasted for everyone. The rest of the library stays silent until a
 page needs it.
 
+Two tracks share the registry, split by ``kind``:
+
+* ``"coach"`` (default) - real coaching, competes for the report's few
+  coaching slots.
+* ``"fun"``   - entertainment cards (old-school graphology lore),
+  clearly labelled, English-gated, never using or touching a score,
+  and selected on their OWN single slot so fun can never displace
+  coaching. The disclaimer lives inside the card text itself.
+
 Adding a tip = appending one registry entry. Nothing else changes.
 """
 
@@ -47,6 +56,19 @@ def _finishing_text(ctx):
 def _style_relevant(ctx):
     s = ctx.get("style")
     return bool(s and s.get("available") and s.get("verdict") == "mixed")
+
+
+def _latin_share(ctx):
+    text = str(ctx.get("text", "") or "")
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return 0.0
+    latin = sum(1 for c in letters if c.isascii())
+    return latin / float(len(letters))
+
+
+def _count_letter(ctx, letter):
+    return str(ctx.get("text", "") or "").lower().count(letter)
 
 
 TIP_LIBRARY = [
@@ -108,6 +130,60 @@ TIP_LIBRARY = [
             else "shown as a general practice habit for every writer"
         ),
     },
+    {
+        "id": "magic-strokes",
+        "title": "Two magic strokes behind every Indic script",
+        # The letterforms of Telugu, Hindi, Tamil, Kannada and English
+        # are all built from two circular strokes; drilling both
+        # directions rebuilds the basic hand skill. Floats up when
+        # Letter Formation (F1) or Smoothness-adjacent Stroke
+        # Continuity (F15) is weak.
+        "relevant": lambda ctx: True,
+        "priority": lambda ctx: 2.0
+        + (10.0 - min(_score(ctx, 1), _score(ctx, 15))) * 0.5,
+        "text": lambda ctx: (
+            "Telugu, Hindi, Tamil, Kannada and English letters are all "
+            "built from just two magic strokes: an anticlockwise circle "
+            "and a clockwise circle. When your hand is comfortable in "
+            "both directions, every letterform gets easier. Practise "
+            "anticlockwise circles, then clockwise; combine them into a "
+            "capital S and a number 8; then make spring-coil strokes in "
+            "each direction. Two to three minutes a day is enough to "
+            "rebuild the basic hand skill."
+        ),
+        "why": lambda ctx: (
+            "shown because Letter Formation scored "
+            f"{_score(ctx, 1):.1f}/10 - circle drills rebuild it"
+            if _score(ctx, 1) < 7.0
+            else "shown as a daily warm-up habit for every script"
+        ),
+    },
+    {
+        "id": "graphology-n",
+        "kind": "fun",
+        "title": "Just for fun: what an old graphologist would read "
+        "in your letter n",
+        # Entertainment only: English pages with enough n's. Never
+        # score-driven, never score-affecting; the honesty note is in
+        # the card itself.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and _count_letter(ctx, "n") >= 5,
+        "priority": lambda ctx: 1.0,
+        "text": lambda ctx: (
+            "Old-school graphology claimed the letter n shows how you "
+            "decide: sharp, pointed n's were read as a quick, decisive "
+            "thinker; flat-topped or rounded n's as someone who "
+            "gathers every fact before choosing. A fun mirror to hold "
+            "up to your page - and only that: graphology is folklore, "
+            "not science. None of your scores use it; the 20 factors "
+            "measure the writing, never the writer. Enjoy it like a "
+            "fortune cookie."
+        ),
+        "why": lambda ctx: (
+            f"your page has {_count_letter(ctx, 'n')} letter n's - "
+            "this card is for curiosity, not coaching"
+        ),
+    },
 ]
 
 
@@ -118,23 +194,30 @@ def select_tips(ctx, max_tips=MAX_TIPS):
     {id, title, text, why}, at most max_tips long, highest priority
     first; library_count is the size of the whole registry so callers
     can say how much more coaching exists beyond the page."""
-    ranked = []
+    coaching, fun = [], []
     for tip in TIP_LIBRARY:
         try:
             if not tip["relevant"](ctx):
                 continue
-            ranked.append(
-                (
-                    float(tip["priority"](ctx)),
-                    {
-                        "id": tip["id"],
-                        "title": tip["title"],
-                        "text": tip["text"](ctx),
-                        "why": tip["why"](ctx),
-                    },
-                )
+            entry = (
+                float(tip["priority"](ctx)),
+                {
+                    "id": tip["id"],
+                    "kind": tip.get("kind", "coach"),
+                    "title": tip["title"],
+                    "text": tip["text"](ctx),
+                    "why": tip["why"](ctx),
+                },
             )
+            if entry[1]["kind"] == "fun":
+                fun.append(entry)
+            else:
+                coaching.append(entry)
         except Exception:
             continue  # a broken tip must never break the report
-    ranked.sort(key=lambda pair: -pair[0])
-    return [t for _, t in ranked[:max_tips]], len(TIP_LIBRARY)
+    coaching.sort(key=lambda pair: -pair[0])
+    fun.sort(key=lambda pair: -pair[0])
+    selected = [t for _, t in coaching[:max_tips]]
+    # at most ONE fun card, after the coaching - it never displaces one
+    selected.extend(t for _, t in fun[:1])
+    return selected, len(TIP_LIBRARY)
