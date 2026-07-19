@@ -21,7 +21,7 @@ import re
 
 FINISHING_LETTERS = set("adhilmnrtu")
 
-_WORD_RE = re.compile(r"[A-Za-z]{2,}")
+_WORD_RE = re.compile(r"[A-Za-z]+")
 
 TIP_ID = "finishing-letters"
 TIP_TITLE = "The 10 letters that improve your handwriting"

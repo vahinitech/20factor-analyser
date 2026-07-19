@@ -10,14 +10,20 @@ word: lifting the hand in some places and joining in others turns
 joins create false word breaks for every reader, human or machine.
 
 Measurement: within each detected line, ink is split into word
-clusters by column gaps (letter gaps are small fractions of the
-x-height, word gaps are around one x-height or more). Each word
-cluster's ink is labelled into connected components; the ratio of
-components to the word's letter count tells the style:
+clusters by column gaps (word gaps are around one x-height or more;
+anything narrower stays part of the same word cluster - the
+components-per-letter ratio below is what actually tells joined ink
+from lifted ink, not the word-splitting gap). Each word cluster's ink
+is labelled into connected components; the ratio of components to the
+word's letter count tells the style:
 
     ratio <= CURSIVE_MAX_RATIO  -> written in one or two strokes: cursive
     ratio >= PRINT_MIN_RATIO    -> roughly one stroke per letter: print
     in between                  -> joined in places, lifted in others: mixed
+
+English/Latin writing-style rule only (the cursive/print/mixed craft
+is a Latin-script convention): gated the same way zone_analysis gates
+on Latin text, unavailable otherwise.
 
 Pure numpy (no cv2/scipy - components via a small flood fill on the
 word crop only). Same honesty contract as zone/tbar analysis.
@@ -27,12 +33,15 @@ from collections import deque
 
 import numpy as np
 
-from zone_analysis import MIN_XHEIGHT_PX, _binarise, _dense_band
+from zone_analysis import MIN_XHEIGHT_PX, binarise, dense_band
 
-# Word-cluster segmentation: column gaps below the letter-gap ceiling
-# are bridged; gaps at or above the word-gap floor split words.
-LETTER_GAP_XH = 0.35
+# Word-cluster segmentation: gaps at or above the word-gap floor split
+# words; anything narrower stays part of the same word cluster.
 WORD_GAP_XH = 0.9
+# Minimum share of Latin letters (of all alphabetic characters, page-
+# wide) required to run the style check - matches the threshold
+# coach_tips.py's _latin_share gates English-only lessons on.
+MIN_LATIN_SHARE = 0.9
 # Components smaller than this many pixels are dots/noise (i-dots,
 # specks) and are not counted as pen lifts.
 MIN_COMPONENT_PX = 6
@@ -41,6 +50,24 @@ CURSIVE_MAX_RATIO = 0.45
 PRINT_MIN_RATIO = 0.80
 # Page verdict: a style must own this share of words to be the verdict.
 DOMINANT_SHARE = 0.65
+
+
+def _is_latin_letter(c):
+    return c.isascii() and c.isalpha()
+
+
+def _latin_letter_count(word):
+    return sum(1 for c in word if _is_latin_letter(c))
+
+
+def _latin_share(text):
+    """Share of Latin/ASCII letters among all alphabetic characters in
+    `text`. Same convention as coach_tips.py's _latin_share."""
+    letters = [c for c in str(text or "") if c.isalpha()]
+    if not letters:
+        return 0.0
+    latin = sum(1 for c in letters if c.isascii())
+    return latin / float(len(letters))
 
 
 def _components(ink):
@@ -108,11 +135,11 @@ def line_word_styles(gray, box, text):
     if y1 - y0 < MIN_XHEIGHT_PX or x1 <= x0:
         return []
 
-    ink = _binarise(gray[y0:y1, x0:x1])
+    ink = binarise(gray[y0:y1, x0:x1])
     profile = ink.sum(axis=1).astype(np.float64)
     if float(profile.max()) < 3.0:
         return []
-    band = _dense_band(profile)
+    band = dense_band(profile)
     if band is None:
         return []
     midline, baseline = band
@@ -120,22 +147,29 @@ def line_word_styles(gray, box, text):
     if h_m < MIN_XHEIGHT_PX:
         return []
 
+    # ASCII/Latin letters only: ratio math assumes the Latin cursive/
+    # print convention, so a non-Latin word's letter count must not
+    # leak in (matters when a line mixes scripts, even though the
+    # page-level Latin gate keeps whole non-Latin pages out earlier).
     words = [
-        w_ for w_ in str(text or "").split() if any(c.isalpha() for c in w_)
+        w_
+        for w_ in str(text or "").split()
+        if any(_is_latin_letter(c) for c in w_)
     ]
     if not words:
         return []
     clusters = _word_clusters(ink, h_m)
     if not clusters:
         return []
-    mean_letters = max(1.0, sum(len(w_) for w_ in words) / float(len(words)))
+    letter_counts = [_latin_letter_count(w_) for w_ in words]
+    mean_letters = max(1.0, sum(letter_counts) / float(len(words)))
 
     out = []
     for i, (c0, c1) in enumerate(clusters):
         if (c1 - c0) < h_m:  # too narrow to be a word
             continue
         letters = (
-            float(len(words[i]))
+            float(letter_counts[i])
             if len(clusters) == len(words)
             else mean_letters
         )
@@ -152,7 +186,16 @@ def analyze_style(gray, lines):
     gray: uint8 grayscale page. lines: OCR line dicts with 'box' and
     'text'. Returns availability honestly, per the coach's framing:
     cursive is correct, print is also good, mixing the two is the
-    mistake to fix."""
+    mistake to fix. English/Latin only: pages without enough Latin
+    text return available=False rather than a guess (Telugu and other
+    non-Latin scripts don't follow this cursive/print convention)."""
+    full_text = " ".join(str(l.get("text", "") or "") for l in lines)
+    if _latin_share(full_text) < MIN_LATIN_SHARE:
+        return {
+            "available": False,
+            "reason": "not enough Latin text for the cursive/print rule",
+        }
+
     ratios = []
     for l in lines:
         b = l.get("box")
@@ -168,22 +211,26 @@ def analyze_style(gray, lines):
         }
 
     n = float(len(ratios))
-    cursive = sum(1 for r in ratios if r <= CURSIVE_MAX_RATIO)
-    print_ = sum(1 for r in ratios if r >= PRINT_MIN_RATIO)
-    mixed = len(ratios) - cursive - print_
+    cursive_raw = sum(1 for r in ratios if r <= CURSIVE_MAX_RATIO) / n
+    print_raw = sum(1 for r in ratios if r >= PRINT_MIN_RATIO) / n
+    mixed_raw = 1.0 - cursive_raw - print_raw
 
-    shares = {
-        "cursive": round(cursive / n, 2),
-        "print": round(print_ / n, 2),
-        "mixed": round(mixed / n, 2),
-    }
-    if shares["cursive"] >= DOMINANT_SHARE:
+    # Verdict is decided from the raw (unrounded) shares: rounding
+    # first can flip a borderline case (e.g. 0.646 rounds to 0.65 and
+    # would wrongly clear the DOMINANT_SHARE bar). Rounding is only for
+    # the reported numbers below.
+    if cursive_raw >= DOMINANT_SHARE:
         verdict, quality = "cursive", "good"
-    elif shares["print"] >= DOMINANT_SHARE:
+    elif print_raw >= DOMINANT_SHARE:
         verdict, quality = "print", "good"
     else:
         verdict, quality = "mixed", "needs-change"
 
+    shares = {
+        "cursive": round(cursive_raw, 2),
+        "print": round(print_raw, 2),
+        "mixed": round(mixed_raw, 2),
+    }
     out = {
         "available": True,
         "wordsUsed": len(ratios),

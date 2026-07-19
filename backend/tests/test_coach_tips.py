@@ -20,11 +20,12 @@ from coach_tips import (  # noqa: E402
 )
 
 
-def _ctx(scores=None, style=None, finishing=None):
+def _ctx(scores=None, style=None, finishing=None, text=""):
     return {
         "scores": scores or {},
         "style": style,
         "finishing": finishing,
+        "text": text,
     }
 
 
@@ -57,6 +58,40 @@ def test_selection_never_exceeds_the_cap():
     )
     assert len(selected) <= MAX_TIPS
     assert count == len(TIP_LIBRARY)
+
+
+def test_coaching_selection_is_exactly_capped_at_max_tips():
+    # No ctx["text"], so the "fun" graphology-n card can't qualify
+    # (_latin_share of an empty text is 0.0): every selected entry here
+    # is a coaching tip, and there are comfortably more than MAX_TIPS
+    # relevant ones for this context, so the coaching cap is exact.
+    selected, _ = select_tips(
+        _ctx(scores={13: 2.0}, style=MIXED_STYLE, finishing=FINISHING)
+    )
+    assert all(t["kind"] != "fun" for t in selected)
+    assert len(selected) == MAX_TIPS
+
+
+def test_selection_allows_one_fun_card_beyond_the_coaching_cap():
+    # Real contract (see select_tips' docstring): at most MAX_TIPS
+    # COACHING entries, plus at most one additional "fun" card - so
+    # the total list can be MAX_TIPS + 1 long. English text with 5+
+    # n's qualifies the graphology-n fun card.
+    ctx = _ctx(
+        scores={13: 2.0},
+        style=MIXED_STYLE,
+        finishing=FINISHING,
+        text="many friendly northern penguins nap near ponds",
+    )
+    selected, _ = select_tips(ctx)
+    coaching = [t for t in selected if t["kind"] != "fun"]
+    fun = [t for t in selected if t["kind"] == "fun"]
+    assert len(coaching) == MAX_TIPS
+    assert len(fun) == 1
+    assert fun[0]["id"] == "graphology-n"
+    assert len(selected) == MAX_TIPS + 1
+    # documents the real contract: total is bounded by cap + 1 fun card
+    assert len(selected) <= MAX_TIPS + 1
 
 
 def test_mixed_style_outranks_everything():

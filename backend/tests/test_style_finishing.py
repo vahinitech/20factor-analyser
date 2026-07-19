@@ -131,6 +131,17 @@ def test_no_qualifying_words_is_unavailable():
     assert out["available"] is False
 
 
+def test_single_letter_words_a_and_i_qualify():
+    # "a" and "I" are common one-letter words ending in finishing
+    # letters; the tokenizer must not drop them just for being short.
+    lines = [{"text": "I saw a dog run by"}]
+    out = analyze_finishing_letters(lines)
+    assert out["available"] is True
+    examples_lower = [e.lower() for e in out["examples"]]
+    assert "a" in examples_lower
+    assert "i" in examples_lower
+
+
 # --- integration ------------------------------------------------------------
 
 

@@ -637,9 +637,13 @@ def select_tips(ctx, max_tips=MAX_TIPS):
     """Rank the relevant tips for this page, return the top few.
 
     Returns (selected, library_count): selected is a list of dicts
-    {id, title, text, why}, at most max_tips long, highest priority
-    first; library_count is the size of the whole registry so callers
-    can say how much more coaching exists beyond the page."""
+    {id, kind, pillar, title, text, why} (plus "examples" when the tip
+    defines them), at most max_tips COACHING entries, highest priority
+    first, plus at most one additional "fun" card appended after them
+    (so the list can be up to max_tips + 1 long - the fun card never
+    displaces a coaching tip); library_count is the size of the whole
+    registry so callers can say how much more coaching exists beyond
+    the page."""
     coaching, fun = [], []
     for tip in TIP_LIBRARY:
         try:
