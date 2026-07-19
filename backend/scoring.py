@@ -16,6 +16,9 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from coach_tips import pillar_summary, select_tips
+from finishing_letters import analyze_finishing_letters
+from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
 from zone_analysis import analyze_zones, zone_score
 
@@ -105,6 +108,9 @@ class AnalysisResult:
     baseline_drift: dict = None
     zone_profile: dict = None
     tbar_profile: dict = None
+    style_profile: dict = None
+    coach_tips: list = None
+    tip_pillars: dict = None
 
     def to_dict(self) -> dict:
         return {
@@ -121,6 +127,9 @@ class AnalysisResult:
             "baselineDrift": self.baseline_drift,
             "zoneProfile": self.zone_profile,
             "tbarProfile": self.tbar_profile,
+            "styleProfile": self.style_profile,
+            "coachTips": self.coach_tips,
+            "tipPillars": self.tip_pillars,
         }
 
 
@@ -613,6 +622,19 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     except Exception:
         tbars = None
     tbar_ok = bool(tbars and tbars.get("available"))
+    # Writing-style classification (cursive / print / mixed) and the
+    # ten-finishing-letters tip - both coach lessons, both advisory.
+    style = None
+    try:
+        style = analyze_style(gray, lines)
+    except Exception:
+        style = None
+    style_ok = bool(style and style.get("available"))
+    finishing = None
+    try:
+        finishing = analyze_finishing_letters(lines)
+    except Exception:
+        finishing = None
     zone_based = bool(zones and zones.get("available"))
     if zone_based:
         zs = zone_score(zones)
@@ -670,6 +692,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             )
             if zones.get("flags"):
                 evidence += f" Flags: {', '.join(zones['flags'])}."
+        if n == 15 and style_ok:
+            sh = style["shares"]
+            evidence += (
+                f" Style check: {style['verdict']} "
+                f"(cursive {int(sh['cursive'] * 100)}%, print "
+                f"{int(sh['print'] * 100)}%, mixed "
+                f"{int(sh['mixed'] * 100)}% of words)."
+            )
+            if style["verdict"] == "mixed":
+                evidence += (
+                    " Joining in places and lifting in others makes "
+                    "words break apart - pick cursive or print and "
+                    "stay with it."
+                )
         if (
             n == 16
             and tbar_ok
@@ -817,6 +853,22 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     plain = build_plain_groups(results)
     coach = build_coach_view(plain)
 
+    # Coach tips: the library will hold hundreds of lesson-derived
+    # tips, so the engine (coach_tips.py) ranks them by this page's
+    # measured scores and keeps only the top few - each with a 'why'
+    # naming the measurement that earned it the slot. Advisory report
+    # content, never a score input.
+    tip_ctx = {
+        "scores": {r.n: r.score for r in results},
+        "style": style,
+        "finishing": finishing,
+        "text": " ".join(str(l.get("text", "") or "") for l in lines),
+    }
+    coach_tips, _tip_library = select_tips(tip_ctx)
+    # The TIP diagnosis (Techniques / Interest / Practice): which leg
+    # of the skill is short on THIS page, from the measured factors.
+    tip_pillars = pillar_summary(tip_ctx)
+
     return AnalysisResult(
         results=results,
         sections=sections,
@@ -834,4 +886,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             if tbars is not None
             else {"available": False, "reason": "analysis unavailable"}
         ),
+        style_profile=(
+            style
+            if style is not None
+            else {"available": False, "reason": "analysis unavailable"}
+        ),
+        coach_tips=coach_tips,
+        tip_pillars=tip_pillars,
     )
