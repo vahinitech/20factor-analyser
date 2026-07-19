@@ -162,3 +162,28 @@ def test_magic_strokes_floats_on_weak_formation():
     selected, _ = select_tips(_ctx(scores={1: 2.0, 13: 9.0}))
     assert selected[0]["id"] == "magic-strokes"
     assert "circle drills rebuild it" in selected[0]["why"]
+
+
+def test_letter_x_tip_needs_an_x_on_the_page():
+    with_x = _ctx() | {"text": "six extra boxes fixed next to the taxi"}
+    ids = [t["id"] for t in select_tips(with_x)[0]]
+    assert "letter-x-two-curves" in ids
+
+    without_x = _ctx() | {"text": "running down the lane one morning"}
+    ids = [t["id"] for t in select_tips(without_x)[0]]
+    assert "letter-x-two-curves" not in ids
+
+    # advice describes the Latin letterform: never on a non-Latin page
+    telugu = _ctx() | {"text": "చేతిరాత అందం x " + "అకషర " * 20}
+    ids = [t["id"] for t in select_tips(telugu)[0]]
+    assert "letter-x-two-curves" not in ids
+
+
+def test_letter_x_tip_floats_on_weak_scores_and_cites_evidence():
+    ctx = _ctx(scores={1: 3.0}) | {"text": "six boxes of tax forms"}
+    selected, _ = select_tips(ctx)
+    assert selected[0]["id"] == "letter-x-two-curves"
+    card = selected[0]
+    assert "3 time(s)" in card["why"]
+    assert "3.0/10" in card["why"]
+    assert "reverse e" in card["text"]

@@ -159,6 +159,41 @@ TIP_LIBRARY = [
         ),
     },
     {
+        "id": "letter-x-two-curves",
+        "title": "The letter x: two curves, not two sticks",
+        # Craft tip for pages that actually write x. A stick-built x is
+        # the first letter to collapse under speed (toward an n, or a
+        # shape from no alphabet), so urgency rises when Letter
+        # Formation (F1) is weak - and when Speed Consistency (F13)
+        # is, because hurry is exactly what exposes it.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and _count_letter(ctx, "x") >= 1,
+        "priority": lambda ctx: 2.2
+        + (10.0 - min(_score(ctx, 1), _score(ctx, 13))) * 0.55,
+        "text": lambda ctx: (
+            "Most students build a lowercase x from two crossing "
+            "sticks. Written slowly it looks fine, but in a hurry the "
+            "crossing drifts apart and the x collapses into something "
+            "like an n - or a shape from no alphabet at all. Build it "
+            "from two curves instead: write a reverse e first, then "
+            "without lifting the pen extend into an ordinary e. The "
+            "two curves sit back to back and the x appears on its own. "
+            "Because the hand never lifts, the shape survives any "
+            "speed - and it joins both ways: the letter before flows "
+            "into the first curve, and the second curve flows straight "
+            "out into the letter after."
+        ),
+        "why": lambda ctx: (
+            "shown because this page writes the letter x "
+            f"{_count_letter(ctx, 'x')} time(s)"
+            + (
+                f" and Letter Formation scored {_score(ctx, 1):.1f}/10"
+                if _score(ctx, 1) < 7.0
+                else ""
+            )
+        ),
+    },
+    {
         "id": "graphology-n",
         "kind": "fun",
         "title": "Just for fun: what an old graphologist would read "
