@@ -270,14 +270,18 @@ def build_endurance(page_plain_groups):
         )
 
     worst = min(per_group, key=lambda g: g["slopePerPage"])
+
+    def _page_mean(page):
+        measured = [p["score"] for p in page if p["score"] is not None]
+        if not measured:
+            # No measurable group scores on this page: missing data,
+            # not a real 0.0 mean, so _slope_per_page treats it like
+            # any other unmeasured point rather than a genuine drop.
+            return None
+        return sum(measured) / len(measured)
+
     overall_slope = _slope_per_page(
-        [
-            (
-                sum(p["score"] for p in page if p["score"] is not None)
-                / max(1, sum(1 for p in page if p["score"] is not None))
-            )
-            for page in page_plain_groups
-        ]
+        [_page_mean(page) for page in page_plain_groups]
     )
     return {
         "pages": n_pages,

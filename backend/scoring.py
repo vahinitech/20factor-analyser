@@ -446,8 +446,9 @@ def _extract_features(arr: np.ndarray, lines, layout):
             ang = math.degrees(math.atan2(y1 - y0, dx))
             slopes.append(abs(ang))
             signed_slopes.append(ang)
-        else:
-            slopes.append(0.0)
+        # Lines without a usable poly are skipped entirely (not given a
+        # fake 0.0) so they don't silently pull line_slope_abs toward
+        # "level" while being excluded from line_slope_signed_med.
 
     rows = _group_lines_by_rows(lines)
     word_gaps = []
@@ -690,8 +691,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 f"~{abs(drift_deg):.1f} deg across the page."
             )
 
-    # Zone profile (issue #21): factor 6 split into the two things a
-    # coach actually checks, from the same proxies that score it.
+    # Zone profile (issue #21): the two things a coach actually checks,
+    # read from the same proxies that already score them — upper/lower
+    # reach from factor 6 (Ascender/Descender Control) and middle-zone
+    # stability from factor 5 (Size Consistency, i.e. letter-height
+    # consistency, used as the proxy for a steady x-height band).
     zone_profile = {
         "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
         "middleStability": round(float(scores.get(5, 0.0)), 1),

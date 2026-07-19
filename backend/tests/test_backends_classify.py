@@ -501,6 +501,60 @@ class TestScoringDataclasses(unittest.TestCase):
         self.assertEqual(len(d["results"]), 20)
         self.assertEqual(d["source"], "python")
 
+    def _lines_with_slope(self, degrees_val, n=4):
+        """Synthetic OCR lines whose poly encodes a constant left-to-right
+        slope of `degrees_val` degrees (positive = descending / sinking,
+        negative = ascending / climbing), matching the atan2(dy, dx)
+        convention used by _extract_features."""
+        import math as _math
+
+        dx = 100.0
+        dy = dx * _math.tan(_math.radians(degrees_val))
+        lines = []
+        for i in range(n):
+            y0 = 10.0 + i * 20.0
+            y1 = y0 + dy
+            lines.append(
+                {
+                    "text": "hello world",
+                    "box": [10, y0, 100, 18],
+                    "poly": [[10, y0], [10 + dx, y1]],
+                    "score": 0.9,
+                }
+            )
+        return lines
+
+    def test_baseline_drift_sinking_direction(self):
+        # Well above the 0.8deg threshold: lines descend left-to-right.
+        lines = self._lines_with_slope(5.0)
+        arr = np.full((200, 300, 3), 255, np.uint8)
+        analysis = scoring.build_analysis(arr, lines, {})
+        drift = analysis.baseline_drift
+        self.assertEqual(drift["direction"], "sinking")
+        self.assertAlmostEqual(drift["degrees"], 5.0, delta=0.1)
+
+    def test_baseline_drift_climbing_direction(self):
+        # Well below -0.8deg: lines ascend left-to-right.
+        lines = self._lines_with_slope(-5.0)
+        arr = np.full((200, 300, 3), 255, np.uint8)
+        analysis = scoring.build_analysis(arr, lines, {})
+        drift = analysis.baseline_drift
+        self.assertEqual(drift["direction"], "climbing")
+        self.assertAlmostEqual(drift["degrees"], 5.0, delta=0.1)
+
+    def test_baseline_drift_threshold_boundary(self):
+        arr = np.full((200, 300, 3), 255, np.uint8)
+        # Just under the 0.8deg cutoff: still "level".
+        below = scoring.build_analysis(
+            arr, self._lines_with_slope(0.5), {}
+        ).baseline_drift
+        self.assertEqual(below["direction"], "level")
+        # Comfortably over the cutoff: classified as drifting (sinking).
+        above = scoring.build_analysis(
+            arr, self._lines_with_slope(1.2), {}
+        ).baseline_drift
+        self.assertEqual(above["direction"], "sinking")
+
 
 class TestDetector(unittest.TestCase):
     def test_merge_lines_drops_overlapping_duplicate_text(self):

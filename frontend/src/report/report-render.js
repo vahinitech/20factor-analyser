@@ -430,13 +430,16 @@ function render(host, data){
   ];
   const plainGroups = analysis.plainGroups || PLAIN_FALLBACK.map(g=>{
     const fs = g.factors.map(n=>analysis.results.find(r=>r.n===n)).filter(Boolean);
-    const live = fs.filter(f=>!f.unmeasured);
+    const live = fs.filter(isLive);
     const avg = live.length ? live.reduce((a,f)=>a+f.score,0)/live.length : null;
     return { id:g.id, label:g.label, question:g.question,
       score: avg==null?null:Math.round(avg*10)/10,
       band: avg==null?null:bandOf(avg),
-      estimated: fs.some(f=>f.conf!=='measured'),
-      factors: fs.map(f=>({n:f.n,name:f.name,score:f.unmeasured?null:f.score,unmeasured:!!f.unmeasured})) };
+      // Pen-pending IMU factors (conf==='imu' && !imuMeasured) aren't
+      // "estimated from the photo" — they simply weren't read yet, so
+      // they're excluded from the estimated flag same as isLive does.
+      estimated: fs.some(f=>f.conf!=='measured' && f.conf!=='imu'),
+      factors: fs.map(f=>({n:f.n,name:f.name,score:isLive(f)?f.score:null,unmeasured:!!f.unmeasured})) };
   });
   const coachRows = (analysis.coachView && analysis.coachView.rows) || plainGroups.map(g=>({
     id:g.id, label:g.label, question:g.question, score:g.score, band:g.band, measurable:true,
@@ -482,7 +485,7 @@ function render(host, data){
       <tbody>${plainRows}</tbody>
     </table>
     <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-      ${coachTotal?`<div style="font-size:11px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;"><b>Measured total: ${coachTotal}</b> across the six aspects a photo can score. Add your own eight marks out of 80 and compare.</div>`:''}
+      ${coachTotal?`<div style="font-size:11px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;"><b>Measured total: ${coachTotal}</b> across the aspects a photo can score. Add your own eight marks out of 80 and compare.</div>`:''}
       <div style="font-size:10px;color:var(--muted);line-height:1.5;flex:1;min-width:220px;">Scoring the page yourself first is the coaches' trick: from tomorrow you write consciously, and most writers see a real change within a week or ten days. Re-scan then and watch both columns move.</div>
     </div>
     ${foot(pg,'Plain words first · every headline traces to measured factors')}
