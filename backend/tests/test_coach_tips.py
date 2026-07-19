@@ -187,3 +187,79 @@ def test_letter_x_tip_floats_on_weak_scores_and_cites_evidence():
     assert "3 time(s)" in card["why"]
     assert "3.0/10" in card["why"]
     assert "reverse e" in card["text"]
+
+
+def _ids(ctx):
+    return [t["id"] for t in select_tips(ctx)[0]]
+
+
+def test_r_vs_s_tip_gates_on_the_rs_cluster():
+    # "Mars" and "cars" put r directly before s - the confusion spot
+    assert "letter-r-vs-s" in _ids(
+        _ctx(scores={1: 2.0}) | {"text": "life on mars and cars"}
+    )
+    # r and s present but never adjacent: stays silent
+    assert "letter-r-vs-s" not in _ids(
+        _ctx(scores={1: 2.0}) | {"text": "red sand on the road"}
+    )
+
+
+def test_c_family_tip_needs_three_of_the_five_letters():
+    assert "c-family-rhythm" in _ids(
+        _ctx(scores={3: 2.0}) | {"text": "a good quad dog"}
+    )
+    # only o and a present: not enough of the family on the page
+    assert "c-family-rhythm" not in _ids(
+        _ctx(scores={3: 2.0}) | {"text": "on a boat"}
+    )
+
+
+def test_z_tip_gates_on_z():
+    assert "letter-z-easy-build" in _ids(
+        _ctx(scores={1: 2.0}) | {"text": "the zoo was open"}
+    )
+    assert "letter-z-easy-build" not in _ids(
+        _ctx(scores={1: 2.0}) | {"text": "the park was open"}
+    )
+
+
+def test_s_join_tip_is_cursive_only():
+    cursive = {
+        "available": True,
+        "verdict": "cursive",
+        "shares": {"cursive": 0.9, "print": 0.05, "mixed": 0.05},
+        "advice": "",
+    }
+    printed = dict(cursive, verdict="print")
+    text = {"text": "save some sums"}
+    assert "joining-s-outside" in _ids(
+        _ctx(scores={15: 2.0}, style=cursive) | text
+    )
+    # a print page never joins, so the join tip stays silent
+    assert "joining-s-outside" not in _ids(
+        _ctx(scores={15: 2.0}, style=printed) | text
+    )
+
+
+def test_calligraphy_tip_is_low_priority_general_guidance():
+    # relevant on any page, but base priority is the lowest in the
+    # coaching track: craft tips with evidence must outrank it
+    ctx = _ctx(scores={1: 2.0}) | {"text": "the zoo was amazing"}
+    ids = _ids(ctx)
+    assert "no-calligraphy-fonts" not in ids[:1]
+    # on a strong page with no craft evidence it can surface
+    plain = select_tips(_ctx(scores={13: 2.0}))[0]
+    assert any(t["id"] == "no-calligraphy-fonts" for t in plain)
+
+
+def test_tips_carry_handwritten_examples():
+    # every selected card ships the examples the report draws in a
+    # handwriting-style face - the tip is shown, not just told
+    ctx = _ctx(scores={1: 2.0, 13: 2.0}) | {
+        "text": "life on mars was a good quad dog zoo six"
+    }
+    selected, _ = select_tips(ctx)
+    assert selected
+    for tip in selected:
+        assert tip["examples"], f"{tip['id']} has no examples"
+        assert all(isinstance(e, str) and e for e in tip["examples"])

@@ -39,9 +39,13 @@ def _score(ctx, n, default=10.0):
 
 
 # --- the library -------------------------------------------------------------
-# Each entry: id, title, relevant(ctx), priority(ctx), text(ctx), why(ctx).
+# Each entry: id, title, relevant(ctx), priority(ctx), text(ctx), why(ctx),
+# and optional examples(ctx) - short practice words/strokes the report
+# renders in a handwriting-style face, so every tip is EXPLAINED with a
+# written example, not just described.
 # ctx keys: scores {n: score}, style (styleProfile), finishing
-# (finishing-letters analysis). All optional; entries must guard.
+# (finishing-letters analysis), text (OCR text). All optional; entries
+# must guard.
 
 
 def _finishing_relevant(ctx):
@@ -71,6 +75,19 @@ def _count_letter(ctx, letter):
     return str(ctx.get("text", "") or "").lower().count(letter)
 
 
+def _distinct_c_family(ctx):
+    """How many of the five c-built letters (a d g q o) the page uses."""
+    text = str(ctx.get("text", "") or "").lower()
+    return sum(1 for c in "adgqo" if c in text)
+
+
+def _is_cursive_page(ctx):
+    s = ctx.get("style")
+    return bool(
+        s and s.get("available") and s.get("verdict") in ("cursive", "mixed")
+    )
+
+
 TIP_LIBRARY = [
     {
         "id": "one-style-only",
@@ -87,6 +104,10 @@ TIP_LIBRARY = [
             f"({int(ctx['style']['shares']['mixed'] * 100)}% of words "
             "switch style)"
         ),
+        "examples": lambda ctx: [
+            "and, the, said - joined every time",
+            "and, the, said - printed every time",
+        ],
     },
     {
         "id": "finishing-letters",
@@ -103,6 +124,10 @@ TIP_LIBRARY = [
             f"{ctx['finishing']['wordCount']} words ending in the ten "
             "finishing letters"
         ),
+        "examples": lambda ctx: [
+            "A D H I L M N R T U",
+            "sun  hat  pearl  drum",
+        ],
     },
     {
         "id": "speed-three-ways",
@@ -129,6 +154,9 @@ TIP_LIBRARY = [
             if _score(ctx, 13) < 7.0
             else "shown as a general practice habit for every writer"
         ),
+        "examples": lambda ctx: [
+            "read the whole line - look away - write it",
+        ],
     },
     {
         "id": "magic-strokes",
@@ -157,6 +185,9 @@ TIP_LIBRARY = [
             if _score(ctx, 1) < 7.0
             else "shown as a daily warm-up habit for every script"
         ),
+        "examples": lambda ctx: [
+            "o o o   c c c   S   8   spring coils",
+        ],
     },
     {
         "id": "letter-x-two-curves",
@@ -192,6 +223,159 @@ TIP_LIBRARY = [
                 else ""
             )
         ),
+        "examples": lambda ctx: [
+            "x = reverse e + e",
+            "box  taxi  exam",
+        ],
+    },
+    {
+        "id": "letter-r-vs-s",
+        "title": "r and s: twins until the finish",
+        # In words like Mars the two letters blur together because both
+        # start with the same entry stroke. Gated to pages that write
+        # r directly next to s - the exact place the confusion shows.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and "rs" in str(ctx.get("text", "") or "").lower(),
+        "priority": lambda ctx: 2.1
+        + (10.0 - min(_score(ctx, 1), _score(ctx, 3))) * 0.5,
+        "text": lambda ctx: (
+            "In words like Mars, r and s often come out looking like "
+            "twins - both letters start with the same small entry "
+            "stroke, so at speed they blur into each other. The whole "
+            "difference is in the finish: for r, bring the stroke down "
+            "and stop level with the height of the opening loop. For "
+            "s, come down like a backslash and close with a soft curve "
+            "at the bottom. Write Mars slowly a few times watching "
+            "only those two finishes, and the twins separate for good."
+        ),
+        "why": lambda ctx: (
+            "shown because this page writes r directly before s "
+            f"{str(ctx.get('text', '') or '').lower().count('rs')} "
+            "time(s) - the exact spot the two letters blur"
+        ),
+        "examples": lambda ctx: [
+            "Mars  cars  verse",
+            "r stops high - s slides low",
+        ],
+    },
+    {
+        "id": "c-family-rhythm",
+        "title": "Five letters, one c: the rhythm secret",
+        # a, d, g, q and o are all built on the same c. Identical c's
+        # across them read as rhythm; varied c's unsettle the word.
+        # Gated to pages using at least three of the five.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and _distinct_c_family(ctx) >= 3,
+        "priority": lambda ctx: 2.3
+        + (10.0 - min(_score(ctx, 1), _score(ctx, 3))) * 0.6,
+        "text": lambda ctx: (
+            "Five letters - a, d, g, q and o - are all built on the "
+            "same c. When each of them carries an identically shaped "
+            "c, the word gains a rhythm the eye reads as beautiful; "
+            "when the c inside d is fatter than the c inside a, the "
+            "same word looks unsettled. Practise one honest c, then "
+            "extend that exact c into a, into d, into g, into q, and "
+            "close it into o. Keep the c the same size and shape "
+            "across all five and the rhythm takes care of itself."
+        ),
+        "why": lambda ctx: (
+            f"shown because this page uses {_distinct_c_family(ctx)} "
+            "of the five c-built letters (a d g q o)"
+        ),
+        "examples": lambda ctx: [
+            "c -> a  d  g  q  o",
+            "dog  quad  good",
+        ],
+    },
+    {
+        "id": "letter-z-easy-build",
+        "title": "The easiest lowercase z",
+        # The last letter, but not least: gated to pages that write z.
+        # Like the x tip, hurry exposes a badly built z, so weak Speed
+        # Consistency (F13) raises it alongside weak formation.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and _count_letter(ctx, "z") >= 1,
+        "priority": lambda ctx: 2.0
+        + (10.0 - min(_score(ctx, 1), _score(ctx, 13))) * 0.5,
+        "text": lambda ctx: (
+            "The lowercase z takes more wrong turns than almost any "
+            "letter. The easy build: think of the number 3, drawn as "
+            "two reverse c curves - make the first one small and "
+            "compact, the second a little wider - then finish with a "
+            "descending tail that ends the way g, j and y do. On "
+            "ruled paper, keep the first curve clear of the line, let "
+            "the second reach about halfway into the line below, and "
+            "lean the tail slightly left as it closes."
+        ),
+        "why": lambda ctx: (
+            "shown because this page writes the letter z "
+            f"{_count_letter(ctx, 'z')} time(s)"
+        ),
+        "examples": lambda ctx: [
+            "z = small 3 + a g-style tail",
+            "zoo  size  zigzag",
+        ],
+    },
+    {
+        "id": "joining-s-outside",
+        "title": "Join into s from the outside, never the inside",
+        # Cursive-specific: an inside join collapses the s. Gated to
+        # pages that actually join their letters; urgency follows
+        # Stroke Continuity (F15), the factor joins live in.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        and _is_cursive_page(ctx)
+        and _count_letter(ctx, "s") >= 1,
+        "priority": lambda ctx: 2.4 + (10.0 - _score(ctx, 15)) * 0.6,
+        "text": lambda ctx: (
+            "When joining into a lowercase s in cursive, never enter "
+            "it from the inside - an inside join collapses the letter "
+            "and drags down every word that contains it. Bring the "
+            "connector up and over, entering the s from the outside, "
+            "and the letter keeps its shape at any speed. Practise "
+            "with save and sum: watch only the entry into the s, "
+            "nothing else, until the outside entry is automatic."
+        ),
+        "why": lambda ctx: (
+            "shown because this page joins its letters and writes "
+            f"{_count_letter(ctx, 's')} s's - the letter that "
+            "suffers most from an inside join"
+        ),
+        "examples": lambda ctx: [
+            "save  sum  so",
+            "enter the s over the top, not from inside",
+        ],
+    },
+    {
+        "id": "no-calligraphy-fonts",
+        "title": "Handwriting is not calligraphy",
+        # General guidance, deliberately low priority: it surfaces on
+        # pages with room in the report, and floats a little when
+        # Speed Consistency (F13) is weak - fancy letterforms are a
+        # common hidden cause of slow, tiring writing.
+        "relevant": lambda ctx: True,
+        "priority": lambda ctx: 1.6 + (10.0 - _score(ctx, 13)) * 0.3,
+        "text": lambda ctx: (
+            "Handwriting and calligraphy are different crafts. "
+            "Italic, Chancery and Lucida-style lettering looks "
+            "beautiful, but used for everyday writing it moves the "
+            "effort from the content to the letterforms - the hand "
+            "tires quickly, and answers do not finish in the allotted "
+            "time. Keep a plain cursive or print hand for daily "
+            "writing and exams, where the content is the point, and "
+            "save artistic lettering for what it is made for: project "
+            "titles, invitations and greeting cards."
+        ),
+        "why": lambda ctx: (
+            "shown because Speed Consistency scored "
+            f"{_score(ctx, 13):.1f}/10 - ornate letterforms are a "
+            "common hidden cause of slow, tiring writing"
+            if _score(ctx, 13) < 7.0
+            else "shown as general guidance on choosing a daily hand"
+        ),
+        "examples": lambda ctx: [
+            "daily hand: plain cursive or print",
+            "fancy lettering: cards and titles only",
+        ],
     },
     {
         "id": "graphology-n",
@@ -218,6 +402,9 @@ TIP_LIBRARY = [
             f"your page has {_count_letter(ctx, 'n')} letter n's - "
             "this card is for curiosity, not coaching"
         ),
+        "examples": lambda ctx: [
+            "n with sharp peaks - n with round tops",
+        ],
     },
 ]
 
@@ -234,16 +421,18 @@ def select_tips(ctx, max_tips=MAX_TIPS):
         try:
             if not tip["relevant"](ctx):
                 continue
-            entry = (
-                float(tip["priority"](ctx)),
-                {
-                    "id": tip["id"],
-                    "kind": tip.get("kind", "coach"),
-                    "title": tip["title"],
-                    "text": tip["text"](ctx),
-                    "why": tip["why"](ctx),
-                },
-            )
+            card = {
+                "id": tip["id"],
+                "kind": tip.get("kind", "coach"),
+                "title": tip["title"],
+                "text": tip["text"](ctx),
+                "why": tip["why"](ctx),
+            }
+            if "examples" in tip:
+                # short practice samples the report draws in a
+                # handwriting-style face
+                card["examples"] = [str(e) for e in tip["examples"](ctx)]
+            entry = (float(tip["priority"](ctx)), card)
             if entry[1]["kind"] == "fun":
                 fun.append(entry)
             else:

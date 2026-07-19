@@ -565,6 +565,35 @@ function render(host, data){
     ${foot(pg,'Top 3 issues · full 20-factor deep-dive: info@vahinitech.com')}
   </section>`);
 
+  /* ---------- PAGE · COACH'S CORNER (lesson tips + handwritten samples) ----
+     The backend tip engine picks a few lessons for THIS page (score-driven,
+     never generic - each card says why it was chosen). Every tip is
+     explained with example words rendered in a handwriting-style face on a
+     ruled baseline, so the reader sees the target shape, not just prose. */
+  const coachTips = analysis.coachTips || [];
+  if (coachTips.length){
+    pg=P();
+    const hand = (s)=>`<span style="font-family:'Segoe Script','Bradley Hand','Snell Roundhand','Comic Sans MS',cursive;font-size:15px;line-height:2;color:var(--ink);padding:0 6px 1px;border-bottom:1.5px solid var(--accent-deep);white-space:nowrap;">${esc(s)}</span>`;
+    const tipCards = coachTips.map(t=>`
+      <div style="background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:14px 16px;${t.kind==='fun'?'border-style:dashed;':''}">
+        <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:${t.kind==='fun'?'var(--accent-deep)':'var(--muted)'};font-weight:700;">${t.kind==='fun'?'Just for fun':'Coach tip'}</div>
+        <div style="font-family:var(--serif);font-size:16px;line-height:1.25;margin:5px 0 6px;">${esc(t.title)}</div>
+        <p style="font-size:11px;color:var(--ink-2);line-height:1.55;margin:0 0 9px;">${esc(plainText(t.text))}</p>
+        ${(t.examples&&t.examples.length)?`<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;background:var(--paper-2);border-radius:10px;padding:9px 12px 7px;margin-bottom:8px;">
+          <span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;align-self:center;">Write it</span>
+          ${t.examples.map(hand).join('')}
+        </div>`:''}
+        <div style="font-size:9.5px;color:var(--muted);line-height:1.45;">${esc(t.why)}</div>
+      </div>`).join('');
+    pages.push(`<section class="page" data-screen-label="Coach's corner">
+      ${head("Coach's corner")}
+      <div class="sec-title"><div><div class="eyebrow">Lessons picked for this page from a growing library: each card says why</div><h2>Coach's corner</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">${tipCards}</div>
+      <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.5;">The <b>Write it</b> samples are drawn in a handwriting-style face so you can picture the target shape: copy them slowly a few times before writing at speed. Cards marked <b>Just for fun</b> are entertainment, never scoring.</div>
+      ${foot(pg,"Coach's corner · tips chosen by the measured factors, never generic")}
+    </section>`);
+  }
+
   /* ---------- PAGE · REFERENCE VALUES (read like a lab report) ---------- */
   pg=P();
   const td = 'padding:4px 8px;border-bottom:1px solid var(--hair);font-size:10.5px;text-align:center;vertical-align:middle;';
