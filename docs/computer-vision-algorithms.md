@@ -209,13 +209,34 @@ wobble = RMS distance of letter bottoms off the line, ÷ x-height   # F7 baselin
 
 ---
 
-## 9. x-height & zone analysis
+## 9. x-height & zone analysis (the 1:2 letter-size rule)
 
 **What:** the height of a normal lowercase letter body (the height of "x"), used as the natural
 ruler so all measurements work at any writing size, plus the three vertical **zones**:
 upper (l, h, t), middle (a, o, e), lower (g, y, p).
-**How:** x-height = median letter height. A letter reaching well above the body band counts as
-upper-zone; below the fitted baseline, lower-zone. The balance of the three gives F6.
+**Why:** handwriting coaches teach letter size as one proportion: a 't' stands **two**
+x-heights tall, a 'g' hangs **two** x-heights deep (the 1:2 rule). The three classic
+mistakes are writing everything in one zone, over-reaching up, and over-reaching down.
+**How** (`backend/zone_analysis.py`, measured per line from ink):
+
+```
+binarise the line crop (iterative midpoint threshold)
+profile = ink pixels per row                       # horizontal projection
+middle zone = longest contiguous run of rows ≥ 40% of peak density
+midline = band top, baseline = band bottom, x-height = band height
+ascender top / descender bottom = outermost rows with meaningful ink
+ascender reach  = (upper + middle) / middle        # target 2.0
+descender reach = (lower + middle) / middle        # target 2.0
+```
+
+Aggregated over lines with medians (one bad detection cannot skew the page), the reach
+ratios score **F6** directly: full credit within ±0.35 of the 2.0 target, zero credit at
+±1.0, minus a consistency penalty when reach varies line to line. The coach's mistakes are
+named in the output as flags: `single-zone`, `upper-heavy`, `lower-heavy`. The report's
+evidence line shows the measured numbers ("ascenders reach 1.8x the x-height").
+Latin-script pages only: zone conventions differ for Indic scripts (matras occupy the
+zones differently), so other pages keep the tall-letter-share proxy and the
+`zoneProfile.method` field says which method produced the numbers.
 
 ---
 

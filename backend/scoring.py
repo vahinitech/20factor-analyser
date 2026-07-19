@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from zone_analysis import analyze_zones, zone_score
 
 try:
     import cv2
@@ -576,6 +577,37 @@ def _score_factor_map(fx):
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     fx = _extract_features(arr, lines, layout)
     scores = _score_factor_map(fx)
+
+    # Three-zone letter-size rule (the coaches' 1:2 proportion): when the
+    # page supports it, Factor 6 is scored from measured zone geometry
+    # instead of the tall-letter-share proxy. zone_analysis.py.
+    zones = None
+    try:
+        if cv2 is not None:
+            gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+        else:
+            # Same RGB->gray weights as classify.py's _gray, so zone
+            # measurement stays consistent whether or not cv2 is
+            # available in the environment.
+            gray = np.dot(
+                np.asarray(arr[..., :3], dtype=np.float64),
+                [0.299, 0.587, 0.114],
+            ).astype(np.uint8)
+        zones = analyze_zones(gray, lines)
+    except Exception as e:
+        # Keep the failure honest: zoneProfile.method should say WHY
+        # the proxy was used instead of silently swallowing it.
+        zones = {
+            "available": False,
+            "reason": f"zone analysis failed: {e}",
+        }
+    zone_based = bool(zones and zones.get("available"))
+    if zone_based:
+        zs = zone_score(zones)
+        if zs is not None:
+            scores[6] = round(float(zs), 1)
+        else:
+            zone_based = False
     basis = {
         1: f"{fx['n_chars']} letters",
         2: f"{fx['n_words']} words",
@@ -612,6 +644,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         )
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
+        evidence = f"Server-side OCR/layout heuristic based on {detail}."
+        if n == 6 and zone_based:
+            parts = []
+            if zones.get("ascReach") is not None:
+                parts.append(f"ascenders reach {zones['ascReach']:.1f}x")
+            if zones.get("descReach") is not None:
+                parts.append(f"descenders reach {zones['descReach']:.1f}x")
+            evidence = (
+                "Measured zone bands over "
+                f"{zones['linesUsed']} lines: {', '.join(parts)} the "
+                "x-height (the 1:2 rule targets 2.0x)."
+            )
+            if zones.get("flags"):
+                evidence += f" Flags: {', '.join(zones['flags'])}."
         results.append(
             FactorScore(
                 n=n,
@@ -624,7 +670,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 score100=int(round(score * 10)),
                 band=_band(score),
                 value=value,
-                evidence=f"Server-side OCR/layout heuristic based on {detail}.",
+                evidence=evidence,
                 based_on=basis.get(n),
             )
         )
@@ -691,19 +737,50 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 f"~{abs(drift_deg):.1f} deg across the page."
             )
 
-    # Zone profile (issue #21): the two things a coach actually checks,
-    # read from the same proxies that already score them — upper/lower
-    # reach from factor 6 (Ascender/Descender Control) and middle-zone
-    # stability from factor 5 (Size Consistency, i.e. letter-height
-    # consistency, used as the proxy for a steady x-height band).
-    zone_profile = {
-        "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
-        "middleStability": round(float(scores.get(5, 0.0)), 1),
-        "method": (
-            "proxy from tall-letter share and letter-height statistics; "
-            "per-zone geometry lands with character segmentation"
-        ),
-    }
+    # Zone profile (issue #21): the two things a coach actually checks —
+    # upper/lower reach (factor 6, Ascender/Descender Control) and
+    # middle-zone stability (factor 5, Size Consistency, i.e. letter-
+    # height consistency used as the proxy for a steady x-height band).
+    # Measured projection-profile zone bands are used when the page
+    # supports them, the proxy otherwise - the method field always says
+    # which one produced the numbers.
+    # Both branches always populate the same key set (measured keys are
+    # null/empty in the proxy case) so API consumers don't have to
+    # special-case the schema on zone_based; upperLowerReach is kept in
+    # both for backward compatibility with pre-measurement consumers.
+    if zone_based:
+        zone_profile = {
+            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+            "ascenderReach": zones.get("ascReach"),
+            "descenderReach": zones.get("descReach"),
+            "targetReach": zones.get("targetReach"),
+            "xHeightPx": zones.get("xHeightPx"),
+            "flags": zones.get("flags", []),
+            "middleStability": round(float(scores.get(5, 0.0)), 1),
+            "method": (
+                "measured: per-line ink projection profiles -> zone "
+                f"bands over {zones['linesUsed']} lines (1:2 rule)"
+            ),
+        }
+    else:
+        zone_profile = {
+            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+            "ascenderReach": None,
+            "descenderReach": None,
+            "targetReach": None,
+            "xHeightPx": None,
+            "flags": [],
+            "middleStability": round(float(scores.get(5, 0.0)), 1),
+            "method": (
+                "proxy from tall-letter share and letter-height "
+                "statistics"
+                + (
+                    f" ({zones['reason']})"
+                    if zones and zones.get("reason")
+                    else ""
+                )
+            ),
+        }
 
     # Plain-language layer (issue #12) + the coaches' eight-aspect view
     # (issue #21). Presentation only: nothing above rescored.
