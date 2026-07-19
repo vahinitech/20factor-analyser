@@ -7,9 +7,7 @@ I, L, M, N, R, T, U - share an ending on a downstroke. Whenever a
 WORD ends with one of them, finish with a small exit stroke (a gentle
 upward flick); never stop abruptly on the bare vertical. "Hand"
 should not end on a dead 'd' stem - it earns the small finishing
-stroke. The coach's Telugu title for the lesson:
-"చేతిరాత అందాన్ని పెంచే 10 అక్షరాలు"
-(the 10 letters that make handwriting beautiful).
+stroke.
 
 Detecting the exit stroke itself needs character segmentation, which
 the pipeline does not have yet - so this module is honest about being
@@ -26,7 +24,7 @@ FINISHING_LETTERS = set("adhilmnrtu")
 _WORD_RE = re.compile(r"[A-Za-z]{2,}")
 
 TIP_ID = "finishing-letters"
-TIP_TITLE = "చేతిరాత అందాన్ని పెంచే 10 అక్షరాలు · the 10 finishing letters"
+TIP_TITLE = "The 10 letters that improve your handwriting"
 
 
 def analyze_finishing_letters(lines):

@@ -120,7 +120,7 @@ def test_finishing_letters_tip_with_examples():
     assert out["wordCount"] == 6
     assert "hand" in [e.lower() for e in out["examples"]]
     tip = out["tip"]
-    assert "అక్షరాలు" in tip["title"]  # the coach's Telugu heading
+    assert tip["title"] == "The 10 letters that improve your handwriting"
     assert "small upward stroke" in tip["text"]
     assert "'hand'" in tip["text"].lower()
 

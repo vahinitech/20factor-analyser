@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from coach_tips import select_tips
 from finishing_letters import analyze_finishing_letters
 from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
@@ -850,19 +851,18 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     plain = build_plain_groups(results)
     coach = build_coach_view(plain)
 
-    # Coach tips: lesson-derived advice addressed to this page's own
-    # words. Advisory report content, never a score input.
-    coach_tips = []
-    if finishing and finishing.get("available"):
-        coach_tips.append(finishing["tip"])
-    if style_ok and style.get("advice"):
-        coach_tips.append(
-            {
-                "id": "one-style-only",
-                "title": "Cursive or print - never both",
-                "text": style["advice"],
-            }
-        )
+    # Coach tips: the library will hold hundreds of lesson-derived
+    # tips, so the engine (coach_tips.py) ranks them by this page's
+    # measured scores and keeps only the top few - each with a 'why'
+    # naming the measurement that earned it the slot. Advisory report
+    # content, never a score input.
+    coach_tips, _tip_library = select_tips(
+        {
+            "scores": {r.n: r.score for r in results},
+            "style": style,
+            "finishing": finishing,
+        }
+    )
 
     return AnalysisResult(
         results=results,
