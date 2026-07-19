@@ -586,11 +586,21 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         if cv2 is not None:
             gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
         else:
-            gray = np.asarray(arr[..., :3], dtype=np.float64).mean(axis=2)
-            gray = gray.astype(np.uint8)
+            # Same RGB->gray weights as classify.py's _gray, so zone
+            # measurement stays consistent whether or not cv2 is
+            # available in the environment.
+            gray = np.dot(
+                np.asarray(arr[..., :3], dtype=np.float64),
+                [0.299, 0.587, 0.114],
+            ).astype(np.uint8)
         zones = analyze_zones(gray, lines)
-    except Exception:
-        zones = None
+    except Exception as e:
+        # Keep the failure honest: zoneProfile.method should say WHY
+        # the proxy was used instead of silently swallowing it.
+        zones = {
+            "available": False,
+            "reason": f"zone analysis failed: {e}",
+        }
     zone_based = bool(zones and zones.get("available"))
     if zone_based:
         zs = zone_score(zones)
@@ -734,8 +744,13 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # Measured projection-profile zone bands are used when the page
     # supports them, the proxy otherwise - the method field always says
     # which one produced the numbers.
+    # Both branches always populate the same key set (measured keys are
+    # null/empty in the proxy case) so API consumers don't have to
+    # special-case the schema on zone_based; upperLowerReach is kept in
+    # both for backward compatibility with pre-measurement consumers.
     if zone_based:
         zone_profile = {
+            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
             "ascenderReach": zones.get("ascReach"),
             "descenderReach": zones.get("descReach"),
             "targetReach": zones.get("targetReach"),
@@ -750,6 +765,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     else:
         zone_profile = {
             "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+            "ascenderReach": None,
+            "descenderReach": None,
+            "targetReach": None,
+            "xHeightPx": None,
+            "flags": [],
             "middleStability": round(float(scores.get(5, 0.0)), 1),
             "method": (
                 "proxy from tall-letter share and letter-height "

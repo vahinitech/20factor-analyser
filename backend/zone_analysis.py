@@ -32,6 +32,8 @@ import re
 
 import numpy as np
 
+from geometry import clamp_box
+
 # The coach's rule: reach two x-heights up and down.
 ZONE_TARGET_REACH = 2.0
 # Full credit within this error; zero credit beyond ZONE_ZERO_ERR.
@@ -94,12 +96,14 @@ def line_zone_bands(gray, box):
     reach ratios, or None when the crop is unusable."""
     h_img, w_img = gray.shape[:2]
     x, y, w, h = [int(round(float(v))) for v in box[:4]]
-    # pad one x-height above and below: ascenders/descenders often poke
-    # past the detector's tight box
+    # pad by half the detected box height above and below: ascenders/
+    # descenders often poke past the detector's tight box
     pad = max(4, h // 2)
-    y0, y1 = max(0, y - pad), min(h_img, y + h + pad)
-    x0, x1 = max(0, x), min(w_img, x + max(1, w))
-    if y1 - y0 < MIN_XHEIGHT_PX or x1 <= x0:
+    clamped = clamp_box(x, y - pad, max(1, w), h + 2 * pad, w_img, h_img)
+    if clamped is None:
+        return None
+    x0, y0, x1, y1 = clamped
+    if y1 - y0 < MIN_XHEIGHT_PX:
         return None
 
     ink = _binarise(gray[y0:y1, x0:x1])
