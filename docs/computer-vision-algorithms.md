@@ -378,6 +378,42 @@ Every finding ships with a crop of the writer's own ink as evidence.
 
 ---
 
+## 20. Cross-bar craft: the double-t rule (`tbar_analysis.py`)
+
+A handwriting coach's cursive lesson, measured from ink:
+
+* **Two t's side by side** (bottle, little, butter): the craft is **one
+  extended cross bar** across both stems - two separate bars means an
+  unnecessary extra pen lift.
+* **Two t's apart** in a word (that): each t is crossed on its own.
+* **A t beside a tall letter** ("at least" -> tl): the bar must stay on
+  the t stem, not ride over the neighbouring ascender.
+
+**Gate first, geometry second.** A line is only examined when its OCR
+text (spaces stripped, so "at least" counts) contains a `tt` or a
+t-beside-tall-letter pattern - an `ll` can never masquerade as a
+double-t because the gate never opens for it. Then, per line: binarise
+the crop, find the middle zone with the same dense-band profile as the
+zone rule (§9), take **tall stems** (column runs whose ink fills most of
+the ascender band) and **bar runs** (horizontal ink runs at least half
+an x-height wide, high in the ascender band), and classify each
+side-by-side stem pair:
+
+| Ink pattern | Event | Meaning |
+|---|---|---|
+| One bar run crosses both stems | `shared` | the craft: one bar, one lift saved |
+| Two runs, one per stem | `separate` | the coach's tip: an extra lift |
+| One stem barred, bar reaches >= 60% of the way to the unbarred stem | `overshoot` | bar riding over the l |
+| One stem barred, bar stays home | `contained` | clean tl |
+
+**Where it lands.** `tbarProfile` in the analysis output (counts +
+flags: `double-t-single-bar`, `double-t-extra-lifts`,
+`t-bar-overshoot`), an evidence sentence on **Factor 16 (Pen Lift
+Frequency)** - the shared bar is literally a saved pen lift - and, when
+overshoots exist, on **Factor 1 (Letter Formation)**. Advisory by
+design: the observations inform evidence and coaching copy, they do not
+silently change scores until field data validates the thresholds.
+
 ## One-page cheat sheet
 
 | # | Algorithm | Question it answers | Feeds |
@@ -401,6 +437,7 @@ Every finding ships with a crop of the writer's own ink as evidence.
 | 17 | Letter crops | "Show me MY letters as proof" | factor cards |
 | 18 | Learning curve | "Where is this heading?" | forecast page |
 | 19 | Expected-text alignment | "Which letter is which, and is it right?" | letter-level findings |
+| 20 | Cross-bar craft | "One bar for a double-t? Bar off the l?" | tbarProfile, F16/F1 evidence |
 
 ---
 
