@@ -356,7 +356,7 @@ function render(host, data){
   }).join('');
   const chip = (f, kind)=>`<span class="sc2-chip ${kind}">${esc(f.name)}<i>${(f.imuMeasured||f.conf!=='imu')?f.score.toFixed(1):'—'}</i></span>`;
   const scoreboard = `<div class="ea-panel" style="margin-top:14px;">
-    <div class="ea-head act"><span class="t">All 20 factors at a glance</span><span class="tag" style="background:var(--ink);color:#fff;">reference values on page ${imu?'04':'03'}</span></div>
+    <div class="ea-head act"><span class="t">All 20 factors at a glance</span><span class="tag" style="background:var(--ink);color:#fff;">reference values on page ${imu?'05':'04'}</span></div>
     <div class="fscore-grid">${analysis.results.map(f=>`<span class="fscore ${f.band}"${isLive(f)?'':' style="opacity:.45;filter:grayscale(.55)"'}><b>${String(f.n).padStart(2,'0')}</b><span class="fs-nm">${esc(f.name)}</span><i>${isLive(f)?f.score.toFixed(1):'—'}</i></span>`).join('')}</div>
   </div>`;
   const rec = (analysis && analysis.recognition) ? analysis.recognition : null;
@@ -411,6 +411,84 @@ function render(host, data){
     </div>
     ${recLine?`<div style="margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5;">${recLine} Text recognition is <b>under progress and will improve soon</b>: accuracy rises with every update, delivered in increments. The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</div>`:''}
     ${foot(pg,'One-page scorecard · improvement plan follows')}
+  </section>`);
+
+  /* ---------- PAGE · YOUR WRITING IN PLAIN WORDS (issues #12/#21) ----------
+     The plain-language layer: six groups named after what the writer sees
+     on their own page, phrased as questions a teacher would say out loud,
+     plus the two coach-protocol aspects a single scan cannot score
+     (posture, page-to-page). Every headline row keeps its technical
+     factors in small print, so nothing is hidden, only layered.
+     Fallback mapping must track backend/plain_groups.py. */
+  const PLAIN_FALLBACK = [
+    {id:'shapes', label:'Letter shapes',      question:'Are my letters the right shape, and closed where they should be?', factors:[1,2,3,19]},
+    {id:'sizes',  label:'Letter sizes',       question:'Are my letters the same size? Do tall letters stand tall and tails hang below?', factors:[5,6]},
+    {id:'spaces', label:'Spaces and gaps',    question:'Do my words and letters have enough room? Did I leave a margin?', factors:[8,9,10]},
+    {id:'line',   label:'Staying on the line',question:'Does my writing sit on the line and stay straight across the page?', factors:[7,11,12]},
+    {id:'pen',    label:'Pen control',        question:'Are my strokes smooth and steady, not shaky or pressed too hard?', factors:[4,13,14,15,16]},
+    {id:'read',   label:'Easy to read',       question:'Can someone else read my page easily?', factors:[17,18,20]},
+  ];
+  const plainGroups = analysis.plainGroups || PLAIN_FALLBACK.map(g=>{
+    const fs = g.factors.map(n=>analysis.results.find(r=>r.n===n)).filter(Boolean);
+    const live = fs.filter(isLive);
+    const avg = live.length ? live.reduce((a,f)=>a+f.score,0)/live.length : null;
+    return { id:g.id, label:g.label, question:g.question,
+      score: avg==null?null:Math.round(avg*10)/10,
+      band: avg==null?null:bandOf(avg),
+      // Pen-pending IMU factors (conf==='imu' && !imuMeasured) aren't
+      // "estimated from the photo" — they simply weren't read yet, so
+      // they're excluded from the estimated flag same as isLive does.
+      estimated: fs.some(f=>f.conf!=='measured' && f.conf!=='imu'),
+      factors: fs.map(f=>({n:f.n,name:f.name,score:isLive(f)?f.score:null,unmeasured:!!f.unmeasured})) };
+  });
+  const coachRows = (analysis.coachView && analysis.coachView.rows) || plainGroups.map(g=>({
+    id:g.id, label:g.label, question:g.question, score:g.score, band:g.band, measurable:true,
+    note:g.estimated?'estimated from the photo':null,
+  })).concat([
+    {id:'posture', label:'Posture', question:'How do I sit and hold the pen while writing?', score:null, band:null, measurable:false, note:'Not visible in a scan. The Vahini pen senses it through pen-angle steadiness.'},
+    {id:'pages', label:'Page to page', question:'Does my writing stay the same, or change after two or three pages?', score:null, band:null, measurable:false, note:'Scan 2-3 pages as one assessment to measure this (endurance).'},
+  ]);
+  pg=P();
+  const gById = {}; plainGroups.forEach(g=>{ gById[g.id]=g; });
+  const plainRows = coachRows.map(row=>{
+    const g = gById[row.id];
+    const chips = g ? g.factors.map(f=>`<span style="display:inline-block;font-size:9px;color:var(--muted);background:var(--paper-2);border:1px solid var(--hair);border-radius:99px;padding:1px 7px;margin:1px 2px 0 0;">${esc(f.name)}${f.score!=null?' '+f.score.toFixed(1):' —'}</span>`).join('') : '';
+    const scoreCell = row.score!=null
+      ? `<b style="font-variant-numeric:tabular-nums;font-size:13px;">${row.score.toFixed(1)}</b><span style="color:var(--muted);font-size:9.5px;">/10</span>`
+      : `<span style="color:var(--muted);font-size:9.5px;">—</span>`;
+    const bandCell = row.band
+      ? `<span style="color:${BAND_COLOR[row.band]};font-weight:800;font-size:10px;white-space:nowrap;">${BAND_STARS[row.band]} ${BAND_LABEL[row.band]}</span>`
+      : `<span style="color:var(--muted);font-size:9px;">${esc(row.note||'')}</span>`;
+    return `<tr>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);vertical-align:top;">
+        <b style="font-size:11.5px;">${esc(row.label)}</b>
+        <div style="font-size:9.5px;color:var(--ink-2);margin-top:1px;">${esc(row.question)}</div>
+        ${chips?`<div style="margin-top:2px;">${chips}</div>`:''}
+        ${row.measurable&&row.note?`<div style="font-size:8.5px;color:var(--muted);margin-top:1px;">${esc(row.note)}</div>`:''}
+      </td>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:center;vertical-align:top;white-space:nowrap;">${scoreCell}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top;">${bandCell}</td>
+      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:center;vertical-align:top;color:var(--muted);font-size:11px;">____</td>
+    </tr>`;
+  }).join('');
+  const thp = 'padding:6px 8px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--ink);text-align:left;';
+  const coachTotal = (analysis.coachView && analysis.coachView.measuredTotal!=null)
+    ? `${analysis.coachView.measuredTotal.toFixed(1)} / ${analysis.coachView.measuredOutOf}` : null;
+  pages.push(`<section class="page" data-screen-label="Plain words">
+    ${head('Your writing, in plain words')}
+    <div class="sec-title"><div><div class="eyebrow">Six things you can see on your own page: the details follow later</div><h2>Your writing, in plain words</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+    <p class="lead" style="max-width:88%;margin-bottom:10px;">Coaches score a page by asking eight plain questions. Here are the analyser's answers for ${rc.you==='you'?'your':esc(name)+'\u2019s'} page: and an empty column to write <b>your own marks out of 10</b> before you peek. Where your marks and the measured marks disagree is exactly where practice pays fastest. The small print under each row lists the measured factors behind the headline, scored in detail on the pages that follow.</p>
+    <table style="width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--hair);border-radius:12px;overflow:hidden;">
+      <thead><tr>
+        <th style="${thp}">What to look at</th><th style="${thp}text-align:center;">Measured</th><th style="${thp}">Band</th><th style="${thp}text-align:center;">Your marks /10</th>
+      </tr></thead>
+      <tbody>${plainRows}</tbody>
+    </table>
+    <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+      ${coachTotal?`<div style="font-size:11px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;"><b>Measured total: ${coachTotal}</b> across the aspects a photo can score. Add your own eight marks out of 80 and compare.</div>`:''}
+      <div style="font-size:10px;color:var(--muted);line-height:1.5;flex:1;min-width:220px;">Scoring the page yourself first is the coaches' trick: from tomorrow you write consciously, and most writers see a real change within a week or ten days. Re-scan then and watch both columns move.</div>
+    </div>
+    ${foot(pg,'Plain words first · every headline traces to measured factors')}
   </section>`);
 
   /* ---------- IMU CAPTURE & SIGNALS (pen mode only: page 2) ---------- */
