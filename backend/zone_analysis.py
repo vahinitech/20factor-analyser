@@ -52,7 +52,7 @@ _DESCENDER_RE = re.compile(r"[gjpqy]")
 _LATIN_RE = re.compile(r"[A-Za-z]")
 
 
-def _binarise(crop):
+def binarise(crop):
     """Iterative midpoint threshold (Ridler-Calvard style), numpy only.
     Returns a boolean ink mask (True = ink)."""
     lo, hi = float(crop.min()), float(crop.max())
@@ -71,7 +71,7 @@ def _binarise(crop):
     return crop <= thr
 
 
-def _dense_band(profile):
+def dense_band(profile):
     """Longest contiguous run of rows at >= DENSE_FRAC of peak density:
     the middle-zone (x-height) band."""
     peak = float(profile.max())
@@ -106,12 +106,12 @@ def line_zone_bands(gray, box):
     if y1 - y0 < MIN_XHEIGHT_PX:
         return None
 
-    ink = _binarise(gray[y0:y1, x0:x1])
+    ink = binarise(gray[y0:y1, x0:x1])
     profile = ink.sum(axis=1).astype(np.float64)
     if float(profile.max()) < 3.0:
         return None
 
-    band = _dense_band(profile)
+    band = dense_band(profile)
     if band is None:
         return None
     midline, baseline = band

@@ -16,6 +16,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from tbar_analysis import analyze_tbars
 from zone_analysis import analyze_zones, zone_score
 
 try:
@@ -103,6 +104,7 @@ class AnalysisResult:
     coach_view: dict = None
     baseline_drift: dict = None
     zone_profile: dict = None
+    tbar_profile: dict = None
 
     def to_dict(self) -> dict:
         return {
@@ -118,6 +120,7 @@ class AnalysisResult:
             "coachView": self.coach_view,
             "baselineDrift": self.baseline_drift,
             "zoneProfile": self.zone_profile,
+            "tbarProfile": self.tbar_profile,
         }
 
 
@@ -601,6 +604,15 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             "available": False,
             "reason": f"zone analysis failed: {e}",
         }
+    # Cross-bar craft rule (double-t shared bar, t-bar overshoot):
+    # advisory observations from tbar_analysis.py - they feed evidence
+    # on factors 16 and 1, never silently change a score.
+    tbars = None
+    try:
+        tbars = analyze_tbars(gray, lines)
+    except Exception:
+        tbars = None
+    tbar_ok = bool(tbars and tbars.get("available"))
     zone_based = bool(zones and zones.get("available"))
     if zone_based:
         zs = zone_score(zones)
@@ -658,6 +670,24 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             )
             if zones.get("flags"):
                 evidence += f" Flags: {', '.join(zones['flags'])}."
+        if (
+            n == 16
+            and tbar_ok
+            and (tbars["sharedBars"] or tbars["separateBars"])
+        ):
+            evidence += (
+                " Cross-bar check: "
+                f"{tbars['sharedBars']} shared double-t bar(s), "
+                f"{tbars['separateBars']} crossed with separate "
+                "lifts (one extended bar per side-by-side tt saves "
+                "a pen lift)."
+            )
+        if n == 1 and tbar_ok and tbars["overshoots"]:
+            evidence += (
+                f" Cross-bar check: {tbars['overshoots']} t-bar(s) "
+                "ride over the neighbouring tall letter - limit the "
+                "bar to the t stem."
+            )
         results.append(
             FactorScore(
                 n=n,
@@ -799,4 +829,9 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         coach_view=coach,
         baseline_drift=baseline_drift,
         zone_profile=zone_profile,
+        tbar_profile=(
+            tbars
+            if tbars is not None
+            else {"available": False, "reason": "analysis unavailable"}
+        ),
     )
