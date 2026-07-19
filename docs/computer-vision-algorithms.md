@@ -385,14 +385,16 @@ A handwriting coach's cursive lesson, measured from ink:
 * **Two t's side by side** (bottle, little, butter): the craft is **one
   extended cross bar** across both stems - two separate bars means an
   unnecessary extra pen lift.
-* **Two t's apart** in a word (that): each t is crossed on its own.
 * **A t beside a tall letter** ("at least" -> tl): the bar must stay on
   the t stem, not ride over the neighbouring ascender.
 
 **Gate first, geometry second.** A line is only examined when its OCR
 text (spaces stripped, so "at least" counts) contains a `tt` or a
 t-beside-tall-letter pattern - an `ll` can never masquerade as a
-double-t because the gate never opens for it. Then, per line: binarise
+double-t because the gate never opens for it. Only side-by-side stem
+pairs close enough to plausibly share a bar are classified; t's that
+sit apart in a word with no adjacent tall-stem pair are out of scope,
+not asserted as "crossed on its own". Then, per line: binarise
 the crop, find the middle zone with the same dense-band profile as the
 zone rule (§9), take **tall stems** (column runs whose ink fills most of
 the ascender band) and **bar runs** (horizontal ink runs at least half

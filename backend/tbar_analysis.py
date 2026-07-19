@@ -2,15 +2,22 @@
 # (c) 2026 Vahini Technologies.
 """Cross-bar (t-bar) craft check, from a handwriting coach's lesson.
 
-The rule being measured (coach transcript, Jul 2026):
+The rule being measured (coach transcript, Jul 2026), for the two
+patterns this module actually gates on and classifies - a side-by-side
+pair of tall stems close enough (within PAIR_GAP_XH) to plausibly
+share a bar:
 
 * Two t's side by side (bottle, little, butter): ONE extended cross
   bar across both stems is the craft - two separate bars means an
   unnecessary extra pen lift.
-* Two t's apart in the word (that): each t is crossed on its own; a
-  shared bar is impossible and each stem should carry one.
-* A t followed by a tall letter (at least -> "tl"): the bar must stay
-  on the t stem and not ride over the neighbouring ascender.
+* A t beside another tall letter (at least -> "tl", or "th"/"tk"/"tb"
+  and their mirror): the bar must stay on the t stem and not ride over
+  the neighbouring ascender.
+
+This does not attempt to verify t's that sit apart in a word (with no
+adjacent tall-stem pair to examine, e.g. two t's separated by short
+letters) - those are simply out of scope, not asserted as "crossed on
+its own".
 
 Pure numpy, same conventions as zone_analysis.py: gated on the OCR
 text actually containing the letter patterns, honest availability
@@ -22,7 +29,7 @@ import re
 
 import numpy as np
 
-from zone_analysis import MIN_XHEIGHT_PX, _binarise, _dense_band
+from zone_analysis import INK_FRAC, MIN_XHEIGHT_PX, binarise, dense_band
 
 # Words where the rule applies, from the OCR text (lowercased).
 _TT_RE = re.compile(r"tt")
@@ -113,18 +120,18 @@ def line_tbar_events(gray, box):
     if y1 - y0 < MIN_XHEIGHT_PX or x1 <= x0:
         return []
 
-    ink = _binarise(gray[y0:y1, x0:x1])
+    ink = binarise(gray[y0:y1, x0:x1])
     profile = ink.sum(axis=1).astype(np.float64)
     if float(profile.max()) < 3.0:
         return []
-    band = _dense_band(profile)
+    band = dense_band(profile)
     if band is None:
         return []
     midline, baseline = band
     h_m = baseline - midline + 1
     if h_m < MIN_XHEIGHT_PX:
         return []
-    meaningful = profile >= max(2.0, float(profile.max()) * 0.08)
+    meaningful = profile >= max(2.0, float(profile.max()) * INK_FRAC)
     rows = np.nonzero(meaningful)[0]
     asc_top = int(rows[0])
     if (midline - asc_top) < int(h_m * 0.5):
@@ -189,15 +196,24 @@ def analyze_tbars(gray, lines):
 
     counts = {"shared": 0, "separate": 0, "overshoot": 0, "contained": 0}
     lines_used = 0
-    for l in tt_lines + tl_lines:
-        b = l.get("box")
-        if not b:
-            continue
-        events = line_tbar_events(gray, b)
-        if events:
-            lines_used += 1
-        for e in events:
-            counts[e] += 1
+    for group, is_tl_gated in ((tt_lines, False), (tl_lines, True)):
+        for l in group:
+            b = l.get("box")
+            if not b:
+                continue
+            events = line_tbar_events(gray, b)
+            if events:
+                lines_used += 1
+            for e in events:
+                if is_tl_gated and e == "shared":
+                    # "shared" is only meaningful for a genuine adjacent
+                    # double-t pair. A tl-gated line (t beside a tall,
+                    # non-t letter) has no second t to legitimately
+                    # share a bar with, so a bar that fully crosses
+                    # both stems is really riding over the neighbour:
+                    # an overshoot, not the double-t craft.
+                    e = "overshoot"
+                counts[e] += 1
 
     if sum(counts.values()) == 0:
         return {

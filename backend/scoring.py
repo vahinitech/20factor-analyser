@@ -670,7 +670,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             )
             if zones.get("flags"):
                 evidence += f" Flags: {', '.join(zones['flags'])}."
-        if n == 16 and tbar_ok:
+        if (
+            n == 16
+            and tbar_ok
+            and (tbars["sharedBars"] or tbars["separateBars"])
+        ):
             evidence += (
                 " Cross-bar check: "
                 f"{tbars['sharedBars']} shared double-t bar(s), "

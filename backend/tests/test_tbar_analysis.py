@@ -160,6 +160,30 @@ def test_overshoot_page_flags_the_mistake():
     assert "t-bar-overshoot" in out["flags"]
 
 
+def test_tl_line_bar_fully_crossing_neighbour_is_reclassified_overshoot():
+    # "at least" is tl-gated (t beside a tall, non-t letter), not a
+    # genuine double-t pair. A bar that fully crosses BOTH stems would
+    # be classified "shared" by the per-line geometry (it has no way
+    # to know the word), but aggregation must remap that to
+    # "overshoot" for tl-gated lines: there's no second t to share a
+    # bar with, so a full-span bar is riding over the neighbour.
+    page, lines = _make_line(
+        bars=[(150, 210)], stems=[160, 200], text="at least"
+    )
+    # Confirm the per-line geometry alone reports "shared" (it can't
+    # see the tt-vs-tl distinction), so the test actually exercises the
+    # aggregation remap and not some other code path.
+    events = line_tbar_events(page, lines[0]["box"])
+    assert "shared" in events
+
+    out = analyze_tbars(page, lines)
+    assert out["available"] is True
+    assert out["overshoots"] >= 1
+    assert out["sharedBars"] == 0
+    assert "t-bar-overshoot" in out["flags"]
+    assert "double-t-single-bar" not in out["flags"]
+
+
 def test_ll_cannot_masquerade_as_tt():
     # two tall stems, no bars, text without tt/tl patterns ("small"
     # has ll but the gate needs a t next to it) -> unavailable
