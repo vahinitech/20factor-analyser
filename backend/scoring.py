@@ -16,6 +16,8 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from finishing_letters import analyze_finishing_letters
+from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
 from zone_analysis import analyze_zones, zone_score
 
@@ -105,6 +107,8 @@ class AnalysisResult:
     baseline_drift: dict = None
     zone_profile: dict = None
     tbar_profile: dict = None
+    style_profile: dict = None
+    coach_tips: list = None
 
     def to_dict(self) -> dict:
         return {
@@ -121,6 +125,8 @@ class AnalysisResult:
             "baselineDrift": self.baseline_drift,
             "zoneProfile": self.zone_profile,
             "tbarProfile": self.tbar_profile,
+            "styleProfile": self.style_profile,
+            "coachTips": self.coach_tips,
         }
 
 
@@ -613,6 +619,19 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     except Exception:
         tbars = None
     tbar_ok = bool(tbars and tbars.get("available"))
+    # Writing-style classification (cursive / print / mixed) and the
+    # ten-finishing-letters tip - both coach lessons, both advisory.
+    style = None
+    try:
+        style = analyze_style(gray, lines)
+    except Exception:
+        style = None
+    style_ok = bool(style and style.get("available"))
+    finishing = None
+    try:
+        finishing = analyze_finishing_letters(lines)
+    except Exception:
+        finishing = None
     zone_based = bool(zones and zones.get("available"))
     if zone_based:
         zs = zone_score(zones)
@@ -670,6 +689,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             )
             if zones.get("flags"):
                 evidence += f" Flags: {', '.join(zones['flags'])}."
+        if n == 15 and style_ok:
+            sh = style["shares"]
+            evidence += (
+                f" Style check: {style['verdict']} "
+                f"(cursive {int(sh['cursive'] * 100)}%, print "
+                f"{int(sh['print'] * 100)}%, mixed "
+                f"{int(sh['mixed'] * 100)}% of words)."
+            )
+            if style["verdict"] == "mixed":
+                evidence += (
+                    " Joining in places and lifting in others makes "
+                    "words break apart - pick cursive or print and "
+                    "stay with it."
+                )
         if (
             n == 16
             and tbar_ok
@@ -817,6 +850,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     plain = build_plain_groups(results)
     coach = build_coach_view(plain)
 
+    # Coach tips: lesson-derived advice addressed to this page's own
+    # words. Advisory report content, never a score input.
+    coach_tips = []
+    if finishing and finishing.get("available"):
+        coach_tips.append(finishing["tip"])
+    if style_ok and style.get("advice"):
+        coach_tips.append(
+            {
+                "id": "one-style-only",
+                "title": "Cursive or print - never both",
+                "text": style["advice"],
+            }
+        )
+
     return AnalysisResult(
         results=results,
         sections=sections,
@@ -834,4 +881,10 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             if tbars is not None
             else {"available": False, "reason": "analysis unavailable"}
         ),
+        style_profile=(
+            style
+            if style is not None
+            else {"available": False, "reason": "analysis unavailable"}
+        ),
+        coach_tips=coach_tips,
     )
