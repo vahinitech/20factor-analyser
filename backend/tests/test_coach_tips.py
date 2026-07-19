@@ -11,7 +11,13 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from coach_tips import MAX_TIPS, TIP_LIBRARY, select_tips  # noqa: E402
+from coach_tips import (  # noqa: E402
+    MAX_TIPS,
+    PILLARS,
+    TIP_LIBRARY,
+    pillar_summary,
+    select_tips,
+)
 
 
 def _ctx(scores=None, style=None, finishing=None):
@@ -242,14 +248,75 @@ def test_s_join_tip_is_cursive_only():
 
 
 def test_calligraphy_tip_is_low_priority_general_guidance():
-    # relevant on any page, but base priority is the lowest in the
-    # coaching track: craft tips with evidence must outrank it
+    # relevant on any page, but never the headline: craft tips with
+    # page evidence must outrank it
     ctx = _ctx(scores={1: 2.0}) | {"text": "the zoo was amazing"}
     ids = _ids(ctx)
     assert "no-calligraphy-fonts" not in ids[:1]
-    # on a strong page with no craft evidence it can surface
-    plain = select_tips(_ctx(scores={13: 2.0}))[0]
-    assert any(t["id"] == "no-calligraphy-fonts" for t in plain)
+    # near the bottom of the always-relevant coaching track by design:
+    # it only surfaces on pages with room in the report
+    neutral = _ctx()
+    always = {
+        t["id"]: t["priority"](neutral)
+        for t in TIP_LIBRARY
+        if t.get("kind", "coach") == "coach" and t["relevant"](neutral)
+    }
+    assert always["no-calligraphy-fonts"] == min(always.values())
+
+
+# --- the TIP diagnosis (Techniques / Interest / Practice) --------------------
+
+
+def test_every_tip_declares_a_valid_pillar():
+    for tip in TIP_LIBRARY:
+        assert tip.get("pillar") in PILLARS, tip["id"]
+
+
+def test_selected_cards_carry_their_pillar():
+    selected, _ = select_tips(_ctx(scores={13: 2.0}))
+    assert selected
+    for tip in selected:
+        assert tip["pillar"] in PILLARS
+
+
+def test_pillar_summary_points_at_the_short_leg():
+    # weak craft, decent speed: the technique leg is short
+    weak_craft = pillar_summary(_ctx(scores={1: 2.0, 3: 6.0, 13: 8.0}))
+    assert weak_craft["focus"] == "technique"
+    assert weak_craft["pillars"]["technique"]["score"] == 2.0
+    # sound craft, weak speed: the practice leg is short
+    weak_practice = pillar_summary(_ctx(scores={1: 9.0, 3: 9.0, 13: 3.0}))
+    assert weak_practice["focus"] == "practice"
+
+
+def test_pillar_summary_never_pretends_to_measure_interest():
+    s = pillar_summary(_ctx(scores={1: 2.0, 13: 2.0}))
+    interest = s["pillars"]["interest"]
+    assert interest["measured"] is False
+    assert interest["score"] is None
+    assert "only you know" in interest["note"]
+    # and with no scores at all, nothing is invented
+    empty = pillar_summary(_ctx())
+    assert empty["focus"] is None
+
+
+def test_skill_card_floats_on_a_weak_page():
+    # a page weak across the board needs the mindset card most
+    weak = select_tips(_ctx(scores={1: 2.0, 3: 2.0, 13: 8.0}))[0]
+    assert any(t["id"] == "skill-not-subject" for t in weak)
+    card = [t for t in weak if t["id"] == "skill-not-subject"][0]
+    assert "skill gap" in card["why"]
+
+
+def test_orwell_card_is_english_only():
+    english = _ctx(scores={13: 2.0}) | {"text": "the answer was long"}
+    assert "orwell-six-rules" in [
+        t["id"] for t in select_tips(english, max_tips=6)[0]
+    ]
+    telugu = _ctx(scores={13: 2.0}) | {"text": "చేతిరాత అందం " * 10}
+    assert "orwell-six-rules" not in [
+        t["id"] for t in select_tips(telugu, max_tips=6)[0]
+    ]
 
 
 def test_tips_carry_handwritten_examples():

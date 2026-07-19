@@ -88,9 +88,69 @@ def _is_cursive_page(ctx):
     )
 
 
+def _avg_present(ctx):
+    """Average of the scores actually measured (missing page = strong)."""
+    scores = [float(v) for v in (ctx.get("scores") or {}).values()]
+    return sum(scores) / len(scores) if scores else 10.0
+
+
+# --- the TIP diagnosis -------------------------------------------------------
+# Handwriting is a skill, and skills stand on three legs - the coach's
+# acronym: T-echniques, I-nterest, P-ractice. Each tip declares the
+# pillar it strengthens, and pillar_summary() reads the measured
+# factors to say which leg is short for THIS page. Honesty rule:
+# interest cannot be measured from a photograph, and the summary says
+# so instead of pretending.
+
+PILLARS = ("technique", "interest", "practice")
+
+# Which measured factors evidence each pillar. Technique = the craft
+# of the forms (Letter Formation F1, Consistency F3, Stroke Continuity
+# F15, t-bar craft F16); Practice = automaticity under time (Speed
+# Consistency F13).
+_PILLAR_FACTORS = {"technique": (1, 3, 15, 16), "practice": (13,)}
+
+
+def pillar_summary(ctx):
+    """Diagnose the short TIP leg from the measured factor scores.
+
+    Returns {acronym, focus, pillars:{technique, interest, practice}}.
+    Each pillar carries measured (bool) and score (worst measured
+    factor of that pillar, or None). focus is the weaker measured
+    pillar - technique wins ties, because a technique fault is usually
+    the cheapest to fix. Interest is never scored from a photo."""
+    scores = ctx.get("scores", {}) or {}
+    pillars = {}
+    for pillar, ns in _PILLAR_FACTORS.items():
+        present = [float(scores[n]) for n in ns if n in scores]
+        pillars[pillar] = {
+            "measured": bool(present),
+            "score": round(min(present), 1) if present else None,
+        }
+    pillars["interest"] = {
+        "measured": False,
+        "score": None,
+        "note": "not measurable from a photo - only you know this one",
+    }
+    measured = {
+        p: d["score"] for p, d in pillars.items() if d["score"] is not None
+    }
+    focus = (
+        min(measured, key=lambda p: (measured[p], p != "technique"))
+        if measured
+        else None
+    )
+    return {
+        "acronym": "TIP - Techniques, Interest, Practice",
+        "focus": focus,
+        "pillars": pillars,
+    }
+
+
 TIP_LIBRARY = [
     {
         "id": "one-style-only",
+        "pillar": "technique",
         "title": "Cursive or print - never both",
         "relevant": _style_relevant,
         # The coach calls mixing the one real mistake: it must outrank
@@ -111,6 +171,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "finishing-letters",
+        "pillar": "technique",
         "title": "The 10 letters that improve your handwriting",
         "relevant": _finishing_relevant,
         # A craft tip: floats up when Letter Formation (F1) or letter
@@ -131,6 +192,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "speed-three-ways",
+        "pillar": "practice",
         "title": "Improve your writing speed",
         # Speed practice applies to every writer; urgency scales with
         # the measured Speed Consistency score (F13).
@@ -160,6 +222,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "magic-strokes",
+        "pillar": "practice",
         "title": "Two magic strokes behind every Indic script",
         # The letterforms of Telugu, Hindi, Tamil, Kannada and English
         # are all built from two circular strokes; drilling both
@@ -191,6 +254,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "letter-x-two-curves",
+        "pillar": "technique",
         "title": "The letter x: two curves, not two sticks",
         # Craft tip for pages that actually write x. A stick-built x is
         # the first letter to collapse under speed (toward an n, or a
@@ -230,6 +294,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "letter-r-vs-s",
+        "pillar": "technique",
         "title": "r and s: twins until the finish",
         # In words like Mars the two letters blur together because both
         # start with the same entry stroke. Gated to pages that write
@@ -260,6 +325,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "c-family-rhythm",
+        "pillar": "technique",
         "title": "Five letters, one c: the rhythm secret",
         # a, d, g, q and o are all built on the same c. Identical c's
         # across them read as rhythm; varied c's unsettle the word.
@@ -289,6 +355,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "letter-z-easy-build",
+        "pillar": "technique",
         "title": "The easiest lowercase z",
         # The last letter, but not least: gated to pages that write z.
         # Like the x tip, hurry exposes a badly built z, so weak Speed
@@ -318,6 +385,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "joining-s-outside",
+        "pillar": "technique",
         "title": "Join into s from the outside, never the inside",
         # Cursive-specific: an inside join collapses the s. Gated to
         # pages that actually join their letters; urgency follows
@@ -347,6 +415,7 @@ TIP_LIBRARY = [
     },
     {
         "id": "no-calligraphy-fonts",
+        "pillar": "technique",
         "title": "Handwriting is not calligraphy",
         # General guidance, deliberately low priority: it surfaces on
         # pages with room in the report, and floats a little when
@@ -378,7 +447,102 @@ TIP_LIBRARY = [
         ],
     },
     {
+        "id": "skill-not-subject",
+        "pillar": "interest",
+        "title": "Handwriting is a skill, not a subject",
+        # The TIP mindset card: floats up when the whole page is weak,
+        # because a low report reads like a verdict unless someone
+        # says out loud that skills are learnable.
+        "relevant": lambda ctx: True,
+        "priority": lambda ctx: 1.8 + (10.0 - _avg_present(ctx)) * 0.35,
+        "text": lambda ctx: (
+            "Handwriting is not a school subject - it is a skill, "
+            "like cycling or swimming, and anybody at any age can "
+            "improve it. Skills stand on three legs, and TIP is the "
+            "acronym: T for Techniques (was the method you were "
+            "taught actually sound?), I for Interest (the skills you "
+            "cared about are the ones you mastered), and P for "
+            "Practice (the hours your other skills got and "
+            "handwriting did not). When one leg is short, the page "
+            "shows it; when all three are justified, the handwriting "
+            "comes up to the mark. This report's job is to point at "
+            "the short leg."
+        ),
+        "why": lambda ctx: (
+            "shown because the average measured score is "
+            f"{_avg_present(ctx):.1f}/10 - a skill gap, never a "
+            "talent gap"
+            if _avg_present(ctx) < 6.0
+            else "shown as the lens for every card in this corner"
+        ),
+        "examples": lambda ctx: [
+            "T techniques   I interest   P practice",
+        ],
+    },
+    {
+        "id": "write-every-day",
+        "pillar": "practice",
+        "title": "Write every day - the oldest rule on the poster",
+        # The practice pillar's habit card, paraphrasing the habit
+        # rules every classroom writing poster agrees on.
+        "relevant": lambda ctx: True,
+        "priority": lambda ctx: 1.7 + (10.0 - _score(ctx, 13)) * 0.4,
+        "text": lambda ctx: (
+            "The oldest rule on every classroom writing poster is the "
+            "truest one for handwriting too: if you write every day, "
+            "you get better at writing every day. Make it a routine - "
+            "the same ten minutes at the same table beats an hour "
+            "once a week. Keep a notebook and a spare pen within "
+            "reach so the routine never has an excuse, and write "
+            "about anything at all: walks, dishes, the day. The "
+            "scores in this report move with the pages you fill."
+        ),
+        "why": lambda ctx: (
+            "shown because Speed Consistency scored "
+            f"{_score(ctx, 13):.1f}/10 - daily minutes are what "
+            "make a hand automatic"
+            if _score(ctx, 13) < 7.0
+            else "shown as the practice habit behind every skill"
+        ),
+        "examples": lambda ctx: [
+            "ten minutes  same table  every day",
+            "notebook + spare pen, always",
+        ],
+    },
+    {
+        "id": "orwell-six-rules",
+        "pillar": "technique",
+        "title": "Orwell's six rules are speed rules for your hand",
+        # Word craft meets hand craft: shorter, plainer sentences are
+        # literally fewer strokes. English-prose advice, so gated to
+        # Latin pages.
+        "relevant": lambda ctx: _latin_share(ctx) >= 0.9,
+        "priority": lambda ctx: 1.5 + (10.0 - _score(ctx, 13)) * 0.25,
+        "text": lambda ctx: (
+            "George Orwell's famous rules for writers are also speed "
+            "rules for your hand: never use a long word where a short "
+            "one will do; if a word can be cut, cut it; prefer the "
+            "active voice; skip worn-out figures of speech and "
+            "needless jargon - and break any of these rules before "
+            "writing something ugly. Every sentence you shorten is "
+            "strokes your hand never has to make, so plain wording "
+            "shows up on paper as faster, fresher handwriting - "
+            "especially against an exam clock."
+        ),
+        "why": lambda ctx: (
+            "shown because Speed Consistency scored "
+            f"{_score(ctx, 13):.1f}/10 - shorter words are the "
+            "cheapest speed you will ever buy"
+            if _score(ctx, 13) < 7.0
+            else "shown as word-craft that quietly helps the hand"
+        ),
+        "examples": lambda ctx: [
+            "short words - active voice - cut the extra",
+        ],
+    },
+    {
         "id": "graphology-n",
+        "pillar": "interest",
         "kind": "fun",
         "title": "Just for fun: what an old graphologist would read "
         "in your letter n",
@@ -424,6 +588,7 @@ def select_tips(ctx, max_tips=MAX_TIPS):
             card = {
                 "id": tip["id"],
                 "kind": tip.get("kind", "coach"),
+                "pillar": tip.get("pillar", "technique"),
                 "title": tip["title"],
                 "text": tip["text"](ctx),
                 "why": tip["why"](ctx),

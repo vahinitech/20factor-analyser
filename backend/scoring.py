@@ -16,7 +16,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
-from coach_tips import select_tips
+from coach_tips import pillar_summary, select_tips
 from finishing_letters import analyze_finishing_letters
 from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
@@ -110,6 +110,7 @@ class AnalysisResult:
     tbar_profile: dict = None
     style_profile: dict = None
     coach_tips: list = None
+    tip_pillars: dict = None
 
     def to_dict(self) -> dict:
         return {
@@ -128,6 +129,7 @@ class AnalysisResult:
             "tbarProfile": self.tbar_profile,
             "styleProfile": self.style_profile,
             "coachTips": self.coach_tips,
+            "tipPillars": self.tip_pillars,
         }
 
 
@@ -856,14 +858,16 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # measured scores and keeps only the top few - each with a 'why'
     # naming the measurement that earned it the slot. Advisory report
     # content, never a score input.
-    coach_tips, _tip_library = select_tips(
-        {
-            "scores": {r.n: r.score for r in results},
-            "style": style,
-            "finishing": finishing,
-            "text": " ".join(str(l.get("text", "") or "") for l in lines),
-        }
-    )
+    tip_ctx = {
+        "scores": {r.n: r.score for r in results},
+        "style": style,
+        "finishing": finishing,
+        "text": " ".join(str(l.get("text", "") or "") for l in lines),
+    }
+    coach_tips, _tip_library = select_tips(tip_ctx)
+    # The TIP diagnosis (Techniques / Interest / Practice): which leg
+    # of the skill is short on THIS page, from the measured factors.
+    tip_pillars = pillar_summary(tip_ctx)
 
     return AnalysisResult(
         results=results,
@@ -888,4 +892,5 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             else {"available": False, "reason": "analysis unavailable"}
         ),
         coach_tips=coach_tips,
+        tip_pillars=tip_pillars,
     )

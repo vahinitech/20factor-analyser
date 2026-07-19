@@ -480,6 +480,7 @@ class TestScoringDataclasses(unittest.TestCase):
                 "tbarProfile",
                 "styleProfile",
                 "coachTips",
+                "tipPillars",
             },
         )
         self.assertEqual(d["source"], "python")
