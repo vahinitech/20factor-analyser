@@ -319,6 +319,33 @@ def test_orwell_card_is_english_only():
     ]
 
 
+def test_slate_method_is_evidence_gated_remedial():
+    # tracing only makes sense when Letter Formation is measurably
+    # weak: a strong page (or an unmeasured one) never sees it
+    weak = select_tips(_ctx(scores={1: 3.0}), max_tips=8)[0]
+    assert "slate-method" in [t["id"] for t in weak]
+    card = [t for t in weak if t["id"] == "slate-method"][0]
+    assert "3.0/10" in card["why"]
+    assert card["pillar"] == "practice"
+    strong = select_tips(_ctx(scores={1: 9.0}), max_tips=8)[0]
+    assert "slate-method" not in [t["id"] for t in strong]
+    unmeasured = select_tips(_ctx(), max_tips=8)[0]
+    assert "slate-method" not in [t["id"] for t in unmeasured]
+
+
+def test_handwriting_vs_typing_stays_within_the_research():
+    selected = select_tips(_ctx(scores={13: 5.0}), max_tips=8)[0]
+    cards = [t for t in selected if t["id"] == "handwriting-vs-typing"]
+    assert cards, "motivation card missing"
+    card = cards[0]
+    assert card["pillar"] == "interest"
+    assert "by hand" in card["text"]
+    # the lesson's personality claims are deliberately NOT repeated:
+    # that would drift into graphology territory
+    assert "personality" not in card["text"].lower()
+    assert "marker of who you are" not in card["text"].lower()
+
+
 def test_tips_carry_handwritten_examples():
     # every selected card ships the examples the report draws in a
     # handwriting-style face - the tip is shown, not just told

@@ -339,7 +339,8 @@ TIP_LIBRARY = [
             "same c. When each of them carries an identically shaped "
             "c, the word gains a rhythm the eye reads as beautiful; "
             "when the c inside d is fatter than the c inside a, the "
-            "same word looks unsettled. Practise one honest c, then "
+            "same word looks unsettled. Always start these letters "
+            "with the c as their base: practise one honest c, then "
             "extend that exact c into a, into d, into g, into q, and "
             "close it into o. Keep the c the same size and shape "
             "across all five and the rhythm takes care of itself."
@@ -444,6 +445,65 @@ TIP_LIBRARY = [
         "examples": lambda ctx: [
             "daily hand: plain cursive or print",
             "fancy lettering: cards and titles only",
+        ],
+    },
+    {
+        "id": "slate-method",
+        "pillar": "practice",
+        "title": "The slate method: trace until it vanishes",
+        # A remedial technique, so it is evidence-gated: it only makes
+        # sense when Letter Formation is measurably weak - tracing a
+        # letter you already form well teaches nothing.
+        "relevant": lambda ctx: _score(ctx, 1) < 6.0,
+        "priority": lambda ctx: 2.0 + (10.0 - _score(ctx, 1)) * 0.2,
+        "text": lambda ctx: (
+            "One reason many young children struggle with letterforms "
+            "today is that writing slates fell out of use. The old "
+            "method still works: an adult writes the letter on a "
+            "slate in chalk, and the child traces over it again and "
+            "again with a slate pencil - absorbing not just the shape "
+            "but the hand of the person who wrote it. Then the second "
+            "trick: trace the chalk letter with a small damp piece of "
+            "cotton. The mark fades as the child traces, and when the "
+            "letter has completely vanished, it is truly learned. Ten "
+            "minutes of tracing beats an hour of correcting."
+        ),
+        "why": lambda ctx: (
+            "shown because Letter Formation scored "
+            f"{_score(ctx, 1):.1f}/10 - tracing is the fastest way "
+            "to rebuild a letterform"
+        ),
+        "examples": lambda ctx: [
+            "chalk letter - trace - trace again",
+            "damp cotton: when it vanishes, it is learned",
+        ],
+    },
+    {
+        "id": "handwriting-vs-typing",
+        "pillar": "interest",
+        "title": "Long live handwriting: what typing cannot give you",
+        # The motivation card from the research lesson. Claims kept to
+        # what the studies actually showed (stronger activation, better
+        # retention when writing by hand); no personality claims.
+        "relevant": lambda ctx: True,
+        "priority": lambda ctx: 1.65,
+        "text": lambda ctx: (
+            "Brain-imaging studies of young children learning letters "
+            "found far stronger brain activation when they wrote the "
+            "letters by hand than when they typed them - writing by "
+            "hand makes the brain process each shape deeply, which is "
+            "also why handwritten notes are remembered better than "
+            "typed ones. Typing is fine when it is necessary. But "
+            "every message, list or note you choose to write by hand "
+            "is free practice and a memory boost in one. Whenever you "
+            "get the chance, take the pen. Long live handwriting."
+        ),
+        "why": lambda ctx: (
+            "shown because every handwritten page is practice - and "
+            "memory - that typing can never replace"
+        ),
+        "examples": lambda ctx: [
+            "write one note by hand today",
         ],
     },
     {
