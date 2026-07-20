@@ -16,6 +16,11 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from plain_groups import build_coach_view, build_plain_groups
+from coach_tips import pillar_summary, select_tips
+from finishing_letters import analyze_finishing_letters
+from style_analysis import analyze_style
+from tbar_analysis import analyze_tbars
+from zone_analysis import analyze_zones, zone_score
 
 try:
     import cv2
@@ -102,6 +107,10 @@ class AnalysisResult:
     coach_view: dict = None
     baseline_drift: dict = None
     zone_profile: dict = None
+    tbar_profile: dict = None
+    style_profile: dict = None
+    coach_tips: list = None
+    tip_pillars: dict = None
 
     def to_dict(self) -> dict:
         return {
@@ -117,6 +126,10 @@ class AnalysisResult:
             "coachView": self.coach_view,
             "baselineDrift": self.baseline_drift,
             "zoneProfile": self.zone_profile,
+            "tbarProfile": self.tbar_profile,
+            "styleProfile": self.style_profile,
+            "coachTips": self.coach_tips,
+            "tipPillars": self.tip_pillars,
         }
 
 
@@ -576,6 +589,59 @@ def _score_factor_map(fx):
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     fx = _extract_features(arr, lines, layout)
     scores = _score_factor_map(fx)
+
+    # Three-zone letter-size rule (the coaches' 1:2 proportion): when the
+    # page supports it, Factor 6 is scored from measured zone geometry
+    # instead of the tall-letter-share proxy. zone_analysis.py.
+    zones = None
+    try:
+        if cv2 is not None:
+            gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
+        else:
+            # Same RGB->gray weights as classify.py's _gray, so zone
+            # measurement stays consistent whether or not cv2 is
+            # available in the environment.
+            gray = np.dot(
+                np.asarray(arr[..., :3], dtype=np.float64),
+                [0.299, 0.587, 0.114],
+            ).astype(np.uint8)
+        zones = analyze_zones(gray, lines)
+    except Exception as e:
+        # Keep the failure honest: zoneProfile.method should say WHY
+        # the proxy was used instead of silently swallowing it.
+        zones = {
+            "available": False,
+            "reason": f"zone analysis failed: {e}",
+        }
+    # Cross-bar craft rule (double-t shared bar, t-bar overshoot):
+    # advisory observations from tbar_analysis.py - they feed evidence
+    # on factors 16 and 1, never silently change a score.
+    tbars = None
+    try:
+        tbars = analyze_tbars(gray, lines)
+    except Exception:
+        tbars = None
+    tbar_ok = bool(tbars and tbars.get("available"))
+    # Writing-style classification (cursive / print / mixed) and the
+    # ten-finishing-letters tip - both coach lessons, both advisory.
+    style = None
+    try:
+        style = analyze_style(gray, lines)
+    except Exception:
+        style = None
+    style_ok = bool(style and style.get("available"))
+    finishing = None
+    try:
+        finishing = analyze_finishing_letters(lines)
+    except Exception:
+        finishing = None
+    zone_based = bool(zones and zones.get("available"))
+    if zone_based:
+        zs = zone_score(zones)
+        if zs is not None:
+            scores[6] = round(float(zs), 1)
+        else:
+            zone_based = False
     basis = {
         1: f"{fx['n_chars']} letters",
         2: f"{fx['n_words']} words",
@@ -612,6 +678,52 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         )
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
+        evidence = f"Server-side OCR/layout heuristic based on {detail}."
+        if n == 6 and zone_based:
+            parts = []
+            if zones.get("ascReach") is not None:
+                parts.append(f"ascenders reach {zones['ascReach']:.1f}x")
+            if zones.get("descReach") is not None:
+                parts.append(f"descenders reach {zones['descReach']:.1f}x")
+            evidence = (
+                "Measured zone bands over "
+                f"{zones['linesUsed']} lines: {', '.join(parts)} the "
+                "x-height (the 1:2 rule targets 2.0x)."
+            )
+            if zones.get("flags"):
+                evidence += f" Flags: {', '.join(zones['flags'])}."
+        if n == 15 and style_ok:
+            sh = style["shares"]
+            evidence += (
+                f" Style check: {style['verdict']} "
+                f"(cursive {int(sh['cursive'] * 100)}%, print "
+                f"{int(sh['print'] * 100)}%, mixed "
+                f"{int(sh['mixed'] * 100)}% of words)."
+            )
+            if style["verdict"] == "mixed":
+                evidence += (
+                    " Joining in places and lifting in others makes "
+                    "words break apart - pick cursive or print and "
+                    "stay with it."
+                )
+        if (
+            n == 16
+            and tbar_ok
+            and (tbars["sharedBars"] or tbars["separateBars"])
+        ):
+            evidence += (
+                " Cross-bar check: "
+                f"{tbars['sharedBars']} shared double-t bar(s), "
+                f"{tbars['separateBars']} crossed with separate "
+                "lifts (one extended bar per side-by-side tt saves "
+                "a pen lift)."
+            )
+        if n == 1 and tbar_ok and tbars["overshoots"]:
+            evidence += (
+                f" Cross-bar check: {tbars['overshoots']} t-bar(s) "
+                "ride over the neighbouring tall letter - limit the "
+                "bar to the t stem."
+            )
         results.append(
             FactorScore(
                 n=n,
@@ -624,7 +736,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 score100=int(round(score * 10)),
                 band=_band(score),
                 value=value,
-                evidence=f"Server-side OCR/layout heuristic based on {detail}.",
+                evidence=evidence,
                 based_on=basis.get(n),
             )
         )
@@ -691,24 +803,71 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 f"~{abs(drift_deg):.1f} deg across the page."
             )
 
-    # Zone profile (issue #21): the two things a coach actually checks,
-    # read from the same proxies that already score them — upper/lower
-    # reach from factor 6 (Ascender/Descender Control) and middle-zone
-    # stability from factor 5 (Size Consistency, i.e. letter-height
-    # consistency, used as the proxy for a steady x-height band).
-    zone_profile = {
-        "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
-        "middleStability": round(float(scores.get(5, 0.0)), 1),
-        "method": (
-            "proxy from tall-letter share and letter-height statistics; "
-            "per-zone geometry lands with character segmentation"
-        ),
-    }
+    # Zone profile (issue #21): the two things a coach actually checks —
+    # upper/lower reach (factor 6, Ascender/Descender Control) and
+    # middle-zone stability (factor 5, Size Consistency, i.e. letter-
+    # height consistency used as the proxy for a steady x-height band).
+    # Measured projection-profile zone bands are used when the page
+    # supports them, the proxy otherwise - the method field always says
+    # which one produced the numbers.
+    # Both branches always populate the same key set (measured keys are
+    # null/empty in the proxy case) so API consumers don't have to
+    # special-case the schema on zone_based; upperLowerReach is kept in
+    # both for backward compatibility with pre-measurement consumers.
+    if zone_based:
+        zone_profile = {
+            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+            "ascenderReach": zones.get("ascReach"),
+            "descenderReach": zones.get("descReach"),
+            "targetReach": zones.get("targetReach"),
+            "xHeightPx": zones.get("xHeightPx"),
+            "flags": zones.get("flags", []),
+            "middleStability": round(float(scores.get(5, 0.0)), 1),
+            "method": (
+                "measured: per-line ink projection profiles -> zone "
+                f"bands over {zones['linesUsed']} lines (1:2 rule)"
+            ),
+        }
+    else:
+        zone_profile = {
+            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
+            "ascenderReach": None,
+            "descenderReach": None,
+            "targetReach": None,
+            "xHeightPx": None,
+            "flags": [],
+            "middleStability": round(float(scores.get(5, 0.0)), 1),
+            "method": (
+                "proxy from tall-letter share and letter-height "
+                "statistics"
+                + (
+                    f" ({zones['reason']})"
+                    if zones and zones.get("reason")
+                    else ""
+                )
+            ),
+        }
 
     # Plain-language layer (issue #12) + the coaches' eight-aspect view
     # (issue #21). Presentation only: nothing above rescored.
     plain = build_plain_groups(results)
     coach = build_coach_view(plain)
+
+    # Coach tips: the library will hold hundreds of lesson-derived
+    # tips, so the engine (coach_tips.py) ranks them by this page's
+    # measured scores and keeps only the top few - each with a 'why'
+    # naming the measurement that earned it the slot. Advisory report
+    # content, never a score input.
+    tip_ctx = {
+        "scores": {r.n: r.score for r in results},
+        "style": style,
+        "finishing": finishing,
+        "text": " ".join(str(l.get("text", "") or "") for l in lines),
+    }
+    coach_tips, _tip_library = select_tips(tip_ctx)
+    # The TIP diagnosis (Techniques / Interest / Practice): which leg
+    # of the skill is short on THIS page, from the measured factors.
+    tip_pillars = pillar_summary(tip_ctx)
 
     return AnalysisResult(
         results=results,
@@ -722,4 +881,16 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         coach_view=coach,
         baseline_drift=baseline_drift,
         zone_profile=zone_profile,
+        tbar_profile=(
+            tbars
+            if tbars is not None
+            else {"available": False, "reason": "analysis unavailable"}
+        ),
+        style_profile=(
+            style
+            if style is not None
+            else {"available": False, "reason": "analysis unavailable"}
+        ),
+        coach_tips=coach_tips,
+        tip_pillars=tip_pillars,
     )
