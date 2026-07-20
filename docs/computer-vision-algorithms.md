@@ -209,13 +209,34 @@ wobble = RMS distance of letter bottoms off the line, ÷ x-height   # F7 baselin
 
 ---
 
-## 9. x-height & zone analysis
+## 9. x-height & zone analysis (the 1:2 letter-size rule)
 
 **What:** the height of a normal lowercase letter body (the height of "x"), used as the natural
 ruler so all measurements work at any writing size, plus the three vertical **zones**:
 upper (l, h, t), middle (a, o, e), lower (g, y, p).
-**How:** x-height = median letter height. A letter reaching well above the body band counts as
-upper-zone; below the fitted baseline, lower-zone. The balance of the three gives F6.
+**Why:** handwriting coaches teach letter size as one proportion: a 't' stands **two**
+x-heights tall, a 'g' hangs **two** x-heights deep (the 1:2 rule). The three classic
+mistakes are writing everything in one zone, over-reaching up, and over-reaching down.
+**How** (`backend/zone_analysis.py`, measured per line from ink):
+
+```
+binarise the line crop (iterative midpoint threshold)
+profile = ink pixels per row                       # horizontal projection
+middle zone = longest contiguous run of rows ≥ 40% of peak density
+midline = band top, baseline = band bottom, x-height = band height
+ascender top / descender bottom = outermost rows with meaningful ink
+ascender reach  = (upper + middle) / middle        # target 2.0
+descender reach = (lower + middle) / middle        # target 2.0
+```
+
+Aggregated over lines with medians (one bad detection cannot skew the page), the reach
+ratios score **F6** directly: full credit within ±0.35 of the 2.0 target, zero credit at
+±1.0, minus a consistency penalty when reach varies line to line. The coach's mistakes are
+named in the output as flags: `single-zone`, `upper-heavy`, `lower-heavy`. The report's
+evidence line shows the measured numbers ("ascenders reach 1.8x the x-height").
+Latin-script pages only: zone conventions differ for Indic scripts (matras occupy the
+zones differently), so other pages keep the tall-letter-share proxy and the
+`zoneProfile.method` field says which method produced the numbers.
 
 ---
 
@@ -357,6 +378,44 @@ Every finding ships with a crop of the writer's own ink as evidence.
 
 ---
 
+## 20. Cross-bar craft: the double-t rule (`tbar_analysis.py`)
+
+A handwriting coach's cursive lesson, measured from ink:
+
+* **Two t's side by side** (bottle, little, butter): the craft is **one
+  extended cross bar** across both stems - two separate bars means an
+  unnecessary extra pen lift.
+* **A t beside a tall letter** ("at least" -> tl): the bar must stay on
+  the t stem, not ride over the neighbouring ascender.
+
+**Gate first, geometry second.** A line is only examined when its OCR
+text (spaces stripped, so "at least" counts) contains a `tt` or a
+t-beside-tall-letter pattern - an `ll` can never masquerade as a
+double-t because the gate never opens for it. Only side-by-side stem
+pairs close enough to plausibly share a bar are classified; t's that
+sit apart in a word with no adjacent tall-stem pair are out of scope,
+not asserted as "crossed on its own". Then, per line: binarise
+the crop, find the middle zone with the same dense-band profile as the
+zone rule (§9), take **tall stems** (column runs whose ink fills most of
+the ascender band) and **bar runs** (horizontal ink runs at least half
+an x-height wide, high in the ascender band), and classify each
+side-by-side stem pair:
+
+| Ink pattern | Event | Meaning |
+|---|---|---|
+| One bar run crosses both stems | `shared` | the craft: one bar, one lift saved |
+| Two runs, one per stem | `separate` | the coach's tip: an extra lift |
+| One stem barred, bar reaches >= 60% of the way to the unbarred stem | `overshoot` | bar riding over the l |
+| One stem barred, bar stays home | `contained` | clean tl |
+
+**Where it lands.** `tbarProfile` in the analysis output (counts +
+flags: `double-t-single-bar`, `double-t-extra-lifts`,
+`t-bar-overshoot`), an evidence sentence on **Factor 16 (Pen Lift
+Frequency)** - the shared bar is literally a saved pen lift - and, when
+overshoots exist, on **Factor 1 (Letter Formation)**. Advisory by
+design: the observations inform evidence and coaching copy, they do not
+silently change scores until field data validates the thresholds.
+
 ## One-page cheat sheet
 
 | # | Algorithm | Question it answers | Feeds |
@@ -380,6 +439,7 @@ Every finding ships with a crop of the writer's own ink as evidence.
 | 17 | Letter crops | "Show me MY letters as proof" | factor cards |
 | 18 | Learning curve | "Where is this heading?" | forecast page |
 | 19 | Expected-text alignment | "Which letter is which, and is it right?" | letter-level findings |
+| 20 | Cross-bar craft | "One bar for a double-t? Bar off the l?" | tbarProfile, F16/F1 evidence |
 
 ---
 
