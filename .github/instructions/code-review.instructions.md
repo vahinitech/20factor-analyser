@@ -8,6 +8,23 @@ Open-source (AGPL-3.0) handwriting analyser: FastAPI recognition backend
 + static frontend, deterministic/auditable computer vision over black-box
 AI by design. Consumed by `vahinitech/web-live` as a pinned submodule.
 
+## Provenance: Never Copied Research Code
+
+- **Flag any newly added code that looks lifted from a paper's official
+  implementation or another public repo** — unusual style vs. the rest
+  of the file, naming that doesn't match this codebase, or a
+  suspiciously complete block appearing all at once. Ask directly: "is
+  this cited and independently written, or copied?"
+- The OnHW baselines and CV techniques here should reference published
+  methods (cite the paper) but be our own implementation. If literal
+  reuse of someone else's code is genuinely needed, it must come with
+  documented author consent *and* be license-compatible with this repo's
+  AGPL-3.0 — don't paste code without checking its original license
+  first.
+- This is a research project; unattributed/uncredited reuse is an
+  academic-integrity and IP risk, not just a style issue, and applies
+  with extra force to AI-assisted changes.
+
 ## Security Critical Issues
 
 - Endpoints that accept uploads (`/ocr`, `/analyze-vl`, `/report-python`)

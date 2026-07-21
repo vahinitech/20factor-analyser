@@ -6,6 +6,18 @@
   Never invent accuracy numbers, factor thresholds, or API shapes — every
   scored claim in reports and docs must trace to code in `backend/` or
   `frontend/src/`.
+- **Never copy another researcher's code into this repo — reference it,
+  don't paste it.** The OnHW baselines (CNN/LSTM/BiLSTM) in
+  `onhw_models.py` are standard published architectures — citing a
+  paper's design choice is fine, but the implementation itself must be
+  ours, independently written. If a specific published implementation is
+  genuinely needed: (a) cite it and reimplement independently, or (b) if
+  literal reuse is truly unavoidable, get the original author's explicit
+  consent first and record it in the commit/PR before merging. This is a
+  research project — unattributed code reuse is an academic-integrity and
+  IP risk, and it applies with extra force to AI-assisted changes, since a
+  model can reproduce code it saw during training without anyone noticing
+  the provenance.
 - **Deterministic, auditable CV over black-box AI** is a deliberate product
   choice here — keep scoring explainable; don't introduce opaque models
   into the 20-factor path without an explicit decision.
