@@ -14,6 +14,10 @@
   parents/teachers.
 - **Conventional commits** (`feat:`, `fix:`, `docs:`, `test:`); body says why.
 - **Build and test before every commit; CI green before merge.**
+- **Docs-only changes skip CI** — `ci.yml` has `paths-ignore: ['**/*.md',
+  'docs/**']`; a PR touching only markdown never triggers the pipeline. A
+  mixed PR (docs + code) still runs everything — the filter only fires
+  when every changed file is docs.
 
 ## Commands (mirror of `.github/workflows/ci.yml`)
 
