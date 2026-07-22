@@ -707,7 +707,50 @@ function render(host, data){
   </section>`);
 
   host.innerHTML = pages.join('');
+  wirePrintFit(host);
 }
 
-global.VahiniReport = { render };
+/* ---- print fit: keep "one report page = one printed sheet" honest --------
+   .page boxes are designed as exactly one A4 sheet, but content height varies
+   with names, recognition notes and reader fonts. Printing used to clamp the
+   page and let flexbox squeeze the blocks into each other (the scrambled-print
+   bug). Instead: measure each page before printing; a page that overflows the
+   sheet by up to FIT_MIN is scaled down onto one sheet (width-compensated, so
+   it still fills the full 210mm and text reflows slightly wider); a page past
+   that limit is left natural and flows onto a readable continuation sheet. */
+const A4_MM = { w:210, h:296 };  /* 296: see report.css print note on 297mm */
+const FIT_MIN = 0.84;            /* scale floor: below this, spill instead */
+function fitPrintPages(host){
+  const pxPerMM = 96/25.4;
+  const sheetH = A4_MM.h * pxPerMM;
+  host.querySelectorAll('section.page').forEach(pageEl=>{
+    pageEl.style.zoom = ''; pageEl.style.width = ''; pageEl.style.minHeight = '';
+    /* two passes: width compensation reflows text, which changes height */
+    for (let i=0; i<2; i++){
+      const h = pageEl.scrollHeight;
+      if (h <= sheetH + 1) break;
+      const z = Math.max(FIT_MIN, sheetH / h);
+      if (z <= FIT_MIN + 0.001){          /* too tall to shrink readably */
+        pageEl.style.zoom=''; pageEl.style.width=''; pageEl.style.minHeight='';
+        break;
+      }
+      pageEl.style.zoom = String(z);
+      pageEl.style.width = 'calc('+A4_MM.w+'mm / '+z+')';
+      pageEl.style.minHeight = 'calc('+A4_MM.h+'mm / '+z+')';
+    }
+  });
+}
+function unfitPrintPages(host){
+  host.querySelectorAll('section.page').forEach(p=>{
+    p.style.zoom=''; p.style.width=''; p.style.minHeight='';
+  });
+}
+let printFitWired = false;
+function wirePrintFit(host){
+  if (printFitWired) return; printFitWired = true;
+  window.addEventListener('beforeprint', ()=>fitPrintPages(host));
+  window.addEventListener('afterprint', ()=>unfitPrintPages(host));
+}
+
+global.VahiniReport = { render, fitPrintPages };
 })(window);
