@@ -591,15 +591,30 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .page{
     /* min-height is kept just UNDER one A4 sheet (297mm). At exactly 297mm,
        sub-pixel mm→device rounding tips the box over a full sheet and Chrome
-       emits a blank/duplicate page after every page. 296mm + clipped overflow
-       keeps each page on exactly one sheet. */
+       emits a blank/duplicate page after every page. 296mm keeps the fitting
+       case on exactly one sheet.
+       No max-height/overflow clamp: .page is a column flex container, and
+       clamping it made every flex child SHRINK (default flex-shrink:1) when
+       content ran taller than one sheet — each block's contents then painted
+       over the next (chips over the factor grid, footer over rows 17-20: the
+       "scrambled print" bug). A page that outgrows one sheet must spill to a
+       continuation sheet, never compress into overlap. The renderer's
+       fitPrintPages() scales near-fitting pages back onto one sheet. */
     margin:0; box-shadow:none; width:210mm;
-    height:auto; min-height:296mm; max-height:297mm; overflow:hidden;
+    height:auto; min-height:296mm;
     page-break-after:always; break-after:page;
-    page-break-inside:avoid; break-inside:avoid;
   }
+  /* Same bug, other half: even without a height clamp, print content must
+     never be squeezed by the flex container. */
+  .page > *{ flex-shrink:0; }
   .page:last-of-type{ page-break-after:auto; break-after:auto; }
   .page::after{ border:none; }
+  /* If a page does spill, break between rows/cards, never through one. */
+  .cat-row,.fscore,.sc2-row,.callout,.ll-block,tr,.ex{ break-inside:avoid; }
+  /* Print compaction: reclaim vertical room so standard pages fit one sheet. */
+  :root{ --pg-pad:13mm; }
+  .run-head{ margin-bottom:12px; }
+  .sec-title{ margin-bottom:12px; }
 }
 @page{ size:A4 portrait; margin:0; }
 
