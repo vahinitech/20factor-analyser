@@ -316,6 +316,21 @@
     });
   }
 
+  // The consent banner is same-origin site.js code (vahinitech.com/site/),
+  // so its "vahini_consent" localStorage entry is readable here too even
+  // though this page never loads site.js itself. Null means no consent
+  // decision has been recorded yet (e.g. a visitor who landed straight on
+  // the analyser without ever seeing the banner).
+  function readConsent(){
+    try {
+      var c = JSON.parse(localStorage.getItem("vahini_consent"));
+      if (c && typeof c === "object") {
+        return { decision: c.decision || "", analytics: !!c.analytics, ts: c.ts || null };
+      }
+    } catch (e) {}
+    return null;
+  }
+
   function persistUpload(file, source){
     if (!file || !file.size || file.size > 24 * 1024 * 1024) return;
     readAsDataURL(file).then(function(dataUrl){
@@ -327,7 +342,8 @@
         meta: {
           size: file.size,
           modified: file.lastModified || 0,
-          page: location.pathname
+          page: location.pathname,
+          consent: readConsent()
         }
       });
     }).then(function(resp){
