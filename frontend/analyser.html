@@ -321,10 +321,18 @@
   // though this page never loads site.js itself. Null means no consent
   // decision has been recorded yet (e.g. a visitor who landed straight on
   // the analyser without ever seeing the banner).
+  //
+  // site.js's own getConsent() only trusts a record whose `v` matches its
+  // current CONSENT_VERSION (1 today) -- a version bump there is how it
+  // invalidates old-shape records rather than misreading them. Mirror that
+  // check here too, or a future version bump would make site.js correctly
+  // stop trusting the stored consent while this page kept forwarding the
+  // stale record as if it were still current.
+  var CONSENT_VERSION = 1;
   function readConsent(){
     try {
       var c = JSON.parse(localStorage.getItem("vahini_consent"));
-      if (c && typeof c === "object") {
+      if (c && typeof c === "object" && c.v === CONSENT_VERSION) {
         return { decision: c.decision || "", analytics: !!c.analytics, ts: c.ts || null };
       }
     } catch (e) {}
