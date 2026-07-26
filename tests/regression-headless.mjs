@@ -47,6 +47,16 @@ async function runHeadlessChecks() {
   try {
     const page = await browser.newPage();
 
+    // Print-fit checks measure .page against its @media print sizing (the
+    // print rules aren't applied under the default screen media), and the
+    // wirePrintFit checks dispatch real beforeprint/afterprint events -- both
+    // need the page actually in print media, not just simulated. This must
+    // run BEFORE goto: the test page's own checks fire from DOMContentLoaded
+    // (+ a setTimeout(0)), which resolves before Playwright's 'load' wait
+    // does, so emulating print media only after goto left the checks running
+    // under screen media's .page sizing (297mm/17mm pad, not print's
+    // 296mm/13mm) despite the emulation call being present.
+    await page.emulateMedia({ media: 'print' });
     await page.goto(TEST_URL, { waitUntil: 'load' });
 
     await page.waitForFunction(() => {

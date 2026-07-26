@@ -714,10 +714,13 @@ function render(host, data){
    .page boxes are designed as exactly one A4 sheet, but content height varies
    with names, recognition notes and reader fonts. Printing used to clamp the
    page and let flexbox squeeze the blocks into each other (the scrambled-print
-   bug). Instead: measure each page before printing; a page that overflows the
-   sheet by up to FIT_MIN is scaled down onto one sheet (width-compensated, so
-   it still fills the full 210mm and text reflows slightly wider); a page past
-   that limit is left natural and flows onto a readable continuation sheet. */
+   bug). Instead: measure each page before printing; FIT_MIN is a scale floor,
+   not an overflow amount -- a page whose required shrink (sheetHeight/pageHeight)
+   is still at or above FIT_MIN (0.84, i.e. shrinks by at most ~16%) is scaled
+   down onto one sheet (width-compensated, so it still fills the full 210mm and
+   text reflows slightly wider); a page that would need to shrink past that
+   floor to be readable is left natural and flows onto a continuation sheet
+   instead. */
 const A4_MM = { w:210, h:296 };  /* 296: see report.css print note on 297mm */
 const FIT_MIN = 0.84;            /* scale floor: below this, spill instead */
 function fitPrintPages(host){

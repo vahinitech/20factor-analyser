@@ -204,6 +204,101 @@
     add(/github\.com\/vahinitech\/20factor-analyser/i.test(host.innerHTML||''),
       'GitHub issues note present');
 
+    // #host is display:none (it's a structural scratch area for the checks
+    // above, which only read text/DOM, never layout) -- fitPrintPages reads
+    // real scrollHeight, which is always 0 while display:none. Make it
+    // layout-visible (but not eye-visible) for the two layout-dependent
+    // checks below, then restore.
+    const hostOriginalStyle = host.getAttribute('style') || '';
+    host.style.cssText = hostOriginalStyle + '; display:block !important; visibility:hidden; position:absolute; left:-99999px; top:0;';
+
+    // Synthetic .page elements with a single controlled-height filler child,
+    // rather than mutating the real report's pages: real page height depends
+    // on report content (already 1.2x a sheet on page 1 in this fixture), so
+    // testing against it can't reliably distinguish "moderate" from
+    // "extreme" overflow. sheetH mirrors fitPrintPages' own A4_MM.h math.
+    const sheetH = 296 * 96 / 25.4;
+    function makeTestPage(fillerPx){
+      const el = document.createElement('section');
+      el.className = 'page';
+      const filler = document.createElement('div');
+      filler.style.height = fillerPx + 'px';
+      el.appendChild(filler);
+      host.appendChild(el);
+      return el;
+    }
+    // .page's own padding (report.css --pg-pad) adds to the filler's height
+    // when fitPrintPages measures scrollHeight -- read it from a real .page
+    // rather than hardcoding the print value, so this stays correct if
+    // --pg-pad ever changes.
+    const pagePadPx = (() => {
+      const probe = document.createElement('section');
+      probe.className = 'page';
+      host.appendChild(probe);
+      const cs = getComputedStyle(probe);
+      const pad = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+      probe.remove();
+      return pad;
+    })();
+
+    // 11) print fit (the scrambled-print bug's regression coverage): a page
+    // within one sheet is left alone; one that overflows moderately is
+    // scaled down onto one sheet, width-compensated; one that overflows far
+    // past the scale floor is left natural to spill onto a continuation
+    // sheet instead of being shrunk unreadably. Exercised via VahiniReport's
+    // exported fitPrintPages -- the test runs under @media print (see
+    // regression-headless.mjs) so .page actually carries its print sizing.
+    try {
+      if (typeof VahiniReport.fitPrintPages === 'function') {
+        let p = makeTestPage(Math.round(sheetH * 0.5));
+        VahiniReport.fitPrintPages(host);
+        add(!p.style.zoom, 'A page within one sheet is left unscaled by fitPrintPages', 'zoom="'+p.style.zoom+'"');
+        p.remove();
+
+        // Sized so the required shrink (sheetH / contentHeight) lands
+        // around 0.87 -- inside the FIT_MIN(0.84) floor, so it should be
+        // shrunk to fit rather than left to spill. Filler is net of
+        // pagePadPx so the *rendered* page (filler + padding) is the one
+        // that actually lands at ~0.87, not the filler alone.
+        p = makeTestPage(Math.round(sheetH / 0.87 - pagePadPx));
+        VahiniReport.fitPrintPages(host);
+        let zoom = parseFloat(p.style.zoom || '0');
+        add(zoom > 0.84 && zoom < 0.97, 'A moderately overflowing page is scaled down onto one sheet', 'zoom='+p.style.zoom);
+        add(/calc\(/.test(p.style.width || ''), 'Scaled page compensates width so it still fills 210mm', 'width="'+p.style.width+'"');
+        p.remove();
+
+        // Five sheets' worth of content: far past any readable shrink, so
+        // the page should spill naturally instead of being over-shrunk.
+        p = makeTestPage(Math.round(sheetH * 5));
+        VahiniReport.fitPrintPages(host);
+        add(!p.style.zoom, 'A page far past the fit floor spills naturally instead of over-shrinking', 'zoom="'+p.style.zoom+'"');
+        p.remove();
+      } else {
+        add(false, 'Print-fit tests found fitPrintPages to exercise', 'fitPrintPages='+(typeof VahiniReport.fitPrintPages));
+      }
+    } catch (e) {
+      add(false, 'Print-fit (fitPrintPages) runs without throwing', String(e));
+    }
+
+    // 12) wirePrintFit: render() wires beforeprint/afterprint listeners on
+    // the host it was given, so an actual print (or Ctrl+P / window.print())
+    // fits pages without any extra caller wiring. Dispatching the real
+    // window events (rather than calling fitPrintPages directly) is what
+    // proves the wiring itself works, not just the fitting math.
+    try {
+      const p = makeTestPage(Math.round(sheetH / 0.87 - pagePadPx));
+      window.dispatchEvent(new Event('beforeprint'));
+      add(!!p.style.zoom, 'beforeprint triggers fitPrintPages via wirePrintFit', 'zoom="'+p.style.zoom+'"');
+
+      window.dispatchEvent(new Event('afterprint'));
+      add(!p.style.zoom, 'afterprint clears the fit so the screen layout is unaffected', 'zoom="'+p.style.zoom+'"');
+      p.remove();
+    } catch (e) {
+      add(false, 'wirePrintFit (beforeprint/afterprint) runs without throwing', String(e));
+    }
+
+    host.setAttribute('style', hostOriginalStyle);
+
     finish();
   }
 

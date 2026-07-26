@@ -605,7 +605,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
     page-break-after:always; break-after:page;
   }
   /* Same bug, other half: even without a height clamp, print content must
-     never be squeezed by the flex container. */
+     never be squeezed by the flex container. The universal child selector
+     is deliberate, not a placeholder: flex-shrink:1 is the default on ANY
+     element, so a future .page child (a new section type, a wrapper div)
+     would silently reintroduce the exact scrambled-print bug this rule
+     exists to prevent unless it's covered too -- narrowing this to today's
+     known children would leave that trap for the next one. */
   .page > *{ flex-shrink:0; }
   .page:last-of-type{ page-break-after:auto; break-after:auto; }
   .page::after{ border:none; }
