@@ -37,7 +37,9 @@
 # backend
 python -m py_compile backend/*.py            # syntax gate
 black --check --line-length 79 backend/*.py backend/tests/*.py frontend/build_bundle.py
-pylint (min score 9.0)                        # see ci.yml for exact args
+# pylint --fail-under=9.0 <backend/*.py + frontend/build_bundle.py> -- see
+# ci.yml for the exact file list; not reproduced here since it's not one
+# glob (individual .py files, in the order ci.yml lists them)
 python -m pytest backend/tests/               # unit + integration
 
 # frontend bundle — REBUILD WHENEVER frontend/src changes:

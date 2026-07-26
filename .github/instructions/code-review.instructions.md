@@ -45,9 +45,11 @@ AI by design. Consumed by `vahinitech/web-live` as a pinned submodule.
   `run_in_threadpool` off the event loop in `ppocr-server.py` — flag any
   new endpoint that does blocking work directly in an `async def` handler.
 - Crop/preview generation (`computer_vision.py`): check new code doesn't
-  duplicate the shared `geometry.py` clamp-box logic — three paths
-  (`classify.py`, `ocr_backends.py`, `ppocr-server.py`) already share it
-  specifically to avoid drift.
+  duplicate the shared `geometry.py` clamp-box logic — `classify.py`,
+  `ocr_backends.py`, and `zone_analysis.py` already import `clamp_box`
+  from it specifically to avoid drift; a fourth reimplementation
+  (including inside `ppocr-server.py`, which doesn't use it today) is
+  the drift this rule exists to prevent.
 - `npm run build:bundle` must be re-run whenever `frontend/src/` changes —
   CI checks the bundle is in sync; a PR with source changes but no bundle
   diff is a red flag.
