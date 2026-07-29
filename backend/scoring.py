@@ -20,6 +20,7 @@ from coach_tips import pillar_summary, select_tips
 from finishing_letters import analyze_finishing_letters
 from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
+from baseline_track import track_rows
 from zone_analysis import analyze_zones, zone_score
 
 try:
@@ -464,6 +465,11 @@ def _extract_features(arr: np.ndarray, lines, layout):
         # "level" while being excluded from line_slope_signed_med.
 
     rows = _group_lines_by_rows(lines)
+    # Kalman-smoothed baseline per row (issue #31): every word informs
+    # the slope, instead of the first two vertices of one OCR polygon.
+    # Rows under 3 words are skipped; the poly-based estimate below
+    # remains the fallback so sparse pages behave exactly as before.
+    kf = track_rows(rows)
     word_gaps = []
     for r in rows:
         items = r.get("items", [])
@@ -522,8 +528,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
         # median SIGNED line angle: >0 means lines descend left-to-right
         # (image y grows downward), i.e. the writing sinks below the rule
         "line_slope_signed_med": (
-            float(np.median(signed_slopes)) if signed_slopes else 0.0
+            float(np.median(kf["slopes_deg"]))
+            if kf["rows_used"]
+            else (float(np.median(signed_slopes)) if signed_slopes else 0.0)
         ),
+        "baseline_wave_med": (
+            float(np.median(kf["waviness"])) if kf["rows_used"] else None
+        ),
+        "baseline_rows_tracked": kf["rows_used"],
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
         "digits_ratio": digits_ratio,
@@ -801,6 +813,19 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             r.evidence = (
                 f"{r.evidence} Direction: {drift_dir} "
                 f"~{abs(drift_deg):.1f} deg across the page."
+            )
+        if r.n == 7 and fx.get("baseline_rows_tracked"):
+            wave = fx.get("baseline_wave_med")
+            r.evidence += (
+                " Baseline tracked word-by-word across "
+                f"{fx['baseline_rows_tracked']} line(s) with a smoothing "
+                "filter (issue #31)"
+                + (
+                    f"; word baselines scatter about the track by "
+                    f"{wave * 100:.0f}% of the line height."
+                    if wave is not None
+                    else "."
+                )
             )
 
     # Zone profile (issue #21): the two things a coach actually checks —
