@@ -719,25 +719,25 @@ function renderSampleReport(){
    the docs, the JSONs and this page cannot disagree. */
 const CASE_STORIES = [
   {
-    id:'case1', title:'The sinking baseline',
-    persona:'A nine-year-old copies homework onto unruled paper. Every line starts level and slides downhill; some lines slide more than others.',
-    drill:'Four weeks of the report’s own drills — baseline tracing on ruled sheets (factor 7’s tip) and pausing at the right margin to reset to the line (factor 11’s) — then a rescan.',
+    id:'case1', title:'Lines that slide down the page',
+    persona:'A nine year old copies homework onto plain paper with no ruled lines. Every line starts level, then slowly slides down. Some lines slide more than others.',
+    drill:'Four weeks of the drills from the report: trace along the line on ruled sheets (the tip for factor 7), and stop at the right edge to come back to the line (the tip for factor 11). Then scan again.',
     highlights:[7,11,12,17,10],
-    note:'Five factors moved from one habit: baseline drift, line straightness, tilt spread and slant all read the same line-angle geometry from different directions, and the margin measurement improves because the page-tilt correction no longer has a large sinking signal to fold into the left edge. Deterministic scoring makes that chain inspectable instead of mysterious.',
+    note:'One habit moved five scores. Baseline, line straightness, up and down alignment, and slant all measure the angle of the writing, each in its own way. The margin score also rises, because the sliding lines were getting mixed into the left edge measurement. Nothing is hidden: you can follow exactly why each score moved.',
   },
   {
-    id:'case2', title:'Words crowding together',
-    persona:'A twelve-year-old writes fast before the school bell. Word gaps collapse to nothing in places and gape in others, so the detector splits every written line into ragged fragments.',
-    drill:'The drill: “word␣␣word” spacing practice — one finger of space between words — until rows are detected whole again.',
+    id:'case2', title:'Words too close together',
+    persona:'A twelve year old writes fast before the school bell. In some places the words touch each other. In other places there are big empty gaps. The computer cannot tell where one word ends and the next one starts, so it reads each line as broken pieces.',
+    drill:'The drill from the report: write "word word" with one finger of space between the words, until every line is read as one whole line again.',
     highlights:[8,10,4,13,9,16,20],
-    note:'Margin Discipline reads 0.0 before practice not because the margin is that bad, but because the left-edge statistic sees every fragment’s left edge, and fragments start mid-page. That is honest, inspectable behaviour of the current geometry — and it disappears the moment the writing itself heals: with regular gaps the detector returns whole lines, and Word Spacing’s 10.0 means exactly “no gap irregularity wide enough to split any line”.',
+    note:'Before practice, Margin Discipline shows 0.0. The margin is not really that bad. The computer measures the left edge of every piece it finds, and broken pieces start in the middle of the page. After practice the gaps are even, the computer reads full lines again, and the margin score comes back. Word Spacing at 10.0 means no gap was big enough to break a line.',
   },
   {
-    id:'case3', title:'Everything written in one size',
-    persona:'An adult learner writes fast, small and flat: tall letters barely rise above the middle zone, tails barely hang below, pressure heavy and uneven, the left margin wandering.',
-    drill:'The drills: tall–short pattern practice (bl bl bl), margin-box writing, and same-pressure line drills — then a rescan.',
+    id:'case3', title:'All letters the same size',
+    persona:'An older student writes fast, small and flat. Tall letters like l and h barely rise up. Tails like g and y barely hang down. The pen presses hard and unevenly, and the left margin wanders.',
+    drill:'The drills from the report: tall and short letter patterns (bl bl bl), writing inside a margin box, and lines with the same pen pressure. Then scan again.',
     highlights:[6,14,10,5],
-    note:'Note what did not move: loop closure, slant, baseline and word spacing stay in the same bands across both scans. A factor only moves when its own measurement moves — there is no halo effect from an overall impression, because there is no overall impression: only per-factor geometry.',
+    note:'Also look at what did not move. Loop closure, slant, baseline and word spacing stay in the same bands in both scans. A score only moves when its own measurement moves. One good or bad habit never pulls the other scores up or down.',
   },
 ];
 
@@ -745,17 +745,17 @@ const CASE_STORIES = [
 function caseEvidence(id, d){
   const rows = [];
   if (id==='case1' && d.before.drift && d.after.drift){
-    rows.push(['Measured baseline drift',
+    rows.push(['How much the lines slide',
       d.before.drift.direction+' '+d.before.drift.degrees+'°',
       d.after.drift.direction+' '+d.after.drift.degrees+'°']);
   }
   if (id==='case3' && d.before.zones && d.after.zones){
     const t = Number(d.before.zones.targetReach) || 2.0;
-    rows.push(['Ascender reach (target '+t.toFixed(1)+'x)',
+    rows.push(['How tall the tall letters reach (goal '+t.toFixed(1)+'x)',
       d.before.zones.ascenderReach.toFixed(2)+'x', d.after.zones.ascenderReach.toFixed(2)+'x']);
-    rows.push(['Descender reach (target '+t.toFixed(1)+'x)',
+    rows.push(['How deep the tails hang (goal '+t.toFixed(1)+'x)',
       d.before.zones.descenderReach.toFixed(2)+'x', d.after.zones.descenderReach.toFixed(2)+'x']);
-    rows.push(['Zone flags',
+    rows.push(['Letter size warnings',
       (d.before.zones.flags||[]).join(', ')||'none',
       (d.after.zones.flags||[]).join(', ')||'none']);
   }

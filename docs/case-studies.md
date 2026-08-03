@@ -22,7 +22,7 @@ This is education and skill-building material, not a diagnostic claim.
 
 ---
 
-## Case 1 — The sinking baseline
+## Case 1: Lines that slide down the page
 
 *A nine-year-old copies homework onto unruled paper. Every line starts
 level and slides downhill; some lines slide more than others.*
@@ -59,7 +59,7 @@ Full JSON: [before](examples/case1-baseline-before.json) ·
 
 ---
 
-## Case 2 — Words crowding together
+## Case 2: Words too close together
 
 *A twelve-year-old writes fast before the school bell. Word gaps
 collapse to nothing in places and gape in others; the OCR detector
@@ -95,7 +95,7 @@ Full JSON: [before](examples/case2-spacing-before.json) ·
 
 ---
 
-## Case 3 — Everything written in one size
+## Case 3: All letters the same size
 
 *An adult learner writes fast, small and flat: tall letters barely rise
 above the middle zone, tails barely hang below, pressure heavy and
