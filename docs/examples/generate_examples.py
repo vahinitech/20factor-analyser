@@ -399,7 +399,9 @@ def main():
         result = build_analysis(arr, lines, layout).to_dict()
         results_by_name[name] = result
         path = os.path.join(OUT_DIR, f"{name}.json")
-        with open(path, "w", encoding="utf-8") as f:
+        # newline="\n" everywhere: regeneration must be byte-identical on
+        # Windows too, where text mode would otherwise write \r\n.
+        with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(result, f, indent=2, ensure_ascii=False)
             f.write("\n")
         if name == "example-report":
