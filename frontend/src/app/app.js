@@ -711,9 +711,108 @@ function renderSampleReport(){
   if (printBtn) printBtn.addEventListener('click', ()=>window.print());
 }
 
+/* ---------- case studies page (case-studies.html) ----------
+   Three before/after practice arcs. The prose mirrors
+   docs/case-studies.md; every number is read from
+   window.VAHINI_CASE_STUDIES (real build_analysis output pairs emitted
+   by docs/examples/generate_examples.py), never typed into the page, so
+   the docs, the JSONs and this page cannot disagree. */
+const CASE_STORIES = [
+  {
+    id:'case1', title:'The sinking baseline',
+    persona:'A nine-year-old copies homework onto unruled paper. Every line starts level and slides downhill; some lines slide more than others.',
+    drill:'Four weeks of the report’s own drills — baseline tracing on ruled sheets (factor 7’s tip) and pausing at the right margin to reset to the line (factor 11’s) — then a rescan.',
+    highlights:[7,11,12,17,10],
+    note:'Five factors moved from one habit: baseline drift, line straightness, tilt spread and slant all read the same line-angle geometry from different directions, and the margin measurement improves because the page-tilt correction no longer has a large sinking signal to fold into the left edge. Deterministic scoring makes that chain inspectable instead of mysterious.',
+  },
+  {
+    id:'case2', title:'Words crowding together',
+    persona:'A twelve-year-old writes fast before the school bell. Word gaps collapse to nothing in places and gape in others, so the detector splits every written line into ragged fragments.',
+    drill:'The drill: “word␣␣word” spacing practice — one finger of space between words — until rows are detected whole again.',
+    highlights:[8,10,4,13,9,16,20],
+    note:'Margin Discipline reads 0.0 before practice not because the margin is that bad, but because the left-edge statistic sees every fragment’s left edge, and fragments start mid-page. That is honest, inspectable behaviour of the current geometry — and it disappears the moment the writing itself heals: with regular gaps the detector returns whole lines, and Word Spacing’s 10.0 means exactly “no gap irregularity wide enough to split any line”.',
+  },
+  {
+    id:'case3', title:'Everything written in one size',
+    persona:'An adult learner writes fast, small and flat: tall letters barely rise above the middle zone, tails barely hang below, pressure heavy and uneven, the left margin wandering.',
+    drill:'The drills: tall–short pattern practice (bl bl bl), margin-box writing, and same-pressure line drills — then a rescan.',
+    highlights:[6,14,10,5],
+    note:'Note what did not move: loop closure, slant, baseline and word spacing stay in the same bands across both scans. A factor only moves when its own measurement moves — there is no halo effect from an overall impression, because there is no overall impression: only per-factor geometry.',
+  },
+];
+
+/* Measured-evidence rows the narratives quote, read from the data. */
+function caseEvidence(id, d){
+  const rows = [];
+  if (id==='case1' && d.before.drift && d.after.drift){
+    rows.push(['Measured baseline drift',
+      d.before.drift.direction+' '+d.before.drift.degrees+'°',
+      d.after.drift.direction+' '+d.after.drift.degrees+'°']);
+  }
+  if (id==='case3' && d.before.zones && d.after.zones){
+    const t = Number(d.before.zones.targetReach) || 2.0;
+    rows.push(['Ascender reach (target '+t.toFixed(1)+'x)',
+      d.before.zones.ascenderReach.toFixed(2)+'x', d.after.zones.ascenderReach.toFixed(2)+'x']);
+    rows.push(['Descender reach (target '+t.toFixed(1)+'x)',
+      d.before.zones.descenderReach.toFixed(2)+'x', d.after.zones.descenderReach.toFixed(2)+'x']);
+    rows.push(['Zone flags',
+      (d.before.zones.flags||[]).join(', ')||'none',
+      (d.after.zones.flags||[]).join(', ')||'none']);
+  }
+  return rows;
+}
+
+function renderCaseStudies(){
+  const data = window.VAHINI_CASE_STUDIES;
+  const host = $('#case-studies-host');
+  if (!host || !data) return;
+  const esc = s => String(s==null?'':s).replace(/[&<>\"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+  const byN = (r)=>{ const m={}; r.results.forEach(f=>{ m[f.n]=f; }); return m; };
+  const frow = (f0, f1)=>{
+    const delta = f1.score - f0.score;
+    return `<div class="cs-frow">
+      <span class="cs-fname">#${String(f0.n).padStart(2,'0')} ${esc(f0.name)}</span>
+      <span class="cs-bar"><i class="bd-${f0.band}" style="width:${f0.score*10}%"></i></span>
+      <b class="b-${f0.band}">${f0.score.toFixed(1)}</b>
+      <span class="cs-arrow">→</span>
+      <span class="cs-bar"><i class="bd-${f1.band}" style="width:${f1.score*10}%"></i></span>
+      <b class="b-${f1.band}">${f1.score.toFixed(1)}</b>
+      <em class="cs-delta${delta<0?' down':''}">${delta>=0?'+':''}${delta.toFixed(1)}</em>
+    </div>`;
+  };
+  host.innerHTML = CASE_STORIES.map((c,i)=>{
+    const d = data[c.id];
+    if (!d) return '';
+    const b = byN(d.before), a = byN(d.after);
+    const overall0 = d.before.overallMeasured!=null ? d.before.overallMeasured : d.before.overall;
+    const overall1 = d.after.overallMeasured!=null ? d.after.overallMeasured : d.after.overall;
+    const evRows = caseEvidence(c.id, d).map(r=>
+      `<div class="cs-evrow"><span>${esc(r[0])}</span><b>${esc(r[1])}</b><span class="cs-arrow">→</span><b>${esc(r[2])}</b></div>`).join('');
+    const allRows = d.before.results.map(f0=>frow(f0, a[f0.n])).join('');
+    return `<article class="cs-card">
+      <div class="cs-head">
+        <span class="cs-no">${String(i+1).padStart(2,'0')}</span>
+        <div><h2>${esc(c.title)}</h2><p class="cs-persona">${esc(c.persona)}</p></div>
+        <div class="cs-overall"><span class="cs-ov-label">Overall</span>
+          <span class="cs-ov"><b>${overall0}</b><span class="cs-arrow">→</span><b class="cs-ov-after">${overall1}</b></span>
+          <span class="cs-ov-delta">+${overall1-overall0}</span>
+        </div>
+      </div>
+      <p class="cs-drill">${esc(c.drill)}</p>
+      <div class="cs-frows">${c.highlights.map(n=>frow(b[n], a[n])).join('')}</div>
+      ${evRows?`<div class="cs-evidence">${evRows}</div>`:''}
+      <p class="cs-note">${esc(c.note)}</p>
+      <details class="cs-all"><summary>All 20 factors, before → after</summary>
+        <div class="cs-frows">${allRows}</div>
+      </details>
+    </article>`;
+  }).join('');
+}
+
 /* ---------- wire up ---------- */
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
+  if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
   setupUploadDrop(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', runPipeline);
