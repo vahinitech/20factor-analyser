@@ -32,6 +32,13 @@ Two departures from the textbook, both forced by the data:
 Everything is plain numpy; scoring formulas are untouched in phase 1
 (the robust slope feeds the drift DIRECTION narrative and evidence text
 only - see issue #31 for the phased plan).
+
+Provenance: written for this repo directly from the standard equations
+(Kalman 1960, "A New Approach to Linear Filtering and Prediction
+Problems"; Rauch, Tung & Striebel 1965 for the smoother), not copied or
+adapted from any existing implementation. The repo's code-reuse rule
+(CLAUDE.md) applies to textbook algorithms too: cite the source of the
+equations, write the code independently.
 """
 
 import math
@@ -105,6 +112,24 @@ def _kf_rts(xs, ys, r_var, q_var):
     return x_s
 
 
+def _collapse_duplicate_x(pts):
+    """Collapse points sharing an x position (within 1e-6 px) to one
+    point at their mean y, so the filter sees a strictly increasing
+    axis. Incremental mean per group: every tied point carries equal
+    weight no matter how many share the x (repeated pairwise averaging
+    would weight later points more). pts must be sorted by x."""
+    xs, ys, counts = [], [], []
+    for x, y in pts:
+        if xs and x - xs[-1] < 1e-6:
+            counts[-1] += 1
+            ys[-1] += (y - ys[-1]) / counts[-1]
+        else:
+            xs.append(x)
+            ys.append(y)
+            counts.append(1)
+    return xs, ys
+
+
 def track_row_baseline(points, row_h):
     """Smooth one row's word-baseline measurements.
 
@@ -126,14 +151,7 @@ def track_row_baseline(points, row_h):
     """
     row_h = float(max(1.0, row_h))
     pts = sorted((float(x), float(y)) for x, y in points)
-    # collapse duplicate x (two boxes sharing a centre) to their mean
-    xs, ys = [], []
-    for x, y in pts:
-        if xs and x - xs[-1] < 1e-6:
-            ys[-1] = (ys[-1] + y) * 0.5
-        else:
-            xs.append(x)
-            ys.append(y)
+    xs, ys = _collapse_duplicate_x(pts)
     if len(xs) < MIN_POINTS:
         return None
     xs = np.asarray(xs)

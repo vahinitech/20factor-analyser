@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from baseline_track import (  # noqa: E402
     MIN_POINTS,
+    _collapse_duplicate_x,
     track_row_baseline,
     track_rows,
 )
@@ -83,6 +84,18 @@ def test_wavy_row_scores_wavier_than_straight():
     wavy = track_row_baseline(wavy_pts, ROW_H)
     assert straight is not None and wavy is not None
     assert wavy["waviness"] > straight["waviness"] * 2.0
+
+
+def test_duplicate_x_collapses_to_unbiased_mean():
+    # Three points share one x: each must carry equal weight in the
+    # collapsed point. Repeated pairwise averaging would give
+    # ((490 + 510) / 2 + 550) / 2 = 520 here; the true mean is 516.67.
+    xs, ys = _collapse_duplicate_x(
+        [(100.0, 490.0), (100.0, 510.0), (100.0, 550.0), (200.0, 500.0)]
+    )
+    assert xs == [100.0, 200.0]
+    assert abs(ys[0] - (490.0 + 510.0 + 550.0) / 3.0) < 1e-9
+    assert ys[1] == 500.0
 
 
 def test_short_rows_refuse_rather_than_guess():
