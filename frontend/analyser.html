@@ -68,6 +68,18 @@
   .video-frame{ position:relative; width:100%; aspect-ratio:16/9; border-radius:16px; overflow:hidden;
     box-shadow:0 20px 54px rgba(34,40,49,.20); border:1px solid var(--rule,rgba(34,40,49,.12)); background:#1A1E24; }
   .video-frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
+  /* sample-report / case-studies cards above the intake split: the
+     see-it-before-you-scan links come first, then the upload work */
+  .sample-cta-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1180px; margin:0 auto 20px; }
+  @media (max-width:900px){ .sample-cta-row{ grid-template-columns:1fr; } }
+  .sample-cta{ display:flex; align-items:center; gap:13px; padding:14px 16px;
+    background:var(--surface,#fff); border:1px solid var(--rule,rgba(34,40,49,.14)); border-radius:14px;
+    text-decoration:none; transition:border-color .15s, box-shadow .15s; }
+  .sample-cta:hover{ border-color:var(--accent,#00ADB5); box-shadow:0 6px 20px rgba(34,40,49,.08); }
+  .sample-cta svg{ width:22px; height:22px; color:var(--accent-deep,#048A91); flex:0 0 auto; }
+  .sample-cta b{ display:block; font-size:13.5px; color:var(--ink,#222831); }
+  .sample-cta small{ display:block; font-size:12px; color:var(--muted,#565D66); line-height:1.5; margin-top:2px; }
+  .sample-cta .cta-arrow{ margin-left:auto; color:var(--accent-deep,#048A91); font-weight:700; flex:0 0 auto; }
 </style>
 </head>
 <body class="studio">
@@ -80,6 +92,19 @@
     <div class="eyebrow">Vahini Analyser · 20-factor handwriting analysis</div>
     <h1>Upload a handwriting sample</h1>
     <p>Add one clear, well-lit photo or scan of a handwritten page. The engine reads the text for you, measures the geometry of every letter, and scores all 20 factors.</p>
+  </div>
+
+  <div class="sample-cta-row">
+    <a class="sample-cta" href="sample-report.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
+      <span><b>See a sample report first</b><small>The full report the engine produces, page by page. Open it, print it, or save it as a PDF.</small></span>
+      <span class="cta-arrow">&rarr;</span>
+    </a>
+    <a class="sample-cta" href="case-studies.html" target="_blank" rel="noopener">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>
+      <span><b>Three before and after stories</b><small>Lines that slide down, words too close together, letters all one size. See how the scores rise after practice.</small></span>
+      <span class="cta-arrow">&rarr;</span>
+    </a>
   </div>
 
   <div class="service-banner" id="service-banner" style="display:none;">

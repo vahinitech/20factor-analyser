@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: AGPL-3.0-only
+     © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+     Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
+<html lang="en" data-site-base="../site/">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="only light">
+<title>Sample Report, Vahini 20-Factor Handwriting Analysis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,500;0,600;0,700;1,500;1,600&family=Hanken+Grotesk:wght@400;500;600;700;800&family=Caveat:wght@500;600;700&family=Edu+SA+Beginner:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles/report.css">
+<link rel="stylesheet" href="styles/studio.css">
+<link rel="stylesheet" href="styles/nav.css">
+<style>
+  /* toolbar sits at the top of the report and scrolls away (not sticky) */
+  .report-toolbar{ position:static; justify-content:space-between; padding:14px 22px; gap:12px; flex-wrap:wrap; }
+  /* the toolbar is dark (studio.css): keep the note readable on it */
+  .sample-note{ font-size:12px; color:rgba(255,255,255,.72); line-height:1.55; max-width:640px; text-align:left; }
+  .sample-note b{ color:#fff; }
+  .sample-note code{ color:#9FE8EC; }
+  .toolbar-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  @media print{ #sample-intro, .sample-note{ display:none !important; } }
+</style>
+</head>
+<body class="studio" data-sample-report>
+<div id="site-nav"></div>
+
+<section class="screen on" id="sample-intro" style="padding-bottom:8px;">
+  <div class="screen-head" style="margin-bottom:6px;">
+    <div class="eyebrow">Vahini Analyser · sample report</div>
+    <h1>What your report looks like</h1>
+    <p>Every page below is the real report the analyser produces: scorecard, plain-words view, focus areas, coach's corner, reference values and a practice plan. Print it or save it as a PDF, exactly as you would your own.</p>
+  </div>
+</section>
+
+<section class="screen on" id="screen-report">
+  <div class="report-toolbar">
+    <div class="sample-note"><b>How this sample was made:</b> we never publish a student's real handwriting. This page was made by computer, with 10 written lines that slide down a little and letters of uneven size. The real scoring engine scored it, the same engine that scores your page. You can make it again yourself: <code>python docs/examples/generate_examples.py</code>. Your own report also shows photo evidence cut from your own page.</div>
+    <div class="toolbar-actions">
+      <a class="btn btn-ghost" href="case-studies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>Before and after stories</a>
+      <a class="btn btn-ghost" href="analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Analyse your own page</a>
+      <button class="btn btn-dark" id="print-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button>
+    </div>
+  </div>
+  <div class="report-host" id="report-host"></div>
+</section>
+
+<div id="site-footer"></div>
+<script src="scripts/core/protect.js"></script>
+<script src="scripts/core/sample-report-data.js"></script>
+<script src="scripts/core/engine.bundle.js"></script>
+<script>
+(function(){
+  "use strict";
+  // Optional portal bridge: the page runs standalone even if ../site does not exist.
+  var s = document.createElement("script");
+  s.src = "../site/site.js";
+  s.async = true;
+  s.onerror = function(){
+    var nav = document.getElementById("site-nav");
+    var foot = document.getElementById("site-footer");
+    if (nav) nav.innerHTML = "";
+    if (foot) foot.innerHTML = "";
+  };
+  document.head.appendChild(s);
+})();
+</script>
+</body>
+</html>
