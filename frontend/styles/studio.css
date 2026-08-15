@@ -37,7 +37,7 @@ body.studio{ background:#EEEEEE; }
 
 .screen-head{ text-align:center; margin-bottom:30px; }
 .screen-head .eyebrow{ color:var(--accent); }
-.screen-head h1{ font-family:var(--serif); font-size:38px; color:var(--ink); margin:12px 0 10px; letter-spacing:-.01em; }
+.screen-head h1, .screen-head .screen-h1{ font-family:var(--serif); font-size:38px; color:var(--ink); margin:12px 0 10px; letter-spacing:-.01em; }
 .screen-head p{ color:var(--ink-2); font-size:15px; max-width:560px; margin:0 auto; line-height:1.55; }
 
 /* ---- Cards / panels ---------------------------------------------------- */
