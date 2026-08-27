@@ -17,8 +17,12 @@ scraps/
 .thumbnail
 .image-slots.state.json
 
-# Local Claude Code / editor config (machine-specific, not for release)
-.claude/
+# Local Claude Code / editor config (machine-specific, not for release).
+# Shared skills are checked in: git cannot re-include anything under an
+# excluded directory, so the exclusion is one level down and skills/ is
+# negated back.
+.claude/*
+!.claude/skills/
 
 # OS / editor cruft
 .DS_Store
