@@ -14,7 +14,7 @@ import re
 import base64
 
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageOps
 
 from geometry import clamp_box
 
@@ -48,7 +48,8 @@ def decode_image(raw: bytes) -> Image.Image:
     for a PDF only the first page is used."""
     if raw[:4] == b"%PDF":
         return _pdf_first_page(raw)
-    return Image.open(io.BytesIO(raw)).convert("RGB")
+    with Image.open(io.BytesIO(raw)) as image:
+        return ImageOps.exif_transpose(image).convert("RGB")
 
 
 def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:

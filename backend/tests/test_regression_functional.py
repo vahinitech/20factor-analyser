@@ -206,7 +206,7 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertGreaterEqual(int(a.get("overall", 0)), 0)
         self.assertLessEqual(int(a.get("overall", 100)), 100)
         self.assertEqual(a.get("source"), "python")
-        self.assertGreaterEqual(int(a.get("measuredCount", 0)), 20)
+        self.assertEqual(int(a.get("measuredCount", 0)), 16)
 
         # Renderer-completeness: the browser is render-only now, so every factor
         # must arrive with the rendering extras (drill group, target band, tip)

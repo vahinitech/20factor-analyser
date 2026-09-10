@@ -6,6 +6,8 @@
 fastapi>=0.110
 uvicorn[standard]>=0.29
 python-multipart>=0.0.9
+# Required by computer_vision._pdf_first_page in core-only installs.
+pypdfium2==5.13.0
 pillow>=10.0.0
 numpy>=1.24
 opencv-python-headless>=4.9.0

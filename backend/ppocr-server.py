@@ -520,6 +520,21 @@ def _report_python_process(arr, raw, lang, expected_text):
             lines = lines or hand_lines
             if hand_lines:
                 selected_backend = "cv-fallback"
+        if not hand_lines:
+            return _no_handwriting_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                lines,
+                extra={
+                    "error": "No handwriting found. Upload a clear photo of handwriting.",
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         # Reference-passage alignment: if the writer copied a known passage,
         # correct the recognised text against it (consistent, dependable reading).
         align_info = recognizer.align_to_expected(hand_lines, expected_text)
