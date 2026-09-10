@@ -1,5 +1,10 @@
 # Writing skills: AI-isms to avoid
 
+> The `natural-writing` skill in `.claude/skills/natural-writing/SKILL.md`
+> carries the wider banned-pattern list and the two-pass self-check. This
+> file stays the project-specific layer; where the two overlap they agree,
+> and where this file is more specific about the analyser, it wins.
+
 House rules for every word this project ships: docs, READMEs, report copy,
 commit messages, PR descriptions, UI strings. Generated text is welcome here,
 but it must not read like generated text. Check your writing against this
