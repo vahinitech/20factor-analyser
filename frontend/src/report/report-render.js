@@ -539,9 +539,9 @@ function render(host, data){
           <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>The concept</b>: we look at ${esc(fx.look)}</figcaption>
         </figure>
         <figure style="margin:0;">
-          ${cr?`<img class="f-crop" src="${cr.url}" alt="from your writing" style="width:100%;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--paper-edge);background:#fff;display:block;">`
+          ${cr?`<div style="display:grid;grid-template-columns:${cr.location_url?'minmax(0,1fr) 52px':'minmax(0,1fr)'};gap:6px;"><img class="f-crop" src="${cr.url}" alt="${esc(cr.caption || 'from your writing')}" style="width:100%;height:64px;object-fit:contain;border-radius:8px;border:1px solid var(--paper-edge);background:#fff;display:block;">${cr.location_url?`<img class="f-location" src="${cr.location_url}" alt="Highlighted location on the uploaded page" style="width:52px;height:64px;object-fit:contain;border:1px solid var(--paper-edge);background:#fff;">`:''}</div>`
               :`<div class="f-focus" style="height:64px;margin:0;display:grid;place-items:center;color:var(--muted);font-size:10.5px;">reference crop appears when the recognition server maps your page</div>`}
-          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>Your reference</b>: ${cr?esc(cr.caption):'measured from your own page'}</figcaption>
+          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>Your reference</b>: ${cr?`${cr.status==='context'?'Context only. ':''}${esc(cr.caption)}`:'No localized evidence available for this scan.'}</figcaption>
         </figure>
       </div>
       <div class="f-scorebar"><i style="width:${f.score100}%;background:${BAND_COLOR[f.band]}"></i></div>
@@ -559,7 +559,7 @@ function render(host, data){
         <div style="font-size:11px;color:var(--ink-2);line-height:1.6;">Each <b style="color:var(--accent-deep);">orange box</b> is a piece of writing the engine found and measured: that is the evidence behind every score in this report. The <b style="color:var(--grow);">teal line</b> under a box is the baseline the writing sits on.</div>
       </div>
     </div>`:''}
-    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b>: so you can see exactly what was measured and where to aim next.</p>
+    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b>: The highlighted page map shows where the crop came from. Context-only images do not identify an exact fault.</p>
     <div style="display:grid;gap:12px;">${improveCards}</div>
     <div style="margin-top:10px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:9px 13px;">We show the <b>top 3 issues</b> so practice stays focused. Want the full 20-factor deep-dive report? Email <a href="mailto:info@vahinitech.com" style="color:var(--accent-deep);font-weight:700;">info@vahinitech.com</a>.</div>
     ${foot(pg,'Top 3 issues · full 20-factor deep-dive: info@vahinitech.com')}

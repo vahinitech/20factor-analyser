@@ -73,7 +73,8 @@ jobs:
             backend.tests.test_regression_functional \
             backend.tests.test_handwriting_only \
             backend.tests.test_layout_filter \
-            backend.tests.test_photo_validity
+            backend.tests.test_photo_validity \
+            backend.tests.test_factor_evidence
 
   e2e:
     runs-on: ubuntu-latest

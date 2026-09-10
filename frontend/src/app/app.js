@@ -19,7 +19,7 @@ function serverFactorCrops(vl){
     const v = m[k] || {};
     if (!Number.isFinite(n) || n < 1 || n > 20) return;
     if (!v.url) return;
-    out[n] = { url: v.url, caption: v.caption || 'server vision evidence' };
+    out[n] = { ...v, caption: v.caption || 'server vision evidence' };
   });
   return out;
 }

@@ -245,6 +245,28 @@ class TestHandwritingOnlyRule(unittest.TestCase):
         for reg in j.get("regions", []):
             self.assertNotIn(str(reg.get("text", "")).lower(), MUST_EXCLUDE)
 
+    def test_factor_page_context_masks_excluded_printed_pixels(self):
+        import base64
+        import computer_vision
+
+        arr = np.full((180, 300, 3), 255, np.uint8)
+        arr[10:40, 20:280] = [255, 0, 0]  # excluded printed header
+        arr[90:120, 30:200] = [0, 0, 0]  # accepted handwriting
+        lines = [{"box": [30, 90, 170, 30], "text": "hand", "score": 0.8}]
+        regions = computer_vision._build_region_previews(arr, lines)
+        evidence = computer_vision._factor_region_map(arr, regions, lines)
+        for n in ("18", "20"):
+            raw = base64.b64decode(evidence[n]["url"].split(",")[1])
+            preview = np.array(Image.open(io.BytesIO(raw)).convert("RGB"))
+            red = (
+                (preview[:, :, 0] > 180)
+                & (preview[:, :, 1] < 80)
+                & (preview[:, :, 2] < 80)
+            )
+            self.assertFalse(
+                red.any(), f"printed pixels leaked into factor {n}"
+            )
+
     # ---- fully printed page: refuse, do not fabricate a score -----------
     def test_fully_printed_page_is_refused_with_clear_reason(self):
         arr = _load_sample("handwritten_printed_2.jpg")

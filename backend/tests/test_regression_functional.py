@@ -315,7 +315,7 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertEqual(len(j["rec_texts"]), len(j["rec_polys"]))
         self.assertEqual(len(j["rec_texts"]), len(j["rec_scores"]))
 
-    def test_factor_region_selection_heuristics(self):
+    def test_factor_region_metadata_from_legacy_preview_input(self):
         arr = np.full((220, 640, 3), 255, dtype=np.uint8)
         regions = [
             {
@@ -352,24 +352,15 @@ class RegressionFunctionalTests(unittest.TestCase):
 
         fmap = self.mod.computer_vision._factor_region_map(arr, regions)
 
-        self.assertEqual(
-            fmap["8"]["url"], "p1"
-        )  # word spacing -> multi-word line
-        self.assertEqual(fmap["10"]["url"], "p0")  # margin -> left-most region
-        self.assertEqual(
-            fmap["9"]["url"], "p2"
-        )  # letter spacing -> single-word region
-        self.assertEqual(
-            fmap["12"]["url"], "p3"
-        )  # vertical alignment -> taller region
-
-        # full-page factors intentionally use whole-page fallback, not line crops
-        self.assertTrue(
-            str(fmap["18"]["url"]).startswith("data:image/jpeg;base64,")
-        )
-        self.assertTrue(
-            str(fmap["20"]["url"]).startswith("data:image/jpeg;base64,")
-        )
+        # Preview-only callers still receive encoded crops with coordinates.
+        self.assertEqual(fmap["10"]["bbox"], [340, 160, 30, 18])
+        self.assertEqual(fmap["3"]["status"], "context")
+        for n in ("18", "20"):
+            self.assertEqual(fmap[n]["bbox"], [0, 0, 640, 220])
+            self.assertEqual(fmap[n]["status"], "context")
+            self.assertTrue(
+                fmap[n]["url"].startswith("data:image/jpeg;base64,")
+            )
 
     def test_margin_evidence_uses_true_leftmost_line_not_area_ranked_pool(
         self,
@@ -600,8 +591,8 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertEqual(findings, [])
 
     def test_factor_regions_reference_image_for_all_20(self):
-        # EVERY analysis must carry a usable reference image for each of
-        # the 20 factors (a line crop or the whole-page fallback).
+        # Photo-supported factors carry crops; sensor-only factors must
+        # explicitly say that a still photo cannot localize them.
         files = {"image": ("sample.png", self.image_bytes, "image/png")}
         r = self.client.post(
             "/report-python",
@@ -615,6 +606,10 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertEqual(len(fmap), 20)
         for n in range(1, 21):
             entry = fmap.get(str(n)) or {}
+            if 13 <= n <= 16:
+                self.assertEqual(entry["status"], "unavailable")
+                self.assertFalse(entry["url"])
+                continue
             self.assertTrue(
                 str(entry.get("url", "")).startswith(
                     "data:image/jpeg;base64,"
@@ -660,6 +655,10 @@ class RegressionFunctionalTests(unittest.TestCase):
             fmap = j["factor_regions"]
             self.assertEqual(len(fmap), 20)
             for n in range(1, 21):
+                if 13 <= n <= 16:
+                    self.assertEqual(fmap[str(n)]["status"], "unavailable")
+                    self.assertFalse(fmap[str(n)]["url"])
+                    continue
                 self.assertTrue(
                     str((fmap.get(str(n)) or {}).get("url", "")).startswith(
                         "data:image/jpeg;base64,"

@@ -117,11 +117,16 @@
   }
 
   function renderReport(analysis){
+    const cropURL = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="40"><rect width="1000" height="40" fill="white"/><rect width="20" height="40" fill="red"/><rect x="980" width="20" height="40" fill="blue"/></svg>');
+    const evidence = Object.fromEntries(analysis.results.map(f=>[f.n, {
+      url:cropURL, location_url:cropURL, status:'context',
+      caption:'region 10: Synthetic evidence; exact fault not localized.',
+    }]));
     const host = document.getElementById('host');
     VahiniReport.render(host, {
       intake:{ role:'individual', writerName:'' },
       analysis, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
-      ocrEngine:'server', detURL:'', crops:{}, letterFindings:null, history:null,
+      ocrEngine:'server', detURL:'', crops:evidence, letterFindings:null, history:null,
       pipeline:{ nLines:3, nWords:9, nChars:36, ocrEngine:'server' },
     });
     return host;
@@ -164,6 +169,14 @@
     const improvePage = [...pages].find(p=>/Where exactly to improve/i.test(p.textContent||''));
     add(!!improvePage && /The concept/.test(improvePage.textContent||'') && /Your reference/.test(improvePage.textContent||''),
       'Improve cards show concept + reference');
+
+    const cropImages = [...host.querySelectorAll('.f-crop')];
+    add(cropImages.length > 0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'),
+      'Evidence crops preserve both ends of long handwriting lines');
+    add(host.querySelectorAll('.f-location').length === cropImages.length,
+      'Each evidence crop includes a source-page location map');
+    add(/Context only/.test(host.textContent) && /region 10/.test(host.textContent),
+      'Evidence captions distinguish context and identify the source region');
 
     // 4d) the how-many-tries prediction is present
     add(/tries/i.test(host.textContent||''), 'How-many-tries prediction rendered');

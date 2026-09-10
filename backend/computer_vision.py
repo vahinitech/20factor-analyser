@@ -14,7 +14,7 @@ import re
 import base64
 
 import numpy as np
-from PIL import Image, ImageOps
+from PIL import Image, ImageOps, ImageDraw
 
 from geometry import clamp_box
 
@@ -235,173 +235,286 @@ def _full_page_preview(arr: np.ndarray):
 
 
 def _factor_region_map(arr: np.ndarray, regions, lines=None):
-    # `regions` is the shared, area-ranked preview pool built by
-    # _build_region_previews (capped for response size), used for every
-    # factor's evidence pick below. `lines` is the FULL, unranked
-    # handwriting-only line set _extract_features scores from; factor 10
-    # (margin) needs it directly, see the override near the end of this
-    # function, because a page with more lines than the pool cap can have
-    # its true left-most line excluded from `regions` by the area ranking.
-    # Keep captions aligned to the current 20-factor language while letting
-    # backend vision provide the concrete evidence crop.
-    labels = {
-        1: "letter formation evidence from detected writing",
-        2: "stroke sequence proxy from detected word region",
-        3: "loop/closure evidence from rounded letter region",
-        4: "stroke smoothness evidence from local letter region",
-        5: "size consistency evidence from representative line",
-        6: "ascender/descender zone evidence",
-        7: "baseline alignment evidence from line crop",
-        8: "word spacing evidence",
-        9: "letter spacing evidence",
-        10: "margin consistency evidence",
-        11: "line straightness evidence",
-        12: "vertical alignment evidence",
-        13: "speed factor context from writing region",
-        14: "pressure factor context from writing region",
-        15: "stroke continuity context",
-        16: "pen-lift context",
-        17: "slant consistency evidence",
-        18: "overall legibility evidence",
-        19: "character distinction evidence",
-        20: "overall neatness evidence",
-    }
-    fallback = _full_page_preview(arr)
-    seq = regions if regions else []
+    """Locate score inputs in the full handwriting set, never the preview cap.
 
-    if not seq:
-        return {
-            str(n): {
-                "url": fallback,
-                "caption": labels.get(n, "factor evidence"),
+    Boxes use processed-image pixels, the same space as hand_lines/proc_w/h.
+    A context crop is not proof of a local defect. In particular, OCR proxies
+    and composite scores cannot identify an exact faulty character.
+    """
+    # Reuse the scorer's row grouping and camera-tilt correction so evidence
+    # selection follows the measurements that produced the report.
+    from scoring import (
+        _group_lines_by_rows,
+        _page_tilt_degrees,
+        _detilted_left_x,
+    )
+
+    height, width = arr.shape[:2]
+    source = (
+        lines
+        if lines is not None
+        else [{**r, "box": r.get("bbox")} for r in regions]
+    )
+    accepted = []
+    for item in source:
+        box = item.get("box")
+        if item.get("printed_hint") or not box or len(box) != 4:
+            continue
+        if not all(np.isfinite(float(v)) for v in box):
+            continue
+        bounds = clamp_box(*box, width, height)
+        if bounds is None:
+            continue
+        x0, y0, x1, y1 = bounds
+        accepted.append(
+            {
+                **item,
+                "box": [x0, y0, x1 - x0, y1 - y0],
             }
+        )
+    accepted.sort(key=lambda l: (l["box"][1], l["box"][0]))
+    for i, item in enumerate(accepted):
+        item["evidence_id"] = f"line_{i+1}"
+
+    # Only accepted handwriting rectangles reach page-wide context or
+    # multi-region crops. Printed headers between regions remain white.
+    masked = np.full_like(arr, 255)
+    for item in accepted:
+        x, y, w, h = item["box"]
+        masked[y : y + h, x : x + w] = arr[y : y + h, x : x + w]
+
+    def unavailable(reason):
+        return {
+            "url": "",
+            "caption": reason,
+            "status": "unavailable",
+            "bbox": None,
+            "region_ids": [],
+            "location_url": "",
+            "coordinate_space": "processed-image",
+            "source_size": [width, height],
+            "selection_method": "unavailable",
+        }
+
+    if not accepted:
+        return {
+            str(n): unavailable("No handwriting region available.")
             for n in range(1, 21)
         }
 
-    feats = []
-    for i, r in enumerate(seq):
-        b = r.get("bbox") or [0.0, 0.0, 0.0, 0.0]
-        x, y, w, h = [float(v) for v in b]
-        txt = str(r.get("text", "") or "")
-        sc = float(r.get("score", 0.0) or 0.0)
-        area = max(1.0, w * h)
-        feats.append(
-            {
-                "i": i,
-                "x": x,
-                "y": y,
-                "w": w,
-                "h": h,
-                "area": area,
-                "aspect": (w / max(1.0, h)),
-                "score": sc,
-                "text": txt,
-                "text_len": len(txt),
-                "space_count": txt.count(" "),
-                "digit_ratio": (
-                    (len(re.findall(r"\d", txt)) / max(1, len(txt)))
-                    if txt
-                    else 0.0
-                ),
-                "preview": r.get("preview", ""),
-            }
+    encoded = {}
+    locators = {}
+
+    def evidence(items, method, caption, status="context", page=False):
+        boxes = [item["box"] for item in items]
+        x = min(b[0] for b in boxes)
+        y = min(b[1] for b in boxes)
+        right = max(b[0] + b[2] for b in boxes)
+        bottom = max(b[1] + b[3] for b in boxes)
+        bbox = [x, y, right - x, bottom - y]
+        crop_box = [0, 0, width, height] if page else bbox
+        key = tuple(crop_box)
+        if key not in encoded:
+            encoded[key] = _to_data_url(
+                _crop_rgb(masked, crop_box), quality=90
+            )
+        ids = [item["evidence_id"] for item in items]
+        locator_key = tuple(ids)
+        if locator_key not in locators:
+            # A small page map preserves each region's position without
+            # exposing the rejected printed content surrounding the writing.
+            preview = Image.fromarray(masked)
+            preview.thumbnail((180, 180), Image.Resampling.LANCZOS)
+            draw = ImageDraw.Draw(preview)
+            sx, sy = preview.width / width, preview.height / height
+            for bx, by, bw, bh in boxes:
+                draw.rectangle(
+                    [bx * sx, by * sy, (bx + bw - 1) * sx, (by + bh - 1) * sy],
+                    outline=(210, 85, 25),
+                    width=2,
+                )
+            locators[locator_key] = _to_data_url(np.array(preview), quality=90)
+        location = (
+            ", ".join(
+                f"region {item['evidence_id'].split('_')[1]}" for item in items
+            )
+            if len(items) <= 2
+            else f"{len(items)} handwriting regions"
         )
-
-    mean_area = float(np.mean([f["area"] for f in feats])) if feats else 1.0
-    mean_h = float(np.mean([f["h"] for f in feats])) if feats else 1.0
-
-    def pick(pred=None, key=None, reverse=True, default_idx=0):
-        pool = feats
-        if pred is not None:
-            pool = [f for f in feats if pred(f)]
-        if not pool:
-            pool = feats
-        if not pool:
-            return default_idx
-        if key is None:
-            return pool[0]["i"]
-        pool.sort(key=key, reverse=reverse)
-        return pool[0]["i"]
-
-    # Factor-specific picks (heuristic, deterministic):
-    # Compact regions tend to represent single letters/short glyph clusters.
-    def compact(f):
-        return f["area"] <= mean_area * 0.85 and f["h"] <= mean_h * 1.15
-
-    def longline(f):
-        return f["aspect"] >= 5.0 or f["text_len"] >= 16
-
-    def spaced(f):
-        return f["space_count"] >= 2
-
-    def wordish(f):
-        return f["space_count"] == 0 and f["text_len"] >= 4
-
-    picks = {
-        1: pick(compact, key=lambda f: (f["score"], -f["digit_ratio"])),
-        2: pick(longline, key=lambda f: (f["text_len"], f["score"])),
-        3: pick(compact, key=lambda f: (f["h"], f["score"])),
-        4: pick(compact, key=lambda f: (f["score"], -f["aspect"])),
-        5: pick(None, key=lambda f: (f["h"], f["score"])),
-        6: pick(None, key=lambda f: (f["h"], f["text_len"])),
-        7: pick(None, key=lambda f: (f["w"], f["score"])),
-        8: pick(spaced, key=lambda f: (f["space_count"], f["w"])),
-        9: pick(wordish, key=lambda f: (-abs(f["text_len"] - 7), f["score"])),
-        10: pick(
-            None, key=lambda f: -f["x"], reverse=True
-        ),  # left margin evidence: fallback only, see the override below
-        11: pick(None, key=lambda f: (f["w"], f["score"])),
-        12: pick(None, key=lambda f: (f["h"], -f["w"], f["score"])),
-        13: pick(None, key=lambda f: (f["score"], f["text_len"])),
-        14: pick(None, key=lambda f: (f["h"], f["score"])),
-        15: pick(longline, key=lambda f: (f["text_len"], f["score"])),
-        16: pick(longline, key=lambda f: (f["text_len"], f["score"])),
-        17: pick(None, key=lambda f: (f["aspect"], f["text_len"])),
-        18: None,  # whole-page readability
-        19: pick(compact, key=lambda f: (f["score"], -f["digit_ratio"])),
-        20: None,  # whole-page neatness
-    }
-
-    # Margin evidence (factor 10) must show the page's actual left-most
-    # line. Picking within `seq` alone is wrong on any page with more lines
-    # than _build_region_previews' pool cap: the true left-most line can be
-    # short (small area) and never make it into that area-ranked pool, so
-    # the "left-most in the pool" pick silently becomes an arbitrary large
-    # line instead. Search the full, unranked, already handwriting-only
-    # `lines` directly when available.
-    margin_url = None
-    if lines:
-        leftmost = min(
-            lines,
-            key=lambda l: float((l.get("box") or [1e9, 0, 0, 0])[0]),
-            default=None,
-        )
-        if leftmost is not None:
-            crop = _crop_rgb(arr, leftmost.get("box") or [0, 0, 0, 0])
-            if crop is not None and crop.size:
-                margin_url = _to_data_url(crop, quality=90)
-
-    out = {}
-    for n in range(1, 21):
-        if n == 10 and margin_url:
-            out["10"] = {
-                "url": margin_url,
-                "caption": labels.get(10, "factor evidence"),
-            }
-            continue
-        idx = picks.get(n)
-        if idx is None:
-            url = fallback
-        else:
-            region = seq[int(max(0, min(idx, len(seq) - 1)))]
-            # Never emit an empty reference image: every factor must carry
-            # a usable crop, falling back to the whole-page preview.
-            url = region.get("preview") or fallback
-        out[str(n)] = {
-            "url": url,
-            "caption": labels.get(n, "factor evidence"),
+        return {
+            "url": encoded[key],
+            "caption": f"{location}: {caption}",
+            "status": status,
+            "bbox": crop_box,
+            "region_ids": ids,
+            "location_url": locators[locator_key],
+            "coordinate_space": "processed-image",
+            "source_size": [width, height],
+            "selection_method": method,
         }
-    return out
+
+    def outlier(values):
+        center = float(np.median(values))
+        return accepted[
+            max(range(len(values)), key=lambda i: abs(values[i] - center))
+        ]
+
+    widths = [item["box"][2] for item in accepted]
+    heights = [item["box"][3] for item in accepted]
+    low_confidence = min(accepted, key=lambda l: float(l.get("score", 0) or 0))
+    char_widths = [
+        item["box"][2]
+        / max(1, len(re.sub(r"\s+", "", str(item.get("text") or ""))))
+        for item in accepted
+    ]
+    char_outlier = outlier(char_widths)
+    height_outlier = outlier(heights)
+    width_outlier = outlier(widths)
+    loop_context = max(
+        accepted,
+        key=lambda l: len(
+            re.findall(r"[abdegopqABDGOPQR0689]", str(l.get("text") or ""))
+        ),
+    )
+    out = {
+        "1": evidence(
+            [low_confidence],
+            "ocr-confidence-context",
+            "OCR-confidence context; letter-shape fault not localized.",
+        ),
+        "2": evidence(
+            [char_outlier],
+            "character-width-proxy-context",
+            "Character-width proxy context; stroke order not visible in a photo.",
+        ),
+        "3": evidence(
+            [loop_context],
+            "loop-text-context",
+            "Loop-letter text context; open loop not localized.",
+        ),
+        "4": evidence(
+            [width_outlier],
+            "region-width-proxy-context",
+            "Region width differs most from the median; stroke roughness not localized.",
+        ),
+        "5": evidence(
+            [height_outlier],
+            "height-deviation",
+            "Region height differs most from the page median.",
+            "measurement",
+        ),
+        "6": evidence(
+            [max(accepted, key=lambda l: l["box"][3])],
+            "zone-context",
+            "Tall-region zone context; individual zone fault not localized.",
+        ),
+        "9": evidence(
+            [char_outlier],
+            "character-width-proxy-context",
+            "Character-width proxy context; individual letter gap not localized.",
+        ),
+        "18": evidence(
+            accepted,
+            "aggregate-context",
+            "Handwriting-only context for a composite score.",
+            page=True,
+        ),
+        "19": evidence(
+            [low_confidence],
+            "ocr-confidence-context",
+            "OCR-confidence context; confused character not localized.",
+        ),
+        "20": evidence(
+            accepted,
+            "aggregate-context",
+            "Handwriting-only context for a composite score.",
+            page=True,
+        ),
+    }
+    # Factors 7/11 score absolute polygon angles. A long level line must
+    # never displace a shorter tilted line merely because its crop is wider.
+    angled = []
+    for item in accepted:
+        poly = item.get("poly") or []
+        if len(poly) >= 2:
+            dx = max(1e-6, float(poly[1][0]) - float(poly[0][0]))
+            angle = float(
+                np.degrees(
+                    np.arctan2(float(poly[1][1]) - float(poly[0][1]), dx)
+                )
+            )
+            if np.isfinite(angle):
+                angled.append((item, abs(angle)))
+    for n in ("7", "11"):
+        out[n] = (
+            evidence(
+                [max(angled, key=lambda p: p[1])[0]],
+                "absolute-line-angle",
+                "Largest absolute detected line angle.",
+                "measurement",
+            )
+            if angled
+            else evidence(
+                accepted,
+                "line-context",
+                "No line angle available; fault not localized.",
+                page=True,
+            )
+        )
+    for n in ("12", "17"):
+        if angled:
+            median = float(np.median([angle for _, angle in angled]))
+            item = max(angled, key=lambda p: abs(p[1] - median))[0]
+            out[n] = evidence(
+                [item],
+                "line-angle-spread-context",
+                "Line-angle spread proxy; individual stroke slant not localized.",
+            )
+        else:
+            out[n] = evidence(
+                accepted,
+                "line-context",
+                "No line angle available; fault not localized.",
+                page=True,
+            )
+
+    tilt = _page_tilt_degrees(accepted)
+    lefts = [_detilted_left_x(l["box"], tilt, width, height) for l in accepted]
+    out["10"] = evidence(
+        [outlier(lefts)],
+        "detilted-left-deviation",
+        "Left edge differs most from the corrected page median.",
+        "measurement",
+    )
+
+    gaps = []
+    for row in _group_lines_by_rows(accepted):
+        items = row["items"]
+        row_height = float(np.mean([l["box"][3] for l in items]))
+        for left, right in zip(items, items[1:]):
+            gap = max(0, right["box"][0] - left["box"][0] - left["box"][2])
+            gaps.append((left, right, gap / max(1, row_height)))
+    if gaps:
+        median = float(np.median([gap for _, _, gap in gaps]))
+        left, right, _ = max(gaps, key=lambda g: abs(g[2] - median))
+        out["8"] = evidence(
+            [left, right],
+            "normalized-word-gap-deviation",
+            "Observed gap differs most from the page median.",
+            "measurement",
+        )
+    else:
+        out["8"] = evidence(
+            accepted,
+            "spacing-context",
+            "No between-region word gap available; fault not localized.",
+            page=True,
+        )
+    for n in range(13, 17):
+        out[str(n)] = unavailable(
+            "Requires sensor-pen data; no photo location can show this measurement."
+        )
+    return {str(n): out[str(n)] for n in range(1, 21)}
 
 
 # --------------------------------------------------------------------------- #
@@ -502,9 +615,11 @@ def _line_ink_components(arr, box):
     rather than a wrong guess."""
     if cv2 is None:
         return None
-    crop = _crop_rgb(arr, box)
-    if crop is None or crop.size == 0:
+    bounds = clamp_box(*box, arr.shape[1], arr.shape[0])
+    if bounds is None:
         return None
+    x0, y0, x1, y1 = bounds
+    crop = arr[y0:y1, x0:x1]
     gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
     h, w = gray.shape[:2]
     # Below this, individual letter strokes are only a few pixels wide, so
@@ -529,7 +644,7 @@ def _line_ink_components(arr, box):
         ink, connectivity=8
     )
     min_area = max(2.0, (h * w) * 0.0006)
-    ox, oy = float(box[0]), float(box[1])
+    ox, oy = float(x0), float(y0)
     comps = []
     for i in range(1, n_labels):
         if float(stats[i, cv2.CC_STAT_AREA]) < min_area:
