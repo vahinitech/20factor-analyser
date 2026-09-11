@@ -157,6 +157,8 @@
     add(host.querySelectorAll('.concept-target svg').length===3 && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs a target concept with uploaded evidence');
     add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Overall score|Factor scores|Your three priorities|Coaching|Tips and drills|Prediction', 'All report sections appear in the required order');
     add(!!host.querySelector('.projection-chart svg') && /illustrative scenario/i.test(host.textContent), 'Prediction chart is restored with its uncertainty label');
+    add(host.querySelectorAll('.coaching-card .coach-example').length===3 && /Check your next row/.test(host.textContent), 'Coaching includes illustrated examples and a self-check');
+    add(host.querySelectorAll('.reason-text').length===3 && !/CV|RMS|ratio err/.test(host.querySelector('.report-score-table').textContent), 'Priority reasons and score table use plain language');
     const cropImages=[...host.querySelectorAll('.f-crop')];
     add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
     add(host.querySelectorAll('.f-location').length===cropImages.length, 'Handwriting evidence includes source page location maps');

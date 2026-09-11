@@ -13,7 +13,10 @@ export async function checkReportLayout(page){
     document.body.style.cssText='margin:0;padding:0;font-size:20px';
     const sheet=document.createElement('style');sheet.textContent='body p { font-size:20px; }';document.head.append(sheet);
   });
-  await page.evaluate(()=>document.fonts.ready);
+  await page.evaluate(()=>Promise.all(['600 17px Spectral','400 12px "Hanken Grotesk"','500 20px Caveat','400 20px "Edu SA Beginner"'].map(font=>document.fonts.load(font))));
+  const loaded=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==='loaded').map(f=>f.family.replace(/"/g,'')));
+  add(['Spectral','Hanken Grotesk','Caveat','Edu SA Beginner'].every(name=>loaded.includes(name)), 'All four report font families load from local assets');
+  add(await page.locator('.free-report').first().evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(255, 253, 248)', 'Paper background is preserved');
   await mkdir('test-results/report-layout',{recursive:true});
   for(const mode of ['desktop','mobile','print']){
     await page.setViewportSize({width:mode==='mobile'?390:1200,height:1000});

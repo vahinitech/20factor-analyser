@@ -318,6 +318,29 @@ function render(host, data){
   const {analysis, intake={}, recognizedText='', crops={}}=data;
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
+  const explanations={
+    1:['Letter shapes','The detected letter shapes differ from the reference pattern. This is a shape estimate, not a letter-by-letter correction.'],
+    2:['Stroke order','A photo cannot show the order in which strokes were written. Treat this as a proxy, not proof of a wrong stroke order.'],
+    3:['Closing loops','The detected pattern suggests some round shapes may be open. Check whether o and a close clearly.'],
+    4:['Smooth strokes','The detected strokes vary in steadiness. Check for wobbles, while remembering that image blur can affect this estimate.'],
+    5:['Even letter sizes','The detected writing heights vary. Check whether small letters stay at a similar height from word to word.'],
+    6:['Tall letters and tails','The detected balance of tall letters and tails differs from the reference. Check the height of h and l and the tails of g and y.'],
+    7:['Staying on the line','The detected words do not all sit at the same distance from the baseline. Check for words floating above or dipping below the line.'],
+    8:['Spaces between words','The detected gaps between words vary. Check for gaps that are much tighter or wider than the others.'],
+    9:['Spaces inside words','The spacing estimate varies within words. Check for letters that crowd together or spread too far apart.'],
+    10:['Straight left margin','The detected line starts do not form a straight left edge. Check where each handwritten line begins.'],
+    11:['Level lines','The detected lines change slope. Check whether a line rises or falls across the page.'],
+    12:['Upright strokes','The detected upright strokes vary in angle. Compare the stems of tall letters.'],
+    13:['Steady writing speed','Speed needs a timed pen recording; a page photo cannot measure it.'],
+    14:['Even pen pressure','Pressure needs a pen sensor; dark ink alone does not establish writing force.'],
+    15:['Continuous strokes','Stroke continuity needs a pen recording to distinguish pauses and joins.'],
+    16:['Pen lifts','Pen lifts need a pen recording; a photo does not count them reliably.'],
+    17:['Consistent slant','The detected letter lean varies. Aim for a consistent angle that is comfortable for you.'],
+    18:['Easy to read','This combines other handwriting measurements. Work on the specific priorities rather than treating it as a separate fault.'],
+    19:['Distinct letter shapes','The shape estimate suggests some letters may look alike. Check easily confused pairs such as a/o and c/e.'],
+    20:['Neat page','This combines size, spacing and alignment. Improving the specific priorities can make the page easier to follow.']
+  };
+  const examples={3:'o o o   a a a',4:'l l l   c c c',5:'a a a   o o o',6:'h l b   g y p',7:'keep words on the line',8:'word   word   word',9:'letter   letter',10:'start each line here',11:'write a level line',12:'l l l   h h h',17:'m i n   m i n',19:'a o   c e'};
   const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
   const weak=sorted.filter(f=>f.score<8.5);
   const maintenance=!weak.length && sorted.length>0;
@@ -345,7 +368,8 @@ function render(host, data){
     const n=window.VahiniNarrate ? VahiniNarrate.narrate(f) : null;
     const instruction=plainText(n ? n.drill : f.tip);
     priorities.push({id:String(f.n),factor:f,title:f.name,
-      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Within the strong reference range; maintain this skill.':'Below the strong reference range of 8.5–10; one of your measured practice priorities.'}`,
+      explanation:explanations[f.n]?.[1] || f.evidence,
+      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Within the strong reference range; maintain this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`,
       instruction,drill:'Write one short guided row, then a fresh row without the guide. Compare the two.'});
   });
   const spellingStatus=!readable
@@ -370,13 +394,13 @@ function render(host, data){
       : '<p style="font-size:10px;">No localized evidence available for this scan. This score does not identify an exact letter fault.</p>';
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
-  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p><div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Concept example, not a corrected scan</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
-  const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p></article>`).join('');
+  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p>${p.explanation?`<p class="reason-text"><b>What this score means:</b> ${esc(p.explanation)}</p>`:''}<div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Concept example, not a corrected scan</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
+  const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p><b>What to check:</b> ${esc(p.explanation||p.reason)}</p><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p><b>Check your next row:</b> Compare it with the guide, then try one row without the guide.</p></article>`).join('');
   const drills=priorities.map((p,i)=>`<article class="practice-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><p>${esc(p.drill)}</p></article>`).join('');
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
   const overall=Number.isFinite(rawOverall)?rawOverall:null;
   const measured=analysis.results.filter(isLive);
-  const scoreRows=analysis.results.map(f=>`<tr data-factor="${f.n}"><td>${f.n}</td><td>${esc(f.name)}</td><td>${isLive(f)?f.score.toFixed(1):'—'}</td><td>${isLive(f)?BAND_LABEL[bandOf(f.score)]:'Unavailable'}</td><td>${esc(f.target||'')}</td></tr>`).join('');
+  const scoreRows=analysis.results.map(f=>`<tr data-factor="${f.n}"><td>${f.n}</td><td>${esc(f.name)}</td><td>${isLive(f)?f.score.toFixed(1):'—'}</td><td>${isLive(f)?BAND_LABEL[bandOf(f.score)]:'Unavailable'}</td><td>${esc(explanations[f.n]?.[0]||f.name)}</td></tr>`).join('');
   let forecast=null;
   if(overall!=null && measured.length && window.VahiniForecast){
     const sections=analysis.sections.map(section=>({...section,factors:section.factors.filter(isLive)})).filter(section=>section.factors.length);
@@ -394,21 +418,21 @@ function render(host, data){
     `<section class="page free-report" data-screen-label="Factor scores">${head('2 · Factor scores')}
       <div class="sec-title"><h2>Your 20-factor score table</h2></div>
       <p>The strong reference band is 8.5–10. These engine thresholds guide practice; they are not clinical or age-specific norms.</p>
-      <table class="report-score-table"><thead><tr><th>#</th><th>Factor</th><th>/10</th><th>Band</th><th>Target</th></tr></thead><tbody>${scoreRows}</tbody></table>
+      <table class="report-score-table"><thead><tr><th>#</th><th>Factor</th><th>/10</th><th>Band</th><th>What to look at</th></tr></thead><tbody>${scoreRows}</tbody></table>
       <p>“—” means unavailable. Some measurements are proxies; a score alone does not establish an exact letter fault.</p>${foot(2)}</section>`,
     `<section class="page free-report" data-screen-label="Your three priorities">${head('3 · Concept and your handwriting')}
       <div class="sec-title"><div><div class="eyebrow">Free review · up to three priorities</div><h2>${title}</h2></div></div>
       <p class="lead">${maintenance?'Keep these strengths steady.':'Start with these priorities.'} Small, regular practice can help make schoolwork easier to read.</p>
-      <p class="spelling-status" style="font-size:11px;">${esc(spellingStatus)}</p>
+
       ${rec.printed_lines>0?`<p style="font-size:10px;">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
       ${reportCards || empty}
       <p style="font-size:10px;">Spelling suggestions do not change handwriting scores. Only measured factors are selected; a photo cannot measure pen speed or pressure.</p>${foot(3)}</section>`,
     `<section class="page free-report" data-screen-label="Coaching">${head('4 · Coaching')}
-      <div class="sec-title"><h2>How to work on each priority</h2></div>
+      <div class="sec-title"><h2>Coach’s guide: see it, try it, check it</h2></div>
       <p class="lead">Use the same priorities from your review. Ask a teacher or parent to check a word or letter with you if you are unsure.</p>
       ${coaching || empty}${foot(4)}</section>`,
     `<section class="page free-report" data-screen-label="Tips and drills">${head('5 · Tips and drills')}
-      <div class="sec-title"><h2>Your short practice session</h2></div>
+      <div class="sec-title"><h2>Tips and drills for your next page</h2></div>
       <p class="lead">Choose one priority to start. Take a few comfortable minutes and stop if your hand feels tired.</p>
       ${drills || empty}
       <p style="font-size:11px;">After practising, upload a fresh sample to get another free review. Use similar paper and lighting. Progress varies; this report does not predict marks or exam results.</p>

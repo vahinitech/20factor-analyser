@@ -79,3 +79,8 @@ packages, plus declared core/default Python dependencies. Generate a separate
 inventory from the built container for resolved Python transitives, operating
 system packages and model weights. Refresh the source inventory with
 `python backend/update_sbom.py` after dependency changes.
+
+
+## Locally served report fonts
+
+Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the SIL Open Font License 1.1. Original license files, upstream URLs and SHA-256 hashes are preserved in `frontend/assets/fonts/`. These files are served locally so reports do not require Google Fonts at export time.

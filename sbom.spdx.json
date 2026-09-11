@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-878d6abc768dd30b42f7",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-604ccff39263ab8195f7",
   "creationInfo": {
-    "created": "2026-09-11T00:00:09Z",
+    "created": "2026-09-11T03:52:28Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -14,6 +14,91 @@
   },
   "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
   "packages": [
+    {
+      "SPDXID": "SPDXRef-LocalFont-Caveat",
+      "name": "Caveat.ttf",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/Caveat%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988"
+        }
+      ],
+      "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-EduSABeginner",
+      "name": "EduSABeginner.ttf",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/edusabeginner/EduSABeginner%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "1ec0d8b4f3a6fda018079fa284570d2c4a3a514e3687d139b25b05dbb86c7ff4"
+        }
+      ],
+      "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-HankenGrotesk",
+      "name": "HankenGrotesk.ttf",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/hankengrotesk/HankenGrotesk%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f"
+        }
+      ],
+      "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-Spectral-Regular",
+      "name": "Spectral-Regular.ttf",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/Spectral-Regular.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "c89021dc20720c8d0dcf40b0b2f6e00c13665fa8041717f581396f51b8c78f5d"
+        }
+      ],
+      "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-Spectral-SemiBold",
+      "name": "Spectral-SemiBold.ttf",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/Spectral-SemiBold.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "5f86915a744832ecf6e4a17ab04bea091b9fa992ef5164ff65ae34c1da2fe94b"
+        }
+      ],
+      "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
     {
       "SPDXID": "SPDXRef-Package-Caveat",
       "name": "caveat",
@@ -1629,6 +1714,31 @@
       "spdxElementId": "SPDXRef-Package-Uvicorn",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-Caveat"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-EduSABeginner"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-HankenGrotesk"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-Spectral-Regular"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-Spectral-SemiBold"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",

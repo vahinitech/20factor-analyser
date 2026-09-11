@@ -1,3 +1,4 @@
+@import url('./report-fonts.css');
 /* SPDX-License-Identifier: AGPL-3.0-only
    © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
@@ -715,7 +716,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .free-report .practice-card { border-left:3px solid var(--grow); }
 .free-report .factor-instruction { font-size:12px; line-height:1.55; }
 .free-report .priority-evidence { display:grid; grid-template-columns:minmax(0,1fr) 100px; gap:12px; align-items:center; margin:10px 0 4px; }
-.free-report .priority-evidence .f-crop { width:100%; height:76px; object-fit:contain; border:1px solid var(--hair); border-radius:5px; }
+.free-report .priority-evidence .f-crop { width:100%; height:88px; object-fit:contain; border:1px solid var(--hair); border-radius:5px; }
 .free-report .priority-evidence .f-location { width:100%; height:88px; object-fit:contain; }
 .free-report .guided-support { background:var(--accent-soft); }
 .free-report .guided-support a { color:var(--accent-deep); font-weight:700; }
@@ -752,3 +753,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .free-report .concept-comparison { grid-template-columns:1fr; }
   .free-report .restored-score { max-width:100%; }
 }
+
+.free-report { background-color:#fffdf8; }
+.free-report .run-head { border-bottom:2px solid var(--accent-deep); }
+.free-report .coach-example { display:flex; align-items:center; gap:12px; background:var(--accent-soft); padding:8px 12px; border-radius:8px; margin:8px 0; }
+.free-report .coach-example svg { height:45px!important; width:180px!important; }
+.free-report .coach-example span { font-family:var(--handA); font-size:23px; }
+.free-report .reason-text { border-left:3px solid var(--gold); padding-left:8px; }
+.free-report .report-score-table thead { background:var(--accent-soft); }
+.free-report .report-score-table tbody tr:nth-child(even) { background:#f4f7f5; }
