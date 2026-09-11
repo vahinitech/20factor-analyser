@@ -121,6 +121,7 @@
     const evidence = Object.fromEntries(analysis.results.map(f=>[f.n, {
       url:cropURL, location_url:cropURL, status:'context',
       caption:'region 10: Synthetic evidence; exact fault not localized.',
+      region_ids:['region_14'], selection_method:f.n===5?'height-deviation':f.n===6?'zone-context':f.n===9?'character-width-proxy-context':f.n===17?'line-angle-spread-context':'detilted-left-deviation',
     }]));
     const host = document.getElementById(hostId);
     VahiniReport.render(host, {
@@ -156,13 +157,13 @@
     add(host.querySelectorAll('.report-score-table tbody tr').length===20 && /out of 100/.test(host.textContent), 'Overall score and all 20 factor rows are restored');
     add(host.querySelectorAll('.concept-target svg').length===3 && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs a target concept with uploaded evidence');
     add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Overall score|Factor scores|Your three priorities|Coaching|Tips and drills|Prediction', 'All report sections appear in the required order');
-    add(!!host.querySelector('.projection-chart svg') && /illustrative scenario/i.test(host.textContent), 'Prediction chart is restored with its uncertainty label');
+    add(!!host.querySelector('.projection-chart svg') && /one possible path/i.test(host.textContent), 'Prediction chart is restored with its uncertainty label');
     add(host.querySelectorAll('.coaching-card .coach-example').length===3 && /Check your next row/.test(host.textContent), 'Coaching includes illustrated examples and a self-check');
     add(host.querySelectorAll('.reason-text').length===3 && !/CV|RMS|ratio err/.test(host.querySelector('.report-score-table').textContent), 'Priority reasons and score table use plain language');
     const cropImages=[...host.querySelectorAll('.f-crop')];
     add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
     add(host.querySelectorAll('.f-location').length===cropImages.length, 'Handwriting evidence includes source page location maps');
-    add(/Context only/.test(host.textContent) && /region 10/.test(host.textContent), 'Evidence distinguishes context from an exact fault');
+    add(/Example only/.test(host.textContent) && /Part 14/.test(host.textContent), 'Evidence distinguishes context from an exact fault');
 
     const classifiedAnalysis = makeAnalysis(Array(20).fill(8));
     classifiedAnalysis.textClassification = {
@@ -195,10 +196,10 @@
     const factors = selector=>[...classifiedHost.querySelectorAll(selector)].map(e=>e.dataset.factor).join(',');
     add(factors('.coaching-card')==='5,8' && factors('.practice-card')==='5,8', 'Coaching and drills share the lowest measured factors and exclude missing dynamics');
     const instructions = selector=>[...classifiedHost.querySelectorAll(selector+' .factor-instruction')].map(e=>e.textContent).join('|');
-    add(instructions('.coaching-card')===instructions('.practice-card') && /two-line/i.test(instructions('.practice-card')), 'Size coaching uses the same specific guide-line drill as practice');
+    add(instructions('.coaching-card')===instructions('.practice-card') && /two guide lines/i.test(instructions('.practice-card')), 'Size coaching uses the same specific guide-line drill as practice');
     add(!/UNRELATED ENTERTAINMENT|Pressure waves/.test(classifiedHost.textContent), 'Generic entertainment and unrelated grouped drills are absent');
     renderReport(makeAnalysis(Array(20).fill(9)),'classification-host');
-    add(/Within the strong reference range/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
+    add(/Strong work/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
     const good = makeAnalysis(Array(20).fill(9)); good.results[2].score=7.5; good.results[2].band='good';
     renderReport(good,'classification-host');
     add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
@@ -227,13 +228,17 @@
     classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
-    add(!/weeks to fast/.test(host.textContent||'') && /not been calibrated/.test(host.textContent), 'Projection does not claim validated gains or photo speed');
+    add(!/weeks to fast/.test(host.textContent||'') && /has not been tested to predict your own progress/.test(host.textContent), 'Projection does not claim validated gains or photo speed');
 
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');
     add(/3 printed lines on the page were excluded/i.test(txt), 'Printed text exclusion remains visible');
     add(!!host.querySelector('.guided-support a[href^="mailto:"]') && /needs no purchase/.test(txt), 'Optional guided-support enquiry follows useful free feedback');
-    add(!/comparison|full 20-factor deep-dive/i.test(txt), 'Free report does not expose unrelated repository or comparison details');
+    add(!/20factor-analyser-pro|private repo|AGPL/i.test(txt), 'Report does not expose repository details');
+    add(/Ask about Pro/.test(txt) && /which Pro options are available and what they cost/.test(txt), 'Pro enquiry explains value without promising unavailable features');
+    add(host.querySelectorAll('.shared-evidence').length===3 && /does not mean separate mistakes/.test(txt), 'Repeated regions are disclosed without counting them as separate mistakes');
+    add(host.querySelectorAll('.selection-reason').length===3, 'Every crop explains why it was selected');
+    add(new Set([...host.querySelectorAll('.selection-reason')].map(el=>el.textContent)).size===3, 'Shared region keeps the distinct reason for each factor');
     add(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/.test(txt), 'Report contains no control or replacement characters');
 
     // #host is display:none (it's a structural scratch area for the checks

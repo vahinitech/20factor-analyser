@@ -319,26 +319,26 @@ function render(host, data){
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const explanations={
-    1:['Letter shapes','The detected letter shapes differ from the reference pattern. This is a shape estimate, not a letter-by-letter correction.'],
-    2:['Stroke order','A photo cannot show the order in which strokes were written. Treat this as a proxy, not proof of a wrong stroke order.'],
-    3:['Closing loops','The detected pattern suggests some round shapes may be open. Check whether o and a close clearly.'],
-    4:['Smooth strokes','The detected strokes vary in steadiness. Check for wobbles, while remembering that image blur can affect this estimate.'],
-    5:['Even letter sizes','The detected writing heights vary. Check whether small letters stay at a similar height from word to word.'],
-    6:['Tall letters and tails','The detected balance of tall letters and tails differs from the reference. Check the height of h and l and the tails of g and y.'],
-    7:['Staying on the line','The detected words do not all sit at the same distance from the baseline. Check for words floating above or dipping below the line.'],
-    8:['Spaces between words','The detected gaps between words vary. Check for gaps that are much tighter or wider than the others.'],
-    9:['Spaces inside words','The spacing estimate varies within words. Check for letters that crowd together or spread too far apart.'],
-    10:['Straight left margin','The detected line starts do not form a straight left edge. Check where each handwritten line begins.'],
-    11:['Level lines','The detected lines change slope. Check whether a line rises or falls across the page.'],
-    12:['Upright strokes','The detected upright strokes vary in angle. Compare the stems of tall letters.'],
+    1:['Letter shapes','Check that each letter has a clear shape. The photo gives a rough check; it cannot show every wrong letter.'],
+    2:['Stroke order','A photo cannot show which stroke you wrote first. This score is only an estimate.'],
+    3:['Closing loops','Check that round letters such as o and a close at the top.'],
+    4:['Smooth strokes','Look for shaky lines in your letters. A blurry photo can also make lines look shaky.'],
+    5:['Even letter sizes','Some writing looks taller than the rest. Keep small letters such as a, o and e the same height.'],
+    6:['Tall letters and tails','Check that h and l reach above small letters. The tails of g and y should go below the writing line.'],
+    7:['Staying on the line','Check that your words sit on the writing line, without floating above or dipping below it.'],
+    8:['Spaces between words','Leave a clear, even gap between words so they are easy to read.'],
+    9:['Spaces inside words','Keep letters close enough to form a word, but give each letter room.'],
+    10:['Straight left margin','Check where each line starts. Start at the same left margin each time.'],
+    11:['Level lines','Keep each line level. Check whether it rises or falls across the page.'],
+    12:['Upright strokes','Check that the straight parts of tall letters lean the same way.'],
     13:['Steady writing speed','Speed needs a timed pen recording; a page photo cannot measure it.'],
-    14:['Even pen pressure','Pressure needs a pen sensor; dark ink alone does not establish writing force.'],
-    15:['Continuous strokes','Stroke continuity needs a pen recording to distinguish pauses and joins.'],
-    16:['Pen lifts','Pen lifts need a pen recording; a photo does not count them reliably.'],
-    17:['Consistent slant','The detected letter lean varies. Aim for a consistent angle that is comfortable for you.'],
-    18:['Easy to read','This combines other handwriting measurements. Work on the specific priorities rather than treating it as a separate fault.'],
-    19:['Distinct letter shapes','The shape estimate suggests some letters may look alike. Check easily confused pairs such as a/o and c/e.'],
-    20:['Neat page','This combines size, spacing and alignment. Improving the specific priorities can make the page easier to follow.']
+    14:['Even pen pressure','A photo cannot measure how hard you press the pen.'],
+    15:['Continuous strokes','A photo cannot show when you pause the pen.'],
+    16:['Pen lifts','A photo cannot count how often you lift the pen.'],
+    17:['Consistent slant','Try to make your letters lean the same way. Choose an angle that feels comfortable.'],
+    18:['Easy to read','This score brings other skills together. Practise the three skills chosen for you.'],
+    19:['Distinct letter shapes','Check that a looks different from o, and c looks different from e.'],
+    20:['Neat page','Even sizes, clear spaces and straight lines help make your page neat.']
   };
   const examples={3:'o o o   a a a',4:'l l l   c c c',5:'a a a   o o o',6:'h l b   g y p',7:'keep words on the line',8:'word   word   word',9:'letter   letter',10:'start each line here',11:'write a level line',12:'l l l   h h h',17:'m i n   m i n',19:'a o   c e'};
   const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
@@ -366,35 +366,69 @@ function render(host, data){
   }
   (maintenance?sorted:weak).slice(0,3-priorities.length).forEach(f=>{
     const n=window.VahiniNarrate ? VahiniNarrate.narrate(f) : null;
-    const instruction=plainText(n ? n.drill : f.tip);
-    priorities.push({id:String(f.n),factor:f,title:f.name,
+    const simpleDrills={
+      1:'Copy five letters slowly. Check each shape before writing the next one.',
+      3:'Write a row of o and a. Close each round shape.',
+      4:'Write a row of l and c slowly. Try to make each stroke smooth.',
+      5:'Use two guide lines. Keep a, o and e the same height between them.',
+      6:'Write h, l, g and y. Make h and l tall; let g and y go below the line.',
+      7:'Write one short sentence. Make each word sit on the line.',
+      8:'Write a short sentence. Leave a small, even gap between words.',
+      9:'Write the word letter five times. Leave room to see each letter.',
+      10:'Draw a light left margin. Start three short lines beside it.',
+      11:'Write a sentence along a ruled line. Keep it level to the end.',
+      12:'Write l and h in a row. Keep their tall strokes at the same angle.',
+      17:'Write m, i and n slowly. Keep their lean the same.',
+      19:'Write a next to o, then c next to e. Make each pair easy to tell apart.'
+    };
+    const instruction=simpleDrills[f.n] || plainText(n ? n.drill : f.tip);
+    priorities.push({id:String(f.n),factor:f,title:explanations[f.n]?.[0] || f.name,
       explanation:explanations[f.n]?.[1] || f.evidence,
-      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Within the strong reference range; maintain this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`,
+      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Strong work. Keep practising this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`,
       instruction,drill:'Write one short guided row, then a fresh row without the guide. Compare the two.'});
   });
   const spellingStatus=!readable
     ? 'Spelling check deferred: the text reading is not confident enough. Try a clearer photo or check the words with a teacher.'
     : !hasText ? 'Spelling check unavailable: no usable handwritten text was read.'
     : spelling.length ? 'Possible English spelling mistakes found. One is included in your three priorities. Confirm it against the original page; text reading can make mistakes.'
-    : 'No common English misspellings from our limited list were found. This is not a complete spelling or grammar check; other languages are not checked.';
+    : 'We did not find a spelling mistake from our limited list of common English words. We may miss other mistakes. We do not check grammar or other languages.';
   const title=esc(intake.writerName || 'Your handwriting');
   const head=label=>`<div class="run-head"><span class="rh-mark"><span class="rh-dot"></span><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
   const foot=n=>`<div class="run-foot"><span>Free handwriting review</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
   const cardStyle='';
+  const selectionReasons={
+    'height-deviation':'This part has a writing height that differs most from the middle height on your page.',
+    'zone-context':'This is the tallest part found in your handwriting. Use it to check tall letters and tails.',
+    'detilted-left-deviation':'This line starts furthest from the usual left edge, after allowing for a tilted photo.',
+    'absolute-line-angle':'This line has the biggest upward or downward slope.',
+    'ocr-confidence-context':'The text reader was least sure about this part. Check the letters yourself.',
+    'character-width-proxy-context':'The estimated space per letter differs most here. This is only a rough example.',
+    'loop-text-context':'This part contains the most letters that may have loops.',
+    'region-width-proxy-context':'This part has an unusual width. It may not contain a shaky stroke.',
+    'line-angle-spread-context':'This line leans differently from the usual line angle. It does not show the angle of each letter.',
+    'normalized-word-gap-deviation':'The gap here differs most from the usual gaps on your page.',
+    'aggregate-context':'This shows the handwriting used for the combined score.',
+    'line-context':'Use this as a general example; we could not check its line angle.'
+  };
   const evidence=p=>{
     if(p.spelling){
       const f=p.spelling;
       return `<div class="spelling-evidence"><p>Text read from your handwriting: <q>${esc(f.context)}</q></p><small>${f.region?'Source region: '+esc(f.region):'Source: recognized handwriting; exact word location unavailable.'} · Suggested correction: <b>${esc(f.suggestion)}</b></small></div>`;
     }
     const c=crops[p.factor.n];
+    const ids=Array.isArray(c?.region_ids)?c.region_ids:[];
+    const shared=ids.length && priorities.some(other=>other!==p && other.factor &&
+      (crops[other.factor.n]?.region_ids||[]).some(id=>ids.includes(id)));
+    const location=ids.length?'Part '+ids.map(id=>String(id).replace(/^region_/, '')).join(', '):'';
+    const why=selectionReasons[c?.selection_method] || 'The reason for choosing this example is not available. Check it against your full page.';
     return c ? `<div class="priority-evidence">
       ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
       ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
-      <p style="font-size:10px;">${c.status==='context'?'Context only. ':''}${esc(c.caption||'Reference from the uploaded page.')} Geometry proxies do not establish an exact letter fault.</p>`
-      : '<p style="font-size:10px;">No localized evidence available for this scan. This score does not identify an exact letter fault.</p>';
+      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; no exact wrong letter was found.':'This checks the shape of a writing area, not each letter.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it does not mean separate mistakes.</span>':''}</p>`
+      : '<p style="font-size:10px;">We could not find a clear example for this skill. The score does not show an exact wrong letter.</p>';
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
-  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p>${p.explanation?`<p class="reason-text"><b>What this score means:</b> ${esc(p.explanation)}</p>`:''}<div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Concept example, not a corrected scan</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
+  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p>${p.explanation?`<p class="reason-text"><b>What to check:</b> ${esc(p.explanation)}</p>`:''}<div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Example to practise, not your corrected writing</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
   const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p><b>What to check:</b> ${esc(p.explanation||p.reason)}</p><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p><b>Check your next row:</b> Compare it with the guide, then try one row without the guide.</p></article>`).join('');
   const drills=priorities.map((p,i)=>`<article class="practice-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><p>${esc(p.drill)}</p></article>`).join('');
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
@@ -411,15 +445,15 @@ function render(host, data){
     `<section class="page free-report" data-screen-label="Overall score">${head('1 · Overall score')}
       <div class="sec-title"><div><div class="eyebrow">Handwriting review</div><h2>${title}</h2></div></div>
       <div class="score-card restored-score"><div class="ring">${overall!=null?ringSVG(overall):''}<div class="ring-num"><b>${overall??'—'}</b><span>out of 100</span></div></div><div class="band-pill">${overall!=null?overallBand(overall):'Not measured'}</div></div>
-      <p class="lead">${measured.length} of ${analysis.results.length} factors measured. Missing measurements do not contribute to the score.</p>
+      <p class="lead">${measured.length} of ${analysis.results.length} skills checked. Skills we cannot check do not lower your score.</p>
       <div class="restored-summary"><h3>Your practice priorities</h3>${priorities.map(p=>`<p>${esc(p.title)}</p>`).join('')||empty}</div>
-      <p>Read the factor scores on page 2 and compare the concept with your handwriting on page 3. Coaching, tips and drills follow, with a practice projection on page 6.</p>
+      <p>See your scores on page 2 and examples on page 3. Pages 4 and 5 show you how to practise. Page 6 helps you plan your next check.</p>
       <p class="spelling-status">${esc(spellingStatus)}</p>${foot(1)}</section>`,
     `<section class="page free-report" data-screen-label="Factor scores">${head('2 · Factor scores')}
       <div class="sec-title"><h2>Your 20-factor score table</h2></div>
-      <p>The strong reference band is 8.5–10. These engine thresholds guide practice; they are not clinical or age-specific norms.</p>
+      <p>Each skill is scored out of 10. A score of 8.5 or more is called strong. These scores guide practice; they are not school grades or a comparison with students your age.</p>
       <table class="report-score-table"><thead><tr><th>#</th><th>Factor</th><th>/10</th><th>Band</th><th>What to look at</th></tr></thead><tbody>${scoreRows}</tbody></table>
-      <p>“—” means unavailable. Some measurements are proxies; a score alone does not establish an exact letter fault.</p>${foot(2)}</section>`,
+      <p>“—” means we could not check this skill. Photo scores are estimates. They cannot point out every wrong letter.</p>${foot(2)}</section>`,
     `<section class="page free-report" data-screen-label="Your three priorities">${head('3 · Concept and your handwriting')}
       <div class="sec-title"><div><div class="eyebrow">Free review · up to three priorities</div><h2>${title}</h2></div></div>
       <p class="lead">${maintenance?'Keep these strengths steady.':'Start with these priorities.'} Small, regular practice can help make schoolwork easier to read.</p>
@@ -436,14 +470,14 @@ function render(host, data){
       <p class="lead">Choose one priority to start. Take a few comfortable minutes and stop if your hand feels tired.</p>
       ${drills || empty}
       <p style="font-size:11px;">After practising, upload a fresh sample to get another free review. Use similar paper and lighting. Progress varies; this report does not predict marks or exam results.</p>
-      <div class="guided-support" style="${cardStyle}"><h3>Want help choosing your next steps?</h3><p>Students, parents and teachers can ask about guided handwriting support. Schools can enquire about support for their students.</p><a href="mailto:info@vahinitech.com?subject=Guided%20handwriting%20support">Ask about guided support</a><p style="font-size:10px;">Your free review needs no purchase. Students can ask a parent or teacher to enquire.</p></div>
+      <div class="guided-support" style="${cardStyle}"><h3>Want more help? Ask about Pro</h3><p>Your free report gives you three things to practise. Want to compare two writing samples or get a personal practice plan? Ask which Pro options are available and what they cost.</p><a href="mailto:info@vahinitech.com?subject=Pro%20handwriting%20support">Ask about Pro with a parent or teacher</a><p style="font-size:10px;">Your free review needs no purchase. Students can ask a parent or teacher to enquire.</p></div>
       <p style="font-size:10px;">This is practice guidance, not a medical assessment. <a href="https://github.com/vahinitech/20factor-analyser/issues">Report a mistake</a>.</p>${foot(5)}</section>`,
     `<section class="page free-report" data-screen-label="Prediction">${head('6 · Practice prediction')}
       <div class="sec-title"><h2>Your practice projection</h2></div>
-      <p class="lead">An illustrative scenario, not a measured forecast or a promise of improvement.</p>
+      <p class="lead">This chart shows one possible path with practice. It cannot tell how quickly you will improve.</p>
       ${forecast?`<div class="projection-chart">${trajectoryChart(forecast.curve,forecast.overallNow,forecast.overallProj)}</div><p>Current measured score: <b>${overall}/100</b>. Illustrative range after ${forecast.horizon} weeks: <b>${forecast.projLow}–${forecast.projHigh}/100</b>.</p>`:'<p>A projection is unavailable until there are usable measured scores.</p>'}
-      <p>The model assumes short, regular practice. It has not been calibrated to predict this writer’s progress. Actual results depend on practice, the sample and image quality. Missing factors are excluded.</p>
-      <h3>Check your progress</h3><p>Practise the same priorities from pages 4 and 5. Re-scan a comparable passage after practice and check the real measurements. A photo cannot establish writing speed or pressure.</p>${foot(6)}</section>`
+      <p>This estimate assumes short, regular practice. It has not been tested to predict your own progress. Your practice, writing sample and photo quality can change the result. Only checked skills are included.</p>
+      <h3>Check your progress</h3><p>Practise the skills on pages 4 and 5. Then write a similar passage and upload a clear photo. Compare your new scores. A photo cannot measure pen speed or pressure.</p>${foot(6)}</section>`
   ];
   host.innerHTML=pages.join('');
   wirePrintFit(host);
