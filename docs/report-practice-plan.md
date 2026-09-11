@@ -1,13 +1,13 @@
-# Reader report and coaching alignment
+# Free handwriting review
 
-Issues #59, #60 and #61 are addressed in the report renderer.
+The free experience serves school students, especially classes 5–10 and class 12, while remaining useful to anyone practising handwriting. Teachers and schools can use the same short review.
 
-The reader report has six sections: scorecard, plain-language review, handwriting evidence, coaching, reference values and practice. Photo and pen reports use the same page numbering. Detailed classification transcripts and the separate technical sensor page are omitted. Classification remains in API responses and the printed-only refusal screen.
+The report has three stages: up to three priorities, coaching for those priorities, and matching drills. It does not show the complete factor scorecard, reference tables or sample-history comparisons. Underlying API measurements are unchanged. A short optional guided-support enquiry follows the free feedback and requires no purchase to use the review.
 
-Evidence, coaching, scorecard priorities and practice share up to three lowest measured factors below 8.5. Composite factors 18 and 20 remain on the scorecard and reference table, but practice targets their underlying factors. If all actionable factors reach 8.5, the same cards use maintenance wording. Missing factors cannot drive drills.
+A possible spelling mistake occupies one of the three slots. The other slots use the lowest measured non-composite handwriting factors below 8.5. If actionable factors are all strong, the report describes maintenance rather than inventing faults. Missing measurements do not generate issues. Every selected priority is carried through coaching and drills.
 
-Coaching and practice use the factor-specific narration instruction, also shown with the evidence. Broad exercise groups no longer choose drills. The backend legacy coaching library remains available in API responses, but the reader report does not render its generic habit or entertainment cards. No scores change in this revision.
+Spelling currently checks a limited explicit list of common English misspellings. It is not a dictionary, a grammar checker or support for other languages. Unknown words are not flagged merely because they are absent from the list. Suggestions display original recognized text, a correction and a source region when available; users must verify them against their handwriting. Low or moderate recognition confidence defers checking. When classification metadata exists, only included handwritten regions supply text; printed and excluded regions never supply spelling findings. Spelling does not change geometry scores.
 
-The report does not infer interest, practice habits or improvement speed from the sample. It no longer displays projected scores, sessions to a milestone or photo-based speed predictions. Practice asks the reader to write a short guided row, repeat without the guide, and compare the same factor after a comparable re-scan.
+The report never claims that an upload has no spelling or grammar mistakes. A clean limited-list result only means no matching common misspelling was detected. The backend classification streams remain available, and printed-only inputs keep their refusal details.
 
-Validation: browser regression covers shared priorities and instructions, missing dynamics, maintenance, good-band guidance, six-page photo and pen layouts, escaping and print fitting. A Chromium-exported mixed-fixture PDF was checked with PDFium and contained six sheets. Extremely long externally supplied content can still require print continuation to preserve legibility; content is never silently clipped to enforce a sheet count.
+Validation covers the three-priority budget, corrections and offsets, OCR uncertainty, printed exclusion, escaped snippets, maintenance, missing measurements, matching stages, and print fitting. Very long content can continue onto a printed sheet to preserve legibility rather than being silently clipped.

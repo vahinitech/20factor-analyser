@@ -1,10 +1,10 @@
 # Mixed handwritten and printed text (issue #6)
 
-The API retains separate classification streams for handwritten and printed text. Following the reader-report change in issue #60, the six-page report no longer appends transcript tables. The separate PDF-section criterion in issue #6 is therefore not fulfilled by the current reader report. Printed text is shown only for identification; it remains outside factor scores, factor evidence crops, recognized handwriting text and grammar checks. Each row shows its source-region ID, available classification level, printed-likeness score and whether its region contributed to scoring.
+The API retains separate classification streams for handwritten and printed text. Following the reader-report change in issues #60 and #63, the three-stage report no longer appends transcript tables. The separate PDF-section criterion in issue #6 is therefore not fulfilled by the current reader report. Printed text is shown only for identification; it remains outside factor scores, factor evidence crops, recognized handwriting text and grammar checks. Each row shows its source-region ID, available classification level, printed-likeness score and whether its region contributed to scoring.
 
 | Acceptance criterion | Implementation and verification |
 |---|---|
-| Distinct handwritten and printed sections in mixed-page PDFs | Not included in the current six-page reader report. The classification panel helper and API streams remain covered by tests; the helper is used on printed-only refusal screens. |
+| Distinct handwritten and printed sections in mixed-page PDFs | Not included in the current three-stage reader report. The classification panel helper and API streams remain covered by tests; the helper is used on printed-only refusal screens. |
 | Letter/word/text labels where available | The presentation preserves explicit `letter`, `word` or `line` metadata. Current detection/classification is line-level; no finer labels are inferred by splitting a string. Tests cover explicit finer metadata and the line default. |
 | Accurate handling of handwritten-only and printed-only pages | The classification panel helper says no printed text was detected for handwriting-only input. Printed-only pages retain the no-handwriting refusal and show excluded printed text on the refusal screen, without generating handwriting scores. |
 

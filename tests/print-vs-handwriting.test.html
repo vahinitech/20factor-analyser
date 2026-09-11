@@ -150,33 +150,13 @@
       add(true, 'Report renders from server analysis without throwing');
     }catch(e){ add(false,'Report renders from server analysis without throwing', String(e)); return finish(); }
 
-    // 3) all 20 factors are shown on the scoreboard
-    const fscores = host.querySelectorAll('.fscore');
-    add(fscores.length === 20, 'All 20 factors rendered on the scoreboard', 'found='+fscores.length);
-
-    // 4) compact field-launch report: at most 4 pages from a photo (5 with
-    //    the pen) so a young writer keeps interest: scorecard, where to
-    //    improve, reference values, practice & prediction.
-    const pages = host.querySelectorAll('.page');
-    add(pages.length === 6, 'Reader report contains exactly six pages', 'pages='+pages.length);
-
-    // 4b) the published reference values appear for every factor (lab-report style)
-    const refPage = [...pages].find(p=>/Reference interval/i.test(p.textContent||''));
-    const refRows = refPage ? refPage.querySelectorAll('tbody tr').length : 0;
-    add(refRows === 20, 'Reference-values table lists all 20 factors', 'rows='+refRows);
-
-    // 4c) improvement cards pair the concept drawing with a reference slot
-    const improvePage = [...pages].find(p=>/Where exactly to improve/i.test(p.textContent||''));
-    add(!!improvePage && /The concept/.test(improvePage.textContent||'') && /Your reference/.test(improvePage.textContent||''),
-      'Improve cards show concept + reference');
-
-    const cropImages = [...host.querySelectorAll('.f-crop')];
-    add(cropImages.length > 0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'),
-      'Evidence crops preserve both ends of long handwriting lines');
-    add(host.querySelectorAll('.f-location').length === cropImages.length,
-      'Each evidence crop includes a source-page location map');
-    add(/Context only/.test(host.textContent) && /region 10/.test(host.textContent),
-      'Evidence captions distinguish context and identify the source region');
+    const pages=host.querySelectorAll('.page');
+    add(pages.length===3, 'Free report has three stages: review, coaching, drills');
+    add(host.querySelectorAll('.priority-card').length===3 && !host.querySelector('.fscore'), 'Free review shows at most three priorities and no full factor scorecard');
+    const cropImages=[...host.querySelectorAll('.f-crop')];
+    add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
+    add(host.querySelectorAll('.f-location').length===cropImages.length, 'Handwriting evidence includes source page location maps');
+    add(/Context only/.test(host.textContent) && /region 10/.test(host.textContent), 'Evidence distinguishes context from an exact fault');
 
     const classifiedAnalysis = makeAnalysis(Array(20).fill(8));
     classifiedAnalysis.textClassification = {
@@ -186,7 +166,7 @@
     };
     const classifiedHost = document.createElement('div'); classifiedHost.id='classification-host'; document.body.append(classifiedHost);
     renderReport(classifiedAnalysis, 'classification-host');
-    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages after page 6');
+    add(classifiedHost.querySelectorAll('.page').length===3 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages to the free report');
     classifiedHost.innerHTML = VahiniReport.classificationPanels(classifiedAnalysis.textClassification).join('');
     const handSection = classifiedHost.querySelector('[data-kind="handwritten"]');
     const printSection = classifiedHost.querySelector('[data-kind="printed"]');
@@ -217,48 +197,38 @@
     renderReport(good,'classification-host');
     add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
     renderReport(aligned,'classification-host',{});
-    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also ends at page 6');
-    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03,04,05,06', 'Page numbering follows the six-page layout');
+    add(classifiedHost.querySelectorAll('.page').length===3 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also uses three stages');
+    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03', 'Page numbering follows the three-stage layout');
+    const spellingAnalysis=makeAnalysis(Array(20).fill(4));
+    spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
+    renderReport(spellingAnalysis,'classification-host');
+    add(factors('.priority-card')==='spelling,1,2' && factors('.coaching-card')===factors('.practice-card'), 'Spelling takes one of three slots and follows through coaching and drills');
+    add(/receive/.test(classifiedHost.textContent) && /line_7/.test(classifiedHost.textContent) && !/becuase/.test(classifiedHost.textContent), 'Spelling correction uses handwritten source text and excludes printed words');
+    spellingAnalysis.recognition.level='low';renderReport(spellingAnalysis,'classification-host');
+    add(!factors('.priority-card').includes('spelling') && /deferred/.test(classifiedHost.textContent), 'Low-confidence OCR defers spelling instead of accusing the writer');
+    spellingAnalysis.recognition.level='high';spellingAnalysis.textClassification.handwritten[0].included_in_scoring=false;
+    renderReport(spellingAnalysis,'classification-host');
+    add(!factors('.priority-card').includes('spelling'), 'Score-excluded handwriting does not supply spelling findings');
+    const corrections=VahiniCraft.checkSpelling('recieve becuase definately RECIEVE');
+    add(corrections.length===4 && corrections[0].suggestion==='receive' && corrections[3].start===27, 'Common spelling checker returns corrections and source offsets');
+    add(VahiniCraft.checkSpelling('colour centre favourite Malli constructor తెలుగు').length===0, 'Regional spellings, unknown names, non-English script and object keys are not flagged');
+    spellingAnalysis.textClassification.handwritten=[{id:'line_1',text:'<img src=x> recieve',included_in_scoring:true}];
+    renderReport(spellingAnalysis,'classification-host');
+    add(!classifiedHost.querySelector('.spelling-evidence img') && /<img/.test(classifiedHost.textContent), 'Spelling source snippets are escaped');
+    const empty=makeAnalysis(Array(20).fill(0));empty.results.forEach(f=>f.unmeasured=true);
+    renderReport(empty,'classification-host');
+    add(classifiedHost.querySelectorAll('.priority-card').length===0 && /clearer page/.test(classifiedHost.textContent), 'Unavailable measurements do not fabricate three faults');
     classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
     add(!/Projected score|How many tries|weeks to fast/.test(host.textContent||''), 'Report does not predict score gains or photo speed');
 
-    // 4e) recognition transparency: percentage in brackets + under-progress note
-    add(/\(91%\)/.test(host.textContent||'') && /under progress/i.test(host.textContent||''),
-      'Recognition % in brackets + under-progress note');
-
-    // 4f) document checks: spelling/grammar verdict on the scorecard
-    add(/no spelling mistakes/i.test(host.textContent||'') || /to check/i.test(host.textContent||''),
-      'Spelling & grammar document checks rendered');
-
-    // 4g) top-3 note with the full-report email
-    add(/full 20-factor deep-dive/i.test(host.textContent||''),
-      'Top-3 note with deep-dive email present');
-
-    // 5) the overall score appears in the cover / rings
-    const txt = host.textContent || '';
-    add(/out of 100/.test(txt), 'Overall score rendered', 'has "out of 100"='+/out of 100/.test(txt));
-
-    // 6) no control / replacement / unusual characters leaked into the report
-    const weird = (txt.match(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD\uFFFE\uFFFF]/g) || []);
-    add(weird.length === 0, 'Report has no control / replacement characters', weird.length ? weird.length+' found' : 'none');
-
-    // 7) strengths + focus chips present (topStrong / topWeak wired through)
-    add(/Top strengths/i.test(txt) && /Focus areas/i.test(txt), 'Scorecard shows strengths & focus areas');
-
-    // 8) a low-scoring factor is flagged focus, a high one strong
-    const focusChip = host.querySelectorAll('.fscore.focus').length;
-    const strongChip = host.querySelectorAll('.fscore.strong').length;
-    add(focusChip >= 1 && strongChip >= 1, 'Factor bands rendered (focus + strong present)', 'focus='+focusChip+' strong='+strongChip);
-
-    // 9) printed text on the page is disclosed as EXCLUDED, never scored
-    add(/3 printed lines on the page were excluded/i.test(txt),
-      'Printed-lines-excluded disclosure rendered (handwriting-only rule)');
-
-    // 10) the report invites bug reports / feature ideas on GitHub
-    add(/github\.com\/vahinitech\/20factor-analyser/i.test(host.innerHTML||''),
-      'GitHub issues note present');
+    const txt=host.textContent||'';
+    add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');
+    add(/3 printed lines on the page were excluded/i.test(txt), 'Printed text exclusion remains visible');
+    add(!!host.querySelector('.guided-support a[href^="mailto:"]') && /needs no purchase/.test(txt), 'Optional guided-support enquiry follows useful free feedback');
+    add(!/comparison|full 20-factor deep-dive/i.test(txt), 'Free report does not expose unrelated repository or comparison details');
+    add(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/.test(txt), 'Report contains no control or replacement characters');
 
     // #host is display:none (it's a structural scratch area for the checks
     // above, which only read text/DOM, never layout) -- fitPrintPages reads
