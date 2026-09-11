@@ -116,7 +116,7 @@
     };
   }
 
-  function renderReport(analysis, hostId='host'){
+  function renderReport(analysis, hostId='host', imu=null){
     const cropURL = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="40"><rect width="1000" height="40" fill="white"/><rect width="20" height="40" fill="red"/><rect x="980" width="20" height="40" fill="blue"/></svg>');
     const evidence = Object.fromEntries(analysis.results.map(f=>[f.n, {
       url:cropURL, location_url:cropURL, status:'context',
@@ -125,7 +125,7 @@
     const host = document.getElementById(hostId);
     VahiniReport.render(host, {
       intake:{ role:'individual', writerName:'' },
-      analysis, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
+      analysis, imu, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
       ocrEngine:'server', detURL:'', crops:evidence, letterFindings:null, history:null,
       pipeline:{ nLines:3, nWords:9, nChars:36, ocrEngine:'server' },
     });
@@ -158,7 +158,7 @@
     //    the pen) so a young writer keeps interest: scorecard, where to
     //    improve, reference values, practice & prediction.
     const pages = host.querySelectorAll('.page');
-    add(pages.length >= 3 && pages.length <= 5, 'Compact report generated (3-5 pages)', 'pages='+pages.length);
+    add(pages.length === 6, 'Reader report contains exactly six pages', 'pages='+pages.length);
 
     // 4b) the published reference values appear for every factor (lab-report style)
     const refPage = [...pages].find(p=>/Reference interval/i.test(p.textContent||''));
@@ -186,6 +186,8 @@
     };
     const classifiedHost = document.createElement('div'); classifiedHost.id='classification-host'; document.body.append(classifiedHost);
     renderReport(classifiedAnalysis, 'classification-host');
+    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages after page 6');
+    classifiedHost.innerHTML = VahiniReport.classificationPanels(classifiedAnalysis.textClassification).join('');
     const handSection = classifiedHost.querySelector('[data-kind="handwritten"]');
     const printSection = classifiedHost.querySelector('[data-kind="printed"]');
     add(!!handSection && !!printSection && /written answer/.test(handSection.textContent) && /Printed form label/.test(printSection.textContent),
@@ -200,10 +202,27 @@
       'Long printed streams paginate without dropping rows');
     add(VahiniReport.classificationPanels({handwritten:classifiedAnalysis.textClassification.handwritten,printed:[]}).join('').includes('No printed text detected.'),
       'Handwriting-only reports explicitly show no printed text');
+    const scores = Array(20).fill(9); scores[4]=3; scores[7]=4; scores[12]=0;
+    const aligned = makeAnalysis(scores); aligned.results[12].unmeasured=true;
+    aligned.coachTips=[{kind:'fun',title:'UNRELATED ENTERTAINMENT',text:'Generic speed habit'}];
+    renderReport(aligned,'classification-host');
+    const factors = selector=>[...classifiedHost.querySelectorAll(selector)].map(e=>e.dataset.factor).join(',');
+    add(factors('.coaching-card')==='5,8' && factors('.practice-card')==='5,8', 'Coaching and drills share the lowest measured factors and exclude missing dynamics');
+    const instructions = selector=>[...classifiedHost.querySelectorAll(selector+' .factor-instruction')].map(e=>e.textContent).join('|');
+    add(instructions('.coaching-card')===instructions('.practice-card') && /two-line/i.test(instructions('.practice-card')), 'Size coaching uses the same specific guide-line drill as practice');
+    add(!/UNRELATED ENTERTAINMENT|Pressure waves/.test(classifiedHost.textContent), 'Generic entertainment and unrelated grouped drills are absent');
+    renderReport(makeAnalysis(Array(20).fill(9)),'classification-host');
+    add(/Within the strong reference range/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
+    const good = makeAnalysis(Array(20).fill(9)); good.results[2].score=7.5; good.results[2].band='good';
+    renderReport(good,'classification-host');
+    add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
+    renderReport(aligned,'classification-host',{});
+    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also ends at page 6');
+    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03,04,05,06', 'Page numbering follows the six-page layout');
     classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
-    add(/tries/i.test(host.textContent||''), 'How-many-tries prediction rendered');
+    add(!/Projected score|How many tries|weeks to fast/.test(host.textContent||''), 'Report does not predict score gains or photo speed');
 
     // 4e) recognition transparency: percentage in brackets + under-progress note
     add(/\(91%\)/.test(host.textContent||'') && /under progress/i.test(host.textContent||''),
