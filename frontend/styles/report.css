@@ -731,3 +731,24 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .free-report .coaching-card,
   .free-report .practice-card { margin-bottom:10px; }
 }
+
+/* Restored report sections, with stable screen and print geometry. */
+.free-report .restored-score { width:280px; min-height:250px; margin:16px auto 24px; }
+.free-report .restored-summary { background:var(--paper-2); padding:16px; border-radius:12px; }
+.free-report .report-score-table { width:100%; border-collapse:collapse; table-layout:fixed; margin:14px 0; }
+.free-report .report-score-table th,.free-report .report-score-table td { text-align:left; padding:7px 5px; border-bottom:1px solid var(--hair); font-size:10px; overflow-wrap:anywhere; }
+.free-report .report-score-table th:nth-child(1) { width:6%; }
+.free-report .report-score-table th:nth-child(2) { width:32%; }
+.free-report .report-score-table th:nth-child(3) { width:8%; }
+.free-report .report-score-table th:nth-child(4) { width:18%; }
+.free-report .concept-comparison { display:grid; grid-template-columns:150px minmax(0,1fr); gap:12px; }
+.free-report .concept-target { display:flex; flex-direction:column; justify-content:center; background:var(--paper-2); border-radius:6px; padding:8px; }
+.free-report .concept-target svg { height:58px!important; }
+.free-report .concept-target small { font-size:9px; }
+.free-report .concept-actual { min-width:0; }
+.free-report .priority-evidence { grid-template-columns:minmax(0,1fr) 60px; }
+.free-report .projection-chart { margin:25px 0; }
+@media screen and (max-width:540px) {
+  .free-report .concept-comparison { grid-template-columns:1fr; }
+  .free-report .restored-score { max-width:100%; }
+}

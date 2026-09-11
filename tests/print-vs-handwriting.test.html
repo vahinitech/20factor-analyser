@@ -151,8 +151,12 @@
     }catch(e){ add(false,'Report renders from server analysis without throwing', String(e)); return finish(); }
 
     const pages=host.querySelectorAll('.page');
-    add(pages.length===3, 'Free report has three stages: review, coaching, drills');
-    add(host.querySelectorAll('.priority-card').length===3 && !host.querySelector('.fscore'), 'Free review shows at most three priorities and no full factor scorecard');
+    add(pages.length===6, 'Full report restores all six pages');
+    add(host.querySelectorAll('.priority-card').length===3 && !host.querySelector('.fscore'), 'Evidence page keeps three selected priorities');
+    add(host.querySelectorAll('.report-score-table tbody tr').length===20 && /out of 100/.test(host.textContent), 'Overall score and all 20 factor rows are restored');
+    add(host.querySelectorAll('.concept-target svg').length===3 && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs a target concept with uploaded evidence');
+    add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Overall score|Factor scores|Your three priorities|Coaching|Tips and drills|Prediction', 'All report sections appear in the required order');
+    add(!!host.querySelector('.projection-chart svg') && /illustrative scenario/i.test(host.textContent), 'Prediction chart is restored with its uncertainty label');
     const cropImages=[...host.querySelectorAll('.f-crop')];
     add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
     add(host.querySelectorAll('.f-location').length===cropImages.length, 'Handwriting evidence includes source page location maps');
@@ -166,7 +170,7 @@
     };
     const classifiedHost = document.createElement('div'); classifiedHost.id='classification-host'; document.body.append(classifiedHost);
     renderReport(classifiedAnalysis, 'classification-host');
-    add(classifiedHost.querySelectorAll('.page').length===3 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages to the free report');
+    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages to the free report');
     classifiedHost.innerHTML = VahiniReport.classificationPanels(classifiedAnalysis.textClassification).join('');
     const handSection = classifiedHost.querySelector('[data-kind="handwritten"]');
     const printSection = classifiedHost.querySelector('[data-kind="printed"]');
@@ -197,8 +201,8 @@
     renderReport(good,'classification-host');
     add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
     renderReport(aligned,'classification-host',{});
-    add(classifiedHost.querySelectorAll('.page').length===3 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also uses three stages');
-    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03', 'Page numbering follows the three-stage layout');
+    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also preserves six pages');
+    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03,04,05,06', 'Page numbering follows the six-page layout');
     const spellingAnalysis=makeAnalysis(Array(20).fill(4));
     spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
     renderReport(spellingAnalysis,'classification-host');
@@ -221,7 +225,7 @@
     classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
-    add(!/Projected score|How many tries|weeks to fast/.test(host.textContent||''), 'Report does not predict score gains or photo speed');
+    add(!/weeks to fast/.test(host.textContent||'') && /not been calibrated/.test(host.textContent), 'Projection does not claim validated gains or photo speed');
 
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');

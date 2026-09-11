@@ -370,28 +370,56 @@ function render(host, data){
       : '<p style="font-size:10px;">No localized evidence available for this scan. This score does not identify an exact letter fault.</p>';
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
-  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p>${evidence(p)}</article>`).join('');
+  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p><div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Concept example, not a corrected scan</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
   const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p></article>`).join('');
   const drills=priorities.map((p,i)=>`<article class="practice-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><p>${esc(p.drill)}</p></article>`).join('');
+  const rawOverall=analysis.overallMeasured ?? analysis.overall;
+  const overall=Number.isFinite(rawOverall)?rawOverall:null;
+  const measured=analysis.results.filter(isLive);
+  const scoreRows=analysis.results.map(f=>`<tr data-factor="${f.n}"><td>${f.n}</td><td>${esc(f.name)}</td><td>${isLive(f)?f.score.toFixed(1):'—'}</td><td>${isLive(f)?BAND_LABEL[bandOf(f.score)]:'Unavailable'}</td><td>${esc(f.target||'')}</td></tr>`).join('');
+  let forecast=null;
+  if(overall!=null && measured.length && window.VahiniForecast){
+    const sections=analysis.sections.map(section=>({...section,factors:section.factors.filter(isLive)})).filter(section=>section.factors.length);
+    const weight=sections.reduce((sum,section)=>sum+section.weight,0);
+    if(weight>0)forecast=VahiniForecast.compute({...analysis,results:measured,sections:sections.map(section=>({...section,weight:section.weight/weight}))},data.imu,data.pipeline||{},overall);
+  }
   const pages=[
-    `<section class="page free-report" data-screen-label="Your three priorities">${head('1 · Your review')}
+    `<section class="page free-report" data-screen-label="Overall score">${head('1 · Overall score')}
+      <div class="sec-title"><div><div class="eyebrow">Handwriting review</div><h2>${title}</h2></div></div>
+      <div class="score-card restored-score"><div class="ring">${overall!=null?ringSVG(overall):''}<div class="ring-num"><b>${overall??'—'}</b><span>out of 100</span></div></div><div class="band-pill">${overall!=null?overallBand(overall):'Not measured'}</div></div>
+      <p class="lead">${measured.length} of ${analysis.results.length} factors measured. Missing measurements do not contribute to the score.</p>
+      <div class="restored-summary"><h3>Your practice priorities</h3>${priorities.map(p=>`<p>${esc(p.title)}</p>`).join('')||empty}</div>
+      <p>Read the factor scores on page 2 and compare the concept with your handwriting on page 3. Coaching, tips and drills follow, with a practice projection on page 6.</p>
+      <p class="spelling-status">${esc(spellingStatus)}</p>${foot(1)}</section>`,
+    `<section class="page free-report" data-screen-label="Factor scores">${head('2 · Factor scores')}
+      <div class="sec-title"><h2>Your 20-factor score table</h2></div>
+      <p>The strong reference band is 8.5–10. These engine thresholds guide practice; they are not clinical or age-specific norms.</p>
+      <table class="report-score-table"><thead><tr><th>#</th><th>Factor</th><th>/10</th><th>Band</th><th>Target</th></tr></thead><tbody>${scoreRows}</tbody></table>
+      <p>“—” means unavailable. Some measurements are proxies; a score alone does not establish an exact letter fault.</p>${foot(2)}</section>`,
+    `<section class="page free-report" data-screen-label="Your three priorities">${head('3 · Concept and your handwriting')}
       <div class="sec-title"><div><div class="eyebrow">Free review · up to three priorities</div><h2>${title}</h2></div></div>
       <p class="lead">${maintenance?'Keep these strengths steady.':'Start with these priorities.'} Small, regular practice can help make schoolwork easier to read.</p>
       <p class="spelling-status" style="font-size:11px;">${esc(spellingStatus)}</p>
       ${rec.printed_lines>0?`<p style="font-size:10px;">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
       ${reportCards || empty}
-      <p style="font-size:10px;">Spelling suggestions do not change handwriting scores. Only measured factors are selected; a photo cannot measure pen speed or pressure.</p>${foot(1)}</section>`,
-    `<section class="page free-report" data-screen-label="Coaching">${head('2 · Coaching')}
+      <p style="font-size:10px;">Spelling suggestions do not change handwriting scores. Only measured factors are selected; a photo cannot measure pen speed or pressure.</p>${foot(3)}</section>`,
+    `<section class="page free-report" data-screen-label="Coaching">${head('4 · Coaching')}
       <div class="sec-title"><h2>How to work on each priority</h2></div>
       <p class="lead">Use the same priorities from your review. Ask a teacher or parent to check a word or letter with you if you are unsure.</p>
-      ${coaching || empty}${foot(2)}</section>`,
-    `<section class="page free-report" data-screen-label="Drills">${head('3 · Drills')}
+      ${coaching || empty}${foot(4)}</section>`,
+    `<section class="page free-report" data-screen-label="Tips and drills">${head('5 · Tips and drills')}
       <div class="sec-title"><h2>Your short practice session</h2></div>
       <p class="lead">Choose one priority to start. Take a few comfortable minutes and stop if your hand feels tired.</p>
       ${drills || empty}
       <p style="font-size:11px;">After practising, upload a fresh sample to get another free review. Use similar paper and lighting. Progress varies; this report does not predict marks or exam results.</p>
       <div class="guided-support" style="${cardStyle}"><h3>Want help choosing your next steps?</h3><p>Students, parents and teachers can ask about guided handwriting support. Schools can enquire about support for their students.</p><a href="mailto:info@vahinitech.com?subject=Guided%20handwriting%20support">Ask about guided support</a><p style="font-size:10px;">Your free review needs no purchase. Students can ask a parent or teacher to enquire.</p></div>
-      <p style="font-size:10px;">This is practice guidance, not a medical assessment. <a href="https://github.com/vahinitech/20factor-analyser/issues">Report a mistake</a>.</p>${foot(3)}</section>`
+      <p style="font-size:10px;">This is practice guidance, not a medical assessment. <a href="https://github.com/vahinitech/20factor-analyser/issues">Report a mistake</a>.</p>${foot(5)}</section>`,
+    `<section class="page free-report" data-screen-label="Prediction">${head('6 · Practice prediction')}
+      <div class="sec-title"><h2>Your practice projection</h2></div>
+      <p class="lead">An illustrative scenario, not a measured forecast or a promise of improvement.</p>
+      ${forecast?`<div class="projection-chart">${trajectoryChart(forecast.curve,forecast.overallNow,forecast.overallProj)}</div><p>Current measured score: <b>${overall}/100</b>. Illustrative range after ${forecast.horizon} weeks: <b>${forecast.projLow}–${forecast.projHigh}/100</b>.</p>`:'<p>A projection is unavailable until there are usable measured scores.</p>'}
+      <p>The model assumes short, regular practice. It has not been calibrated to predict this writer’s progress. Actual results depend on practice, the sample and image quality. Missing factors are excluded.</p>
+      <h3>Check your progress</h3><p>Practise the same priorities from pages 4 and 5. Re-scan a comparable passage after practice and check the real measurements. A photo cannot establish writing speed or pressure.</p>${foot(6)}</section>`
   ];
   host.innerHTML=pages.join('');
   wirePrintFit(host);

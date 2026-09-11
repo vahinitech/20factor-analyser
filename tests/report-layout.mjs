@@ -35,7 +35,7 @@ export async function checkReportLayout(page){
         crops:[...document.querySelectorAll('.f-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=70)
       };
     });
-    add(metrics.pages===3 && metrics.priorities===3,mode+': all stages and three priorities remain visible');
+    add(metrics.pages===6 && metrics.priorities===3,mode+': all stages and three priorities remain visible');
     add(metrics.fonts.every(n=>n<=13),mode+': report typography is isolated from oversized host text');
     add(metrics.fits && !metrics.overlap && metrics.cardsIntact,mode+': no horizontal overflow, overlapping blocks or clipped cards',JSON.stringify(metrics.heights));
     add(metrics.crops,mode+': readable evidence images preserve complete crops');
