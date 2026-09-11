@@ -451,7 +451,7 @@ function render(host, data){
     `<section class="page free-report compact-report" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
       <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
       ${coaching||empty}
-      <div class="guided-support"><h3>Ready to look at the whole page?</h3><div class="plan-comparison"><div><b>FREE · Start here</b><p>Three priorities, selected examples and practice steps.</p></div><div><b>PRO · Planned fuller review</b><p>Feedback across all handwriting parts, two-sample comparisons and a personal practice plan.</p></div></div><a href="mailto:info@vahinitech.com?subject=Pro%20handwriting%20support">Ask about Pro with a parent or teacher →</a><p class="report-note">Ask which Pro options are available and what they cost. Your free review needs no purchase.</p></div>
+      <div class="guided-support"><h3>Demo handwriting report</h3><p>This PDF shows an example of your review and practice steps. Use Vahini App to explore your results.</p></div>
       <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');

@@ -233,14 +233,14 @@
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');
     add(/3 printed lines on the page were excluded/i.test(txt), 'Printed text exclusion remains visible');
-    add(!!host.querySelector('.guided-support a[href^="mailto:"]') && /needs no purchase/.test(txt), 'Optional guided-support enquiry follows useful free feedback');
+    add(!host.querySelector('.guided-support a') && /Demo handwriting report/.test(txt), 'Demo PDF does not send students to external sales links');
     add(!/20factor-analyser-pro|private repo|AGPL/i.test(txt), 'Report does not expose repository details');
-    add(/Ask about Pro/.test(txt) && /which Pro options are available and what they cost/.test(txt), 'Pro enquiry explains value without promising unavailable features');
+    add(/Use Vahini App/.test(txt) && !/Ask about Pro/.test(txt), 'Commercial journey belongs in the app, not the demo PDF');
     add(host.querySelectorAll('.shared-evidence').length===3 && /does not mean separate mistakes/.test(txt), 'Repeated regions are disclosed without counting them as separate mistakes');
     add(host.querySelectorAll('.selection-reason').length===3, 'Every crop explains why it was selected');
     add(new Set([...host.querySelectorAll('.selection-reason')].map(el=>el.textContent)).size===3, 'Shared region keeps the distinct reason for each factor');
     add(/5 handwriting parts/.test(txt) && /1 different part is shown/.test(txt), 'Region coverage counts unique evidence rather than repeated crops');
-    add(host.querySelectorAll('.writing-lines').length===3 && /Planned fuller review/.test(txt), 'Illustrated practice space and honest Pro scope are present');
+    add(host.querySelectorAll('.writing-lines').length===3 && /Demo handwriting report/.test(txt), 'Illustrated practice space and demo label are present');
     add(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/.test(txt), 'Report contains no control or replacement characters');
 
     // #host is display:none (it's a structural scratch area for the checks
