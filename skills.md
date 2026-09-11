@@ -50,7 +50,8 @@ Avoid these; they add nothing:
   "high accuracy".
 - Write for the actual audience. Report copy is read by Indian school
   children and their parents: short words, concrete claims, no jargon.
-  "Hand shaky" beats "tremor", "writing flow" beats "rhythm".
+  Describe visible features, such as uneven strokes. Do not infer a medical
+  condition, personality, or motivation from handwriting.
 
 ## Formatting habits
 
@@ -66,3 +67,17 @@ Avoid these; they add nothing:
 Read it aloud. If a sentence would sound odd said to a colleague across a
 desk, rewrite it. If a paragraph could be pasted into any other project's
 README without change, it says nothing; delete it.
+
+
+## Evidence and technical claims
+
+- Distinguish a measured feature from a proxy, a context crop, and an unavailable measurement. A page image cannot establish pen speed, pressure or stroke order.
+- Name the observed feature and its source region. Do not call a representative crop the exact fault when the scorer cannot localize it.
+- Separate OCR confidence from recognition accuracy. Accuracy needs a labeled evaluation set; a model confidence percentage is not that result.
+- Report tests with their scope: request count, endpoint, cache state, hardware where known, and whether OCR was real or stubbed. Concurrent request handling does not establish production model throughput.
+- Describe dependencies as declared, locked or installed. A version range is not an installed version. State what a source SBOM omits, including container libraries and model weights.
+- When a dependency or CDN asset changes, update its lockfile or pinned URL and the source inventory with `python backend/update_sbom.py`. Verify with `--check`.
+
+## Review procedure
+
+Read the relevant source and tests before editing claims. Check parent-facing text for unsupported conclusions, then run the affected tests. Record remaining limits directly in the PR. Apply these rules to new or edited prose; do not rewrite unrelated text merely to remove a listed word from a technical name, quote or identifier.

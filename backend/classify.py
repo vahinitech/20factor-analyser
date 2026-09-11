@@ -64,16 +64,28 @@ def _gray(arr):
 
 
 def _ink_mask(gray):
-    """Binary mask, 1 = ink. Otsu when cv2 is present, else mean-offset."""
+    """Ink mask with polarity inferred from the region border.
+
+    Reverse-print headings have light glyphs on a dark panel. Counting the
+    panel as ink turns all letters into one component and destroys the print
+    signals. Require a predominantly dark border before reversing polarity.
+    """
     if gray.size == 0:
         return np.zeros_like(gray, dtype=np.uint8)
     if cv2 is not None:
         _t, th = cv2.threshold(
             gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
         )
-        return (th > 0).astype(np.uint8)
-    thr = float(np.mean(gray)) - 12.0
-    return (gray < thr).astype(np.uint8)
+        mask = (th > 0).astype(np.uint8)
+    else:
+        mask = (gray < float(np.mean(gray)) - 12.0).astype(np.uint8)
+    border = np.concatenate((mask[0], mask[-1], mask[:, 0], mask[:, -1]))
+    gray_border = np.concatenate((gray[0], gray[-1], gray[:, 0], gray[:, -1]))
+    if (
+        border.mean() >= 0.6 or gray_border.mean() < 128
+    ) and mask.mean() > 0.5:
+        mask = 1 - mask
+    return mask
 
 
 def _stroke_width_cv(mask):
@@ -155,7 +167,22 @@ def region_features(crop_rgb):
     gray = _gray(crop_rgb)
     mask = _ink_mask(gray)
     ink_ratio = float(mask.mean()) if mask.size else 0.0
+    dark_border = (
+        np.concatenate((gray[0], gray[-1], gray[:, 0], gray[:, -1]))
+        if gray.size
+        else np.array([255])
+    )
+    glyph_count = 0
+    if cv2 is not None and mask.size:
+        _n, _labels, stats, _centers = cv2.connectedComponentsWithStats(mask)
+        glyph_count = sum(
+            1
+            for x, y, w, h, area in stats[1:]
+            if area >= 6 and h >= max(3, 0.12 * mask.shape[0])
+        )
     return {
+        "light_on_dark": bool(dark_border.mean() < 128 and gray.mean() < 128),
+        "glyph_count": glyph_count,
         "sw_cv": _stroke_width_cv(mask),
         "gh_cv": _glyph_height_cv(mask),
         "edge_ratio": _edge_straightness(gray, mask),
@@ -252,6 +279,17 @@ def printed_probability(crop_rgb, text, score, box):
     textual = _text_printed_score(text, float(score or 0.0), box)
     # Weight structure a touch higher than text cues; both must agree to push high.
     prob = 0.58 * struct + 0.42 * textual
+    # Reverse-print capital headings need multiple separate, same-height,
+    # uniform-width glyphs as well as readable OCR. Not a keyword blacklist.
+    if (
+        feat.get("light_on_dark")
+        and feat.get("glyph_count", 0) >= 4
+        and 0 < feat.get("sw_cv", 1) <= 0.30
+        and feat.get("gh_cv", 1) <= 0.12
+        and float(score or 0) >= 0.86
+        and re.fullmatch(r"[A-Z]{5,}", str(text or "").strip())
+    ):
+        prob = max(prob, 0.80)
     return float(max(0.0, min(1.0, prob))), feat
 
 
@@ -367,3 +405,38 @@ def split_lines(arr, lines, threshold=None):
     hand = [l for l in lines if not l.get("printed_hint")]
     printed = [l for l in lines if l.get("printed_hint")]
     return hand, printed
+
+
+def classification_summary(lines, hand_lines=None):
+    """Presentation-only streams; never feed printed text into scoring."""
+    included = {id(line) for line in (hand_lines or [])}
+    result = {"handwritten": [], "printed": [], "unclassified": []}
+    for index, line in enumerate(lines, 1):
+        score = line.get("printed_prob")
+        classified = score is not None
+        kind = (
+            ("printed" if line.get("printed_hint") else "handwritten")
+            if classified
+            else "unclassified"
+        )
+        granularity = line.get("classification_granularity", "line")
+        if granularity not in ("letter", "word", "line"):
+            granularity = "line"
+        result[kind].append(
+            {
+                "id": f"text_{index}",
+                "text": str(line.get("text") or ""),
+                "bbox": line.get("box"),
+                "granularity": granularity,
+                "classification": kind,
+                "printed_score": float(score) if classified else None,
+                "included_in_scoring": id(line) in included,
+            }
+        )
+    result["note"] = (
+        "Labels apply to detected regions. Word or letter labels appear only "
+        "when separately classified at that level. A line containing both "
+        "print and handwriting may receive one label. The printed-likeness "
+        "score is a heuristic, not a calibrated confidence or accuracy percentage."
+    )
+    return result

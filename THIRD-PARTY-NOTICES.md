@@ -2,11 +2,10 @@
 
 The Vahini 20-Factor Handwriting Analyser is free software, licensed under the
 GNU Affero General Public License v3.0 only (© 2026 Vahini Technologies — see
-`LICENSE`). The **browser engine contains no
-bundled third-party code libraries** — all computer-vision, scoring and report
-code is first-party JavaScript. The components below are loaded at runtime, used
-on an optional server path, or used only for deployment. Each remains under its
-own licence and copyright.
+`LICENSE`). The browser bundle contains first-party client and report code.
+Computer vision and scoring run on the Python server. The browser lazily loads
+PDF.js for PDF uploads and loads web fonts at runtime. Each third-party
+component retains its own licence and copyright.
 
 A machine-readable SBOM in SPDX 2.3 format is provided in `sbom.spdx.json`.
 
@@ -35,9 +34,8 @@ All four fonts are licensed under the **SIL Open Font License 1.1 (OFL-1.1)**.
 **PaddleOCR (PP-OCRv5)** — © PaddlePaddle Authors — **Apache License 2.0**
 <https://github.com/PaddlePaddle/PaddleOCR>
 
-Used **only** on the optional heavy-recognition *server* path to confirm which
-characters were attempted. It is **not bundled in the browser app** and is never
-the basis of a handwriting score. The Apache-2.0 licence requires preservation of
+Used on the default recognition server path. It is not bundled in the browser
+app. Some current scoring proxies consume its text and confidence outputs. The Apache-2.0 licence requires preservation of
 copyright, licence and NOTICE files when redistributed; PaddleOCR is not
 redistributed as part of the client build.
 
@@ -57,9 +55,32 @@ redistributed as part of the client build.
 **nginx** — © Igor Sysoev; © Nginx, Inc. / F5 — **BSD-2-Clause**
 <https://nginx.org>
 
-Used as the static web server in deployment (`deploy/nginx.conf`, `Dockerfile`).
-Not part of the shipped client bundle.
+Optional reverse proxy for deployments. The default Docker image serves the
+client and APIs through FastAPI/Uvicorn; nginx is not included in that image.
 
 ---
 
 *Questions about attribution or licensing: info@vahinitech.com*
+
+
+## PDF readers and dependency inventory
+
+**PDF.js 6.3.289**, Mozilla Foundation and contributors, Apache-2.0, is loaded
+from jsDelivr only for browser PDF uploads. Its worker uses the same pinned
+version. Source: <https://github.com/mozilla/pdf.js>.
+
+**pypdfium2 5.13.0** is a required core server dependency for PDF decoding.
+Binding licensing and PDFium third-party notices are recorded by the package;
+retain the upstream notices when distributing its binaries. Source:
+<https://github.com/pypdfium2-team/pypdfium2>.
+
+The SPDX source inventory includes npm test tooling and transitive lockfile
+packages, plus declared core/default Python dependencies. Generate a separate
+inventory from the built container for resolved Python transitives, operating
+system packages and model weights. Refresh the source inventory with
+`python backend/update_sbom.py` after dependency changes.
+
+
+## Locally served report fonts
+
+Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the SIL Open Font License 1.1. Original license files, upstream URLs and SHA-256 hashes are preserved in `frontend/assets/fonts/`. These files are served locally so reports do not require Google Fonts at export time.

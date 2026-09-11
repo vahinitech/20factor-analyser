@@ -98,7 +98,7 @@ const T = {
     drill:'Pick your single lowest factor and drill only that', next:'this score follows automatically next scan.' },
 };
 
-function pick(v, f){ return typeof v==='function' ? v(f.value, f) : (v && v[f.band]!==undefined ? (typeof v[f.band]==='function'? v[f.band](f.value,f) : v[f.band]) : v); }
+function pick(v, f){ if (v && typeof v==='object' && f.band==='good' && v.good===undefined) return pick(v, {...f,band:'strong'}); return typeof v==='function' ? v(f.value, f) : (v && v[f.band]!==undefined ? (typeof v[f.band]==='function'? v[f.band](f.value,f) : v[f.band]) : v); }
 
 function narrate(f){
   const t = T[f.n];
@@ -109,13 +109,13 @@ function narrate(f){
   if (!usePen && t.honest){
     const body = t.honest(f);
     const drill = pick(t.drill, f);
-    return { label:'What this means', body, action: drill + ': ' + t.next };
+    return { label:'What this means', body, drill, action: drill + ': ' + t.next };
   }
   const saw = src.saw ? (typeof src.saw[f.band]==='function' ? src.saw[f.band](f.value) : src.saw[f.band]) : '';
   const body = `${src.measured} ${saw} ${src.why}`;
   const drill = pick(src.drill, f);
   return { label: f.band==='strong' ? 'Why it scored well' : f.band==='dev' ? 'Why it’s developing' : 'Why this is a focus',
-           body, action: drill + ': ' + src.next };
+           body, drill, action: drill + ': ' + src.next };
 }
 
 global.VahiniNarrate = { narrate };

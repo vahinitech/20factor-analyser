@@ -90,7 +90,7 @@ class SectionScore:
             "avg": self.avg,
             "avg100": self.avg100,
             "factors": [f.to_dict() for f in self.factors],
-            "scoredCount": len(self.factors),
+            "scoredCount": sum(not f.unmeasured for f in self.factors),
         }
 
 
@@ -599,6 +599,8 @@ def _score_factor_map(fx):
 
 
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
+    if not lines:
+        raise ValueError("No handwriting regions available to score")
     fx = _extract_features(arr, lines, layout)
     scores = _score_factor_map(fx)
 
@@ -691,6 +693,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
+        motion_only = sec == "dynamics"
+        if motion_only:
+            score = 0.0
+            value = "Not measured"
+            evidence = "A still photo cannot measure pen motion or pressure."
         if n == 6 and zone_based:
             parts = []
             if zones.get("ascReach") is not None:
@@ -749,14 +756,23 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 band=_band(score),
                 value=value,
                 evidence=evidence,
-                based_on=basis.get(n),
+                based_on=None if motion_only else basis.get(n),
+                conf="imu" if motion_only else "measured",
+                unmeasured=motion_only,
+                unmeasured_reason=(
+                    "Requires time-series data from the sensor pen."
+                    if motion_only
+                    else None
+                ),
+                unmeasured_kind="imu" if motion_only else None,
             )
         )
 
     sections = []
     for sec_meta in _SECTIONS:
         fs = [r for r in results if r.sec == sec_meta["id"]]
-        avg = mean([r.score for r in fs]) if fs else 0.0
+        measured = [r for r in fs if not r.unmeasured]
+        avg = mean([r.score for r in measured]) if measured else 0.0
         sections.append(
             SectionScore(
                 id=sec_meta["id"],
@@ -764,25 +780,27 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 weight=sec_meta["weight"],
                 blurb=sec_meta["blurb"],
                 factors=fs,
-                avg=round(avg, 1) if fs else None,
-                avg100=int(round(avg * 10)) if fs else None,
+                avg=round(avg, 1) if measured else None,
+                avg100=int(round(avg * 10)) if measured else None,
             )
         )
 
-    wsum = sum(float(s.weight) for s in sections) or 1.0
+    live_sections = [s for s in sections if s.avg100 is not None]
+    wsum = sum(float(s.weight) for s in live_sections) or 1.0
     overall = int(
         round(
             sum(
                 float(s.avg100 or 0) * (float(s.weight) / wsum)
-                for s in sections
+                for s in live_sections
             )
         )
     )
-    ranked = sorted(results, key=lambda r: float(r.score))
+    measured_results = [r for r in results if not r.unmeasured]
+    ranked = sorted(measured_results, key=lambda r: float(r.score))
     top_weak = ranked[:3]
-    top_strong = sorted(results, key=lambda r: float(r.score), reverse=True)[
-        :4
-    ]
+    top_strong = sorted(
+        measured_results, key=lambda r: float(r.score), reverse=True
+    )[:4]
 
     # Baseline drift DIRECTION (issue #21): coaches teach climbing vs
     # sinking, not just "misaligned". Positive signed angle = the lines
@@ -884,7 +902,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # naming the measurement that earned it the slot. Advisory report
     # content, never a score input.
     tip_ctx = {
-        "scores": {r.n: r.score for r in results},
+        "scores": {r.n: r.score for r in measured_results},
         "style": style,
         "finishing": finishing,
         "text": " ".join(str(l.get("text", "") or "") for l in lines),
@@ -899,7 +917,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         sections=sections,
         overall=overall,
         overall_measured=overall,
-        measured_count=len(results),
+        measured_count=len(measured_results),
         top_weak=top_weak,
         top_strong=top_strong,
         plain_groups=plain,

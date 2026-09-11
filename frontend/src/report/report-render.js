@@ -278,435 +278,183 @@ function focusSVG(f){
 }
 
 /* ===================== MAIN RENDER ===================================== */
-/* Compact field-launch report: at most 4 pages from a photo (5 with the
-   pen) so a young writer keeps interest:
-     1. Scorecard       : overall, sections, all 20 factors at a glance
-     2. Where to improve: concept drawing + a reference crop from THEIR page
-     3. Reference values: the published ranges for all 20 factors, read
-                           like a medical lab report
-     4. Practice & tries: the drills, and how many tries to the milestone */
-function render(host, data){
-  const { intake, analysis, recognizedText, ocrEngine, detURL, pipeline, imu, crops, history } = data;
-  const rc = roleConfig('individual');
-  const name = intake.writerName || 'this sample';
-  const isLive = (f)=> !f.unmeasured && (f.imuMeasured || f.conf!=='imu');
-  const penPending = analysis.results.filter(f=>!f.imuMeasured && f.conf==='imu').length;
-  const unmeasuredCount = analysis.results.filter(f=>f.unmeasured).length;
-  const measuredCount = (analysis.measuredCount!=null ? analysis.measuredCount : (20-penPending));
-  // Headline score: in photo mode use the Measured overall (excludes pen-pending factors)
-  const overall = imu ? analysis.overall : (analysis.overallMeasured!=null ? analysis.overallMeasured : analysis.overall);
-  const MILESTONE = Math.min(100, Math.ceil((overall+1)/5)*5);
-  const topWeakNames = analysis.topWeak.slice(0,2).map(f=>f.name);
-  const today = new Date().toLocaleDateString('en-GB',{ day:'numeric', month:'long', year:'numeric' });
-  const rid = (function(){
-    /* Sequential, incrementing report number (not random): 0001, 0002, … */
-    let n = 0;
-    try{ n = parseInt(localStorage.getItem('vahini_report_seq')||'0', 10) || 0; }catch(e){}
-    n += 1;
-    try{ localStorage.setItem('vahini_report_seq', String(n)); }catch(e){}
-    return 'VHN-'+new Date().getFullYear()+'-'+String(n).padStart(4,'0');
-  })();
-  const logo = 'assets/vahini-logo.png';
-  const head = (label)=>`<div class="run-head"><span class="rh-mark"><img class="rh-logo" src="${logo}" alt=""><span class="rh-name">Vahini</span></span><span class="rh-right">${label}</span></div>`;
-  const foot = (pg, mid)=>`<div class="run-foot"><span>Vahini Handwriting Analysis · ${rid}</span><span>${mid||'info@vahinitech.com · vahinitech.com'}</span><span class="pg-num">${String(pg).padStart(2,'0')}</span></div>`;
-  let pg=0; const P=()=>++pg;
-  const pages = [];
-
-  /* ---- drill prescription (shared by Scorecard + Practice page) ---- */
-  const DRILL = {
-    slant:  { title:'Slant rails',          goal:'a single, steady slant' },
-    round:  { title:'Oval & circle roll',   goal:'even, rounded, same-size letters' },
-    rhythm: { title:'Even spacing practice', goal:'even gaps between letters and words' },
-    frame:  { title:'Frame the page',       goal:'tidy margins and a straight baseline' },
-    wave:   { title:'Pressure waves',       goal:'smooth, even pen pressure' },
-  };
-  const liveSorted = analysis.results.filter(isLive).sort((a,b)=>a.score-b.score);
-  const focusFactors = liveSorted.slice(0,3);
-  const maintenance = !liveSorted.some(f=>f.score<6.5);
-  const prescribed = maintenance ? liveSorted.slice(0,2) : liveSorted.filter(f=>f.score<6.5).slice(0,4);
-  const groupMap = {};
-  prescribed.forEach(f=>{ const t=f.ex||'round'; (groupMap[t]=groupMap[t]||{type:t,factors:[]}).factors.push(f); });
-  const drills = Object.values(groupMap)
-    .map(g=>({ ...g, low: Math.min(...g.factors.map(f=>f.score)) }))
-    .sort((a,b)=>a.low-b.low).slice(0,3);
-
-  /* ---- prediction: how many tries to the next milestone ---- */
-  let fc = null, tries = null;
-  if (window.VahiniForecast){
-    fc = window.VahiniForecast.compute(analysis, imu, pipeline, overall);
-    let wk = null;
-    for (const p of fc.curve){ if (p.overall >= MILESTONE){ wk = p.w; break; } }
-    if (wk != null){ const w = Math.max(1, wk); tries = { weeks: w, sessions: w*3 }; }
-  }
-
-  /* ---------- PAGE 1 · SCORECARD ---------- */
-  pg=P();
-  const scSecRows = analysis.sections.map(s=>{
-    const b = bandOf(s.avg);
-    if (s.avg100==null) return `<div class="cat-row" style="padding:10px 14px;">
-      <span class="ci" style="color:var(--accent-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SEC_ICON[s.id]}</svg></span>
-      <span class="ct">${s.name}<small>${s.id==='dynamics'?'measured by the Vahini pen: not scored from a photo':'couldn’t be measured reliably: re-scan'}</small></span>
-      <span class="cmeter"><span class="meter"><i style="width:0%"></i></span><span class="cval" style="color:var(--muted)">—</span></span>
-    </div>`;
-    return `<div class="cat-row" style="padding:10px 14px;">
-      <span class="ci" style="color:var(--accent-deep)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${SEC_ICON[s.id]}</svg></span>
-      <span class="ct">${s.name}<small>${s.blurb} · ${Math.round(s.weight*100)}% weight</small></span>
-      <span class="cmeter"><span class="meter"><i style="width:${s.avg100}%;background:${BAND_COLOR[b]}"></i></span><span class="cval">${s.avg100}</span></span>
-    </div>`;
-  }).join('');
-  const chip = (f, kind)=>`<span class="sc2-chip ${kind}">${esc(f.name)}<i>${(f.imuMeasured||f.conf!=='imu')?f.score.toFixed(1):'—'}</i></span>`;
-  const scoreboard = `<div class="ea-panel" style="margin-top:14px;">
-    <div class="ea-head act"><span class="t">All 20 factors at a glance</span><span class="tag" style="background:var(--ink);color:#fff;">reference values on page ${imu?'05':'04'}</span></div>
-    <div class="fscore-grid">${analysis.results.map(f=>`<span class="fscore ${f.band}"${isLive(f)?'':' style="opacity:.45;filter:grayscale(.55)"'}><b>${String(f.n).padStart(2,'0')}</b><span class="fs-nm">${esc(f.name)}</span><i>${isLive(f)?f.score.toFixed(1):'—'}</i></span>`).join('')}</div>
-  </div>`;
-  const rec = (analysis && analysis.recognition) ? analysis.recognition : null;
-  const recPct = (rec && Number.isFinite(rec.confidence_pct)) ? rec.confidence_pct : null;
-  const recLine = rec ? (({
-    'passage-verified':'Words verified against your passage',
-    'high':'Words read with high confidence',
-    'moderate':'Words read with moderate confidence',
-    'low':'Word reading is assistive on this scan',
-    'unavailable':'Words were not read this scan: the scores are unaffected',
-  }[rec.level] || 'Word reading is assistive') + (recPct!=null?` (${recPct}%)`:'') + '.'
-    + (rec.printed_lines>0?` <b>${rec.printed_lines} printed line${rec.printed_lines>1?'s':''} on the page ${rec.printed_lines>1?'were':'was'} excluded</b>: only handwriting is analysed.`:'')) : '';
-  // Document checks: like the stamp on a lab report: parsed fully, and the
-  // recognised words run through the spelling/grammar rules when reading was
-  // dependable. Never claim a clean sheet off a low-confidence reading.
-  let checksLine = '';
-  if (ocrEngine==='server' && rec){
-    const readable = ['passage-verified','high','moderate'].indexOf(rec.level) >= 0;
-    const readText = String(recognizedText||'').trim();
-    if (readable && readText && window.VahiniCraft){
-      const craft = window.VahiniCraft.analyze(readText, pipeline.docType && pipeline.docType.key);
-      if (craft && craft.runGrammar){
-        checksLine = craft.count
-          ? `Document parsed fully ✓ · spelling &amp; grammar: <b>${craft.count} thing${craft.count>1?'s':''} to check</b>: ${esc(craft.findings.slice(0,1).map(x=>x.msg).join(''))}`
-          : `Document parsed fully ✓ · <b style="color:var(--grow);">no spelling mistakes ✓ · no grammar mistakes ✓</b> in the recognised text`;
-      }
-    } else {
-      checksLine = `Document parsed fully ✓ · spelling &amp; grammar checks switch on once the words are read dependably${recPct!=null?` (reading now: ${recPct}%)`:''}`;
-    }
-  }
-  pages.push(`<section class="page" data-screen-label="Scorecard">
-    ${head('Scorecard · '+today)}
-    <div class="sec-title"><div><div class="eyebrow">Report ${rid} · 20-Factor Engine v3.1</div><h2>${esc(rc.greet(name))}</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <div class="dash-grid" style="margin-bottom:12px;">
-      <div class="score-card">
-        <div class="ring">${ringSVG(overall)}<div class="ring-num"><b>${overall}</b><span>out of 100</span></div></div>
-        <div class="band-pill">${overallBand(overall)}</div>
-        <div class="sc-note">${imu?'All 20 factors measured (pen + image).':`Measured from the photo: ${measuredCount} of 20 factors${unmeasuredCount?'; '+unmeasuredCount+' couldn’t be read':''}.${penPending?` The ${penPending} motion factors await the Vahini pen.`:''}`}</div>
-      </div>
-      <div class="cat-list">${scSecRows}
-        <div class="sc2-goal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg><span><b>Next milestone: ${MILESTONE}/100</b>: reachable by lifting ${esc(topWeakNames.join(' and '))}.${tries?` Our estimate: about <b>${tries.sessions} practice tries</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week).`:''}</span></div>
-      </div>
-    </div>
-    ${scoreboard}
-    <div class="sc2-row" style="margin-top:12px;"><div class="sc2-h good">Top strengths</div><div class="sc2-chips">${analysis.topStrong.slice(0,3).map(f=>chip(f,'good')).join('')}</div></div>
-    <div class="sc2-row"><div class="sc2-h focus">Focus areas</div><div class="sc2-chips">${analysis.topWeak.slice(0,3).map(f=>chip(f,'focus')).join('')}</div></div>
-    ${history?`<div class="hist-strip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg><span><b>Since the last scan (${esc(history.date)}):</b> overall ${history.overall} → <b>${overall}</b> (${overall-history.overall>=0?'+':''}${overall-history.overall})</span></div>`:''}
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:11px;color:var(--ink-2);">
-      <b>${pipeline.nWords} words · ${pipeline.nLines} lines · ${pipeline.nChars} letters</b>
-      ${pipeline.docType ? docTypeChip(pipeline.docType) : ''}
-      ${checksLine?`<span>${checksLine}</span>`:''}
-    </div>
-    ${recLine?`<div style="margin-top:8px;font-size:10.5px;color:var(--muted);line-height:1.5;">${recLine} Text recognition is <b>under progress and will improve soon</b>: accuracy rises with every update, delivered in increments. The 20 factors are measured from the <b>geometry</b> of the writing and don’t depend on reading the words.</div>`:''}
-    ${foot(pg,'One-page scorecard · improvement plan follows')}
-  </section>`);
-
-  /* ---------- PAGE · YOUR WRITING IN PLAIN WORDS (issues #12/#21) ----------
-     The plain-language layer: six groups named after what the writer sees
-     on their own page, phrased as questions a teacher would say out loud,
-     plus the two coach-protocol aspects a single scan cannot score
-     (posture, page-to-page). Every headline row keeps its technical
-     factors in small print, so nothing is hidden, only layered.
-     Fallback mapping must track backend/plain_groups.py. */
-  const PLAIN_FALLBACK = [
-    {id:'shapes', label:'Letter shapes',      question:'Are my letters the right shape, and closed where they should be?', factors:[1,2,3,19]},
-    {id:'sizes',  label:'Letter sizes',       question:'Are my letters the same size? Do tall letters stand tall and tails hang below?', factors:[5,6]},
-    {id:'spaces', label:'Spaces and gaps',    question:'Do my words and letters have enough room? Did I leave a margin?', factors:[8,9,10]},
-    {id:'line',   label:'Staying on the line',question:'Does my writing sit on the line and stay straight across the page?', factors:[7,11,12]},
-    {id:'pen',    label:'Pen control',        question:'Are my strokes smooth and steady, not shaky or pressed too hard?', factors:[4,13,14,15,16]},
-    {id:'read',   label:'Easy to read',       question:'Can someone else read my page easily?', factors:[17,18,20]},
+/* Reader report: six pages, with one shared factor-based practice plan. */
+function classificationPanels(summary){
+  if (!summary) return [];
+  const panels = [];
+  const groups = [
+    ['handwritten', 'Handwritten text'],
+    ['printed', 'Printed text (excluded from scoring)'],
+    ['unclassified', 'Unclassified text'],
   ];
-  const plainGroups = analysis.plainGroups || PLAIN_FALLBACK.map(g=>{
-    const fs = g.factors.map(n=>analysis.results.find(r=>r.n===n)).filter(Boolean);
-    const live = fs.filter(isLive);
-    const avg = live.length ? live.reduce((a,f)=>a+f.score,0)/live.length : null;
-    return { id:g.id, label:g.label, question:g.question,
-      score: avg==null?null:Math.round(avg*10)/10,
-      band: avg==null?null:bandOf(avg),
-      // Pen-pending IMU factors (conf==='imu' && !imuMeasured) aren't
-      // "estimated from the photo" — they simply weren't read yet, so
-      // they're excluded from the estimated flag same as isLive does.
-      estimated: fs.some(f=>f.conf!=='measured' && f.conf!=='imu'),
-      factors: fs.map(f=>({n:f.n,name:f.name,score:isLive(f)?f.score:null,unmeasured:!!f.unmeasured})) };
-  });
-  const coachRows = (analysis.coachView && analysis.coachView.rows) || plainGroups.map(g=>({
-    id:g.id, label:g.label, question:g.question, score:g.score, band:g.band, measurable:true,
-    note:g.estimated?'estimated from the photo':null,
-  })).concat([
-    {id:'posture', label:'Posture', question:'How do I sit and hold the pen while writing?', score:null, band:null, measurable:false, note:'Not visible in a scan. The Vahini pen senses it through pen-angle steadiness.'},
-    {id:'pages', label:'Page to page', question:'Does my writing stay the same, or change after two or three pages?', score:null, band:null, measurable:false, note:'Scan 2-3 pages as one assessment to measure this (endurance).'},
-  ]);
-  pg=P();
-  const gById = {}; plainGroups.forEach(g=>{ gById[g.id]=g; });
-  const plainRows = coachRows.map(row=>{
-    const g = gById[row.id];
-    const chips = g ? g.factors.map(f=>`<span style="display:inline-block;font-size:9px;color:var(--muted);background:var(--paper-2);border:1px solid var(--hair);border-radius:99px;padding:1px 7px;margin:1px 2px 0 0;">${esc(f.name)}${f.score!=null?' '+f.score.toFixed(1):' —'}</span>`).join('') : '';
-    const scoreCell = row.score!=null
-      ? `<b style="font-variant-numeric:tabular-nums;font-size:13px;">${row.score.toFixed(1)}</b><span style="color:var(--muted);font-size:9.5px;">/10</span>`
-      : `<span style="color:var(--muted);font-size:9.5px;">—</span>`;
-    const bandCell = row.band
-      ? `<span style="color:${BAND_COLOR[row.band]};font-weight:800;font-size:10px;white-space:nowrap;">${BAND_STARS[row.band]} ${BAND_LABEL[row.band]}</span>`
-      : `<span style="color:var(--muted);font-size:9px;">${esc(row.note||'')}</span>`;
-    return `<tr>
-      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);vertical-align:top;">
-        <b style="font-size:11.5px;">${esc(row.label)}</b>
-        <div style="font-size:9.5px;color:var(--ink-2);margin-top:1px;">${esc(row.question)}</div>
-        ${chips?`<div style="margin-top:2px;">${chips}</div>`:''}
-        ${row.measurable&&row.note?`<div style="font-size:8.5px;color:var(--muted);margin-top:1px;">${esc(row.note)}</div>`:''}
-      </td>
-      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:center;vertical-align:top;white-space:nowrap;">${scoreCell}</td>
-      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:left;vertical-align:top;">${bandCell}</td>
-      <td style="padding:7px 8px;border-bottom:1px solid var(--hair);text-align:center;vertical-align:top;color:var(--muted);font-size:11px;">____</td>
-    </tr>`;
-  }).join('');
-  const thp = 'padding:6px 8px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--ink);text-align:left;';
-  const coachTotal = (analysis.coachView && analysis.coachView.measuredTotal!=null)
-    ? `${analysis.coachView.measuredTotal.toFixed(1)} / ${analysis.coachView.measuredOutOf}` : null;
-  pages.push(`<section class="page" data-screen-label="Plain words">
-    ${head('Your writing, in plain words')}
-    <div class="sec-title"><div><div class="eyebrow">Six things you can see on your own page: the details follow later</div><h2>Your writing, in plain words</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <p class="lead" style="max-width:88%;margin-bottom:10px;">Coaches score a page by asking eight plain questions. Here are the analyser's answers for ${rc.you==='you'?'your':esc(name)+'\u2019s'} page: and an empty column to write <b>your own marks out of 10</b> before you peek. Where your marks and the measured marks disagree is exactly where practice pays fastest. The small print under each row lists the measured factors behind the headline, scored in detail on the pages that follow.</p>
-    <table style="width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--hair);border-radius:12px;overflow:hidden;">
-      <thead><tr>
-        <th style="${thp}">What to look at</th><th style="${thp}text-align:center;">Measured</th><th style="${thp}">Band</th><th style="${thp}text-align:center;">Your marks /10</th>
-      </tr></thead>
-      <tbody>${plainRows}</tbody>
-    </table>
-    <div style="margin-top:10px;display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-      ${coachTotal?`<div style="font-size:11px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;"><b>Measured total: ${coachTotal}</b> across the aspects a photo can score. Add your own eight marks out of 80 and compare.</div>`:''}
-      <div style="font-size:10px;color:var(--muted);line-height:1.5;flex:1;min-width:220px;">Scoring the page yourself first is the coaches' trick: from tomorrow you write consciously, and most writers see a real change within a week or ten days. Re-scan then and watch both columns move.</div>
-    </div>
-    ${foot(pg,'Plain words first · every headline traces to measured factors')}
-  </section>`);
-
-  /* ---------- IMU CAPTURE & SIGNALS (pen mode only: page 2) ---------- */
-  if (imu){
-    pg=P();
-    const groups = (window.VahiniIMU? window.VahiniIMU.SENSOR_GROUPS : []);
-    const sensorCells = groups.map(g=>`<div style="border:1px solid var(--hair);border-radius:11px;padding:11px 13px;background:var(--card);">
-      <div style="display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:${g.color};"></span><b style="font-size:12px;color:var(--ink);">${g.label}</b></div>
-      <div style="font-size:10px;color:var(--muted);margin:3px 0 7px;">${g.sub}</div>
-      <div style="display:flex;flex-wrap:wrap;gap:4px;">${g.axes.map(a=>`<span style="font-size:9px;font-weight:700;color:${g.color};background:${g.color}1a;padding:2px 6px;border-radius:5px;">${a}</span>`).join('')}</div>
-    </div>`).join('');
-    const stat = (k,v)=>`<div style="padding:12px 14px;border-right:1px solid var(--hair);"><div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;">${k}</div><div style="font-family:var(--serif);font-size:18px;margin-top:4px;color:var(--ink);">${v}</div></div>`;
-    pages.push(`<section class="page" data-screen-label="IMU Capture">
-      ${head('Battu · Live Capture')}
-      <div class="sec-title"><div><div class="eyebrow">${imu.axes}-axis sensor fusion · Kalman-filtered</div><h2>What the pen felt</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-      <p class="lead" style="max-width:84%;margin-bottom:16px;">The IMU pen streamed at <b>${imu.fs} Hz</b> while ${esc(name)} wrote: capturing the <b>process</b> a photo cannot see. A 9-axis IMU, a 6-axis IMU and a tip force sensor were fused and de-noised with a Kalman filter, then read out as the four Dynamics factors.</p>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--hair);border-radius:13px;overflow:hidden;background:var(--card);margin-bottom:16px;">
-        ${stat('Duration', imu.dur.toFixed(1)+' s')}${stat('Samples', imu.nSamp.toLocaleString())}${stat('Strokes', imu.strokes)}<div style="padding:12px 14px;"><div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;">Pen-lifts</div><div style="font-family:var(--serif);font-size:18px;margin-top:4px;color:var(--ink);">${imu.lifts}</div></div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
-        <div class="ea-panel"><div class="ea-head act" style="background:#E1E3F7;"><span class="t" style="color:#3A45B0;">Tip force / pressure</span><span class="tag">N · ${imu.meanForce.toFixed(2)} avg</span></div><div style="padding:8px 10px;">${sparkline(imu.charts.force,'#4F5BD5')}</div></div>
-        <div class="ea-panel"><div class="ea-head exp"><span class="t">Pen tilt / slant</span><span class="tag">${imu.meanTilt.toFixed(0)}° lean</span></div><div style="padding:8px 10px;">${sparkline(imu.charts.tilt,'#2F8F7F')}</div></div>
-      </div>
-      <div class="ea-panel" style="margin-bottom:16px;"><div class="ea-head act"><span class="t">Writing velocity (per-stroke pulses)</span><span class="tag">mm/s</span></div><div style="padding:8px 10px;">${sparkline(imu.charts.vel,'#D4633A',1080,90)}</div></div>
-      <div class="cat-band"><span class="cb-no" style="color:var(--accent-deep)">16-AXIS</span><span class="cb-name" style="font-size:17px;">Sensor array</span><span class="cb-rule"></span></div>
-      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:11px;">${sensorCells}</div>
-      ${foot(pg,'Vahini IMU Sensor Pen · Patent No. 584433')}
-    </section>`);
-  }
-
-  /* ---------- PAGE · WHERE EXACTLY TO IMPROVE ---------- */
-  pg=P();
-  const improveCards = focusFactors.map(f=>{
-    const fx = focusSVG(f);
-    const N = window.VahiniNarrate ? window.VahiniNarrate.narrate(f) : null;
-    const why = plainText(N ? N.body : f.evidence);
-    const act = plainText(N ? N.action : f.tip);
-    const cr = crops && crops[f.n];
-    return `<div class="factor" style="page-break-inside:avoid;">
-      <div class="f-top">
-        <span class="f-no">${String(f.n).padStart(2,'0')}</span>
-        <span class="f-name">${esc(f.name)}<small>${f.score.toFixed(1)}/10 now · reference ${REF_BANDS.strong[0].toFixed(1)}–${REF_BANDS.strong[1].toFixed(1)}</small></span>
-        <span class="f-band ${f.band}">${BAND_LABEL[f.band]}</span>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:stretch;margin:8px 0 4px;">
-        <figure style="margin:0;">
-          <div class="f-focus" style="height:64px;margin:0;">${fx.svg}</div>
-          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>The concept</b>: we look at ${esc(fx.look)}</figcaption>
-        </figure>
-        <figure style="margin:0;">
-          ${cr?`<img class="f-crop" src="${cr.url}" alt="from your writing" style="width:100%;height:64px;object-fit:cover;border-radius:8px;border:1px solid var(--paper-edge);background:#fff;display:block;">`
-              :`<div class="f-focus" style="height:64px;margin:0;display:grid;place-items:center;color:var(--muted);font-size:10.5px;">reference crop appears when the recognition server maps your page</div>`}
-          <figcaption style="font-size:10px;color:var(--muted);margin-top:4px;"><b>Your reference</b>: ${cr?esc(cr.caption):'measured from your own page'}</figcaption>
-        </figure>
-      </div>
-      <div class="f-scorebar"><i style="width:${f.score100}%;background:${BAND_COLOR[f.band]}"></i></div>
-      <p class="f-why"><b>Why this score:</b> ${esc(why)}</p>
-      <div class="f-tip"><b>Try this&nbsp;·&nbsp;</b>${esc(act)} <span style="color:var(--muted);">Target: ${esc(f.target)}.</span></div>
-    </div>`;
-  }).join('');
-  pages.push(`<section class="page" data-screen-label="Where to improve">
-    ${head('Where exactly to improve')}
-    <div class="sec-title"><div><div class="eyebrow">${maintenance?'Nothing is weak: the three to keep polishing':'Your top '+focusFactors.length+' issues: where the score grows fastest'}</div><h2>Where exactly to improve</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    ${detURL?`<div class="ea-panel" style="margin-bottom:12px;">
-      <div class="ea-head act"><span class="t">Your page, as detected</span><span class="tag" style="background:var(--accent-deep);color:#fff;">orange = detected writing</span></div>
-      <div style="display:grid;grid-template-columns:220px 1fr;gap:14px;align-items:center;padding:10px 14px;background:#fff;">
-        <img src="${detURL}" alt="detected sample" style="display:block;width:100%;max-height:235px;object-fit:contain;background:#fff;border:1px solid var(--paper-edge);border-radius:8px;">
-        <div style="font-size:11px;color:var(--ink-2);line-height:1.6;">Each <b style="color:var(--accent-deep);">orange box</b> is a piece of writing the engine found and measured: that is the evidence behind every score in this report. The <b style="color:var(--grow);">teal line</b> under a box is the baseline the writing sits on.</div>
-      </div>
-    </div>`:''}
-    <p class="lead" style="max-width:86%;margin-bottom:12px;">Each card pairs the <b>concept</b> (what good looks like) with a <b>reference cropped from ${rc.you==='you'?'your':esc(name)+'’s'} own page</b>: so you can see exactly what was measured and where to aim next.</p>
-    <div style="display:grid;gap:12px;">${improveCards}</div>
-    <div style="margin-top:10px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:9px 13px;">We show the <b>top 3 issues</b> so practice stays focused. Want the full 20-factor deep-dive report? Email <a href="mailto:info@vahinitech.com" style="color:var(--accent-deep);font-weight:700;">info@vahinitech.com</a>.</div>
-    ${foot(pg,'Top 3 issues · full 20-factor deep-dive: info@vahinitech.com')}
-  </section>`);
-
-  /* ---------- PAGE · COACH'S CORNER (lesson tips + handwritten samples) ----
-     The backend tip engine picks a few lessons for THIS page (score-driven,
-     never generic - each card says why it was chosen). Every tip is
-     explained with example words rendered in a handwriting-style face on a
-     ruled baseline, so the reader sees the target shape, not just prose. */
-  const coachTips = analysis.coachTips || [];
-  if (coachTips.length){
-    pg=P();
-    const hand = (s)=>`<span style="font-family:'Segoe Script','Bradley Hand','Snell Roundhand','Comic Sans MS',cursive;font-size:15px;line-height:2;color:var(--ink);padding:0 6px 1px;border-bottom:1.5px solid var(--accent-deep);white-space:nowrap;">${esc(s)}</span>`;
-    const PILLAR_LABEL = { technique:'T · Technique', interest:'I · Interest', practice:'P · Practice' };
-    /* The TIP strip: which of the three skill legs (Techniques /
-       Interest / Practice) this page's measurements point at. Interest
-       is honestly unmeasurable from a photo and the chip says so. */
-    const tp = analysis.tipPillars || null;
-    let tipIntro = '';
-    if (tp){
-      const chip = (k)=>{
-        const d = (tp.pillars||{})[k]||{};
-        const isFocus = tp.focus===k;
-        const val = d.score!=null ? `${d.score}/10` : (k==='interest' ? 'only you know' : 'not measured');
-        return `<div style="flex:1;min-width:140px;background:${isFocus?'var(--accent-deep)':'var(--card)'};color:${isFocus?'#fff':'var(--ink)'};border:1px solid ${isFocus?'var(--accent-deep)':'var(--hair)'};border-radius:12px;padding:10px 13px;">
-          <div style="font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;${isFocus?'':'color:var(--muted);'}">${PILLAR_LABEL[k]}</div>
-          <div style="font-family:var(--serif);font-size:17px;margin-top:3px;">${esc(val)}</div>
-          ${isFocus?`<div style="font-size:9.5px;margin-top:2px;">your biggest opportunity right now</div>`:''}
-        </div>`;
-      };
-      tipIntro = `<div style="margin-bottom:12px;">
-        <p class="lead" style="max-width:90%;margin-bottom:10px;">Handwriting is a <b>skill</b>, not a subject - and every skill stands on three legs: <b>T</b>echniques, <b>I</b>nterest, <b>P</b>ractice. The measured factors point at the short leg, and every card below names the leg it strengthens.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">${chip('technique')}${chip('interest')}${chip('practice')}</div>
-      </div>`;
+  groups.forEach(([kind, title])=>{
+    const entries = Array.isArray(summary[kind]) ? summary[kind] : [];
+    if (kind==='unclassified' && !entries.length) return;
+    const rows = [];
+    entries.forEach(entry=>{
+      const characters = Array.from(String(entry.text || '(Text not recognized)'));
+      for (let offset=0; offset<characters.length; offset+=120){
+        const text = characters.slice(offset, offset+120).join('');
+        const granularity = ['letter','word','line'].includes(entry.granularity) ? entry.granularity : 'region';
+        const score = Number.isFinite(entry.printed_score) ? entry.printed_score.toFixed(3) : 'Unavailable';
+        rows.push(`<tr><td>${esc(entry.id || '')}${offset?' (continued)':''}<br><small>${esc(granularity)}</small></td><td style="white-space:pre-wrap;overflow-wrap:anywhere;">${esc(text)}</td><td>${score}</td><td>${kind!=='printed' && entry.included_in_scoring?'Included':'Excluded'}</td></tr>`);
+      }
+    });
+    if (!rows.length) rows.push('<tr><td colspan="4">No '+esc(kind)+' text detected.</td></tr>');
+    for (let offset=0; offset<rows.length; offset+=10){
+      panels.push(`<div class="text-classification" data-kind="${kind}">
+        <h3>${title}${offset?' (continued)':''}</h3>
+        <p style="font-size:11px;line-height:1.5;">${esc(summary.note || 'Classification applies to detected regions; finer labels may be unavailable.')}</p>
+        <p style="font-size:11px;">Print score: 0 = less print-like, 1 = more print-like. This is not measured accuracy. Printed text is shown for identification only.</p>
+        <table style="width:100%;table-layout:fixed;font-size:11px;border-collapse:collapse;"><thead><tr><th style="width:18%;">Region / level</th><th style="width:52%;">Recognized text</th><th style="width:15%;">Print score</th><th style="width:15%;">Scoring</th></tr></thead><tbody>${rows.slice(offset,offset+10).join('')}</tbody></table>
+      </div>`);
     }
-    const tipCards = coachTips.map(t=>`
-      <div style="background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:14px 16px;${t.kind==='fun'?'border-style:dashed;':''}">
-        <div style="display:flex;justify-content:space-between;gap:8px;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;"><span style="color:${t.kind==='fun'?'var(--accent-deep)':'var(--muted)'};">${t.kind==='fun'?'Just for fun':'Coach tip'}</span><span style="color:var(--accent-deep);">${PILLAR_LABEL[t.pillar]||''}</span></div>
-        <div style="font-family:var(--serif);font-size:16px;line-height:1.25;margin:5px 0 6px;">${esc(t.title)}</div>
-        <p style="font-size:11px;color:var(--ink-2);line-height:1.55;margin:0 0 9px;">${esc(plainText(t.text))}</p>
-        ${(t.examples&&t.examples.length)?`<div style="display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;background:var(--paper-2);border-radius:10px;padding:9px 12px 7px;margin-bottom:8px;">
-          <span style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;align-self:center;">Write it</span>
-          ${t.examples.map(hand).join('')}
-        </div>`:''}
-        <div style="font-size:9.5px;color:var(--muted);line-height:1.45;">${esc(t.why)}</div>
-      </div>`).join('');
-    pages.push(`<section class="page" data-screen-label="Coach's corner">
-      ${head("Coach's corner")}
-      <div class="sec-title"><div><div class="eyebrow">T·I·P - Techniques, Interest, Practice: lessons picked for this page, each card says why</div><h2>Coach's corner</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-      ${tipIntro}
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;">${tipCards}</div>
-      <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.5;">The <b>Write it</b> samples are drawn in a handwriting-style face so you can picture the target shape: copy them slowly a few times before writing at speed. Cards marked <b>Just for fun</b> are entertainment, never scoring.</div>
-      ${foot(pg,"Coach's corner · T·I·P - tips chosen by the measured factors, never generic")}
-    </section>`);
+  });
+  return panels;
+}
+
+
+function render(host, data){
+  const {analysis, intake={}, recognizedText='', crops={}}=data;
+  const rec=analysis.recognition || {};
+  const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
+  const explanations={
+    1:['Letter shapes','Check that each letter has a clear shape. The photo gives a rough check; it cannot show every wrong letter.'],
+    2:['Stroke order','A photo cannot show which stroke you wrote first. This score is only an estimate.'],
+    3:['Closing loops','Check that round letters such as o and a close at the top.'],
+    4:['Smooth strokes','Look for shaky lines in your letters. A blurry photo can also make lines look shaky.'],
+    5:['Even letter sizes','Some writing looks taller than the rest. Keep small letters such as a, o and e the same height.'],
+    6:['Tall letters and tails','Check that h and l reach above small letters. The tails of g and y should go below the writing line.'],
+    7:['Staying on the line','Check that your words sit on the writing line, without floating above or dipping below it.'],
+    8:['Spaces between words','Leave a clear, even gap between words so they are easy to read.'],
+    9:['Spaces inside words','Keep letters close enough to form a word, but give each letter room.'],
+    10:['Straight left margin','Check where each line starts. Start at the same left margin each time.'],
+    11:['Level lines','Keep each line level. Check whether it rises or falls across the page.'],
+    12:['Upright strokes','Check that the straight parts of tall letters lean the same way.'],
+    13:['Steady writing speed','Speed needs a timed pen recording; a page photo cannot measure it.'],
+    14:['Even pen pressure','A photo cannot measure how hard you press the pen.'],
+    15:['Continuous strokes','A photo cannot show when you pause the pen.'],
+    16:['Pen lifts','A photo cannot count how often you lift the pen.'],
+    17:['Consistent slant','Try to make your letters lean the same way. Choose an angle that feels comfortable.'],
+    18:['Easy to read','This score brings other skills together. Practise the three skills chosen for you.'],
+    19:['Distinct letter shapes','Check that a looks different from o, and c looks different from e.'],
+    20:['Neat page','Even sizes, clear spaces and straight lines help make your page neat.']
+  };
+  const examples={3:'o o o   a a a',4:'l l l   c c c',5:'a a a   o o o',6:'h l b   g y p',7:'keep words on the line',8:'word   word   word',9:'letter   letter',10:'start each line here',11:'write a level line',12:'l l l   h h h',17:'m i n   m i n',19:'a o   c e'};
+  const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
+  const weak=sorted.filter(f=>f.score<8.5);
+  const maintenance=!weak.length && sorted.length>0;
+  const readable=['high','passage-verified'].includes(rec.level);
+  // Classification entries preserve original OCR, unlike passage-corrected
+  // text. Never check the printed stream or score-excluded regions.
+  const classification=analysis.textClassification;
+  const sources=classification
+    ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.id,text:r.text}))
+    : [{id:null,text:recognizedText}];
+  const hasText=sources.some(r=>String(r.text||'').trim());
+  const spelling=readable && window.VahiniCraft
+    ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text).map(f=>({...f,region:r.id}))) : [];
+  const firstSpelling=spelling[0];
+  const priorities=[];
+  if(firstSpelling){
+    const f=firstSpelling;
+    priorities.push({id:'spelling',title:'Check this spelling',
+      reason:`The text reader found “${f.word}”. Did you mean “${f.suggestion}”?`,
+      instruction:`First check “${f.word}” against your handwriting. If it is a spelling mistake, read “${f.suggestion}” aloud and notice the letters that change. If the text reader got it wrong, ignore this suggestion.`,
+      drill:`Look at “${f.suggestion}”, cover it, write it from memory, then check it. Use it in one sentence.`,
+      spelling:f});
   }
-
-  /* ---------- PAGE · REFERENCE VALUES (read like a lab report) ---------- */
-  pg=P();
-  const td = 'padding:4px 8px;border-bottom:1px solid var(--hair);font-size:10.5px;text-align:center;vertical-align:middle;';
-  const flagOf = (f)=> `<span style="color:${BAND_COLOR[f.band]};font-weight:800;">${BAND_STARS[f.band]} ${BAND_LABEL[f.band]}</span>`;
-  const refRows = analysis.results.map(f=>{
-    const live = isLive(f);
-    const noteTxt = f.conf==='imu' && !f.imuMeasured && !imu ? 'measured by the pen' : 'not read this scan';
-    return `<tr>
-      <td style="${td}color:var(--muted);">${String(f.n).padStart(2,'0')}</td>
-      <td style="${td}text-align:left;"><b>${esc(f.name)}</b></td>
-      <td style="${td}"><b style="font-variant-numeric:tabular-nums;font-size:11.5px;">${live?f.score.toFixed(1):'—'}</b></td>
-      <td style="${td}color:var(--muted);">/10</td>
-      <td style="${td}font-variant-numeric:tabular-nums;">${REF_BANDS.strong[0].toFixed(1)} – ${REF_BANDS.strong[1].toFixed(1)}</td>
-      <td style="${td}text-align:left;color:var(--ink-2);">${esc(f.target)}</td>
-      <td style="${td}white-space:nowrap;">${live?flagOf(f):`<span style="color:var(--muted);">— ${noteTxt}</span>`}</td>
-    </tr>`;
-  }).join('');
-  const th = 'padding:6px 8px;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);border-bottom:2px solid var(--ink);text-align:center;';
-  pages.push(`<section class="page" data-screen-label="Reference Values">
-    ${head('Reference values · every factor, published')}
-    <div class="sec-title"><div><div class="eyebrow">Read it like a lab report: result · reference interval · flag</div><h2>The reference values</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <p class="lead" style="max-width:88%;margin-bottom:12px;">Every Vahini report scores against the <b>same fixed, published reference values</b>: so a result means the same thing on every scan, for every writer. A factor is <b>in reference</b> at ${REF_BANDS.strong[0].toFixed(1)}–${REF_BANDS.strong[1].toFixed(1)} points, <b>developing</b> at ${REF_BANDS.dev[0].toFixed(1)}–${REF_BANDS.dev[1].toFixed(1)}, and a <b>focus area</b> below ${REF_BANDS.dev[0].toFixed(1)}. Overall: ${overall}/100 (strong zone: 80–100).</p>
-    <table style="width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--hair);border-radius:12px;overflow:hidden;">
-      <thead><tr>
-        <th style="${th}">#</th><th style="${th}text-align:left;">Factor</th><th style="${th}">Result</th><th style="${th}">Unit</th><th style="${th}">Reference interval</th><th style="${th}text-align:left;">Measured target (how it’s judged)</th><th style="${th}">Flag</th>
-      </tr></thead>
-      <tbody>${refRows}</tbody>
-    </table>
-    <div style="margin-top:10px;font-size:10px;color:var(--muted);line-height:1.55;background:var(--paper-2);border-radius:10px;padding:10px 14px;">
-      <b style="color:var(--ink-2);">How these reference values are set:</b> each factor is real geometry measured from the page (e.g. Size Consistency = letter-height variation, in reference when CV ≤ 0.12). The thresholds come from established document-analysis methods and handwriting-coaching practice (see <i>docs/computer-vision-algorithms.md</i> in the open-source engine) and are identical in every report, so scans are comparable over time. “—” means the factor needs the Vahini pen (motion) or couldn’t be read from this photo; it never silently defaults to a made-up value.
-    </div>
-    ${foot(pg,'Fixed, published reference values: comparable across scans')}
-  </section>`);
-
-  /* ---------- PAGE · PRACTICE PLAN + HOW MANY TRIES ---------- */
-  pg=P();
-  const joinList = (a)=> a.length<2 ? (a[0]||'') : a.slice(0,-1).join(', ')+' and '+a[a.length-1];
-  const exCards = drills.map(d=>{
-    const addresses = d.factors.map(f=>f.name).slice(0,2);
-    return `<div class="ex-card">
-      <div class="ex-info">
-        <div class="ex-head"><span class="ex-tag">${maintenance?'Maintain':'Priority'}</span><span class="ex-grp">addresses: ${esc(addresses.join(' · '))}</span></div>
-        <div class="ex-title">${DRILL[d.type].title}</div>
-        <p class="ex-why"><b>${d.low.toFixed(1)}/10 lowest.</b> Because ${esc(joinList(addresses.map(a=>a.toLowerCase())))} ${addresses.length>1?'are':'is'} below the reference, this drill builds ${DRILL[d.type].goal}.</p>
-        <span class="ex-reps"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 6 9 17l-5-5"/></svg>5–10 min · 3× a week</span>
-      </div>
-      <div class="ex-rail">${exDraw(d.type)}<div class="rl-cap"><span>${EX_CAP[d.type][0]}</span><span>${EX_CAP[d.type][1]}</span></div></div>
-    </div>`;
-  }).join('');
-  const card = (k,big,sub,accent)=>`<div style="background:var(--card);border:1px solid var(--hair);border-radius:14px;padding:15px 16px;">
-    <div style="font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:700;">${k}</div>
-    <div style="font-family:var(--serif);font-size:24px;line-height:1.05;margin:6px 0 4px;color:${accent||'var(--ink)'};">${big}</div>
-    <div style="font-size:10.5px;color:var(--ink-2);line-height:1.4;">${sub}</div></div>`;
-  let predictHTML = '';
-  if (fc){
-    const fluentLine = fc.fluency.imageOnly
-      ? 'estimated from the photo: the pen measures it exactly'
-      : (fc.fluency.alreadyFluent ? 'Already fast &amp; easy'
-        : (fc.fluency.weeksToFluent!=null ? `~${fc.fluency.weeksToFluent} weeks to fast, easy writing` : 'with steady practice'));
-    predictHTML = `
-      <div class="cat-band" style="margin-top:14px;"><span class="cb-no" style="color:var(--accent-deep)">PREDICTION</span><span class="cb-name" style="font-size:17px;">How many tries to the milestone</span><span class="cb-rule"></span></div>
-      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px;">
-        ${card('How many tries?', tries?`≈ ${tries.sessions} tries`:'keep going', tries?`about <b>${tries.sessions} short practice sessions</b> (${tries.weeks} week${tries.weeks>1?'s':''} at 3× a week) to reach <b>${MILESTONE}/100</b>`:`the milestone of ${MILESTONE}/100 sits beyond an 8-week projection: practise the drills and re-scan every 2 weeks`, 'var(--grow)')}
-        ${card('Projected score', `${fc.overallNow} <span style="color:var(--muted);font-size:16px;">→</span> ${fc.projLow}–${fc.projHigh}`, `over ${fc.horizon} weeks of steady practice`, 'var(--ink)')}
-        ${card('Writing flow &amp; speed', fc.fluency.bandNow, `${fluentLine}`, 'var(--accent-deep)')}
-      </div>
-      <div class="ea-panel">
-        <div class="ea-head act"><span class="t">Projected score · each dot is one week of practice</span><span class="tag">estimate</span></div>
-        <div style="padding:8px 12px 2px;">${trajectoryChart(fc.curve, fc.overallNow, fc.overallProj)}</div>
-      </div>
-      <div style="margin-top:8px;font-size:10px;color:var(--muted);line-height:1.5;">Projections assume ~10 minutes of the prescribed drills, 3× a week, along a normal learning curve: a motivational estimate, not a guarantee. Re-scan to track the real curve.</div>`;
-  }
-  const stars = Math.max(1, Math.min(5, Math.round(overall/20)));
-  const starRow = [1,2,3,4,5].map(i=>`<svg viewBox="0 0 24 24" width="22" height="22" ${i<=stars?'fill="#C29A45"':'fill="none" stroke="#C29A45" stroke-width="2"'}><path d="M12 2l3 6.5 7 .7-5.2 4.7 1.5 6.9L12 17l-6.3 3.8L7.2 14 2 9.2l7-.7z"/></svg>`).join('');
-  pages.push(`<section class="page ex-page" data-screen-label="Practice & Prediction">
-    ${head('Practice plan · Prediction')}
-    <div class="sec-title"><div><div class="eyebrow">Chosen from ${esc(name)}’s own results: nothing generic</div><h2>Your drill prescription</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
-    <div class="ex-list">${exCards}</div>
-    ${predictHTML}
-    <div class="mascot-strip" style="margin-top:12px;"><div style="display:flex;gap:3px;align-items:center;">${starRow}</div><div><h4>${stars} star${stars>1?'s':''} earned! ✏️</h4><p>Practise just ${drills.length===1?'this drill':'these '+drills.length+' drills'} for a few fun minutes, 3× a week, and re-scan in 2–4 weeks to earn more stars and watch the score climb.</p></div></div>
-    <div class="disclaimer" style="margin-top:12px;">
-      <h4><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg> Important: please read</h4>
-      <p>This report is intended <b>solely for handwriting improvement, education and skill-building</b>. It is <b>not a medical, psychological, neurological or diagnostic assessment</b> and must not be used to diagnose, screen for, or rule out any condition (including dysgraphia or learning differences): if you have such concerns, please consult a qualified professional. Results can vary with the writing sample, pen, surface and lighting.</p>
-    </div>
-    <div style="margin-top:8px;font-size:10.5px;color:var(--ink-2);background:var(--paper-2);border-radius:10px;padding:8px 13px;">Found a mistake, a bug, or have an idea for a new feature? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:var(--accent-deep);font-weight:700;">github.com/vahinitech/20factor-analyser</a>: every report makes the analyser better.</div>
-    <div class="patent-strip"><span>© ${new Date().getFullYear()} Vahini Technologies</span><span class="ps-dot"></span><span>IMU Sensor Pen · Patent No. 584433</span><span class="ps-dot"></span><span>info@vahinitech.com · vahinitech.com</span></div>
-    ${foot(pg,'Questions about this report: info@vahinitech.com')}
-  </section>`);
-
-  host.innerHTML = pages.join('');
+  (maintenance?sorted:weak).slice(0,3-priorities.length).forEach(f=>{
+    const n=window.VahiniNarrate ? VahiniNarrate.narrate(f) : null;
+    const simpleDrills={
+      1:'Copy five letters slowly. Check each shape before writing the next one.',
+      3:'Write a row of o and a. Close each round shape.',
+      4:'Write a row of l and c slowly. Try to make each stroke smooth.',
+      5:'Use two guide lines. Keep a, o and e the same height between them.',
+      6:'Write h, l, g and y. Make h and l tall; let g and y go below the line.',
+      7:'Write one short sentence. Make each word sit on the line.',
+      8:'Write a short sentence. Leave a small, even gap between words.',
+      9:'Write the word letter five times. Leave room to see each letter.',
+      10:'Draw a light left margin. Start three short lines beside it.',
+      11:'Write a sentence along a ruled line. Keep it level to the end.',
+      12:'Write l and h in a row. Keep their tall strokes at the same angle.',
+      17:'Write m, i and n slowly. Keep their lean the same.',
+      19:'Write a next to o, then c next to e. Make each pair easy to tell apart.'
+    };
+    const instruction=simpleDrills[f.n] || plainText(n ? n.drill : f.tip);
+    priorities.push({id:String(f.n),factor:f,title:explanations[f.n]?.[0] || f.name,
+      explanation:explanations[f.n]?.[1] || f.evidence,
+      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Strong work. Keep practising this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`,
+      instruction,drill:'Write one short guided row, then a fresh row without the guide. Compare the two.'});
+  });
+  const spellingStatus=!readable
+    ? 'Spelling check deferred: the text reading is not confident enough. Try a clearer photo or check the words with a teacher.'
+    : !hasText ? 'Spelling check unavailable: no usable handwritten text was read.'
+    : spelling.length ? 'Possible English spelling mistakes found. One is included in your three priorities. Confirm it against the original page; text reading can make mistakes.'
+    : 'We did not find a spelling mistake from our limited list of common English words. We may miss other mistakes. We do not check grammar or other languages.';
+  const title=esc(intake.writerName || 'Your handwriting');
+  const head=label=>`<div class="run-head"><span class="rh-mark"><span class="rh-dot"></span><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
+  const foot=n=>`<div class="run-foot"><span>Free handwriting review</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
+  const cardStyle='';
+  const selectionReasons={
+    'height-deviation':'This part has a writing height that differs most from the middle height on your page.',
+    'zone-context':'This is the tallest part found in your handwriting. Use it to check tall letters and tails.',
+    'detilted-left-deviation':'This line starts furthest from the usual left edge, after allowing for a tilted photo.',
+    'absolute-line-angle':'This line has the biggest upward or downward slope.',
+    'ocr-confidence-context':'The text reader was least sure about this part. Check the letters yourself.',
+    'character-width-proxy-context':'The estimated space per letter differs most here. This is only a rough example.',
+    'loop-text-context':'This part contains the most letters that may have loops.',
+    'region-width-proxy-context':'This part has an unusual width. It may not contain a shaky stroke.',
+    'line-angle-spread-context':'This line leans differently from the usual line angle. It does not show the angle of each letter.',
+    'normalized-word-gap-deviation':'The gap here differs most from the usual gaps on your page.',
+    'aggregate-context':'This shows the handwriting used for the combined score.',
+    'line-context':'Use this as a general example; we could not check its line angle.'
+  };
+  const evidence=p=>{
+    if(p.spelling){
+      const f=p.spelling;
+      return `<div class="spelling-evidence"><p>Text read from your handwriting: <q>${esc(f.context)}</q></p><small>${f.region?'Source region: '+esc(f.region):'Source: recognized handwriting; exact word location unavailable.'} · Suggested correction: <b>${esc(f.suggestion)}</b></small></div>`;
+    }
+    const c=crops[p.factor.n];
+    const ids=Array.isArray(c?.region_ids)?c.region_ids:[];
+    const shared=ids.length && priorities.some(other=>other!==p && other.factor &&
+      (crops[other.factor.n]?.region_ids||[]).some(id=>ids.includes(id)));
+    const location=ids.length?'Part '+ids.map(id=>String(id).replace(/^region_/, '')).join(', '):'';
+    const why=selectionReasons[c?.selection_method] || 'The reason for choosing this example is not available. Check it against your full page.';
+    return c ? `<div class="priority-evidence">
+      ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
+      ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
+      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; no exact wrong letter was found.':'Area check, not a letter-by-letter correction.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it does not mean separate mistakes.</span>':''}</p>`
+      : '<p style="font-size:10px;">We could not find a clear example for this skill. The score does not show an exact wrong letter.</p>';
+  };
+  const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
+  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)} <span class="priority-score">${p.factor?esc(p.factor.score.toFixed(1))+'/10':''}</span></h3><p class="reason-text">${esc(p.explanation||p.reason)}</p><div class="concept-actual">${evidence(p)}</div></article>`).join('');
+  const coaching=priorities.map((p,i)=>`<article class="coaching-card practice-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example concept-target">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p class="practice-label">Look at the example. Copy it here, then try it on your own.</p><div class="writing-lines" aria-label="Space to practise writing"></div><p class="self-check">Check your next row: ${esc(p.explanation||'Check each letter against the example.')}</p></article>`).join('');
+  const rawOverall=analysis.overallMeasured ?? analysis.overall;
+  const overall=Number.isFinite(rawOverall)?rawOverall:null;
+  const measured=analysis.results.filter(isLive);
+  const regionCount=Array.isArray(classification?.handwritten)?classification.handwritten.length:
+    Number.isInteger(rec.hand_lines)&&rec.hand_lines>=0?rec.hand_lines:null;
+  const shownIds=new Set(priorities.flatMap(p=>p.factor?(crops[p.factor.n]?.region_ids||[]):p.spelling?.region?[p.spelling.region]:[]));
+  const regionSummary=regionCount==null?'We could not count the handwriting parts in this upload.':
+    `${regionCount} handwriting ${regionCount===1?'part':'parts'} found in your upload. A part may be a word or a line.`;
+  const coverage=shownIds.size?`${shownIds.size} different ${shownIds.size===1?'part is':'parts are'} shown below for up to three priorities.`:'This free review focuses on up to three priorities.';
+  const pages=[
+    `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
+      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p></div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
+      <p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
+      <h3>${maintenance?'Keep these strengths':'Your three things to practise'}</h3>
+      ${reportCards||empty}
+      <p class="spelling-status">${esc(spellingStatus)}</p>
+      ${rec.printed_lines>0?`<p class="report-note">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
+      <p class="report-note">Scores are practice guides, not school grades. Turn over for examples and space to try them.</p>${foot(1)}</section>`,
+    `<section class="page free-report compact-report" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
+      <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
+      ${coaching||empty}
+      <div class="guided-support"><h3>Demo handwriting report</h3><p>This PDF shows an example of your review and practice steps. Use Vahini App to explore your results.</p></div>
+      <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
+  ];
+  host.innerHTML=pages.join('');
   wirePrintFit(host);
 }
 
@@ -755,5 +503,5 @@ function wirePrintFit(host){
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
 }
 
-global.VahiniReport = { render, fitPrintPages };
+global.VahiniReport = { render, fitPrintPages, classificationPanels };
 })(window);

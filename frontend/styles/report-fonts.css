@@ -1,0 +1,6 @@
+/* Locally served report fonts; OFL licenses and provenance: ../assets/fonts/. */
+@font-face {font-family:Spectral;src:url('../assets/fonts/Spectral-Regular.ttf') format('truetype');font-weight:400;font-display:swap;}
+@font-face {font-family:Spectral;src:url('../assets/fonts/Spectral-SemiBold.ttf') format('truetype');font-weight:600 800;font-display:swap;}
+@font-face {font-family:'Hanken Grotesk';src:url('../assets/fonts/HankenGrotesk.ttf') format('truetype');font-weight:100 900;font-display:swap;}
+@font-face {font-family:Caveat;src:url('../assets/fonts/Caveat.ttf') format('truetype');font-weight:400 700;font-display:swap;}
+@font-face {font-family:'Edu SA Beginner';src:url('../assets/fonts/EduSABeginner.ttf') format('truetype');font-weight:400 700;font-display:swap;}
