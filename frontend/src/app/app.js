@@ -227,36 +227,37 @@ function setupUploadDrop(){
   input.addEventListener('change', e=>handleSample(e.target.files[0]));
   $('#dz-clear').addEventListener('click', e=>{ e.stopPropagation(); clearSample(); });
 }
-/* Lazy-load pdf.js (UMD) only when a PDF is actually uploaded. */
+/* Load the PDF reader only for PDF uploads; retry after a failed load. */
+let pdfJsPromise = null;
 function loadPdfJs(){
-  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-  return new Promise((res, rej)=>{
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload = ()=>{
-      try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(_e){}
-      res(window.pdfjsLib);
-    };
-    s.onerror = ()=>rej(new Error('Could not load the PDF reader (offline?)'));
-    document.head.appendChild(s);
-  });
+  if (!pdfJsPromise){
+    pdfJsPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.min.mjs')
+      .then(lib=>{
+        lib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.worker.min.mjs';
+        return lib;
+      }).catch(error=>{ pdfJsPromise = null; throw error; });
+  }
+  return pdfJsPromise;
 }
 
-/* Render ONLY the first page of a PDF to an image. Multi-page PDFs are
-   restricted to page 1, matching the server. */
+/* Render page 1 only, and release the reader's worker after each upload. */
 async function pdfFirstPageToImage(file){
   const lib = await loadPdfJs();
-  const buf = await file.arrayBuffer();
-  const pdf = await lib.getDocument({ data: buf }).promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 2.0 });
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-  const url = canvas.toDataURL('image/png');
-  const img = await new Promise((res)=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; });
-  return { img, url, pages: pdf.numPages };
+  const task = lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false });
+  try{
+    const pdf = await task.promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const url = canvas.toDataURL('image/png');
+    const img = await new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    return { img, url, pages: pdf.numPages };
+  } finally {
+    await task.destroy();
+  }
 }
 
 function showSample(img, url){

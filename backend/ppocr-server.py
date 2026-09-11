@@ -45,6 +45,9 @@ import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
 import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
+from PIL import UnidentifiedImageError
+from pypdfium2 import PdfiumError
+
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
@@ -57,7 +60,7 @@ os.environ.setdefault("FLAGS_use_mkldnn", "0")
 os.environ.setdefault("FLAGS_enable_pir_api", "0")
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
@@ -325,6 +328,16 @@ def _ocr_process(arr, raw, lang):
     }
 
 
+async def _decode_upload(raw):
+    """Decode outside the event loop; malformed uploads are client errors."""
+    try:
+        return await run_in_threadpool(_to_numpy, raw)
+    except (UnidentifiedImageError, OSError, ValueError, PdfiumError) as exc:
+        raise HTTPException(
+            status_code=422, detail="Upload a valid image or PDF."
+        ) from exc
+
+
 @app.post("/ocr")
 async def ocr(
     image: UploadFile = File(...),
@@ -344,7 +357,7 @@ async def ocr(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = _to_numpy(raw)
+    arr = await _decode_upload(raw)
     payload = await run_in_threadpool(_ocr_process, arr, raw, lang)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
@@ -471,7 +484,7 @@ async def analyze_vl(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = _to_numpy(raw)
+    arr = await _decode_upload(raw)
     payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
     if not payload.get("ok"):
         return JSONResponse(status_code=200, content=payload)
@@ -693,7 +706,7 @@ async def report_python(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = _to_numpy(raw)
+    arr = await _decode_upload(raw)
     payload = await run_in_threadpool(
         _report_python_process, arr, raw, lang, expected_text
     )
