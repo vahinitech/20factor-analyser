@@ -346,7 +346,7 @@ function render(host, data){
     const instruction=plainText(n ? n.drill : f.tip);
     priorities.push({id:String(f.n),factor:f,title:f.name,
       reason:`${f.score.toFixed(1)}/10. ${maintenance?'Within the strong reference range; maintain this skill.':'Below the strong reference range of 8.5–10; one of your measured practice priorities.'}`,
-      instruction,drill:instruction+' Write one short guided row, then a fresh row without the guide. Compare the two.'});
+      instruction,drill:'Write one short guided row, then a fresh row without the guide. Compare the two.'});
   });
   const spellingStatus=!readable
     ? 'Spelling check deferred: the text reading is not confident enough. Try a clearer photo or check the words with a teacher.'
@@ -354,18 +354,18 @@ function render(host, data){
     : spelling.length ? 'Possible English spelling mistakes found. One is included in your three priorities. Confirm it against the original page; text reading can make mistakes.'
     : 'No common English misspellings from our limited list were found. This is not a complete spelling or grammar check; other languages are not checked.';
   const title=esc(intake.writerName || 'Your handwriting');
-  const head=label=>`<div class="run-head"><span class="rh-mark">Vahini</span><span>${label}</span></div>`;
+  const head=label=>`<div class="run-head"><span class="rh-mark"><span class="rh-dot"></span><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
   const foot=n=>`<div class="run-foot"><span>Free handwriting review</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
-  const cardStyle='background:var(--card);border:1px solid var(--hair);border-radius:12px;padding:12px;margin-bottom:10px;';
+  const cardStyle='';
   const evidence=p=>{
     if(p.spelling){
       const f=p.spelling;
       return `<div class="spelling-evidence"><p>Text read from your handwriting: <q>${esc(f.context)}</q></p><small>${f.region?'Source region: '+esc(f.region):'Source: recognized handwriting; exact word location unavailable.'} · Suggested correction: <b>${esc(f.suggestion)}</b></small></div>`;
     }
     const c=crops[p.factor.n];
-    return c ? `<div style="display:flex;gap:10px;align-items:center;">
-      ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" style="width:65%;height:55px;object-fit:contain;">`:''}
-      ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" style="width:25%;height:65px;object-fit:contain;">`:''}</div>
+    return c ? `<div class="priority-evidence">
+      ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
+      ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
       <p style="font-size:10px;">${c.status==='context'?'Context only. ':''}${esc(c.caption||'Reference from the uploaded page.')} Geometry proxies do not establish an exact letter fault.</p>`
       : '<p style="font-size:10px;">No localized evidence available for this scan. This score does not identify an exact letter fault.</p>';
   };
@@ -374,18 +374,18 @@ function render(host, data){
   const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p></article>`).join('');
   const drills=priorities.map((p,i)=>`<article class="practice-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><p>${esc(p.drill)}</p></article>`).join('');
   const pages=[
-    `<section class="page" data-screen-label="Your three priorities">${head('1 · Your review')}
+    `<section class="page free-report" data-screen-label="Your three priorities">${head('1 · Your review')}
       <div class="sec-title"><div><div class="eyebrow">Free review · up to three priorities</div><h2>${title}</h2></div></div>
       <p class="lead">${maintenance?'Keep these strengths steady.':'Start with these priorities.'} Small, regular practice can help make schoolwork easier to read.</p>
       <p class="spelling-status" style="font-size:11px;">${esc(spellingStatus)}</p>
       ${rec.printed_lines>0?`<p style="font-size:10px;">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
       ${reportCards || empty}
       <p style="font-size:10px;">Spelling suggestions do not change handwriting scores. Only measured factors are selected; a photo cannot measure pen speed or pressure.</p>${foot(1)}</section>`,
-    `<section class="page" data-screen-label="Coaching">${head('2 · Coaching')}
+    `<section class="page free-report" data-screen-label="Coaching">${head('2 · Coaching')}
       <div class="sec-title"><h2>How to work on each priority</h2></div>
       <p class="lead">Use the same priorities from your review. Ask a teacher or parent to check a word or letter with you if you are unsure.</p>
       ${coaching || empty}${foot(2)}</section>`,
-    `<section class="page" data-screen-label="Drills">${head('3 · Drills')}
+    `<section class="page free-report" data-screen-label="Drills">${head('3 · Drills')}
       <div class="sec-title"><h2>Your short practice session</h2></div>
       <p class="lead">Choose one priority to start. Take a few comfortable minutes and stop if your hand feels tired.</p>
       ${drills || empty}

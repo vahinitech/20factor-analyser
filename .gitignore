@@ -41,3 +41,6 @@ venv/
 # Build artifacts / local exports
 export/
 *.log
+
+# Browser layout regression screenshots and PDF
+test-results/
