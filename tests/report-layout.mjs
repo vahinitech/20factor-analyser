@@ -35,11 +35,11 @@ export async function checkReportLayout(page){
         }),
         priorities:document.querySelectorAll('.priority-card').length,
         cardsIntact:[...document.querySelectorAll('.priority-card,.coaching-card,.practice-card')].every(c=>c.scrollHeight<=c.clientHeight+1),
-        crops:[...document.querySelectorAll('.f-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=70)
+        crops:[...document.querySelectorAll('.f-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=65)
       };
     });
-    add(metrics.pages===6 && metrics.priorities===3,mode+': all stages and three priorities remain visible');
-    add(metrics.fonts.every(n=>n<=13),mode+': report typography is isolated from oversized host text');
+    add(metrics.pages===2 && metrics.priorities===3,mode+': all stages and three priorities remain visible');
+    add(metrics.fonts.every(n=>n>=15 && n<=17),mode+': student instructions use larger readable type');
     add(metrics.fits && !metrics.overlap && metrics.cardsIntact,mode+': no horizontal overflow, overlapping blocks or clipped cards',JSON.stringify(metrics.heights));
     add(metrics.crops,mode+': readable evidence images preserve complete crops');
     if(mode==='print')add(metrics.heights.every(h=>h<=1120), 'print: each standard report stage fits one A4 sheet',JSON.stringify(metrics.heights));

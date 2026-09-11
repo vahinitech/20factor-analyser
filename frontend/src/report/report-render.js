@@ -424,60 +424,35 @@ function render(host, data){
     return c ? `<div class="priority-evidence">
       ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
       ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
-      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; no exact wrong letter was found.':'This checks the shape of a writing area, not each letter.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it does not mean separate mistakes.</span>':''}</p>`
+      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; no exact wrong letter was found.':'Area check, not a letter-by-letter correction.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it does not mean separate mistakes.</span>':''}</p>`
       : '<p style="font-size:10px;">We could not find a clear example for this skill. The score does not show an exact wrong letter.</p>';
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
-  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p>${esc(p.reason)}</p>${p.explanation?`<p class="reason-text"><b>What to check:</b> ${esc(p.explanation)}</p>`:''}<div class="concept-comparison"><div class="concept-target"><b>How it should look</b>${p.factor?focusSVG({...p.factor,band:'strong'}).svg:`<p>${esc(p.spelling.suggestion)}</p>`}<small>Example to practise, not your corrected writing</small></div><div class="concept-actual"><b>Your handwriting</b>${evidence(p)}</div></div></article>`).join('');
-  const coaching=priorities.map((p,i)=>`<article class="coaching-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p><b>What to check:</b> ${esc(p.explanation||p.reason)}</p><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p><b>Check your next row:</b> Compare it with the guide, then try one row without the guide.</p></article>`).join('');
-  const drills=priorities.map((p,i)=>`<article class="practice-card" data-factor="${p.id}" style="${cardStyle}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><p>${esc(p.drill)}</p></article>`).join('');
+  const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)} <span class="priority-score">${p.factor?esc(p.factor.score.toFixed(1))+'/10':''}</span></h3><p class="reason-text">${esc(p.explanation||p.reason)}</p><div class="concept-actual">${evidence(p)}</div></article>`).join('');
+  const coaching=priorities.map((p,i)=>`<article class="coaching-card practice-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example concept-target">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p class="practice-label">Look at the example. Copy it here, then try it on your own.</p><div class="writing-lines" aria-label="Space to practise writing"></div><p class="self-check">Check your next row: ${esc(p.explanation||'Check each letter against the example.')}</p></article>`).join('');
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
   const overall=Number.isFinite(rawOverall)?rawOverall:null;
   const measured=analysis.results.filter(isLive);
-  const scoreRows=analysis.results.map(f=>`<tr data-factor="${f.n}"><td>${f.n}</td><td>${esc(f.name)}</td><td>${isLive(f)?f.score.toFixed(1):'—'}</td><td>${isLive(f)?BAND_LABEL[bandOf(f.score)]:'Unavailable'}</td><td>${esc(explanations[f.n]?.[0]||f.name)}</td></tr>`).join('');
-  let forecast=null;
-  if(overall!=null && measured.length && window.VahiniForecast){
-    const sections=analysis.sections.map(section=>({...section,factors:section.factors.filter(isLive)})).filter(section=>section.factors.length);
-    const weight=sections.reduce((sum,section)=>sum+section.weight,0);
-    if(weight>0)forecast=VahiniForecast.compute({...analysis,results:measured,sections:sections.map(section=>({...section,weight:section.weight/weight}))},data.imu,data.pipeline||{},overall);
-  }
+  const regionCount=Array.isArray(classification?.handwritten)?classification.handwritten.length:
+    Number.isInteger(rec.hand_lines)&&rec.hand_lines>=0?rec.hand_lines:null;
+  const shownIds=new Set(priorities.flatMap(p=>p.factor?(crops[p.factor.n]?.region_ids||[]):p.spelling?.region?[p.spelling.region]:[]));
+  const regionSummary=regionCount==null?'We could not count the handwriting parts in this upload.':
+    `${regionCount} handwriting ${regionCount===1?'part':'parts'} found in your upload. A part may be a word or a line.`;
+  const coverage=shownIds.size?`${shownIds.size} different ${shownIds.size===1?'part is':'parts are'} shown below for up to three priorities.`:'This free review focuses on up to three priorities.';
   const pages=[
-    `<section class="page free-report" data-screen-label="Overall score">${head('1 · Overall score')}
-      <div class="sec-title"><div><div class="eyebrow">Handwriting review</div><h2>${title}</h2></div></div>
-      <div class="score-card restored-score"><div class="ring">${overall!=null?ringSVG(overall):''}<div class="ring-num"><b>${overall??'—'}</b><span>out of 100</span></div></div><div class="band-pill">${overall!=null?overallBand(overall):'Not measured'}</div></div>
-      <p class="lead">${measured.length} of ${analysis.results.length} skills checked. Skills we cannot check do not lower your score.</p>
-      <div class="restored-summary"><h3>Your practice priorities</h3>${priorities.map(p=>`<p>${esc(p.title)}</p>`).join('')||empty}</div>
-      <p>See your scores on page 2 and examples on page 3. Pages 4 and 5 show you how to practise. Page 6 helps you plan your next check.</p>
-      <p class="spelling-status">${esc(spellingStatus)}</p>${foot(1)}</section>`,
-    `<section class="page free-report" data-screen-label="Factor scores">${head('2 · Factor scores')}
-      <div class="sec-title"><h2>Your 20-factor score table</h2></div>
-      <p>Each skill is scored out of 10. A score of 8.5 or more is called strong. These scores guide practice; they are not school grades or a comparison with students your age.</p>
-      <table class="report-score-table"><thead><tr><th>#</th><th>Factor</th><th>/10</th><th>Band</th><th>What to look at</th></tr></thead><tbody>${scoreRows}</tbody></table>
-      <p>“—” means we could not check this skill. Photo scores are estimates. They cannot point out every wrong letter.</p>${foot(2)}</section>`,
-    `<section class="page free-report" data-screen-label="Your three priorities">${head('3 · Concept and your handwriting')}
-      <div class="sec-title"><div><div class="eyebrow">Free review · up to three priorities</div><h2>${title}</h2></div></div>
-      <p class="lead">${maintenance?'Keep these strengths steady.':'Start with these priorities.'} Small, regular practice can help make schoolwork easier to read.</p>
-
-      ${rec.printed_lines>0?`<p style="font-size:10px;">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
-      ${reportCards || empty}
-      <p style="font-size:10px;">Spelling suggestions do not change handwriting scores. Only measured factors are selected; a photo cannot measure pen speed or pressure.</p>${foot(3)}</section>`,
-    `<section class="page free-report" data-screen-label="Coaching">${head('4 · Coaching')}
-      <div class="sec-title"><h2>Coach’s guide: see it, try it, check it</h2></div>
-      <p class="lead">Use the same priorities from your review. Ask a teacher or parent to check a word or letter with you if you are unsure.</p>
-      ${coaching || empty}${foot(4)}</section>`,
-    `<section class="page free-report" data-screen-label="Tips and drills">${head('5 · Tips and drills')}
-      <div class="sec-title"><h2>Tips and drills for your next page</h2></div>
-      <p class="lead">Choose one priority to start. Take a few comfortable minutes and stop if your hand feels tired.</p>
-      ${drills || empty}
-      <p style="font-size:11px;">After practising, upload a fresh sample to get another free review. Use similar paper and lighting. Progress varies; this report does not predict marks or exam results.</p>
-      <div class="guided-support" style="${cardStyle}"><h3>Want more help? Ask about Pro</h3><p>Your free report gives you three things to practise. Want to compare two writing samples or get a personal practice plan? Ask which Pro options are available and what they cost.</p><a href="mailto:info@vahinitech.com?subject=Pro%20handwriting%20support">Ask about Pro with a parent or teacher</a><p style="font-size:10px;">Your free review needs no purchase. Students can ask a parent or teacher to enquire.</p></div>
-      <p style="font-size:10px;">This is practice guidance, not a medical assessment. <a href="https://github.com/vahinitech/20factor-analyser/issues">Report a mistake</a>.</p>${foot(5)}</section>`,
-    `<section class="page free-report" data-screen-label="Prediction">${head('6 · Practice prediction')}
-      <div class="sec-title"><h2>Your practice projection</h2></div>
-      <p class="lead">This chart shows one possible path with practice. It cannot tell how quickly you will improve.</p>
-      ${forecast?`<div class="projection-chart">${trajectoryChart(forecast.curve,forecast.overallNow,forecast.overallProj)}</div><p>Current measured score: <b>${overall}/100</b>. Illustrative range after ${forecast.horizon} weeks: <b>${forecast.projLow}–${forecast.projHigh}/100</b>.</p>`:'<p>A projection is unavailable until there are usable measured scores.</p>'}
-      <p>This estimate assumes short, regular practice. It has not been tested to predict your own progress. Your practice, writing sample and photo quality can change the result. Only checked skills are included.</p>
-      <h3>Check your progress</h3><p>Practise the skills on pages 4 and 5. Then write a similar passage and upload a clear photo. Compare your new scores. A photo cannot measure pen speed or pressure.</p>${foot(6)}</section>`
+    `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
+      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p></div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
+      <p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
+      <h3>${maintenance?'Keep these strengths':'Your three things to practise'}</h3>
+      ${reportCards||empty}
+      <p class="spelling-status">${esc(spellingStatus)}</p>
+      ${rec.printed_lines>0?`<p class="report-note">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
+      <p class="report-note">Scores are practice guides, not school grades. Turn over for examples and space to try them.</p>${foot(1)}</section>`,
+    `<section class="page free-report compact-report" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
+      <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
+      ${coaching||empty}
+      <div class="guided-support"><h3>Ready to look at the whole page?</h3><div class="plan-comparison"><div><b>FREE · Start here</b><p>Three priorities, selected examples and practice steps.</p></div><div><b>PRO · Planned fuller review</b><p>Feedback across all handwriting parts, two-sample comparisons and a personal practice plan.</p></div></div><a href="mailto:info@vahinitech.com?subject=Pro%20handwriting%20support">Ask about Pro with a parent or teacher →</a><p class="report-note">Ask which Pro options are available and what they cost. Your free review needs no purchase.</p></div>
+      <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');
   wirePrintFit(host);

@@ -152,14 +152,14 @@
     }catch(e){ add(false,'Report renders from server analysis without throwing', String(e)); return finish(); }
 
     const pages=host.querySelectorAll('.page');
-    add(pages.length===6, 'Full report restores all six pages');
+    add(pages.length===2, 'Full report restores two readable pages');
     add(host.querySelectorAll('.priority-card').length===3 && !host.querySelector('.fscore'), 'Evidence page keeps three selected priorities');
-    add(host.querySelectorAll('.report-score-table tbody tr').length===20 && /out of 100/.test(host.textContent), 'Overall score and all 20 factor rows are restored');
+    add(!host.querySelector('.report-score-table') && /out of 100/.test(host.textContent), 'Overall score stays visible without a long score table');
     add(host.querySelectorAll('.concept-target svg').length===3 && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs a target concept with uploaded evidence');
-    add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Overall score|Factor scores|Your three priorities|Coaching|Tips and drills|Prediction', 'All report sections appear in the required order');
-    add(!!host.querySelector('.projection-chart svg') && /one possible path/i.test(host.textContent), 'Prediction chart is restored with its uncertainty label');
+    add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Your review|Practise and improve', 'All report sections appear in the required order');
+    add(!host.querySelector('.projection-chart'), 'Compact free report omits the speculative prediction');
     add(host.querySelectorAll('.coaching-card .coach-example').length===3 && /Check your next row/.test(host.textContent), 'Coaching includes illustrated examples and a self-check');
-    add(host.querySelectorAll('.reason-text').length===3 && !/CV|RMS|ratio err/.test(host.querySelector('.report-score-table').textContent), 'Priority reasons and score table use plain language');
+    add(host.querySelectorAll('.reason-text').length===3 && !/CV|RMS|ratio err/.test(host.textContent), 'Priority reasons and score table use plain language');
     const cropImages=[...host.querySelectorAll('.f-crop')];
     add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
     add(host.querySelectorAll('.f-location').length===cropImages.length, 'Handwriting evidence includes source page location maps');
@@ -173,7 +173,7 @@
     };
     const classifiedHost = document.createElement('div'); classifiedHost.id='classification-host'; document.body.append(classifiedHost);
     renderReport(classifiedAnalysis, 'classification-host');
-    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages to the free report');
+    add(classifiedHost.querySelectorAll('.page').length===2 && !classifiedHost.querySelector('.text-classification'), 'Classification appendix does not add pages to the free report');
     classifiedHost.innerHTML = VahiniReport.classificationPanels(classifiedAnalysis.textClassification).join('');
     const handSection = classifiedHost.querySelector('[data-kind="handwritten"]');
     const printSection = classifiedHost.querySelector('[data-kind="printed"]');
@@ -199,13 +199,13 @@
     add(instructions('.coaching-card')===instructions('.practice-card') && /two guide lines/i.test(instructions('.practice-card')), 'Size coaching uses the same specific guide-line drill as practice');
     add(!/UNRELATED ENTERTAINMENT|Pressure waves/.test(classifiedHost.textContent), 'Generic entertainment and unrelated grouped drills are absent');
     renderReport(makeAnalysis(Array(20).fill(9)),'classification-host');
-    add(/Strong work/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
+    add(/Keep these strengths/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
     const good = makeAnalysis(Array(20).fill(9)); good.results[2].score=7.5; good.results[2].band='good';
     renderReport(good,'classification-host');
     add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
     renderReport(aligned,'classification-host',{});
-    add(classifiedHost.querySelectorAll('.page').length===6 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also preserves six pages');
-    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02,03,04,05,06', 'Page numbering follows the six-page layout');
+    add(classifiedHost.querySelectorAll('.page').length===2 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also preserves two pages');
+    add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02', 'Page numbering follows the two-page layout');
     const spellingAnalysis=makeAnalysis(Array(20).fill(4));
     spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
     renderReport(spellingAnalysis,'classification-host');
@@ -228,7 +228,7 @@
     classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
-    add(!/weeks to fast/.test(host.textContent||'') && /has not been tested to predict your own progress/.test(host.textContent), 'Projection does not claim validated gains or photo speed');
+    add(!/weeks to fast/.test(host.textContent||'') && !host.querySelector('.projection-chart'), 'Projection does not claim validated gains or photo speed');
 
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');
@@ -239,6 +239,8 @@
     add(host.querySelectorAll('.shared-evidence').length===3 && /does not mean separate mistakes/.test(txt), 'Repeated regions are disclosed without counting them as separate mistakes');
     add(host.querySelectorAll('.selection-reason').length===3, 'Every crop explains why it was selected');
     add(new Set([...host.querySelectorAll('.selection-reason')].map(el=>el.textContent)).size===3, 'Shared region keeps the distinct reason for each factor');
+    add(/5 handwriting parts/.test(txt) && /1 different part is shown/.test(txt), 'Region coverage counts unique evidence rather than repeated crops');
+    add(host.querySelectorAll('.writing-lines').length===3 && /Planned fuller review/.test(txt), 'Illustrated practice space and honest Pro scope are present');
     add(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/.test(txt), 'Report contains no control or replacement characters');
 
     // #host is display:none (it's a structural scratch area for the checks
