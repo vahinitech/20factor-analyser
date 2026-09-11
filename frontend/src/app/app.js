@@ -417,6 +417,9 @@ function showReject(rej){
       <ul class="reject-tips">${tips}</ul>
       <button class="btn btn-primary" id="reject-retry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Upload another photo</button>
     </div>`;
+  if (rej.classification && window.VahiniReport){
+    panel.insertAdjacentHTML('beforeend', VahiniReport.classificationPanels(rej.classification).join(''));
+  }
   const retry = $('#reject-retry');
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
@@ -496,8 +499,9 @@ async function runPipeline(){
     const n = Number(pyReport.printed_lines) || 0;
     showReject({
       reason: 'No handwriting found on this page',
-      detail: 'This page looks fully printed' + (n ? ' (' + n + ' printed line' + (n>1?'s':'') + ' detected)' : '')
-        + '. The analyser measures pen handwriting only, so printed text is never analysed or scored.',
+      classification: pyReport.text_classification,
+      detail: n ? 'This page looks fully printed (' + n + ' printed regions detected). Printed text is shown below for identification and is not scored.'
+        : 'No usable handwriting was detected. Upload a clear photo of a handwritten page.',
       tips: [
         'Upload a page written by hand with a pen or pencil',
         'Mixed pages are fine: printed parts are detected and ignored, only the handwriting is scored',

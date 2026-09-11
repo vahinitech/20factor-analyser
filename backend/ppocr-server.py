@@ -250,6 +250,7 @@ def _no_handwriting_payload(engine, lang, lines, extra=None):
             "printed text is always excluded from the analysis."
         ),
         "printed_lines": printed,
+        "text_classification": classify.classification_summary(lines),
         "rec_texts": [],
         "rec_polys": [],
         "rec_scores": [],
@@ -317,6 +318,9 @@ def _ocr_process(arr, raw, lang):
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
@@ -456,6 +460,9 @@ def _analyze_vl_process(arr, raw, lang):
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
@@ -600,6 +607,9 @@ def _report_python_process(arr, raw, lang, expected_text):
     # report show an honest accuracy/confidence indicator instead of implying a
     # certainty the engine doesn't have.
     if isinstance(analysis, dict):
+        analysis["textClassification"] = classify.classification_summary(
+            lines, hand_lines
+        )
         hand_conf = scoring.mean(
             [float(l.get("score", 0.0)) for l in hand_lines]
         )
@@ -677,6 +687,9 @@ def _report_python_process(arr, raw, lang, expected_text):
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),

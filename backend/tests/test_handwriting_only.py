@@ -267,6 +267,79 @@ class TestHandwritingOnlyRule(unittest.TestCase):
                 red.any(), f"printed pixels leaked into factor {n}"
             )
 
+    def test_mixed_report_presents_both_classified_streams(self):
+        arr = _load_sample("handwritten_printed_mixed_1.jpg")
+        self._stub_lines(REAL_MIXED_LINES)
+        result = self._post("/report-python", _png_bytes(arr)).json()
+        summary = result["analysis"]["textClassification"]
+        self.assertTrue(summary["handwritten"])
+        self.assertTrue(summary["printed"])
+        printed = " ".join(row["text"] for row in summary["printed"]).lower()
+        self.assertIn("chief constable", printed)
+        for row in summary["printed"]:
+            self.assertFalse(row["included_in_scoring"])
+            self.assertEqual(row["granularity"], "line")
+            self.assertIsNotNone(row["printed_score"])
+        self.assertEqual(
+            sum(row["included_in_scoring"] for row in summary["handwritten"]),
+            len(result["hand_lines"]),
+        )
+        self.assertNotIn("chief constable", result["full_text"].lower())
+
+    def test_printed_refusal_retains_classification_without_scores(self):
+        arr = _load_sample("handwritten_printed_2.jpg")
+        self._stub_lines(PRINTED_ONLY)
+        result = self._post("/report-python", _png_bytes(arr)).json()
+        self.assertFalse(result["ok"])
+        self.assertIsNone(result["analysis"])
+        self.assertTrue(result["text_classification"]["printed"])
+        self.assertEqual(result["text_classification"]["handwritten"], [])
+        self.assertEqual(result["full_text"], "")
+
+    def test_handwriting_only_report_has_no_printed_stream(self):
+        from backend.tests.test_server_pipeline import _hand_strip
+
+        arr = np.full((180, 380, 3), 255, np.uint8)
+        arr[80:120, 10:370] = _hand_strip(360, 40)
+        self._stub_lines([_line("sample handwriting", 0.7, 10, 80, 360, 40)])
+        result = self._post("/report-python", _png_bytes(arr)).json()
+        self.assertTrue(result["ok"])
+        self.assertTrue(
+            result["analysis"]["textClassification"]["handwritten"]
+        )
+        self.assertEqual(
+            result["analysis"]["textClassification"]["printed"], []
+        )
+
+    def test_granularity_is_explicit_and_missing_classification_not_guessed(
+        self,
+    ):
+        import classify
+
+        lines = [
+            {"text": "one word", "printed_prob": 0.1, "printed_hint": False},
+            {
+                "text": "word",
+                "printed_prob": 0.9,
+                "printed_hint": True,
+                "classification_granularity": "word",
+            },
+            {
+                "text": "A",
+                "printed_prob": 0.9,
+                "printed_hint": True,
+                "classification_granularity": "letter",
+            },
+            {"text": "", "printed_hint": False},
+        ]
+        result = classify.classification_summary(lines, [lines[0], lines[3]])
+        self.assertEqual(result["handwritten"][0]["granularity"], "line")
+        self.assertEqual(
+            [r["granularity"] for r in result["printed"]], ["word", "letter"]
+        )
+        self.assertIsNone(result["unclassified"][0]["printed_score"])
+        self.assertTrue(result["unclassified"][0]["included_in_scoring"])
+
     # ---- fully printed page: refuse, do not fabricate a score -----------
     def test_fully_printed_page_is_refused_with_clear_reason(self):
         arr = _load_sample("handwritten_printed_2.jpg")

@@ -116,13 +116,13 @@
     };
   }
 
-  function renderReport(analysis){
+  function renderReport(analysis, hostId='host'){
     const cropURL = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="40"><rect width="1000" height="40" fill="white"/><rect width="20" height="40" fill="red"/><rect x="980" width="20" height="40" fill="blue"/></svg>');
     const evidence = Object.fromEntries(analysis.results.map(f=>[f.n, {
       url:cropURL, location_url:cropURL, status:'context',
       caption:'region 10: Synthetic evidence; exact fault not localized.',
     }]));
-    const host = document.getElementById('host');
+    const host = document.getElementById(hostId);
     VahiniReport.render(host, {
       intake:{ role:'individual', writerName:'' },
       analysis, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
@@ -177,6 +177,30 @@
       'Each evidence crop includes a source-page location map');
     add(/Context only/.test(host.textContent) && /region 10/.test(host.textContent),
       'Evidence captions distinguish context and identify the source region');
+
+    const classifiedAnalysis = makeAnalysis(Array(20).fill(8));
+    classifiedAnalysis.textClassification = {
+      handwritten:[{id:'text_1',text:'<img src=x onerror=alert(1)> written answer',granularity:'line',printed_score:0.2,included_in_scoring:true}],
+      printed:[{id:'text_2',text:'Printed form label',granularity:'word',printed_score:0.9,included_in_scoring:false}],
+      unclassified:[], note:'Line-level labels; finer levels only when available.',
+    };
+    const classifiedHost = document.createElement('div'); classifiedHost.id='classification-host'; document.body.append(classifiedHost);
+    renderReport(classifiedAnalysis, 'classification-host');
+    const handSection = classifiedHost.querySelector('[data-kind="handwritten"]');
+    const printSection = classifiedHost.querySelector('[data-kind="printed"]');
+    add(!!handSection && !!printSection && /written answer/.test(handSection.textContent) && /Printed form label/.test(printSection.textContent),
+      'Mixed report presents separate handwritten and printed text sections');
+    add(/word/.test(printSection.textContent) && /0.900/.test(printSection.textContent) && /Excluded/.test(printSection.textContent),
+      'Classification shows available granularity, heuristic score and scoring exclusion');
+    add(!handSection.querySelector('img') && /<img/.test(handSection.textContent),
+      'Recognized classification text is escaped, not interpreted as HTML');
+    const longSummary = {handwritten:[],printed:Array.from({length:25},(_,i)=>({id:'text_'+i,text:'printed row '+i,granularity:'line',printed_score:0.9})),unclassified:[]};
+    const panels = VahiniReport.classificationPanels(longSummary);
+    add(panels.filter(p=>p.includes('data-kind="printed"')).length===3 && panels.join('').includes('printed row 24'),
+      'Long printed streams paginate without dropping rows');
+    add(VahiniReport.classificationPanels({handwritten:classifiedAnalysis.textClassification.handwritten,printed:[]}).join('').includes('No printed text detected.'),
+      'Handwriting-only reports explicitly show no printed text');
+    classifiedHost.remove();
 
     // 4d) the how-many-tries prediction is present
     add(/tries/i.test(host.textContent||''), 'How-many-tries prediction rendered');

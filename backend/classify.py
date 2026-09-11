@@ -367,3 +367,38 @@ def split_lines(arr, lines, threshold=None):
     hand = [l for l in lines if not l.get("printed_hint")]
     printed = [l for l in lines if l.get("printed_hint")]
     return hand, printed
+
+
+def classification_summary(lines, hand_lines=None):
+    """Presentation-only streams; never feed printed text into scoring."""
+    included = {id(line) for line in (hand_lines or [])}
+    result = {"handwritten": [], "printed": [], "unclassified": []}
+    for index, line in enumerate(lines, 1):
+        score = line.get("printed_prob")
+        classified = score is not None
+        kind = (
+            ("printed" if line.get("printed_hint") else "handwritten")
+            if classified
+            else "unclassified"
+        )
+        granularity = line.get("classification_granularity", "line")
+        if granularity not in ("letter", "word", "line"):
+            granularity = "line"
+        result[kind].append(
+            {
+                "id": f"text_{index}",
+                "text": str(line.get("text") or ""),
+                "bbox": line.get("box"),
+                "granularity": granularity,
+                "classification": kind,
+                "printed_score": float(score) if classified else None,
+                "included_in_scoring": id(line) in included,
+            }
+        )
+    result["note"] = (
+        "Labels apply to detected regions. Word or letter labels appear only "
+        "when separately classified at that level. A line containing both "
+        "print and handwriting may receive one label. The printed-likeness "
+        "score is a heuristic, not a calibrated confidence or accuracy percentage."
+    )
+    return result

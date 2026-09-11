@@ -285,6 +285,41 @@ function focusSVG(f){
      3. Reference values: the published ranges for all 20 factors, read
                            like a medical lab report
      4. Practice & tries: the drills, and how many tries to the milestone */
+function classificationPanels(summary){
+  if (!summary) return [];
+  const panels = [];
+  const groups = [
+    ['handwritten', 'Handwritten text'],
+    ['printed', 'Printed text (excluded from scoring)'],
+    ['unclassified', 'Unclassified text'],
+  ];
+  groups.forEach(([kind, title])=>{
+    const entries = Array.isArray(summary[kind]) ? summary[kind] : [];
+    if (kind==='unclassified' && !entries.length) return;
+    const rows = [];
+    entries.forEach(entry=>{
+      const characters = Array.from(String(entry.text || '(Text not recognized)'));
+      for (let offset=0; offset<characters.length; offset+=120){
+        const text = characters.slice(offset, offset+120).join('');
+        const granularity = ['letter','word','line'].includes(entry.granularity) ? entry.granularity : 'region';
+        const score = Number.isFinite(entry.printed_score) ? entry.printed_score.toFixed(3) : 'Unavailable';
+        rows.push(`<tr><td>${esc(entry.id || '')}${offset?' (continued)':''}<br><small>${esc(granularity)}</small></td><td style="white-space:pre-wrap;overflow-wrap:anywhere;">${esc(text)}</td><td>${score}</td><td>${kind!=='printed' && entry.included_in_scoring?'Included':'Excluded'}</td></tr>`);
+      }
+    });
+    if (!rows.length) rows.push('<tr><td colspan="4">No '+esc(kind)+' text detected.</td></tr>');
+    for (let offset=0; offset<rows.length; offset+=10){
+      panels.push(`<div class="text-classification" data-kind="${kind}">
+        <h3>${title}${offset?' (continued)':''}</h3>
+        <p style="font-size:11px;line-height:1.5;">${esc(summary.note || 'Classification applies to detected regions; finer labels may be unavailable.')}</p>
+        <p style="font-size:11px;">Print score: 0 = less print-like, 1 = more print-like. This is not measured accuracy. Printed text is shown for identification only.</p>
+        <table style="width:100%;table-layout:fixed;font-size:11px;border-collapse:collapse;"><thead><tr><th style="width:18%;">Region / level</th><th style="width:52%;">Recognized text</th><th style="width:15%;">Print score</th><th style="width:15%;">Scoring</th></tr></thead><tbody>${rows.slice(offset,offset+10).join('')}</tbody></table>
+      </div>`);
+    }
+  });
+  return panels;
+}
+
+
 function render(host, data){
   const { intake, analysis, recognizedText, ocrEngine, detURL, pipeline, imu, crops, history } = data;
   const rc = roleConfig('individual');
@@ -706,6 +741,15 @@ function render(host, data){
     ${foot(pg,'Questions about this report: info@vahinitech.com')}
   </section>`);
 
+  classificationPanels(analysis.textClassification).forEach(panel=>{
+    pg=P();
+    pages.push(`<section class="page" data-screen-label="Text classification">
+      ${head('Text classification')}
+      <div class="sec-title"><div><h2>Handwritten and printed text</h2></div><div class="sec-no">Page ${String(pg).padStart(2,'0')}</div></div>
+      ${panel}
+      ${foot(pg,'Classification only: printed text never contributes to handwriting scores')}
+    </section>`);
+  });
   host.innerHTML = pages.join('');
   wirePrintFit(host);
 }
@@ -755,5 +799,5 @@ function wirePrintFit(host){
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
 }
 
-global.VahiniReport = { render, fitPrintPages };
+global.VahiniReport = { render, fitPrintPages, classificationPanels };
 })(window);
