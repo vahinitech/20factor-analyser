@@ -707,6 +707,7 @@ function render(host, data){
   </section>`);
 
   host.innerHTML = pages.join('');
+  if (global.VahiniWorksheets) global.VahiniWorksheets.mount(host, analysis.results);
   wirePrintFit(host);
 }
 

@@ -33,6 +33,8 @@ SOURCES = [
     "src/engine/forecast.js",
     "src/engine/craft.js",
     "src/engine/narrate.js",
+    "src/report/worksheet-catalog.js",
+    "src/report/worksheets.js",
     "src/report/report-render.js",
     "src/app/app.js",
     "src/app/share.js",

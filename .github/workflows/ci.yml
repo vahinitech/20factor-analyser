@@ -98,7 +98,7 @@ jobs:
             exit 1
           fi
       - name: Headless print/handwriting checks
-        run: npm run test:regression:headless
+        run: node tests/worksheets.test.mjs && npm run test:regression:headless
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.
