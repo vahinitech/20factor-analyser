@@ -186,12 +186,14 @@ async function serverPythonReport(blob, expectedText){
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.
       const t = setTimeout(()=>ctrl.abort(), 120000);
-      const res = await fetch(url, { method:'POST', body:fd, signal:ctrl.signal });
+      const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text');
+      const res = await fetch(requestUrl, { method:'POST', body:fd, signal:ctrl.signal });
       clearTimeout(t);
       const raw = await res.text();
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
+      if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
       if (j && j.ok !== false && j.analysis && Array.isArray(j.analysis.results)){
         const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const netMs = Math.max(0, Math.round(t1 - t0));

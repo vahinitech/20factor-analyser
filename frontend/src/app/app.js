@@ -382,7 +382,7 @@ const STEPS = [
   { id:'bin',  t:'Binarization', d:'Otsu / adaptive threshold: ink vs paper' },
   { id:'seg',  t:'Segment lines & words', d:'Connected components + gap thresholding' },
   { id:'ocr',  t:'Text detect + recognise', d:'Detection boxes & recognition' },
-  { id:'meas', t:'Measure 20 factors', d:'Deterministic CV geometry (§4C)' },
+  { id:'meas', t:'Review handwriting factors', d:'Deterministic CV geometry (§4C)' },
   { id:'score',t:'Aggregate & narrate', d:'Section weights → overall → report' },
 ];
 function renderLog(){
@@ -437,7 +437,7 @@ function sampleCounts(pyReport){
   const text = pyReport.full_text || lines.map(l=>l.text).filter(Boolean).join('\n') || '';
   const nWords = (text.match(/\S+/g) || []).length;
   const nChars = text.replace(/\s+/g, '').length;
-  return { nLines: lines.length, nWords, nChars };
+  return { nLines: Number.isInteger(pyReport.counts?.lines) ? pyReport.counts.lines : lines.length, nWords, nChars };
 }
 
 /* Server-only pipeline: the recognition server computes every report (OCR +
@@ -537,7 +537,7 @@ async function runPipeline(){
   // 6 measure: the analysis is already computed server-side
   stepState('meas','active'); await sleep(300);
   const analysis = pyReport.analysis;
-  stepState('meas','done', `20 factors · overall <b>${analysis.overall}/100</b>`);
+  stepState('meas','done', `${analysis.results.length} factors in your report · overall <b>${analysis.overall}/100</b>`);
 
   // 7 render
   stepState('score','active'); await sleep(300);
@@ -695,9 +695,11 @@ function renderSampleReport(){
   if (!host || !data || !data.analysis) return;
   collectIntake();
   const s = data.sample || {};
+  const proExample = new URLSearchParams(location.search).get('example') === 'pro';
+  const sampleAnalysis = proExample ? data.analysis : {...data.analysis, access:{tier:'free'}, results:data.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
   VahiniReport.render(host, {
     intake: state.intake,
-    analysis: data.analysis,
+    analysis: sampleAnalysis,
     expectedText: '',
     recognizedText: s.text || '',
     ocrEngine: 'server',
@@ -802,7 +804,7 @@ function renderCaseStudies(){
       <div class="cs-frows">${c.highlights.map(n=>frow(b[n], a[n])).join('')}</div>
       ${evRows?`<div class="cs-evidence">${evRows}</div>`:''}
       <p class="cs-note">${esc(c.note)}</p>
-      <details class="cs-all"><summary>All 20 factors, before → after</summary>
+      <details class="cs-all"><summary>Available factors, before → after</summary>
         <div class="cs-frows">${allRows}</div>
       </details>
     </article>`;

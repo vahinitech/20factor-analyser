@@ -1,0 +1,775 @@
+{
+  "schema_version": "2.0",
+  "scoring_version": "legacy-python-20factor",
+  "ok": true,
+  "summary": {
+    "score": 60,
+    "maximum": 100,
+    "expected_factor_count": 20,
+    "returned_factor_count": 20,
+    "scored_factor_count": 20,
+    "proxy_factor_count": 4,
+    "score_basis": "Existing weighted section score, including image proxies."
+  },
+  "factors": [
+    {
+      "id": "letter_formation",
+      "number": 1,
+      "name": "Letter Formation Accuracy",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: shape regularity proxy",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "shape dist ≤0.10",
+        "instruction": "Slow block-writing drills for the letters that deviate most (a, o, b rows).",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "stroke_order",
+      "number": 2,
+      "name": "Stroke Order Consistency",
+      "section_id": "structure",
+      "status": "proxy",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: stroke order proxy",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": [
+          "A still image does not record the order of pen strokes."
+        ]
+      },
+      "practice": {
+        "target_description": "edit dist ≤2",
+        "instruction": "Guided stroke-tracing sheets for letters built in the wrong order.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "loop_closure",
+      "number": 3,
+      "name": "Loop Closure",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: loop-bearing character consistency",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "≥95% closed",
+        "instruction": "Loop drills — rows of oooo and aaaa keeping every counter closed.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "line_quality",
+      "number": 4,
+      "name": "Line Quality (Smoothness)",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: stroke smoothness proxy",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "jitter ≤0.5 px",
+        "instruction": "Straight-line and curve control drills — llll then cccc, slowly.",
+        "exercise_group": "slant"
+      }
+    },
+    {
+      "id": "size_consistency",
+      "number": 5,
+      "name": "Size Consistency",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: letter-height consistency",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "height CV ≤0.12",
+        "instruction": "Write inside two guide-lines so every letter reaches the same height.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "ascender_descender_control",
+      "number": 6,
+      "name": "Ascender / Descender Control",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: zone balance",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "ratio err ≤0.15",
+        "instruction": "Tall–short pattern drills (bl bl bl) to train ascenders and descenders.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "baseline_alignment",
+      "number": 7,
+      "name": "Baseline Alignment",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: baseline drift",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "RMS ≤0.08 x-h",
+        "instruction": "Underline / baseline tracing on ruled sheets.",
+        "exercise_group": "frame"
+      }
+    },
+    {
+      "id": "word_spacing",
+      "number": 8,
+      "name": "Word Spacing",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: inter-word spacing regularity",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "≈1.0 x-h, CV ≤0.25",
+        "instruction": "“word␣␣word” spacing drill — one finger gap between words.",
+        "exercise_group": "rhythm"
+      }
+    },
+    {
+      "id": "letter_spacing",
+      "number": 9,
+      "name": "Letter Spacing",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: intra-word spacing proxy",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "gap CV ≤0.30",
+        "instruction": "Spaced-letter slow writing — a matchstick gap between letters.",
+        "exercise_group": "rhythm"
+      }
+    },
+    {
+      "id": "margin_discipline",
+      "number": 10,
+      "name": "Margin Discipline",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: left margin consistency",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "left CV ≤0.05",
+        "instruction": "Margin-box writing — keep an even left edge down the page.",
+        "exercise_group": "frame"
+      }
+    },
+    {
+      "id": "line_straightness",
+      "number": 11,
+      "name": "Line Straightness",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: line slope stability",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "drift ≤1°",
+        "instruction": "Ruled-sheet practice; pause at the right margin to reset to the line.",
+        "exercise_group": "frame"
+      }
+    },
+    {
+      "id": "vertical_alignment",
+      "number": 12,
+      "name": "Vertical Alignment",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: stroke tilt stability",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "tilt CV ≤0.20",
+        "instruction": "Straight-stroke drills — l l l l kept upright.",
+        "exercise_group": "slant"
+      }
+    },
+    {
+      "id": "speed_consistency",
+      "number": 13,
+      "name": "Speed Consistency",
+      "section_id": "dynamics",
+      "status": "proxy",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: speed proxy from stroke regularity",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": [
+          "A still image does not record writing speed or timing."
+        ]
+      },
+      "practice": {
+        "target_description": "velocity CV ≤0.20",
+        "instruction": "Slow-writing timing drill; write to a steady 1-2-3 count.",
+        "exercise_group": "wave"
+      }
+    },
+    {
+      "id": "pressure_consistency",
+      "number": 14,
+      "name": "Pressure Consistency",
+      "section_id": "dynamics",
+      "status": "proxy",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: pressure proxy from ink variance",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": [
+          "Ink darkness is not a direct measurement of pen pressure."
+        ]
+      },
+      "practice": {
+        "target_description": "CV ≤0.20",
+        "instruction": "Same-pressure line drills; keep one steady, relaxed force.",
+        "exercise_group": "wave"
+      }
+    },
+    {
+      "id": "stroke_continuity",
+      "number": 15,
+      "name": "Stroke Continuity",
+      "section_id": "dynamics",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: continuity proxy from word morphology",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "0 unintended breaks",
+        "instruction": "Cursive joining practice — connect letters within a word.",
+        "exercise_group": "rhythm"
+      }
+    },
+    {
+      "id": "pen_lift_frequency",
+      "number": 16,
+      "name": "Pen Lift Frequency",
+      "section_id": "dynamics",
+      "status": "proxy",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: pen-lift proxy from segmentation",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": [
+          "A still image does not record pen lifts over time."
+        ]
+      },
+      "practice": {
+        "target_description": "≤0.3 lifts/char",
+        "instruction": "Continuous-word writing without lifting mid-word.",
+        "exercise_group": "rhythm"
+      }
+    },
+    {
+      "id": "slant_consistency",
+      "number": 17,
+      "name": "Slant Consistency",
+      "section_id": "style",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: slant variation",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "angle CV low",
+        "instruction": "Slant rails — rows of / at one steady angle, then \\.",
+        "exercise_group": "slant"
+      }
+    },
+    {
+      "id": "legibility",
+      "number": 18,
+      "name": "Legibility Score",
+      "section_id": "style",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: composite readability",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "even & clear",
+        "instruction": "Lift your two lowest factors first — legibility rises with them.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "character_distinction",
+      "number": 19,
+      "name": "Character Distinction",
+      "section_id": "style",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: character separability proxy",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "clear letter pairs",
+        "instruction": "Practise easily-confused pairs side by side until each is unmistakable.",
+        "exercise_group": "round"
+      }
+    },
+    {
+      "id": "overall_neatness",
+      "number": 20,
+      "name": "Overall Neatness",
+      "section_id": "style",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "Illustrative example only: layout neatness composite",
+        "basis": "Synthetic example, not a real scan",
+        "scoring_inputs": {},
+        "unavailable_reason": null
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "source_label": "measured",
+        "confidence_probability": null,
+        "display_value": null,
+        "limitations": []
+      },
+      "practice": {
+        "target_description": "weighted variance",
+        "instruction": "Keep the page tidy — even size, even spacing, straight lines.",
+        "exercise_group": "frame"
+      }
+    }
+  ],
+  "recognition": {
+    "text": "A little practice.",
+    "metadata": {}
+  },
+  "limitations": [
+    "Scores are heuristic practice feedback, not a diagnosis.",
+    "Normalized scores are not accuracy or confidence percentages.",
+    "The legacy overall score can include proxy factors."
+  ],
+  "access": {
+    "customer_id": "example_customer",
+    "authenticated": true,
+    "tier": "pro",
+    "plan_tier": "pro",
+    "subscription_status": "active",
+    "expires_at": 2000000000,
+    "capabilities": {
+      "factor_numbers": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20
+      ],
+      "detailed_evidence": true,
+      "coaching": true,
+      "personalised_worksheets": true
+    }
+  },
+  "locked_factors": [],
+  "coaching": [],
+  "evidence": {
+    "image_width": null,
+    "image_height": null,
+    "factor_regions": {}
+  },
+  "worksheets": [
+    {
+      "id": "letter-shapes",
+      "title": "Clear letter shapes",
+      "pdf_path": "/assets/worksheets/letter-shapes.pdf",
+      "factor_number": 1
+    },
+    {
+      "id": "smooth-strokes",
+      "title": "Comfortable, clear strokes",
+      "pdf_path": "/assets/worksheets/smooth-strokes.pdf",
+      "factor_number": 4
+    },
+    {
+      "id": "letter-size",
+      "title": "Steady letter size",
+      "pdf_path": "/assets/worksheets/letter-size.pdf",
+      "factor_number": 5
+    }
+  ]
+}

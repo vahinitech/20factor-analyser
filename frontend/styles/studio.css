@@ -283,7 +283,7 @@ body.studio{ background:#EEEEEE; }
   #site-nav, #site-footer,
   .studio-top, .report-toolbar, .screen-head, #screen-intake, #screen-mode, #screen-upload, #screen-imu, #screen-process, .share-overlay{ display:none !important; }
   body.studio{ background:#fff; }
-  #screen-report{ padding:0; }
+  #screen-report{ padding:0; animation:none; transform:none; }
   .report-host{ padding:0; }
   .warn-banner{ display:none; }
 }
