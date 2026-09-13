@@ -96,6 +96,15 @@ class CompactHTTPTests(unittest.TestCase):
                 ).status_code,
                 304,
             )
+            self.assertEqual(
+                client.get(
+                    url,
+                    headers={
+                        "If-None-Match": "W/" + dictionary.headers["etag"]
+                    },
+                ).status_code,
+                304,
+            )
             denied = client.post(
                 "/api/v2/reports?format=compact&include=evidence",
                 files={"image": ("test.png", b"synthetic")},
