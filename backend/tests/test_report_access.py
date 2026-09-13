@@ -195,6 +195,97 @@ class ReportAccessTests(unittest.TestCase):
             self.assertEqual(response.json()["access"]["tier"], "free")
             self.assertNotIn("PRIVATE", response.text)
 
+    def test_evidence_cache_rechecks_revocation(self):
+        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        spec = importlib.util.spec_from_file_location(
+            "cache_access_server", path
+        )
+        server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(server)
+        self.pro()
+
+        async def revoke_while_reading(_image):
+            entitlements.revoke_key(self.db, self.key_id)
+            return b"synthetic"
+
+        with TestClient(server.app) as client, patch.object(
+            server, "_read_upload", new=revoke_while_reading
+        ), patch.object(server, "_cache_get", return_value=sample()):
+            response = client.post(
+                "/analyze-vl",
+                files={"image": ("test.png", b"synthetic")},
+                headers={"Authorization": self.header},
+            )
+            self.assertEqual(response.status_code, 401)
+            self.assertNotIn("PRIVATE", response.text)
+
+    def test_entitlements_run_outside_event_loop(self):
+        import asyncio
+
+        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        spec = importlib.util.spec_from_file_location(
+            "thread_access_server", path
+        )
+        server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(server)
+        original = entitlements.access_for
+        calls = []
+
+        def checked_access(header):
+            with self.assertRaises(RuntimeError):
+                asyncio.get_running_loop()
+            calls.append(header)
+            return original(header)
+
+        with TestClient(server.app) as client, patch.object(
+            entitlements, "access_for", side_effect=checked_access
+        ), patch.object(
+            server, "_report_payload", new=AsyncMock(return_value=sample())
+        ):
+            for route in (
+                "/api/v2/reports",
+                "/api/v2/reports?format=compact",
+                "/report-python",
+                "/analyze-vl",
+            ):
+                response = client.post(
+                    route, files={"image": ("test.png", b"synthetic")}
+                )
+                self.assertIn(response.status_code, (200, 403))
+            self.assertEqual(client.get("/api/v2/me").status_code, 200)
+        self.assertGreaterEqual(len(calls), 8)
+
+    def test_report_decode_runs_outside_event_loop(self):
+        import asyncio
+        import io
+        from starlette.datastructures import UploadFile
+
+        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        spec = importlib.util.spec_from_file_location(
+            "decode_thread_server", path
+        )
+        server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(server)
+        calls = []
+
+        def decode(_raw):
+            with self.assertRaises(RuntimeError):
+                asyncio.get_running_loop()
+            calls.append(True)
+            return object()
+
+        with patch.object(
+            server, "_cache_get", return_value=None
+        ), patch.object(server, "_to_numpy", side_effect=decode), patch.object(
+            server, "_report_python_process", return_value=sample()
+        ):
+            asyncio.run(
+                server._report_payload(
+                    UploadFile(file=io.BytesIO(b"test")), "auto", ""
+                )
+            )
+        self.assertEqual(calls, [True])
+
 
 if __name__ == "__main__":
     unittest.main()

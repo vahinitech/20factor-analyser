@@ -3,7 +3,6 @@
 
 import hashlib
 import json
-import re
 from pathlib import Path
 from functools import lru_cache
 
@@ -79,12 +78,15 @@ def dictionary_bytes():
 @lru_cache(maxsize=16)
 def catalog_bytes(version):
     """Retain archived definitions so older saved reports remain readable."""
-    if not re.fullmatch(r"[a-f0-9]{20}", version):
-        return None
     if version == dictionary()["version"]:
         return dictionary_bytes()
-    path = Path(__file__).parent / "catalogs" / (version + ".json")
-    return path.read_bytes() if path.is_file() else None
+    # Request values select an existing entry, never form a filesystem path.
+    archives = {
+        path.stem: path
+        for path in (Path(__file__).parent / "catalogs").glob("*.json")
+    }
+    path = archives.get(version)
+    return path.read_bytes() if path is not None else None
 
 
 def build_compact(payload, access, include=()):

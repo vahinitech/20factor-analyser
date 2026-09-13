@@ -27,7 +27,8 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   into the 20-factor path without an explicit decision.
 - **No AI-isms** in user-facing report text, commits, or docs (no "delve",
   "seamless", "leverage", filler praise). Coach tips speak plainly to
-  parents/teachers.
+  parents/teachers. Full list and self-check: the `natural-writing` skill
+  (`.claude/skills/natural-writing/SKILL.md`) plus `skills.md` at the root.
 - **Conventional commits** (`feat:`, `fix:`, `docs:`, `test:`); body says why.
 - **Build and test before every commit; CI green before merge.**
 - **Docs-only changes skip CI** — `ci.yml` has `paths-ignore: ['**/*.md',

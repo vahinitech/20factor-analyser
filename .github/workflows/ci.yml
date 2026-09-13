@@ -60,7 +60,7 @@ jobs:
             backend/computer_vision.py backend/scoring.py \
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
-            backend/entitlements.py backend/report_contract.py backend/subscription_admin.py \
+            backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py \
             backend/tests/test_backends_classify.py \
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
@@ -71,6 +71,7 @@ jobs:
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \
+            backend.tests.test_review_safety \
             backend.tests.test_report_access \
             backend.tests.test_compact_reports \
             backend.tests.test_backends_classify \
@@ -95,6 +96,8 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
       - run: npm ci
       - run: npx playwright install --with-deps chromium
+      - name: Verify account and worksheet clients
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs
       - name: Verify the packed bundle is in sync with src/
         run: |
           python3 frontend/build_bundle.py
@@ -103,7 +106,7 @@ jobs:
             exit 1
           fi
       - name: Headless print/handwriting checks
-        run: node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && npm run test:regression:headless
+        run: node tests/account-browser.mjs && npm run test:regression:headless
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

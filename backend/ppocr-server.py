@@ -73,6 +73,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
+from upload_limits import UploadBodyLimit
 import numpy as np
 
 # PaddleOCR 3.x (PP-OCRv5) is imported LAZILY inside get_engine() so this module
@@ -80,6 +81,7 @@ import numpy as np
 # pip install paddleocr paddlepaddle  (see requirements.txt)
 
 app = FastAPI(title="Vahini PP-OCRv5 service", version="1.0")
+app.add_middleware(UploadBodyLimit)
 
 
 @app.middleware("http")
@@ -168,6 +170,20 @@ def _warm_startup_engines():
 # Thin aliases here keep the rest of this file (and callers that still refer
 # to these by their historical short names) unchanged.
 _decode_image = computer_vision.decode_image
+
+
+async def _read_upload(image):
+    raw = await image.read(30 * 1024 * 1024 + 1)
+    if len(raw) > 30 * 1024 * 1024:
+        raise HTTPException(413, "Upload exceeds 30 MiB")
+    return raw
+
+
+def _decode_upload(raw):
+    try:
+        return _to_numpy(raw)
+    except computer_vision.UploadLimitError as exc:
+        raise HTTPException(413, str(exc)) from exc
 
 
 def _to_numpy(raw: bytes) -> np.ndarray:
@@ -362,7 +378,7 @@ async def ocr(
     rec: str = Form("true"),
 ):
     t0 = time.perf_counter()
-    raw = await image.read()
+    raw = await _read_upload(image)
     ckey = _cache_key(
         "ocr",
         raw,
@@ -373,7 +389,7 @@ async def ocr(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = _to_numpy(raw)
+    arr = await run_in_threadpool(_decode_upload, raw)
     payload = await run_in_threadpool(_ocr_process, arr, raw, lang)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
@@ -490,10 +506,12 @@ async def analyze_vl(
     authorization: str = Header(default=None),
 ):
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
-        if entitlements.access_for(authorization)["tier"] != "pro":
+        if (await run_in_threadpool(entitlements.access_for, authorization))[
+            "tier"
+        ] != "pro":
             raise HTTPException(403, "Detailed factor evidence requires Pro")
     t0 = time.perf_counter()
-    raw = await image.read()
+    raw = await _read_upload(image)
     ckey = _cache_key(
         "analyze-vl",
         raw,
@@ -502,18 +520,20 @@ async def analyze_vl(
     )
     cached = _cache_get(ckey)
     if cached is not None:
-        return _with_meta(cached, "hit", t0)
-
-    arr = _to_numpy(raw)
-    payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
+        payload = cached
+    else:
+        arr = await run_in_threadpool(_decode_upload, raw)
+        payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
-        if entitlements.access_for(authorization)["tier"] != "pro":
+        if (await run_in_threadpool(entitlements.access_for, authorization))[
+            "tier"
+        ] != "pro":
             raise HTTPException(403, "Detailed factor evidence requires Pro")
     if not payload.get("ok"):
         return JSONResponse(status_code=200, content=payload)
 
     _cache_set(ckey, payload)
-    return _with_meta(payload, "miss", t0)
+    return _with_meta(payload, "hit" if cached is not None else "miss", t0)
 
 
 def _report_python_process(
@@ -704,7 +724,7 @@ def _report_python_process(
 
 async def _report_payload(image, lang, expected_text, include_evidence=True):
     t0 = time.perf_counter()
-    raw = await image.read()
+    raw = await _read_upload(image)
     ckey = _cache_key(
         "report-python",
         raw,
@@ -715,7 +735,7 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = _to_numpy(raw)
+    arr = await run_in_threadpool(_decode_upload, raw)
     if include_evidence:
         payload = await run_in_threadpool(
             _report_python_process, arr, raw, lang, expected_text
@@ -740,19 +760,20 @@ async def report_python(
 ):
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
-        entitlements.access_for(authorization)
+        await run_in_threadpool(entitlements.access_for, authorization)
     payload = await _report_payload(image, lang, expected_text)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
         return report_contract.legacy_report(
-            payload, entitlements.access_for(authorization)
+            payload,
+            await run_in_threadpool(entitlements.access_for, authorization),
         )
     return payload
 
 
 @app.get("/api/v2/me")
-def api_identity(authorization: str = Header(default=None)):
-    access = entitlements.access_for(authorization)
+async def api_identity(authorization: str = Header(default=None)):
+    access = await run_in_threadpool(entitlements.access_for, authorization)
     return {
         "schema_version": "2.0",
         "access": {
@@ -771,7 +792,7 @@ async def api_report(
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
 ):
-    access = entitlements.access_for(authorization)
+    access = await run_in_threadpool(entitlements.access_for, authorization)
     fields = set(filter(None, include.split(",")))
     if fields - compact_reports.OPTIONAL_FIELDS:
         raise HTTPException(422, "Unsupported include field")
@@ -781,11 +802,14 @@ async def api_report(
         payload = await _report_payload(
             image, lang, expected_text, include_evidence="evidence" in fields
         )
-        access = entitlements.access_for(authorization)
+        access = await run_in_threadpool(
+            entitlements.access_for, authorization
+        )
         return compact_reports.build_compact(payload, access, fields)
     payload = await _report_payload(image, lang, expected_text)
     return report_contract.public_report(
-        payload, entitlements.access_for(authorization)
+        payload,
+        await run_in_threadpool(entitlements.access_for, authorization),
     )
 
 

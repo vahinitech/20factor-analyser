@@ -4,6 +4,7 @@
 import argparse
 import json
 import os
+from contextlib import suppress
 
 from entitlements import (
     initialize,
@@ -12,6 +13,31 @@ from entitlements import (
     revoke_key,
     set_subscription,
 )
+
+
+def write_customer_key(path, customer, secret_file):
+    """Revoke an issued credential if its private delivery file fails."""
+    descriptor = os.open(
+        secret_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
+    )
+    key_id = None
+    try:
+        with os.fdopen(descriptor, "w") as output:
+            key_id, secret = issue_key(path, customer)
+            output.write(secret + "\n")
+            output.flush()
+            os.fsync(output.fileno())
+    except BaseException:
+        try:
+            if key_id is not None:
+                revoke_key(path, key_id)
+        finally:
+            with suppress(OSError):
+                os.close(descriptor)
+            with suppress(FileNotFoundError):
+                os.unlink(secret_file)
+        raise
+    return key_id
 
 
 def main():
@@ -41,13 +67,7 @@ def main():
     elif args.command == "create-customer":
         print(json.dumps({"customer_id": create_customer(args.db)}))
     elif args.command == "issue-key":
-        # Refuse existing output paths before issuing a new credential.
-        descriptor = os.open(
-            args.secret_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600
-        )
-        with os.fdopen(descriptor, "w") as output:
-            key_id, secret = issue_key(args.db, args.customer)
-            output.write(secret + "\n")
+        key_id = write_customer_key(args.db, args.customer, args.secret_file)
         print(json.dumps({"key_id": key_id, "secret_file": args.secret_file}))
     elif args.command == "revoke-key":
         revoke_key(args.db, args.key_id)

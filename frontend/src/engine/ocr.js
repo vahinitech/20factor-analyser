@@ -187,8 +187,11 @@ async function serverPythonReport(blob, expectedText){
       // before falling back to geometry-only so recognition isn't dropped.
       const t = setTimeout(()=>ctrl.abort(), 120000);
       const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text');
-      const res = await fetch(requestUrl, { method:'POST', body:fd, signal:ctrl.signal });
-      clearTimeout(t);
+      let res;
+      try {
+        const account = await global.VahiniAccount.request(requestUrl);
+        res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
+      } finally { clearTimeout(t); }
       const raw = await res.text();
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
@@ -209,7 +212,7 @@ async function serverPythonReport(blob, expectedText){
         return j;
       }
       if (j && j.ok === false && j.error) lastServerError = j.error;
-    }catch(_e){ /* try next */ }
+    }catch(_e){ lastServerError='Report access or processing failed. Please reconnect your account and try again.'; if(global.VahiniAccount.hasKey())return {ok:false,error_code:'account_report_failed',error:lastServerError}; }
   }
   return null;
 }

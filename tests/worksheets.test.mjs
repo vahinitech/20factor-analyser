@@ -11,3 +11,9 @@ assert.deepEqual(ids([{n:8,score:7,conf:'measured'}]),[]);
 assert.equal(ids([1,5,8,7,17].map((n,i)=>({n,score:i,conf:'measured'}))).length,3);
 assert.deepEqual(ids(null),[]);
 console.log('PASS worksheet ranking, deduplication, confidence, missing measurements and selection limit');
+
+for (const hostname of ['stage.vahinitech.com','localhost','custom.example']) {
+ ctx.window.location={hostname};
+ assert.equal(ctx.window.VahiniWorksheets.base(),hostname==='stage.vahinitech.com'?'https://stage.vahinitech.com':'https://vahinitech.com');
+}
+console.log('PASS shared worksheet origin for hosted and self-hosted reports');

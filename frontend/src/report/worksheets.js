@@ -27,5 +27,5 @@
     const style=document.createElement('style');style.textContent='@media print{.worksheet-downloads{display:none!important}}';section.append(style);host.prepend(section);
     return section;
   }
-  global.VahiniWorksheets={recommend,mount};
+  global.VahiniWorksheets={recommend,mount,base};
 })(window);

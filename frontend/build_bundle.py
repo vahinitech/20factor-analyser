@@ -29,6 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 # recognition-client + report rendering only.
 SOURCES = [
     "src/engine/compact-client.js",
+    "src/engine/account.js",
     "src/engine/ocr.js",
     "src/engine/imu.js",
     "src/engine/forecast.js",

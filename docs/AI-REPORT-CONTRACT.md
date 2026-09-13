@@ -24,6 +24,7 @@ Read `backend/API-V2.md` for the current request/response specification and `CLA
 
 ## Browser, worksheets and PDF
 
+- Browser keys stay in page memory only. Resolve access through `/api/v2/me` before choosing paid includes, and never send credentials to fallback hosts or follow credentialed redirects.
 - Rebuild `frontend/scripts/core/engine.bundle.js` with `python frontend/build_bundle.py` after source changes. Do not patch the packed bundle directly.
 - Free renderer: five factors, no hidden paid values in HTML, same policy when printed. `sample-report.html` defaults to the five-factor synthetic example. `?example=pro` selects only a synthetic preview and never changes server entitlement.
 - A Free PDF should fit one A4 page for the ordinary sample, include all five scores and the Vahini logo, and avoid an empty trailing sheet. Long content must remain readable rather than being clipped to force one page.
