@@ -17,8 +17,11 @@ scraps/
 .thumbnail
 .image-slots.state.json
 
-# Local Claude Code / editor config (machine-specific, not for release)
-.claude/
+# Local Claude settings stay private; the shared report skill is tracked.
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/vahini-report-change/
 
 # OS / editor cruft
 .DS_Store

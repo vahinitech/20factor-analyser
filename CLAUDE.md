@@ -1,5 +1,9 @@
 # CLAUDE.md — 20factor-analyser (open-source handwriting analyser, AGPL-3.0)
 
+## Report workflow and skills
+
+For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRACT.md) and [backend/API-V2.md](backend/API-V2.md). The repository skill is [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md); `skills.md` retains the writing rules.
+
 ## Working rules (apply to every change)
 
 - **Verify before claiming.** Read the code before describing behaviour.
@@ -53,15 +57,12 @@ docker compose up -d --wait                   # full stack for live recognition 
 
 ## Architecture facts
 
-- `backend/ppocr-server.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`.
+- `backend/ppocr-server.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/me`,
+  `/api/v2/reports` and versioned public catalogues.
   `computer_vision.py` owns decode/crop/evidence previews; `geometry.py`
   owns the one shared clamp-box implementation (three crop paths depend on
   it — don't fork it).
-- Evidence crops for the report come from **`/analyze-vl`'s
-  `factor_regions`**, scores from `/report-python`. When "images look
-  broken", test both endpoints **inside the container** with pixel-range
-  measurement before suspecting this code — the 2026-07-20 incident was an
-  nginx-layer misroute in the deploy host, not a backend bug.
+- Legacy evidence and score routes remain for compatibility. The hosted browser now uses `/api/v2/reports?format=compact&include=text` and a cached dictionary. Detailed crops are optional Pro evidence; test the changed route and its consumer, not an assumed legacy-only flow.
 - `pypdfium2` is used for PDF decode but reaches the image only
   transitively — keep it explicitly pinned in `backend/requirements-core.txt`.
 - OCR backends are tiered (`requirements-{core,paddle,trocr,surya}.txt`);
@@ -69,9 +70,9 @@ docker compose up -d --wait                   # full stack for live recognition 
 
 ## Consumers — breaking changes ripple
 
-- **vahinitech/web-live** consumes this repo as a git submodule pinned to a
-  release tag and proxies `/ocr`, `/analyze-vl`, `/report-python`,
-  `/analyser/` through its nginx. Response-shape changes need a web-live
+- **vahinitech/vahini-web** consumes this repo as a git submodule pinned to a
+  commit (not necessarily a release tag) and proxies `/ocr`, `/analyze-vl`, `/report-python`,
+  `/api/v2/`, `/analyser/` through its nginx. Response-shape changes need a vahini-web
   submodule bump + its e2e run.
 - History warning: this repo once lost an entire feature set from `main`
   via stacked-PR squash-merges (branches based on branches, then squashed).
