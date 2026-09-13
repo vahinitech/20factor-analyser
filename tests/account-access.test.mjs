@@ -1,0 +1,28 @@
+/* SPDX-License-Identifier: AGPL-3.0-only */
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const calls=[];let tier='free',status=200;
+const window={location:{href:'https://example.test/analyser/',origin:'https://example.test'},fetch:async(url,options)=>{calls.push({url,options});return {ok:status===200,json:async()=>({access:{tier}})};}};
+const context={window,URL};vm.createContext(context);
+vm.runInContext(fs.readFileSync('frontend/src/engine/account.js','utf8'),context);
+const account=window.VahiniAccount;
+let request=await account.request('/api/v2/reports?format=compact&include=text');
+assert.equal(new URL(request.url).searchParams.get('include'),'text');
+assert.equal(request.options.headers.Authorization,undefined);
+tier='pro';await account.connect('vh_synthetic_test_only');
+request=await account.request('/api/v2/reports?format=compact');
+assert.equal(request.options.headers.Authorization,'Bearer vh_synthetic_test_only');
+assert.equal(new URL(request.url).searchParams.get('include'),'text,inputs,coaching,evidence');
+assert.equal(request.options.redirect,'error');
+assert(!request.url.includes('vh_'));
+const before=calls.length;
+await assert.rejects(account.request('https://other.test/api/v2/reports'));
+assert.equal(calls.length,before);
+status=401;await assert.rejects(account.request('/api/v2/reports'));
+account.disconnect();assert.equal(account.hasKey(),false);
+status=200;tier='free';await account.connect('vh_synthetic_free');
+request=await account.request('/api/v2/reports');
+assert.equal(new URL(request.url).searchParams.get('include'),'text');
+assert.equal(calls.at(-1).options.cache,'no-store');
+console.log('PASS server-resolved Free/Pro, per-scan recheck, memory credential, cross-origin rejection and disconnect');

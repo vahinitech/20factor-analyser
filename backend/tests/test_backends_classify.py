@@ -406,6 +406,7 @@ class TestScoringDataclasses(unittest.TestCase):
                 "unmeasuredReason",
                 "unmeasuredKind",
                 "basedOn",
+                "scoringInputs",
             },
         )
         self.assertEqual(d["basedOn"], "12 letters")

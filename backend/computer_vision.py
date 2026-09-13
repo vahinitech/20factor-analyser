@@ -9,6 +9,7 @@ section. Nothing in this module knows about OCR engines or the 20-factor
 scoring model; it only turns bytes into arrays and arrays into previews.
 """
 
+import math
 import io
 import re
 import base64
@@ -27,6 +28,23 @@ except Exception:  # pragma: no cover - cv2 optional
 # --------------------------------------------------------------------------- #
 # Decoding an upload (image or PDF) to a working array
 # --------------------------------------------------------------------------- #
+MAX_DECODE_PIXELS = 24_000_000
+MAX_PDF_PAGES = 100
+
+
+class UploadLimitError(ValueError):
+    """An upload exceeds the bounded decode budget."""
+
+
+def _check_dimensions(width, height):
+    if (
+        not math.isfinite(width * height)
+        or min(width, height) <= 0
+        or width * height > MAX_DECODE_PIXELS
+    ):
+        raise UploadLimitError("Decoded page exceeds 24 million pixels")
+
+
 def _pdf_first_page(raw: bytes) -> Image.Image:
     """Render ONLY the first page of a PDF to an image. Multi-page PDFs are
     intentionally restricted to page 1 (the analyser scores a single
@@ -35,7 +53,13 @@ def _pdf_first_page(raw: bytes) -> Image.Image:
 
     pdf = pdfium.PdfDocument(raw)
     try:
+        if not 1 <= len(pdf) <= MAX_PDF_PAGES:
+            raise UploadLimitError("PDF must contain 1 to 100 pages")
         page = pdf[0]
+        width, height = page.get_size()
+        _check_dimensions(
+            math.ceil(width * 150 / 72), math.ceil(height * 150 / 72)
+        )
         # ~150 DPI (scale = 150/72) is plenty for handwriting OCR.
         bitmap = page.render(scale=150.0 / 72.0)
         return bitmap.to_pil().convert("RGB")
@@ -48,7 +72,9 @@ def decode_image(raw: bytes) -> Image.Image:
     for a PDF only the first page is used."""
     if raw[:4] == b"%PDF":
         return _pdf_first_page(raw)
-    return Image.open(io.BytesIO(raw)).convert("RGB")
+    with Image.open(io.BytesIO(raw)) as image:
+        _check_dimensions(*image.size)
+        return image.convert("RGB")
 
 
 def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:
@@ -798,8 +824,16 @@ def _infer_doc_context(lines, layout):
     }
 
 
-def vl_analyze(arr: np.ndarray, lines):
+def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
     layout = _layout_features(arr)
+    if not include_evidence:
+        return {
+            "layout": layout,
+            "document_context": {},
+            "regions": [],
+            "factor_regions": {},
+            "ambiguous_word_gaps": [],
+        }
     context = _infer_doc_context(lines, layout)
     context["writing_style"] = infer_writing_style(arr, lines)
     regions = _build_region_previews(arr, lines)

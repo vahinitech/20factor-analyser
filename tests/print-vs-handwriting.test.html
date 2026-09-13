@@ -176,9 +176,9 @@
     add(/no spelling mistakes/i.test(host.textContent||'') || /to check/i.test(host.textContent||''),
       'Spelling & grammar document checks rendered');
 
-    // 4g) top-3 note with the full-report email
-    add(/full 20-factor deep-dive/i.test(host.textContent||''),
-      'Top-3 note with deep-dive email present');
+    // 4g) focus summary points to the complete scorecard
+    add(/full set of available scores appears in the scorecard/i.test(host.textContent||'') && !/full 20-factor deep-dive/i.test(host.textContent||''),
+      'Focus summary points to scorecard without obsolete three-factor upsell');
 
     // 5) the overall score appears in the cover / rings
     const txt = host.textContent || '';

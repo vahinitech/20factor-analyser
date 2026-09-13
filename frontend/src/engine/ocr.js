@@ -186,12 +186,17 @@ async function serverPythonReport(blob, expectedText){
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.
       const t = setTimeout(()=>ctrl.abort(), 120000);
-      const res = await fetch(url, { method:'POST', body:fd, signal:ctrl.signal });
-      clearTimeout(t);
+      const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text');
+      let res;
+      try {
+        const account = await global.VahiniAccount.request(requestUrl);
+        res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
+      } finally { clearTimeout(t); }
       const raw = await res.text();
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
+      if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
       if (j && j.ok !== false && j.analysis && Array.isArray(j.analysis.results)){
         const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const netMs = Math.max(0, Math.round(t1 - t0));
@@ -207,7 +212,7 @@ async function serverPythonReport(blob, expectedText){
         return j;
       }
       if (j && j.ok === false && j.error) lastServerError = j.error;
-    }catch(_e){ /* try next */ }
+    }catch(_e){ lastServerError='Report access or processing failed. Please reconnect your account and try again.'; if(global.VahiniAccount.hasKey())return {ok:false,error_code:'account_report_failed',error:lastServerError}; }
   }
   return null;
 }

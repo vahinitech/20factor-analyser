@@ -623,6 +623,18 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 }
 @page{ size:A4 portrait; margin:0; }
 
+/* The Free report uses the same A4 page contract as the full report. */
+.free-report{ width:min(100%,210mm); min-height:0; }
+.free-factor-grid > section{ break-inside:avoid; }
+@media print{
+  .free-report{ width:210mm; min-height:296mm; max-width:none!important; margin:0!important; padding:13mm!important; }
+  .free-report .free-factor-grid{ grid-template-columns:1fr 1fr!important; gap:10px!important; }
+  .free-report h1{ font-size:25px; }
+  .free-report h2{ font-size:20px; }
+  .free-report h3{ font-size:17px; }
+  .free-report p{ font-size:12px; line-height:1.5; }
+}
+
 /* =========================================================================
    Review upgrades: scorecard, quality strip, history, crops, certificate
    ========================================================================= */

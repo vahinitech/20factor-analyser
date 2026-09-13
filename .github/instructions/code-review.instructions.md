@@ -6,7 +6,11 @@ applyTo: "**"
 
 Open-source (AGPL-3.0) handwriting analyser: FastAPI recognition backend
 + static frontend, deterministic/auditable computer vision over black-box
-AI by design. Consumed by `vahinitech/web-live` as a pinned submodule.
+AI by design. Consumed by `vahinitech/vahini-web` as a pinned submodule.
+
+## Report and subscription review
+
+Use [report contract guidance](../../docs/AI-REPORT-CONTRACT.md) and [API specification](../../backend/API-V2.md). Review server entitlement enforcement on fresh results and cache hits, expiry rechecks, the five-factor Free allowlist, compact/expanded compatibility, immutable dictionaries, optional Pro fields and skipped preview work. Check the browser decoder and actual PDF output when those paths change. Report real defects with file/line evidence, and distinguish core tests from live OCR, load and native-app validation.
 
 ## Provenance: Never Copied Research Code
 
@@ -33,7 +37,7 @@ AI by design. Consumed by `vahinitech/web-live` as a pinned submodule.
   `MAX_OCR_SIDE`-style limits aren't bypassed by a new code path.
 - No hardcoded API keys or model-download credentials.
 - Check the OCR-input guard patterns (rate limits, homoglyph/SSRF checks —
-  see `tests/ocr-input-guard.test.mjs` in the consuming web-live repo, and
+  see `tests/ocr-input-guard.test.mjs` in the consuming vahini-web repo, and
   this repo's own `backend/tests/`) aren't weakened by a refactor.
 - Dependency pins in `requirements-*.txt` are security-motivated in places
   (e.g., paddleocr/pillow/numpy versions) — a PR loosening a pin should
