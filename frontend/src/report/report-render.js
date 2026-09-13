@@ -287,6 +287,11 @@ function focusSVG(f){
      4. Practice & tries: the drills, and how many tries to the milestone */
 function render(host, data){
   const { intake, analysis, recognizedText, ocrEngine, detURL, pipeline, imu, crops, history } = data;
+  if (analysis.access && analysis.access.tier === 'free') {
+    const cards = analysis.results.map(f => `<section style="padding:14px;border:1px solid #d9e0e8;border-radius:10px"><h3 style="margin:0 0 8px">${esc(f.name)}</h3><p><strong>${Number.isFinite(f.score) ? f.score.toFixed(1) + ' / 10' : 'Not available'}</strong></p><p>${esc(f.evidence || 'Image-based handwriting feedback.')}</p></section>`).join('');
+    host.innerHTML = `<article class="report-page" style="background:white;color:#253348;max-width:210mm;margin:20px auto;padding:28px;box-sizing:border-box"><header><img src="assets/vahini-logo.png" alt="Vahini" width="44" height="44"><p>FREE HANDWRITING REPORT</p><h1>Your handwriting, five things to explore.</h1><p>${esc(intake.writerName || 'Your sample')}</p></header><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px">${cards}</div><section style="margin-top:24px;padding-top:18px;border-top:1px solid #d9e0e8"><h2>More detail with Pro</h2><p>Pro includes all 20 factor scores, detailed evidence, coaching and personalised worksheet recommendations.</p><p>15 additional factor scores are not included in this Free report.</p><a href="/practice.html">Browse the free practice worksheet library</a></section><footer style="margin-top:24px;font-size:13px">Image-based estimates support practice. They do not diagnose learning or medical conditions. Scores are not accuracy percentages.</footer></article>`;
+    return;
+  }
   const rc = roleConfig('individual');
   const name = intake.writerName || 'this sample';
   const isLive = (f)=> !f.unmeasured && (f.imuMeasured || f.conf!=='imu');

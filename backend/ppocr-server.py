@@ -49,6 +49,8 @@ import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
+import entitlements
+import report_contract
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
@@ -57,7 +59,7 @@ os.environ.setdefault("FLAGS_use_mkldnn", "0")
 os.environ.setdefault("FLAGS_enable_pir_api", "0")
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
@@ -68,6 +70,20 @@ import numpy as np
 # pip install paddleocr paddlepaddle  (see requirements.txt)
 
 app = FastAPI(title="Vahini PP-OCRv5 service", version="1.0")
+
+
+@app.middleware("http")
+async def private_api_responses(request, call_next):
+    """Personal reports and subscription responses must not enter HTTP caches."""
+    response = await call_next(request)
+    if request.url.path.startswith("/api/v2/") or request.url.path in (
+        "/report-python",
+        "/analyze-vl",
+    ):
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Vary"] = "Authorization"
+    return response
+
 
 # Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
 # names are thin aliases so the rest of this file (and the tests, which
@@ -458,7 +474,11 @@ def _analyze_vl_process(arr, raw, lang):
 async def analyze_vl(
     image: UploadFile = File(...),
     lang: str = Form("auto"),
+    authorization: str = Header(default=None),
 ):
+    if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
+        if entitlements.access_for(authorization)["tier"] != "pro":
+            raise HTTPException(403, "Detailed factor evidence requires Pro")
     t0 = time.perf_counter()
     raw = await image.read()
     ckey = _cache_key(
@@ -473,6 +493,9 @@ async def analyze_vl(
 
     arr = _to_numpy(raw)
     payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
+    if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
+        if entitlements.access_for(authorization)["tier"] != "pro":
+            raise HTTPException(403, "Detailed factor evidence requires Pro")
     if not payload.get("ok"):
         return JSONResponse(status_code=200, content=payload)
 
@@ -660,12 +683,7 @@ def _report_python_process(arr, raw, lang, expected_text):
     }
 
 
-@app.post("/report-python")
-async def report_python(
-    image: UploadFile = File(...),
-    lang: str = Form("auto"),
-    expected_text: str = Form(""),
-):
+async def _report_payload(image, lang, expected_text):
     t0 = time.perf_counter()
     raw = await image.read()
     ckey = _cache_key(
@@ -683,10 +701,55 @@ async def report_python(
         _report_python_process, arr, raw, lang, expected_text
     )
     if not payload.get("ok"):
-        return JSONResponse(status_code=200, content=payload)
+        return payload
 
     _cache_set(ckey, payload)
     return _with_meta(payload, "miss", t0)
+
+
+@app.post("/report-python")
+async def report_python(
+    image: UploadFile = File(...),
+    lang: str = Form("auto"),
+    expected_text: str = Form(""),
+    authorization: str = Header(default=None),
+):
+    enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
+    if enforce:
+        entitlements.access_for(authorization)
+    payload = await _report_payload(image, lang, expected_text)
+    if enforce:
+        # Recheck after inference: expiry/revocation must also affect cache hits.
+        return report_contract.legacy_report(
+            payload, entitlements.access_for(authorization)
+        )
+    return payload
+
+
+@app.get("/api/v2/me")
+def api_identity(authorization: str = Header(default=None)):
+    access = entitlements.access_for(authorization)
+    return {
+        "schema_version": "2.0",
+        "access": {
+            **access,
+            "capabilities": entitlements.capabilities(access),
+        },
+    }
+
+
+@app.post("/api/v2/reports")
+async def api_report(
+    image: UploadFile = File(...),
+    lang: str = Form("auto"),
+    expected_text: str = Form(""),
+    authorization: str = Header(default=None),
+):
+    entitlements.access_for(authorization)
+    payload = await _report_payload(image, lang, expected_text)
+    return report_contract.public_report(
+        payload, entitlements.access_for(authorization)
+    )
 
 
 if __name__ == "__main__":

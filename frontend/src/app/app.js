@@ -382,7 +382,7 @@ const STEPS = [
   { id:'bin',  t:'Binarization', d:'Otsu / adaptive threshold: ink vs paper' },
   { id:'seg',  t:'Segment lines & words', d:'Connected components + gap thresholding' },
   { id:'ocr',  t:'Text detect + recognise', d:'Detection boxes & recognition' },
-  { id:'meas', t:'Measure 20 factors', d:'Deterministic CV geometry (§4C)' },
+  { id:'meas', t:'Review handwriting factors', d:'Deterministic CV geometry (§4C)' },
   { id:'score',t:'Aggregate & narrate', d:'Section weights → overall → report' },
 ];
 function renderLog(){
@@ -537,7 +537,7 @@ async function runPipeline(){
   // 6 measure: the analysis is already computed server-side
   stepState('meas','active'); await sleep(300);
   const analysis = pyReport.analysis;
-  stepState('meas','done', `20 factors · overall <b>${analysis.overall}/100</b>`);
+  stepState('meas','done', `${analysis.results.length} factors in your report · overall <b>${analysis.overall}/100</b>`);
 
   // 7 render
   stepState('score','active'); await sleep(300);
@@ -802,7 +802,7 @@ function renderCaseStudies(){
       <div class="cs-frows">${c.highlights.map(n=>frow(b[n], a[n])).join('')}</div>
       ${evRows?`<div class="cs-evidence">${evRows}</div>`:''}
       <p class="cs-note">${esc(c.note)}</p>
-      <details class="cs-all"><summary>All 20 factors, before → after</summary>
+      <details class="cs-all"><summary>Available factors, before → after</summary>
         <div class="cs-frows">${allRows}</div>
       </details>
     </article>`;

@@ -60,6 +60,7 @@ jobs:
             backend/computer_vision.py backend/scoring.py \
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
+            backend/entitlements.py backend/report_contract.py backend/subscription_admin.py \
             backend/tests/test_backends_classify.py \
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
@@ -68,6 +69,7 @@ jobs:
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \
+            backend.tests.test_report_access \
             backend.tests.test_backends_classify \
             backend.tests.test_server_pipeline \
             backend.tests.test_regression_functional \

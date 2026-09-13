@@ -1,0 +1,241 @@
+{
+  "schema_version": "2.0",
+  "scoring_version": "legacy-python-20factor",
+  "ok": true,
+  "summary": {
+    "score": 60,
+    "maximum": 100,
+    "expected_factor_count": 20,
+    "returned_factor_count": 5,
+    "scored_factor_count": 20,
+    "proxy_factor_count": 4,
+    "score_basis": "Existing weighted section score, including image proxies."
+  },
+  "factors": [
+    {
+      "id": "letter_formation",
+      "number": 1,
+      "name": "Letter Formation Accuracy",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "This factor is in the dev band under the current scoring model."
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "confidence_probability": null,
+        "limitations": []
+      }
+    },
+    {
+      "id": "size_consistency",
+      "number": 5,
+      "name": "Size Consistency",
+      "section_id": "structure",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "This factor is in the dev band under the current scoring model."
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "confidence_probability": null,
+        "limitations": []
+      }
+    },
+    {
+      "id": "baseline_alignment",
+      "number": 7,
+      "name": "Baseline Alignment",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "This factor is in the dev band under the current scoring model."
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "confidence_probability": null,
+        "limitations": []
+      }
+    },
+    {
+      "id": "word_spacing",
+      "number": 8,
+      "name": "Word Spacing",
+      "section_id": "spatial",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "This factor is in the dev band under the current scoring model."
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "confidence_probability": null,
+        "limitations": []
+      }
+    },
+    {
+      "id": "legibility",
+      "number": 18,
+      "name": "Legibility Score",
+      "section_id": "style",
+      "status": "estimated",
+      "score": {
+        "value": 6.0,
+        "minimum": 0,
+        "maximum": 10,
+        "normalized": 60,
+        "normalized_maximum": 100,
+        "higher_is_better": true,
+        "band": "dev"
+      },
+      "reason": {
+        "summary": "This factor is in the dev band under the current scoring model."
+      },
+      "measurement": {
+        "method": "image_heuristic",
+        "confidence_probability": null,
+        "limitations": []
+      }
+    }
+  ],
+  "recognition": {
+    "text": "A little practice."
+  },
+  "limitations": [
+    "Scores are heuristic practice feedback, not a diagnosis.",
+    "Normalized scores are not accuracy or confidence percentages.",
+    "The legacy overall score can include proxy factors."
+  ],
+  "access": {
+    "customer_id": "example_customer",
+    "authenticated": true,
+    "tier": "free",
+    "plan_tier": "free",
+    "subscription_status": "active",
+    "expires_at": null,
+    "capabilities": {
+      "factor_numbers": [
+        1,
+        5,
+        7,
+        8,
+        18
+      ],
+      "detailed_evidence": false,
+      "coaching": false,
+      "personalised_worksheets": false
+    }
+  },
+  "locked_factors": [
+    {
+      "number": 2,
+      "id": "stroke_order",
+      "required_tier": "pro"
+    },
+    {
+      "number": 3,
+      "id": "loop_closure",
+      "required_tier": "pro"
+    },
+    {
+      "number": 4,
+      "id": "line_quality",
+      "required_tier": "pro"
+    },
+    {
+      "number": 6,
+      "id": "ascender_descender_control",
+      "required_tier": "pro"
+    },
+    {
+      "number": 9,
+      "id": "letter_spacing",
+      "required_tier": "pro"
+    },
+    {
+      "number": 10,
+      "id": "margin_discipline",
+      "required_tier": "pro"
+    },
+    {
+      "number": 11,
+      "id": "line_straightness",
+      "required_tier": "pro"
+    },
+    {
+      "number": 12,
+      "id": "vertical_alignment",
+      "required_tier": "pro"
+    },
+    {
+      "number": 13,
+      "id": "speed_consistency",
+      "required_tier": "pro"
+    },
+    {
+      "number": 14,
+      "id": "pressure_consistency",
+      "required_tier": "pro"
+    },
+    {
+      "number": 15,
+      "id": "stroke_continuity",
+      "required_tier": "pro"
+    },
+    {
+      "number": 16,
+      "id": "pen_lift_frequency",
+      "required_tier": "pro"
+    },
+    {
+      "number": 17,
+      "id": "slant_consistency",
+      "required_tier": "pro"
+    },
+    {
+      "number": 19,
+      "id": "character_distinction",
+      "required_tier": "pro"
+    },
+    {
+      "number": 20,
+      "id": "overall_neatness",
+      "required_tier": "pro"
+    }
+  ]
+}
