@@ -66,10 +66,13 @@ jobs:
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
             backend/tests/test_layout_filter.py
+      - name: Verify immutable report dictionary
+        run: python backend/compact_reports.py --check
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \
             backend.tests.test_report_access \
+            backend.tests.test_compact_reports \
             backend.tests.test_backends_classify \
             backend.tests.test_server_pipeline \
             backend.tests.test_regression_functional \
@@ -100,7 +103,7 @@ jobs:
             exit 1
           fi
       - name: Headless print/handwriting checks
-        run: node tests/worksheets.test.mjs && npm run test:regression:headless
+        run: node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && npm run test:regression:headless
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

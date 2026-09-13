@@ -34,14 +34,16 @@
   <div class="screen-head" style="margin-bottom:6px;">
     <div class="eyebrow">Vahini Analyser · sample report</div>
     <h1>What your report looks like</h1>
-    <p>Every page below is the real report the analyser produces: scorecard, plain-words view, focus areas, coach's corner, reference values and a practice plan. Print it or save it as a PDF, exactly as you would your own.</p>
+    <p>Preview the five-factor Free report, or open the Pro example with all 20 scores. Both examples use synthetic handwriting. Print or save the selected example as a PDF.</p>
   </div>
 </section>
 
 <section class="screen on" id="screen-report">
   <div class="report-toolbar">
-    <div class="sample-note"><b>How this sample was made:</b> we never publish a student's real handwriting. This page was made by computer, with 10 written lines that slide down a little and letters of uneven size. The real scoring engine scored it, the same engine that scores your page. You can make it again yourself: <code>python docs/examples/generate_examples.py</code>. Your own report also shows photo evidence cut from your own page.</div>
+    <div class="sample-note"><b>How this sample was made:</b> we never publish a student's real handwriting. This page was made by computer, with 10 written lines that slide down a little and letters of uneven size. The real scoring engine scored it, the same engine that scores your page. You can make it again yourself: <code>python docs/examples/generate_examples.py</code>. Pro reports can also include photo evidence from your own page.</div>
     <div class="toolbar-actions">
+      <a class="btn btn-ghost" href="sample-report.html">Free example: five factors</a>
+      <a class="btn btn-ghost" href="sample-report.html?example=pro">Pro example: 20 factors</a>
       <a class="btn btn-ghost" href="case-studies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>Before and after stories</a>
       <a class="btn btn-ghost" href="analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Analyse your own page</a>
       <button class="btn btn-dark" id="print-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button>

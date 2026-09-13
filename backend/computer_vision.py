@@ -798,8 +798,16 @@ def _infer_doc_context(lines, layout):
     }
 
 
-def vl_analyze(arr: np.ndarray, lines):
+def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
     layout = _layout_features(arr)
+    if not include_evidence:
+        return {
+            "layout": layout,
+            "document_context": {},
+            "regions": [],
+            "factor_regions": {},
+            "ambiguous_word_gaps": [],
+        }
     context = _infer_doc_context(lines, layout)
     context["writing_style"] = infer_writing_style(arr, lines)
     regions = _build_region_previews(arr, lines)

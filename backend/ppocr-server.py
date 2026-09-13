@@ -51,6 +51,8 @@ import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
 import report_contract
+import compact_reports
+from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
@@ -59,8 +61,16 @@ os.environ.setdefault("FLAGS_use_mkldnn", "0")
 os.environ.setdefault("FLAGS_enable_pir_api", "0")
 os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
-from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException
-from fastapi.responses import JSONResponse
+from fastapi import (
+    FastAPI,
+    UploadFile,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Query,
+)
+from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 import numpy as np
@@ -76,7 +86,10 @@ app = FastAPI(title="Vahini PP-OCRv5 service", version="1.0")
 async def private_api_responses(request, call_next):
     """Personal reports and subscription responses must not enter HTTP caches."""
     response = await call_next(request)
-    if request.url.path.startswith("/api/v2/") or request.url.path in (
+    if (
+        request.url.path.startswith("/api/v2/")
+        and not request.url.path.startswith("/api/v2/catalog/")
+    ) or request.url.path in (
         "/report-python",
         "/analyze-vl",
     ):
@@ -503,7 +516,9 @@ async def analyze_vl(
     return _with_meta(payload, "miss", t0)
 
 
-def _report_python_process(arr, raw, lang, expected_text):
+def _report_python_process(
+    arr, raw, lang, expected_text, include_evidence=True
+):
     """Synchronous body of /report-python: OCR plus the full 20-factor
     analysis, the heaviest of the three endpoints (see _ocr_process for why
     this runs off the event loop)."""
@@ -552,7 +567,11 @@ def _report_python_process(arr, raw, lang, expected_text):
         rec_langs = [l["lang"] for l in hand_lines]
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
 
-        vl = _vl_analyze(arr, hand_lines)
+        vl = (
+            _vl_analyze(arr, hand_lines)
+            if include_evidence
+            else _vl_analyze(arr, hand_lines, include_evidence=False)
+        )
         analysis = scoring.build_analysis(
             arr, hand_lines, vl.get("layout", {})
         ).to_dict()
@@ -683,23 +702,28 @@ def _report_python_process(arr, raw, lang, expected_text):
     }
 
 
-async def _report_payload(image, lang, expected_text):
+async def _report_payload(image, lang, expected_text, include_evidence=True):
     t0 = time.perf_counter()
     raw = await image.read()
     ckey = _cache_key(
         "report-python",
         raw,
         lang,
-        f"{expected_text or ''}|backend={OCR_BACKEND}",
+        f"{expected_text or ''}|backend={OCR_BACKEND}|evidence={include_evidence}",
     )
     cached = _cache_get(ckey)
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
     arr = _to_numpy(raw)
-    payload = await run_in_threadpool(
-        _report_python_process, arr, raw, lang, expected_text
-    )
+    if include_evidence:
+        payload = await run_in_threadpool(
+            _report_python_process, arr, raw, lang, expected_text
+        )
+    else:
+        payload = await run_in_threadpool(
+            _report_python_process, arr, raw, lang, expected_text, False
+        )
     if not payload.get("ok"):
         return payload
 
@@ -744,11 +768,40 @@ async def api_report(
     lang: str = Form("auto"),
     expected_text: str = Form(""),
     authorization: str = Header(default=None),
+    format: Literal["expanded", "compact"] = Query(default="expanded"),
+    include: str = Query(default=""),
 ):
-    entitlements.access_for(authorization)
+    access = entitlements.access_for(authorization)
+    fields = set(filter(None, include.split(",")))
+    if fields - compact_reports.OPTIONAL_FIELDS:
+        raise HTTPException(422, "Unsupported include field")
+    if fields - {"text"} and access["tier"] != "pro":
+        raise HTTPException(403, "Requested report details require Pro")
+    if format == "compact":
+        payload = await _report_payload(
+            image, lang, expected_text, include_evidence="evidence" in fields
+        )
+        access = entitlements.access_for(authorization)
+        return compact_reports.build_compact(payload, access, fields)
     payload = await _report_payload(image, lang, expected_text)
     return report_contract.public_report(
         payload, entitlements.access_for(authorization)
+    )
+
+
+@app.get("/api/v2/catalog/{version}")
+def api_catalog(version: str, if_none_match: str = Header(default=None)):
+    content = compact_reports.catalog_bytes(version)
+    if content is None:
+        raise HTTPException(404, "Unknown catalogue version")
+    headers = {
+        "Cache-Control": "public, max-age=31536000, immutable",
+        "ETag": '"' + version + '"',
+    }
+    if if_none_match == headers["ETag"]:
+        return Response(status_code=304, headers=headers)
+    return Response(
+        content=content, media_type="application/json", headers=headers
     )
 
 

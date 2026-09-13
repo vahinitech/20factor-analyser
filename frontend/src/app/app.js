@@ -437,7 +437,7 @@ function sampleCounts(pyReport){
   const text = pyReport.full_text || lines.map(l=>l.text).filter(Boolean).join('\n') || '';
   const nWords = (text.match(/\S+/g) || []).length;
   const nChars = text.replace(/\s+/g, '').length;
-  return { nLines: lines.length, nWords, nChars };
+  return { nLines: Number.isInteger(pyReport.counts?.lines) ? pyReport.counts.lines : lines.length, nWords, nChars };
 }
 
 /* Server-only pipeline: the recognition server computes every report (OCR +
@@ -695,9 +695,11 @@ function renderSampleReport(){
   if (!host || !data || !data.analysis) return;
   collectIntake();
   const s = data.sample || {};
+  const proExample = new URLSearchParams(location.search).get('example') === 'pro';
+  const sampleAnalysis = proExample ? data.analysis : {...data.analysis, access:{tier:'free'}, results:data.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
   VahiniReport.render(host, {
     intake: state.intake,
-    analysis: data.analysis,
+    analysis: sampleAnalysis,
     expectedText: '',
     recognizedText: s.text || '',
     ocrEngine: 'server',

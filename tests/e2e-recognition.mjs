@@ -58,34 +58,34 @@ async function main() {
     await page.setInputFiles('#file-input', FIXTURE);
     await page.waitForSelector('#go-process:not([disabled])', { timeout: 15000 });
 
-    // Assert against the ACTUAL /report-python response the app calls
+    // Assert against the compact /api/v2/reports response the app calls
     // (src/engine/ocr.js's serverPythonReport), not scraped report HTML --
     // that markup has been redesigned before (report-render.js's current
     // scorecard has no ".ea-head.exp"/"AI OCR" tag at all, which is why this
     // test hung/failed against current code) and will drift again. The
     // JSON response is the real, stable contract this test is meant to
     // verify: recognizer.collect_lines' selected backend and the recognised
-    // text server-side, in analysis.recognition / full_text.
+    // text server-side, in recognition / text.
     const respPromise = page.waitForResponse(
-      (r) => r.url().includes('/report-python') && r.request().method() === 'POST',
+      (r) => r.url().includes('/api/v2/reports') && r.request().method() === 'POST',
       { timeout: 180000 } // first request can include model load; allow generous time
     );
     await page.click('#go-process');
     const resp = await respPromise;
     const json = await resp.json();
 
-    if (resp.ok() && json.ok) ok('report-python request succeeded', `HTTP ${resp.status()}`);
-    else fail('report-python request succeeded', `HTTP ${resp.status()} :: ${json.error || ''}`);
+    if (resp.ok() && json.ok) ok('compact report request succeeded', `HTTP ${resp.status()}`);
+    else fail('compact report request succeeded', `HTTP ${resp.status()} :: ${json.error || ''}`);
 
-    const backend = json.selected_backend || '';
+    const backend = json.recognition?.backend || '';
     if (backend && backend !== 'cv-fallback') ok('report uses recognition server', `backend "${backend}"`);
     else fail('report uses recognition server', `backend "${backend || '(none)'}" -- OCR did not run`);
 
-    const level = (json.analysis && json.analysis.recognition && json.analysis.recognition.level) || '';
+    const level = json.recognition?.level || '';
     if (level && level !== 'unavailable') ok('recognition not shown as "not enabled"', `level "${level}"`);
     else fail('recognition not shown as "not enabled"', `level "${level || '(none)'}"`);
 
-    const recText = String(json.full_text || '').trim();
+    const recText = String(json.text || '').trim();
     const recLen = recText.replace(/\s+/g, '').length;
     if (recLen >= 40) ok('real words recognised from sample', `${recLen} chars`);
     else fail('real words recognised from sample', `only ${recLen} chars: "${recText.slice(0, 80)}"`);
