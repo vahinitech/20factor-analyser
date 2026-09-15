@@ -2,6 +2,8 @@
 """The JSON Schema contract must match what the server actually emits."""
 
 import copy
+import hashlib
+import importlib.util
 import json
 import os
 import sys
@@ -15,6 +17,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import compact_reports
 import contract_schemas
 import entitlements
+import generate_schemas
 from fastapi import HTTPException
 from report_contract import FACTOR_IDS, public_report
 
@@ -96,6 +99,9 @@ class SchemaFileTests(unittest.TestCase):
             )
             contract_schemas.validator(name)
 
+    def test_committed_files_match_the_generator(self):
+        self.assertEqual(generate_schemas.stale(), [])
+
     def test_shared_definitions_track_server_constants(self):
         common = contract_schemas.load("common")["definitions"]
         self.assertEqual(common["factorId"]["enum"], list(FACTOR_IDS))
@@ -114,6 +120,13 @@ class SchemaFileTests(unittest.TestCase):
             catalogue = json.loads(path.read_text())
             self.assertEqual(contract_schemas.errors("catalog", catalogue), [])
             self.assertEqual(catalogue["version"], path.stem)
+            # The version is the hash of the body, so an in-place edit of an
+            # archived catalogue is caught even when the filename matches.
+            body = {k: v for k, v in catalogue.items() if k != "version"}
+            digest = hashlib.sha256(
+                json.dumps(body, sort_keys=True, ensure_ascii=False).encode()
+            ).hexdigest()[:20]
+            self.assertEqual(digest, catalogue["version"], path.name)
         self.assertEqual(
             contract_schemas.errors("catalog", compact_reports.dictionary()),
             [],
@@ -212,6 +225,26 @@ class LiveShapeTests(unittest.TestCase):
         self.assertTrue(contract_schemas.errors("report-request", bad))
 
 
+class HealthShapeTests(unittest.TestCase):
+    """The live /health payload, including the nullable OCR version."""
+
+    @classmethod
+    def setUpClass(cls):
+        spec = importlib.util.spec_from_file_location(
+            "ppocr_server_for_schema", ROOT / "ppocr-server.py"
+        )
+        cls.server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(cls.server)
+
+    def test_health_payload_validates(self):
+        body = self.server.health()
+        self.assertEqual(contract_schemas.errors("health", body), [])
+        with patch.object(self.server, "OCR_VERSION", None):
+            body = self.server.health()
+        self.assertIsNone(body["ocr_version"])
+        self.assertEqual(contract_schemas.errors("health", body), [])
+
+
 class RejectionTests(unittest.TestCase):
     """The schemas must refuse the leaks and lies they exist to catch."""
 
@@ -241,6 +274,46 @@ class RejectionTests(unittest.TestCase):
         body = public_report(realistic_payload(), self.free)
         body["factors"][0]["practice"] = {"instruction": "x"}
         self.assertTrue(contract_schemas.errors("report-expanded", body))
+
+    def test_free_expanded_cannot_carry_a_pro_factor_or_extra_field(self):
+        body = public_report(realistic_payload(), self.free)
+        leaked = copy.deepcopy(body)
+        leaked["factors"][0]["private_evidence"] = "x"
+        self.assertTrue(contract_schemas.errors("report-expanded", leaked))
+        leaked = copy.deepcopy(body)
+        pro = public_report(realistic_payload(), {"tier": "pro"})
+        leaked["factors"].append(pro["factors"][1])  # factor 2, Pro only
+        leaked["factors"][-1].pop("practice")
+        leaked["factors"][-1]["reason"] = {"summary": "x"}
+        for key in ("display_value", "source_label"):
+            leaked["factors"][-1]["measurement"].pop(key)
+        self.assertTrue(contract_schemas.errors("report-expanded", leaked))
+
+    def test_locked_lists_must_be_the_exact_complement(self):
+        body = compact_reports.build_compact(realistic_payload(), self.free)
+        body["locked"] = list(range(1, 16))
+        self.assertTrue(contract_schemas.errors("report-compact", body))
+        body = public_report(realistic_payload(), self.free)
+        body["locked_factors"] = [body["locked_factors"][0]] * 15
+        self.assertTrue(contract_schemas.errors("report-expanded", body))
+
+    def test_catalogue_must_define_every_factor_once(self):
+        catalogue = json.loads(
+            json.dumps(compact_reports.dictionary(), ensure_ascii=False)
+        )
+        catalogue["factors"][1] = dict(catalogue["factors"][0])
+        self.assertTrue(contract_schemas.errors("catalog", catalogue))
+
+    def test_request_accepts_either_header_spelling(self):
+        for key in ("Authorization", "authorization"):
+            request = {
+                "headers": {key: "Bearer vh_" + "a" * 43},
+                "form": {},
+                "image": {"content_type": "image/png", "size_bytes": 10},
+            }
+            self.assertEqual(
+                contract_schemas.errors("report-request", request), []
+            )
 
     def test_validate_raises_with_paths(self):
         with self.assertRaises(ValueError) as error:

@@ -1,9 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/analyser/v2/report-expanded.schema.json",
-  "title": "POST /api/v2/reports response, expanded format (schema 2.0)",
-  "description": "Default format. The server projects fields from an allowlist per access tier; Free bodies never contain practice, evidence, coaching or worksheets.",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "schema_version",
     "scoring_version",
@@ -15,7 +14,6 @@
     "access",
     "locked_factors"
   ],
-  "additionalProperties": false,
   "properties": {
     "schema_version": {
       "const": "2.0"
@@ -72,6 +70,7 @@
       "type": "array",
       "items": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "id",
           "number",
@@ -185,6 +184,7 @@
           },
           "reason": {
             "type": "object",
+            "additionalProperties": false,
             "required": [
               "summary"
             ],
@@ -214,6 +214,7 @@
           },
           "measurement": {
             "type": "object",
+            "additionalProperties": false,
             "required": [
               "method",
               "confidence_probability",
@@ -254,6 +255,7 @@
           },
           "practice": {
             "type": "object",
+            "additionalProperties": false,
             "required": [
               "target_description",
               "instruction",
@@ -367,6 +369,7 @@
     "locked_factors": {
       "type": "array",
       "maxItems": 15,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -493,6 +496,8 @@
       }
     }
   },
+  "title": "POST /api/v2/reports response, expanded format (schema 2.0)",
+  "description": "Default format. The server projects fields from an allowlist per access tier; Free bodies never contain practice, evidence, coaching or worksheets.",
   "allOf": [
     {
       "if": {
@@ -534,6 +539,15 @@
             "maxItems": 5,
             "items": {
               "properties": {
+                "number": {
+                  "enum": [
+                    1,
+                    5,
+                    7,
+                    8,
+                    18
+                  ]
+                },
                 "practice": false,
                 "reason": {
                   "properties": {
@@ -554,7 +568,14 @@
             }
           },
           "locked_factors": {
-            "minItems": 15
+            "minItems": 15,
+            "items": {
+              "properties": {
+                "number": {
+                  "$ref": "common.schema.json#/definitions/lockedFactorNumber"
+                }
+              }
+            }
           },
           "recognition": {
             "properties": {

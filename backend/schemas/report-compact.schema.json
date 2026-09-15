@@ -1,8 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/analyser/v2/report-compact.schema.json",
-  "title": "POST /api/v2/reports?format=compact response (schema 2.1)",
-  "description": "Scores only; names, explanations and bands come from GET /api/v2/catalog/{catalog_version}. Optional blocks appear only when requested with include= and allowed by the tier.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -306,6 +304,8 @@
       }
     }
   },
+  "title": "POST /api/v2/reports?format=compact response (schema 2.1)",
+  "description": "Scores only; names, explanations and bands come from GET /api/v2/catalog/{catalog_version}. Optional blocks appear only when requested with include= and allowed by the tier.",
   "dependencies": {
     "counts": [
       "text"
@@ -372,7 +372,10 @@
             }
           },
           "locked": {
-            "minItems": 15
+            "minItems": 15,
+            "items": {
+              "$ref": "common.schema.json#/definitions/lockedFactorNumber"
+            }
           }
         }
       },

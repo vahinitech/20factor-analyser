@@ -31,6 +31,7 @@
       "type": "object",
       "additionalProperties": {
         "type": "object",
+        "additionalProperties": false,
         "required": [
           "ready",
           "reason"
@@ -74,7 +75,11 @@
       "minimum": 0
     },
     "ocr_version": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "null when VAHINI_OCR_VERSION is set to an empty value."
     },
     "det_model": {
       "type": [
@@ -103,6 +108,7 @@
     },
     "layout_filter": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "enabled",
         "built_tiers"

@@ -1,20 +1,20 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/analyser/v2/report-request.schema.json",
-  "title": "POST /api/v2/reports request",
-  "description": "Model of one multipart request as an object, for clients that validate what they are about to send and for contract tests. The wire format is multipart/form-data; let the HTTP library set the boundary. Never put the credential in the query string.",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "form",
     "image"
   ],
-  "additionalProperties": false,
   "properties": {
     "headers": {
       "type": "object",
+      "description": "HTTP header names are case-insensitive; either spelling of Authorization is accepted.",
       "additionalProperties": false,
-      "properties": {
-        "authorization": {
+      "maxProperties": 1,
+      "patternProperties": {
+        "^[Aa]uthorization$": {
           "type": "string",
           "pattern": "^Bearer vh_[A-Za-z0-9_-]{16,}$",
           "maxLength": 200,
@@ -25,6 +25,7 @@
     "query": {
       "type": "object",
       "additionalProperties": false,
+      "required": [],
       "properties": {
         "format": {
           "type": "string",
@@ -45,6 +46,7 @@
     "form": {
       "type": "object",
       "additionalProperties": false,
+      "required": [],
       "properties": {
         "lang": {
           "type": "string",
@@ -61,12 +63,11 @@
     },
     "image": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "content_type",
         "size_bytes"
       ],
-      "additionalProperties": false,
-      "description": "Metadata of the uploaded file, not its bytes. width × height must not exceed 24,000,000 pixels; check that product in code, JSON Schema cannot multiply.",
       "properties": {
         "filename": {
           "type": "string"
@@ -103,6 +104,7 @@
           "description": "Only the first page is analysed."
         }
       },
+      "description": "Metadata of the uploaded file, not its bytes. width x height must not exceed 24,000,000 pixels; check that product in code, JSON Schema cannot multiply.",
       "if": {
         "properties": {
           "content_type": {
@@ -116,5 +118,7 @@
         ]
       }
     }
-  }
+  },
+  "title": "POST /api/v2/reports request",
+  "description": "Model of one multipart request as an object, for clients that validate what they are about to send and for contract tests. The wire format is multipart/form-data; let the HTTP library set the boundary. Never put the credential in the query string."
 }

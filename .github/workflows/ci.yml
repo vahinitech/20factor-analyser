@@ -61,7 +61,7 @@ jobs:
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py \
-            backend/contract_schemas.py backend/tests/test_schemas.py \
+            backend/contract_schemas.py backend/generate_schemas.py backend/tests/test_schemas.py \
             backend/tests/test_backends_classify.py \
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
@@ -69,6 +69,8 @@ jobs:
             backend/tests/test_layout_filter.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
+      - name: Verify generated JSON Schemas
+        run: python backend/generate_schemas.py --check
       - name: Run server unit + integration tests
         run: |
           python -m unittest -v \

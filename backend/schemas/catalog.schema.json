@@ -1,8 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/analyser/v2/catalog.schema.json",
-  "title": "GET /api/v2/catalog/{version} response (schema 2.1)",
-  "description": "Public, immutable presentation dictionary. Contains no scores or customer data. Clients cache it by version and must fetch an unknown version before rendering.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -88,6 +86,7 @@
       "type": "array",
       "minItems": 20,
       "maxItems": 20,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,
@@ -457,7 +456,190 @@
             }
           }
         ]
-      }
+      },
+      "description": "Exactly one entry for each factor 1 to 20.",
+      "allOf": [
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 1
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 2
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 3
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 4
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 5
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 6
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 7
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 8
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 9
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 10
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 11
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 12
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 13
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 14
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 15
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 16
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 17
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 18
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 19
+              }
+            }
+          }
+        },
+        {
+          "contains": {
+            "properties": {
+              "n": {
+                "const": 20
+              }
+            }
+          }
+        }
+      ]
     },
     "sections": {
       "type": "array",
@@ -492,5 +674,7 @@
     "version": {
       "$ref": "common.schema.json#/definitions/catalogVersion"
     }
-  }
+  },
+  "title": "GET /api/v2/catalog/{version} response (schema 2.1)",
+  "description": "Public, immutable presentation dictionary. Contains no scores or customer data. Clients cache it by version and must fetch an unknown version before rendering."
 }
