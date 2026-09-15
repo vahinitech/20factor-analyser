@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/error.schema.json",
+  "title": "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 503)",
+  "description": "FastAPI's HTTPException shape. 401 invalid or revoked credential, 403 paid include= fields requested by Free, 404 unknown catalogue version, 413 upload too large, 422 unsupported include field or invalid form/query, 503 subscription service not configured or unavailable. Analysis failures are not HTTP errors: they return 200 with ok:false and an error block in the report schema.",
+  "type": "object",
+  "required": [
+    "detail"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "detail": {
+      "oneOf": [
+        {
+          "type": "string",
+          "minLength": 1
+        },
+        {
+          "type": "array",
+          "minItems": 1,
+          "description": "FastAPI request validation errors.",
+          "items": {
+            "type": "object",
+            "required": [
+              "loc",
+              "msg",
+              "type"
+            ],
+            "properties": {
+              "loc": {
+                "type": "array",
+                "items": {
+                  "type": [
+                    "string",
+                    "integer"
+                  ]
+                }
+              },
+              "msg": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string"
+              },
+              "input": {},
+              "ctx": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

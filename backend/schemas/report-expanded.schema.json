@@ -1,0 +1,613 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/report-expanded.schema.json",
+  "title": "POST /api/v2/reports response, expanded format (schema 2.0)",
+  "description": "Default format. The server projects fields from an allowlist per access tier; Free bodies never contain practice, evidence, coaching or worksheets.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "scoring_version",
+    "ok",
+    "summary",
+    "factors",
+    "recognition",
+    "limitations",
+    "access",
+    "locked_factors"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "scoring_version": {
+      "const": "legacy-python-20factor"
+    },
+    "ok": {
+      "type": "boolean"
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "score",
+        "maximum",
+        "expected_factor_count",
+        "returned_factor_count",
+        "scored_factor_count",
+        "proxy_factor_count",
+        "score_basis"
+      ],
+      "properties": {
+        "score": {
+          "$ref": "common.schema.json#/definitions/scoreOutOfHundred"
+        },
+        "maximum": {
+          "const": 100
+        },
+        "expected_factor_count": {
+          "const": 20
+        },
+        "returned_factor_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "scored_factor_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "proxy_factor_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "score_basis": {
+          "type": "string"
+        }
+      }
+    },
+    "factors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "number",
+          "name",
+          "section_id",
+          "status",
+          "score",
+          "reason",
+          "measurement"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/factorId"
+          },
+          "number": {
+            "$ref": "common.schema.json#/definitions/factorNumber"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "section_id": {
+            "anyOf": [
+              {
+                "$ref": "common.schema.json#/definitions/sectionId"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "$ref": "common.schema.json#/definitions/status"
+          },
+          "score": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "value",
+              "minimum",
+              "maximum",
+              "normalized",
+              "normalized_maximum",
+              "higher_is_better",
+              "band"
+            ],
+            "properties": {
+              "value": {
+                "$ref": "common.schema.json#/definitions/scoreOutOfTen"
+              },
+              "minimum": {
+                "const": 0
+              },
+              "maximum": {
+                "const": 10
+              },
+              "normalized": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 100
+              },
+              "normalized_maximum": {
+                "const": 100
+              },
+              "higher_is_better": {
+                "const": true
+              },
+              "band": {
+                "anyOf": [
+                  {
+                    "$ref": "common.schema.json#/definitions/band"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "if": {
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "normalized": {
+                  "type": "null"
+                },
+                "band": {
+                  "type": "null"
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "normalized": {
+                  "type": "integer"
+                },
+                "band": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "reason": {
+            "type": "object",
+            "required": [
+              "summary"
+            ],
+            "properties": {
+              "summary": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "basis": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "scoring_inputs": {
+                "type": "object"
+              },
+              "unavailable_reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          },
+          "measurement": {
+            "type": "object",
+            "required": [
+              "method",
+              "confidence_probability",
+              "limitations"
+            ],
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "image_heuristic",
+                  "sensor"
+                ]
+              },
+              "source_label": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "confidence_probability": {
+                "type": "null",
+                "description": "Always null: the model produces no calibrated probability."
+              },
+              "display_value": {
+                "type": [
+                  "string",
+                  "number",
+                  "null"
+                ]
+              },
+              "limitations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "practice": {
+            "type": "object",
+            "required": [
+              "target_description",
+              "instruction",
+              "exercise_group"
+            ],
+            "properties": {
+              "target_description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "instruction": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "exercise_group": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "common.schema.json#/definitions/factorIdentity"
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "unavailable"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "score": {
+                  "properties": {
+                    "value": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "score": {
+                  "properties": {
+                    "value": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "measured"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "measurement": {
+                  "properties": {
+                    "method": {
+                      "const": "sensor"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "description": "Factors 2, 13, 14 and 16 cannot be 'estimated' from a still image; they are proxy, measured or unavailable.",
+            "if": {
+              "properties": {
+                "number": {
+                  "enum": [
+                    2,
+                    13,
+                    14,
+                    16
+                  ]
+                },
+                "status": {
+                  "const": "estimated"
+                }
+              },
+              "required": [
+                "number",
+                "status"
+              ]
+            },
+            "then": false
+          }
+        ]
+      },
+      "maxItems": 20,
+      "description": "Sorted by number; one entry per allowed factor."
+    },
+    "locked_factors": {
+      "type": "array",
+      "maxItems": 15,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "number",
+          "id",
+          "required_tier"
+        ],
+        "properties": {
+          "number": {
+            "$ref": "common.schema.json#/definitions/factorNumber"
+          },
+          "id": {
+            "$ref": "common.schema.json#/definitions/factorId"
+          },
+          "required_tier": {
+            "const": "pro"
+          }
+        },
+        "allOf": [
+          {
+            "$ref": "common.schema.json#/definitions/factorIdentity"
+          }
+        ]
+      }
+    },
+    "recognition": {
+      "type": "object",
+      "required": [
+        "text"
+      ],
+      "properties": {
+        "text": {
+          "type": "string"
+        },
+        "metadata": {
+          "$ref": "common.schema.json#/definitions/recognitionMetadata"
+        }
+      }
+    },
+    "limitations": {
+      "$ref": "common.schema.json#/definitions/limitations"
+    },
+    "access": {
+      "$ref": "common.schema.json#/definitions/access"
+    },
+    "coaching": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/definitions/coachingCard"
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": [
+        "image_width",
+        "image_height",
+        "factor_regions"
+      ],
+      "properties": {
+        "image_width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "image_height": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "factor_regions": {
+          "$ref": "common.schema.json#/definitions/factorRegions"
+        }
+      }
+    },
+    "worksheets": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "pdf_path",
+          "factor_number"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "pdf_path": {
+            "type": "string",
+            "pattern": "^/assets/worksheets/[a-z0-9-]+\\.pdf$"
+          },
+          "factor_number": {
+            "$ref": "common.schema.json#/definitions/factorNumber"
+          }
+        }
+      }
+    },
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "minLength": 1
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ok": {
+            "const": false
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "error"
+        ]
+      },
+      "else": {
+        "properties": {
+          "error": false
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "access": {
+            "properties": {
+              "tier": {
+                "const": "free"
+              }
+            }
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "coaching": false,
+          "evidence": false,
+          "worksheets": false,
+          "factors": {
+            "maxItems": 5,
+            "items": {
+              "properties": {
+                "practice": false,
+                "reason": {
+                  "properties": {
+                    "summary": {}
+                  },
+                  "additionalProperties": false,
+                  "required": [
+                    "summary"
+                  ]
+                },
+                "measurement": {
+                  "properties": {
+                    "display_value": false,
+                    "source_label": false
+                  }
+                }
+              }
+            }
+          },
+          "locked_factors": {
+            "minItems": 15
+          },
+          "recognition": {
+            "properties": {
+              "text": {}
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "else": {
+        "required": [
+          "coaching",
+          "evidence",
+          "worksheets"
+        ],
+        "properties": {
+          "factors": {
+            "items": {
+              "required": [
+                "practice"
+              ],
+              "properties": {
+                "reason": {
+                  "required": [
+                    "summary",
+                    "basis",
+                    "scoring_inputs",
+                    "unavailable_reason"
+                  ]
+                },
+                "measurement": {
+                  "required": [
+                    "method",
+                    "source_label",
+                    "confidence_probability",
+                    "display_value",
+                    "limitations"
+                  ]
+                }
+              }
+            }
+          },
+          "locked_factors": {
+            "maxItems": 0
+          },
+          "recognition": {
+            "required": [
+              "text",
+              "metadata"
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/me.schema.json",
+  "title": "GET /api/v2/me response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "access"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.0"
+    },
+    "access": {
+      "$ref": "common.schema.json#/definitions/access"
+    }
+  }
+}

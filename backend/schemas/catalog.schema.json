@@ -1,0 +1,496 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/catalog.schema.json",
+  "title": "GET /api/v2/catalog/{version} response (schema 2.1)",
+  "description": "Public, immutable presentation dictionary. Contains no scores or customer data. Clients cache it by version and must fetch an unknown version before rendering.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "language",
+    "score_scale",
+    "normalized_scale",
+    "statuses",
+    "bands",
+    "factors",
+    "sections",
+    "limitations",
+    "version"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "2.1"
+    },
+    "language": {
+      "type": "string",
+      "pattern": "^[a-z]{2}(-[A-Za-z0-9]+)*$"
+    },
+    "score_scale": {
+      "const": [
+        0,
+        10
+      ]
+    },
+    "normalized_scale": {
+      "const": [
+        0,
+        100
+      ]
+    },
+    "statuses": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "e",
+        "p",
+        "m",
+        "u"
+      ],
+      "properties": {
+        "e": {
+          "const": "estimated"
+        },
+        "p": {
+          "const": "proxy"
+        },
+        "m": {
+          "const": "measured"
+        },
+        "u": {
+          "const": "unavailable"
+        }
+      }
+    },
+    "bands": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "minimum"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/band"
+          },
+          "minimum": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10
+          }
+        }
+      }
+    },
+    "factors": {
+      "type": "array",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "n",
+          "id",
+          "name",
+          "section",
+          "reason",
+          "exercise",
+          "target",
+          "instruction",
+          "limitation"
+        ],
+        "properties": {
+          "n": {
+            "$ref": "common.schema.json#/definitions/factorNumber"
+          },
+          "id": {
+            "$ref": "common.schema.json#/definitions/factorId"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1
+          },
+          "section": {
+            "$ref": "common.schema.json#/definitions/sectionId"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "exercise": {
+            "type": "string"
+          },
+          "target": {
+            "type": "string"
+          },
+          "instruction": {
+            "type": "string"
+          },
+          "limitation": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 1
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "letter_formation"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 2
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "stroke_order"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 3
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "loop_closure"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 4
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "line_quality"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 5
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "size_consistency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 6
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "ascender_descender_control"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 7
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "baseline_alignment"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 8
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "word_spacing"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 9
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "letter_spacing"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 10
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "margin_discipline"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 11
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "line_straightness"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 12
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "vertical_alignment"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 13
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "speed_consistency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 14
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "pressure_consistency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 15
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "stroke_continuity"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 16
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "pen_lift_frequency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 17
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "slant_consistency"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 18
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "legibility"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 19
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "character_distinction"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "n": {
+                  "const": 20
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "id": {
+                  "const": "overall_neatness"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "weight"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/sectionId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "weight": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "limitations": {
+      "$ref": "common.schema.json#/definitions/limitations"
+    },
+    "version": {
+      "$ref": "common.schema.json#/definitions/catalogVersion"
+    }
+  }
+}

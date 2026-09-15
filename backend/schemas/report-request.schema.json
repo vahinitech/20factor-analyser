@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/report-request.schema.json",
+  "title": "POST /api/v2/reports request",
+  "description": "Model of one multipart request as an object, for clients that validate what they are about to send and for contract tests. The wire format is multipart/form-data; let the HTTP library set the boundary. Never put the credential in the query string.",
+  "type": "object",
+  "required": [
+    "form",
+    "image"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "headers": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authorization": {
+          "type": "string",
+          "pattern": "^Bearer vh_[A-Za-z0-9_-]{16,}$",
+          "maxLength": 200,
+          "description": "Operator-issued customer key. Absent means anonymous Free."
+        }
+      }
+    },
+    "query": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "type": "string",
+          "enum": [
+            "expanded",
+            "compact"
+          ],
+          "default": "expanded"
+        },
+        "include": {
+          "type": "string",
+          "pattern": "^(((text|inputs|coaching|evidence)(,(text|inputs|coaching|evidence))*)?)$",
+          "default": "",
+          "description": "Comma-separated. inputs, coaching and evidence need Pro; the server answers 403 before inference otherwise."
+        }
+      }
+    },
+    "form": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lang": {
+          "type": "string",
+          "default": "auto",
+          "pattern": "^([a-z]{2,8}|auto)$"
+        },
+        "expected_text": {
+          "type": "string",
+          "default": "",
+          "maxLength": 20000,
+          "description": "Optional copied reference passage for passage-verified recognition."
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": [
+        "content_type",
+        "size_bytes"
+      ],
+      "additionalProperties": false,
+      "description": "Metadata of the uploaded file, not its bytes. width × height must not exceed 24,000,000 pixels; check that product in code, JSON Schema cannot multiply.",
+      "properties": {
+        "filename": {
+          "type": "string"
+        },
+        "content_type": {
+          "type": "string",
+          "enum": [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "application/pdf"
+          ]
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 31457280,
+          "description": "30 MiB per upload; the whole request body must stay under 32 MiB."
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24000000
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 24000000
+        },
+        "pdf_pages": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Only the first page is analysed."
+        }
+      },
+      "if": {
+        "properties": {
+          "content_type": {
+            "const": "application/pdf"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "pdf_pages"
+        ]
+      }
+    }
+  }
+}
