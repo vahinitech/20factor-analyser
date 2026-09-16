@@ -38,7 +38,7 @@ right margin to reset to the line"* (factor 11's) — then a rescan:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **80** | **90** |
+| **Overall** | **78** | **90** |
 | #7 Baseline Alignment | 5.4 | 8.6 |
 | #11 Line Straightness | 6.3 | 8.9 |
 | #12 Vertical Alignment | 6.5 | 9.5 |
@@ -71,7 +71,7 @@ the geometry every spatial factor reads is fragmented:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **76** | **92** |
+| **Overall** | **77** | **93** |
 | #8 Word Spacing | 5.6 | 10.0 |
 | #10 Margin Discipline | 0.0 | 8.2 |
 | #4 Line Quality (Smoothness) | 4.7 | 8.9 |
@@ -113,7 +113,7 @@ measures reach at 1.89x and 2.14x, and the flag clears:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **81** | **91** |
+| **Overall** | **82** | **92** |
 | #6 Ascender / Descender Control | 2.7 | 9.8 |
 | #14 Pressure Consistency | 5.5 | 8.7 |
 | #10 Margin Discipline | 4.5 | 7.2 |

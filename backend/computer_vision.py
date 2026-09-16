@@ -9,6 +9,7 @@ section. Nothing in this module knows about OCR engines or the 20-factor
 scoring model; it only turns bytes into arrays and arrays into previews.
 """
 
+import math
 import io
 import re
 import base64
@@ -27,6 +28,23 @@ except Exception:  # pragma: no cover - cv2 optional
 # --------------------------------------------------------------------------- #
 # Decoding an upload (image or PDF) to a working array
 # --------------------------------------------------------------------------- #
+MAX_DECODE_PIXELS = 24_000_000
+MAX_PDF_PAGES = 100
+
+
+class UploadLimitError(ValueError):
+    """An upload exceeds the bounded decode budget."""
+
+
+def _check_dimensions(width, height):
+    if (
+        not math.isfinite(width * height)
+        or min(width, height) <= 0
+        or width * height > MAX_DECODE_PIXELS
+    ):
+        raise UploadLimitError("Decoded page exceeds 24 million pixels")
+
+
 def _pdf_first_page(raw: bytes) -> Image.Image:
     """Render ONLY the first page of a PDF to an image. Multi-page PDFs are
     intentionally restricted to page 1 (the analyser scores a single
@@ -35,7 +53,13 @@ def _pdf_first_page(raw: bytes) -> Image.Image:
 
     pdf = pdfium.PdfDocument(raw)
     try:
+        if not 1 <= len(pdf) <= MAX_PDF_PAGES:
+            raise UploadLimitError("PDF must contain 1 to 100 pages")
         page = pdf[0]
+        width, height = page.get_size()
+        _check_dimensions(
+            math.ceil(width * 150 / 72), math.ceil(height * 150 / 72)
+        )
         # ~150 DPI (scale = 150/72) is plenty for handwriting OCR.
         bitmap = page.render(scale=150.0 / 72.0)
         return bitmap.to_pil().convert("RGB")
@@ -49,6 +73,7 @@ def decode_image(raw: bytes) -> Image.Image:
     if raw[:4] == b"%PDF":
         return _pdf_first_page(raw)
     with Image.open(io.BytesIO(raw)) as image:
+        _check_dimensions(*image.size)
         return ImageOps.exif_transpose(image).convert("RGB")
 
 
@@ -270,11 +295,17 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             {
                 **item,
                 "box": [x0, y0, x1 - x0, y1 - y0],
+                "_source": item,
             }
         )
     accepted.sort(key=lambda l: (l["box"][1], l["box"][0]))
     for i, item in enumerate(accepted):
         item["evidence_id"] = f"line_{i+1}"
+        # Also stamp the caller's line so classification can name the
+        # same region; a plain dict copy would otherwise lose the link.
+        source = item.pop("_source")
+        if isinstance(source, dict):
+            source["evidence_id"] = item["evidence_id"]
 
     # Only accepted handwriting rectangles reach page-wide context or
     # multi-region crops. Printed headers between regions remain white.
@@ -914,8 +945,16 @@ def _infer_doc_context(lines, layout):
     }
 
 
-def vl_analyze(arr: np.ndarray, lines):
+def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
     layout = _layout_features(arr)
+    if not include_evidence:
+        return {
+            "layout": layout,
+            "document_context": {},
+            "regions": [],
+            "factor_regions": {},
+            "ambiguous_word_gaps": [],
+        }
     context = _infer_doc_context(lines, layout)
     context["writing_style"] = infer_writing_style(arr, lines)
     regions = _build_region_previews(arr, lines)

@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-604ccff39263ab8195f7",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-29aa424e96876d2505d8",
   "creationInfo": {
-    "created": "2026-09-11T03:52:28Z",
+    "created": "2026-09-16T02:39:38Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -428,6 +428,16 @@
       "copyrightText": "NOASSERTION",
       "primaryPackagePurpose": "OTHER",
       "comment": "Hosted QR-image service (api.qrserver.com) called at runtime in the optional share flow to render a QR for a share link. No code is redistributed; the service is free for commercial and non-commercial use per goQR.me terms. Has a graceful offline fallback (link shown directly)."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-jsonschema",
+      "name": "jsonschema",
+      "downloadLocation": "https://pypi.org/project/jsonschema/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "comment": "Declared in backend/requirements-core.txt: jsonschema>=4.18. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-nginx",
@@ -1767,6 +1777,11 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-goQR",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-jsonschema",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },

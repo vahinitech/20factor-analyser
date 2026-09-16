@@ -314,8 +314,48 @@ function classificationPanels(summary){
 }
 
 
+/* Pen capture: the server scores the trace image and marks the four
+   Dynamics factors unmeasured; the pen's own per-stroke measurements fill
+   them in here, and the section and overall scores are recomputed with the
+   published weights so every factor counts. */
+const SECTION_WEIGHTS={structure:0.30,spatial:0.30,dynamics:0.20,style:0.20};
+function applyPenDynamics(analysis, imu){
+  const dyn=imu && imu.dynamics;
+  if(!analysis || !Array.isArray(analysis.results) || !dyn) return analysis;
+  analysis.results.forEach(f=>{
+    const d=dyn[f.n]; if(!d || !Number.isFinite(d.score)) return;
+    const score=Math.max(0,Math.min(10,Number(d.score)));
+    Object.assign(f,{score:Number(score.toFixed(1)),score100:Math.round(score*10),band:bandOf(score),conf:'measured',
+      imuMeasured:true,unmeasured:false,unmeasuredReason:null,unmeasuredKind:null,
+      value:d.value||f.value,evidence:d.evidence||f.evidence});
+  });
+  const live=analysis.results.filter(f=>!f.unmeasured && Number.isFinite(f.score));
+  (analysis.sections||[]).forEach(s=>{
+    const fs=live.filter(f=>f.sec===s.id);
+    s.factors=analysis.results.filter(f=>f.sec===s.id);
+    s.avg=fs.length?Number((fs.reduce((n,f)=>n+f.score,0)/fs.length).toFixed(1)):null;
+    s.avg100=s.avg==null?null:Math.round(s.avg*10);
+    s.scoredCount=fs.length;
+    s.weight=SECTION_WEIGHTS[s.id]??s.weight;
+  });
+  const scored=(analysis.sections||[]).filter(s=>s.avg100!=null);
+  const wsum=scored.reduce((n,s)=>n+s.weight,0)||1;
+  const overall=Math.round(scored.reduce((n,s)=>n+s.avg100*(s.weight/wsum),0));
+  analysis.overall=overall; analysis.overallMeasured=overall; analysis.measuredCount=live.length;
+  const ranked=live.slice().sort((a,b)=>a.score-b.score);
+  analysis.topWeak=ranked.slice(0,3); analysis.topStrong=ranked.slice().reverse().slice(0,4);
+  return analysis;
+}
+
 function render(host, data){
-  const {analysis, intake={}, recognizedText='', crops={}}=data;
+  const {analysis, intake={}, recognizedText='', crops={}, imu=null}=data;
+  if (analysis.access && analysis.access.tier === 'free') {
+    const cards = analysis.results.map(f => `<section style="padding:14px;border:1px solid #d9e0e8;border-radius:10px"><h3 style="margin:0 0 8px">${esc(f.name)}</h3><p><strong>${Number.isFinite(f.score) ? f.score.toFixed(1) + ' / 10' : 'Not available'}</strong></p><p>${esc(f.evidence || 'Image-based handwriting feedback.')}</p></section>`).join('');
+    host.innerHTML = `<section class="page report-page free-report" style="background:white;color:#253348;max-width:210mm;margin:20px auto;padding:28px;box-sizing:border-box"><header><img src="assets/vahini-logo.png" alt="Vahini" width="44" height="44"><p>FREE HANDWRITING REPORT</p><h1>Your handwriting, five things to explore.</h1><p>${esc(intake.writerName || 'Your sample')}</p></header><div class="free-factor-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px">${cards}</div><section style="margin-top:24px;padding-top:18px;border-top:1px solid #d9e0e8"><h2>More detail with Pro</h2><p>Pro includes all 20 factor scores, detailed evidence, coaching and personalised worksheet recommendations.</p><p>15 additional factor scores are not included in this Free report.</p><a href="${esc(window.VahiniWorksheets.base())}/practice.html">Browse the free practice worksheet library</a></section><footer style="margin-top:24px;font-size:13px">Image-based estimates support practice. They do not diagnose learning or medical conditions. Scores are not accuracy percentages.</footer></section>`;
+    wirePrintFit(host);
+    return;
+  }
+  if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const explanations={
@@ -349,7 +389,7 @@ function render(host, data){
   // text. Never check the printed stream or score-excluded regions.
   const classification=analysis.textClassification;
   const sources=classification
-    ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.id,text:r.text}))
+    ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.evidence_id||r.id,text:r.text}))
     : [{id:null,text:recognizedText}];
   const hasText=sources.some(r=>String(r.text||'').trim());
   const spelling=readable && window.VahiniCraft
@@ -408,8 +448,17 @@ function render(host, data){
     'line-angle-spread-context':'This line leans differently from the usual line angle. It does not show the angle of each letter.',
     'normalized-word-gap-deviation':'The gap here differs most from the usual gaps on your page.',
     'aggregate-context':'This shows the handwriting used for the combined score.',
-    'line-context':'Use this as a general example; we could not check its line angle.'
+    'line-context':'Use this as a general example; we could not check its line angle.',
+    'spacing-context':'No gap between two parts was found on this row, so this shows the handwriting used for the spacing estimate.'
   };
+  // Two factors can share a selection method; say what each one reads from it.
+  const factorReasons={
+    2:{'character-width-proxy-context':'The estimated space per letter differs most here. Stroke order itself cannot be seen in a photo; this is only a rough example.'},
+    9:{'character-width-proxy-context':'The estimated space per letter differs most here, which is the closest photo check for spacing inside words.'},
+    7:{'absolute-line-angle':'This line sits furthest from level, so it is the clearest check of staying on the writing line.'},
+    11:{'absolute-line-angle':'This line has the biggest upward or downward slope across the page.'}
+  };
+  const reasonFor=(n,method)=>(factorReasons[n]&&factorReasons[n][method])||selectionReasons[method];
   const evidence=p=>{
     if(p.spelling){
       const f=p.spelling;
@@ -419,8 +468,8 @@ function render(host, data){
     const ids=Array.isArray(c?.region_ids)?c.region_ids:[];
     const shared=ids.length && priorities.some(other=>other!==p && other.factor &&
       (crops[other.factor.n]?.region_ids||[]).some(id=>ids.includes(id)));
-    const location=ids.length?'Part '+ids.map(id=>String(id).replace(/^region_/, '')).join(', '):'';
-    const why=selectionReasons[c?.selection_method] || 'The reason for choosing this example is not available. Check it against your full page.';
+    const location=ids.length?'Part '+ids.map(id=>String(id).replace(/^(region_|line_)/, '')).join(', '):'';
+    const why=reasonFor(p.factor.n, c?.selection_method) || 'The reason for choosing this example is not available. Check it against your full page.';
     return c ? `<div class="priority-evidence">
       ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
       ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
@@ -435,7 +484,10 @@ function render(host, data){
   const measured=analysis.results.filter(isLive);
   const regionCount=Array.isArray(classification?.handwritten)?classification.handwritten.length:
     Number.isInteger(rec.hand_lines)&&rec.hand_lines>=0?rec.hand_lines:null;
-  const shownIds=new Set(priorities.flatMap(p=>p.factor?(crops[p.factor.n]?.region_ids||[]):p.spelling?.region?[p.spelling.region]:[]));
+  // Coverage counts distinct evidence regions (line_N). A spelling source
+  // joins the count only when it carries that same evidence id.
+  const shownIds=new Set(priorities.flatMap(p=>p.factor?(crops[p.factor.n]?.region_ids||[])
+    :(p.spelling?.region && /^line_/.test(String(p.spelling.region)))?[p.spelling.region]:[]));
   const regionSummary=regionCount==null?'We could not count the handwriting parts in this upload.':
     `${regionCount} handwriting ${regionCount===1?'part':'parts'} found in your upload. A part may be a word or a line.`;
   const coverage=shownIds.size?`${shownIds.size} different ${shownIds.size===1?'part is':'parts are'} shown below for up to three priorities.`:'This free review focuses on up to three priorities.';
@@ -503,5 +555,5 @@ function wirePrintFit(host){
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
 }
 
-global.VahiniReport = { render, fitPrintPages, classificationPanels };
+global.VahiniReport = { render, fitPrintPages, classificationPanels, applyPenDynamics };
 })(window);

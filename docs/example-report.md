@@ -18,19 +18,20 @@ python docs/examples/generate_examples.py   # deterministic, fixed seed
 ```
 
 Full JSON: [`examples/example-report.json`](examples/example-report.json).
-The rendered PDF (from `frontend/src/report/report-render.js`) lays these
-same numbers out with evidence crops from the scanned page; the page
-order below is the renderer's.
+The rendered report (from `frontend/src/report/report-render.js`) is now two
+pages: priorities with evidence, then coaching and practice space. The page
+walkthrough below follows the earlier full layout and is kept because it
+explains every number the engine produces.
 
 ## Page 1 — Scorecard
 
-**Overall: 84 / 100** — the weighted average of four sections.
+**Overall: 84 / 100** — the weighted average of the three sections a photo can score (Structure 37.5%, Spatial 37.5%, Style 25% after renormalising; Dynamics needs the sensor pen).
 
 | Section | Weight | Score |
 |---|---|---|
 | Structure — letter shapes, size & control | 30% | 83 |
 | Spatial — spacing, baseline & layout | 30% | 82 |
-| Dynamics — speed, pressure & flow | 20% | 87 |
+| Dynamics — speed, pressure & flow | not scored from a photo | — |
 | Style & Readability — slant, legibility & neatness | 20% | 87 |
 
 Every factor lands in one of four bands (cut-offs in

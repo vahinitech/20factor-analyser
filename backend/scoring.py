@@ -48,6 +48,7 @@ class FactorScore:
     unmeasured: bool = False
     unmeasured_reason: str = None
     unmeasured_kind: str = None
+    scoring_inputs: dict = field(default_factory=dict)
 
     def to_dict(self) -> dict:
         return {
@@ -68,6 +69,7 @@ class FactorScore:
             "unmeasuredReason": self.unmeasured_reason,
             "unmeasuredKind": self.unmeasured_kind,
             "basedOn": self.based_on,
+            "scoringInputs": self.scoring_inputs,
         }
 
 
@@ -598,6 +600,30 @@ def _score_factor_map(fx):
     return s
 
 
+_INPUT_FEATURES = {
+    1: ("avg_score", "height_cv"),
+    2: ("char_w_cv", "avg_score"),
+    3: ("loop_ratio",),
+    4: ("width_cv",),
+    5: ("height_cv",),
+    6: ("tall_ratio",),
+    7: ("line_slope_abs",),
+    8: ("word_gap_cv",),
+    9: ("char_w_cv",),
+    10: ("left_cv",),
+    11: ("line_slope_abs",),
+    12: ("line_slope_std",),
+    13: ("width_cv",),
+    14: ("ink_cv",),
+    15: ("n_chars", "n_words"),
+    16: ("char_w_cv",),
+    17: ("line_slope_std",),
+    18: (),
+    19: ("avg_score", "digits_ratio"),
+    20: (),
+}
+
+
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
@@ -765,6 +791,29 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                     else None
                 ),
                 unmeasured_kind="imu" if motion_only else None,
+                scoring_inputs=(
+                    {"method": "sensor_required", "features": {}}
+                    if motion_only
+                    else (
+                        {"method": "zone_geometry", "profile": zones}
+                        if n == 6 and zone_based
+                        else {
+                            "method": "image_heuristic",
+                            "features": {
+                                key: fx[key] for key in _INPUT_FEATURES[n]
+                            },
+                            "component_scores": {
+                                str(key): scores[key]
+                                for key in (
+                                    {
+                                        18: (1, 5, 8, 7),
+                                        20: (5, 8, 10, 11, 17),
+                                    }.get(n, ())
+                                )
+                            },
+                        }
+                    )
+                ),
             )
         )
 
@@ -787,12 +836,19 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
 
     live_sections = [s for s in sections if s.avg100 is not None]
     wsum = sum(float(s.weight) for s in live_sections) or 1.0
+    # The serialized weights are the ones the overall score actually used:
+    # a section with no measured factor (Dynamics from a photo) carries 0
+    # and the others are renormalised to sum to 1, so clients cannot
+    # recompute a different headline from the published weights.
+    for section in sections:
+        section.weight = (
+            round(float(section.weight) / wsum, 4)
+            if section.avg100 is not None
+            else 0.0
+        )
     overall = int(
         round(
-            sum(
-                float(s.avg100 or 0) * (float(s.weight) / wsum)
-                for s in live_sections
-            )
+            sum(float(s.avg100 or 0) * float(s.weight) for s in live_sections)
         )
     )
     measured_results = [r for r in results if not r.unmeasured]

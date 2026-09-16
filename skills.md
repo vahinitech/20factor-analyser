@@ -1,4 +1,13 @@
+# Skill index
+
+For implementation and review of Free/Pro reports, compact APIs and PDFs, use [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md) and [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRACT.md). The writing rules below remain applicable to prose.
+
 # Writing skills: AI-isms to avoid
+
+> The `natural-writing` skill in `.claude/skills/natural-writing/SKILL.md`
+> carries the wider banned-pattern list and the two-pass self-check. This
+> file stays the project-specific layer; where the two overlap they agree,
+> and where this file is more specific about the analyser, it wins.
 
 House rules for every word this project ships: docs, READMEs, report copy,
 commit messages, PR descriptions, UI strings. Generated text is welcome here,
@@ -36,8 +45,7 @@ Avoid these; they add nothing:
 
 ## Tone mistakes
 
-- Don't hedge everything. "This may potentially help improve" means "this
-  helps".
+- Don't hedge everything. Remove redundant hedges, but preserve uncertainty when the evidence is limited.
 - Don't flatter the reader ("Great question!", "You're absolutely right").
 - Don't apologise for the software in docs. State what it does and what it
   does not do.

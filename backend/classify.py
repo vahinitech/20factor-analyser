@@ -425,7 +425,10 @@ def classification_summary(lines, hand_lines=None):
         result[kind].append(
             {
                 "id": f"text_{index}",
-                "text": str(line.get("text") or ""),
+                # The same accepted line is numbered line_N in factor
+                # evidence; carry that id so a renderer can match them.
+                "evidence_id": line.get("evidence_id"),
+                "text": str(line.get("text_as_read", line.get("text")) or ""),
                 "bbox": line.get("box"),
                 "granularity": granularity,
                 "classification": kind,

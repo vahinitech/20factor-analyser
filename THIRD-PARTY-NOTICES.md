@@ -11,7 +11,7 @@ A machine-readable SBOM in SPDX 2.3 format is provided in `sbom.spdx.json`.
 
 ---
 
-## Web fonts — loaded at runtime from Google Fonts
+## Web fonts — site pages (loaded at runtime from Google Fonts); report fonts are served locally, see below
 
 All four fonts are licensed under the **SIL Open Font License 1.1 (OFL-1.1)**.
 <https://openfontlicense.org>

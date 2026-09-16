@@ -173,8 +173,19 @@
       </div>
     </details>
 
+      <details class="upload-help" style="margin:12px 0">
+        <summary>Have a Vahini access key?</summary>
+        <form id="account-access" style="padding:16px">
+          <label for="account-key">Private access key</label>
+          <input id="account-key" type="password" autocomplete="off" spellcheck="false" placeholder="vh_…" style="width:100%;box-sizing:border-box;margin:8px 0">
+          <button class="btn" type="submit">Connect account</button>
+          <button class="btn" type="button" data-disconnect>Disconnect</button>
+          <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
+        </form>
+      </details>
     <div class="actions">
       <a href="#" class="btn btn-ghost" id="use-pen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3-1 12-12-2-2L4 18z"/><path d="M15 5l2 2"/><circle cx="19.5" cy="4.5" r="1.6"/></svg>Capture live with the sensor pen</a>
+
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
      </div>

@@ -80,6 +80,7 @@ def synchronize(document):
                 "relatedSpdxElement": APP,
             }
         )
+    declared = set()
     for filename in ("requirements-core.txt", "requirements-paddle.txt"):
         for line in (ROOT / "backend" / filename).read_text().splitlines():
             match = re.match(
@@ -88,6 +89,7 @@ def synchronize(document):
             if not match:
                 continue
             name, constraint = match.groups()
+            declared.add(name.lower())
             package = next(
                 (
                     p
@@ -134,6 +136,23 @@ def synchronize(document):
                     "relatedSpdxElement": APP,
                 }
             )
+    # A Python package that left every manifest leaves the inventory too;
+    # only manifest-managed entries (the ones this tool declared) are pruned.
+    stale = {
+        p["SPDXID"]
+        for p in document["packages"]
+        if str(p.get("comment", "")).startswith("Declared in backend/")
+        and p["name"].lower() not in declared
+    }
+    document["packages"] = [
+        p for p in document["packages"] if p["SPDXID"] not in stale
+    ]
+    document["relationships"] = [
+        r
+        for r in document["relationships"]
+        if r["spdxElementId"] not in stale
+        and r["relatedSpdxElement"] not in stale
+    ]
     pdf_version = re.search(
         r"pdfjs-dist@([0-9.]+)/",
         (ROOT / "frontend/src/app/app.js").read_text(),

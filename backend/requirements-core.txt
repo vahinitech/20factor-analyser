@@ -13,6 +13,8 @@ numpy>=1.24
 opencv-python-headless>=4.9.0
 # Used by starlette/fastapi TestClient in the regression suite.
 httpx>=0.27
+# Validates API messages against backend/schemas (draft-07 contract).
+jsonschema>=4.18
 # Dev/lint tooling (not runtime deps): pinned exactly, since black's own
 # policy is that formatting output can change between versions, and a
 # pylint bump can add new checks that shift the score CI enforces.
