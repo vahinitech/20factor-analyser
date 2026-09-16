@@ -52,6 +52,76 @@ def _hand_strip(w=240, h=40):
     return img
 
 
+class TestReversePrint(unittest.TestCase):
+    def _heading(self):
+        cv2 = classify.cv2
+        if cv2 is None:
+            self.skipTest("OpenCV required")
+        crop = np.full((72, 230, 3), 40, np.uint8)
+        cv2.putText(
+            crop,
+            "NOTES",
+            (10, 55),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            1.7,
+            (230, 230, 230),
+            4,
+            cv2.LINE_AA,
+        )
+        return crop
+
+    def test_reverse_print_polarity_matches_normal(self):
+        crop = self._heading()
+        reverse = classify.region_features(crop)
+        normal = classify.region_features(255 - crop)
+        self.assertGreaterEqual(reverse["glyph_count"], 4)
+        self.assertAlmostEqual(reverse["sw_cv"], normal["sw_cv"], places=4)
+        probability, _ = classify.printed_probability(
+            crop, "NOTES", 0.9, [0, 0, 230, 72]
+        )
+        self.assertGreaterEqual(probability, classify.PRINTED_THRESHOLD)
+
+    def test_reverse_handwriting_not_removed_for_word_alone(self):
+        crop = 255 - _hand_strip()
+        probability, _ = classify.printed_probability(
+            crop, "NOTES", 0.9, [0, 0, 240, 40]
+        )
+        self.assertLess(probability, classify.PRINTED_THRESHOLD)
+
+    def test_heading_excluded_from_scores_and_factor_evidence(self):
+        import computer_vision
+
+        page = np.full((220, 320, 3), 255, np.uint8)
+        page[10:82, 10:240] = self._heading()
+        page[130:170, 50:290] = _hand_strip()
+        lines = [
+            {"text": "NOTES", "score": 0.9, "box": [10, 10, 230, 72]},
+            {
+                "text": "my written answer",
+                "score": 0.6,
+                "box": [50, 130, 240, 40],
+            },
+        ]
+        hand, printed = classify.split_lines(page, lines)
+        self.assertEqual([item["text"] for item in printed], ["NOTES"])
+        self.assertEqual(
+            [item["text"] for item in hand], ["my written answer"]
+        )
+        # These are the same accepted lines passed to scoring by the server.
+        summary = classify.classification_summary(lines, hand)
+        self.assertFalse(summary["printed"][0]["included_in_scoring"])
+        evidence = computer_vision._factor_region_map(page, [], hand)
+        self.assertTrue(
+            any(
+                item.get("bbox") and item["bbox"][1] >= 120
+                for item in evidence.values()
+            )
+        )
+        self.assertTrue(
+            all(len(item["region_ids"]) <= 1 for item in evidence.values())
+        )
+
+
 class TestRegistry(unittest.TestCase):
     def test_registry_has_all_engines(self):
         ocr_backends.init_registry()

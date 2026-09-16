@@ -57,9 +57,12 @@ python backend/analyser-ocr-server.py
 
 The overall score is the weighted average of the section scores, 0 to 100.
 From a photo, the Dynamics factors are not scored; the headline uses only what
-was actually measured. The report is 4 pages: scorecard, top 3 issues with
-reference crops, the published reference values for all 20 factors, and a
-practice plan with a prediction of how many tries reach the next milestone.
+was actually measured. The full report is two pages: the overall score,
+handwriting-region coverage and up to three priorities with reference crops
+from the writer's own page; then illustrated coaching and ruled practice
+space. The hosted anonymous Free report is a five-factor summary served from
+the compact API (see `backend/API-V2.md`). There is no prediction and no
+score table in either report.
 
 ## See it before you scan
 

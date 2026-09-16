@@ -246,8 +246,9 @@ def common():
             "factorRegions": {
                 "type": "object",
                 "description": (
-                    "Keyed by factor number as a string. "
-                    "Present only with Pro evidence."
+                    "Keyed by factor number as a string. Present only with "
+                    "Pro evidence. Sensor-only factors carry status "
+                    "'unavailable' with an empty url."
                 ),
                 "propertyNames": {"pattern": NUMBER_KEY},
                 "additionalProperties": {
@@ -256,9 +257,43 @@ def common():
                     "properties": {
                         "url": {
                             "type": "string",
-                            "pattern": "^data:image/(jpeg|png|webp);base64,",
+                            "pattern": "^(data:image/(jpeg|png|webp);base64,|$)",
                         },
                         "caption": {"type": "string"},
+                        "status": {
+                            "type": "string",
+                            "enum": ["measurement", "context", "unavailable"],
+                        },
+                        "bbox": {
+                            "type": ["array", "null"],
+                            "items": {"type": "number"},
+                            "minItems": 4,
+                            "maxItems": 4,
+                        },
+                        "source_size": {
+                            "type": ["array", "null"],
+                            "items": {"type": "integer", "minimum": 1},
+                            "minItems": 2,
+                            "maxItems": 2,
+                        },
+                        "coordinate_space": {
+                            "type": "string",
+                            "enum": ["processed-image"],
+                        },
+                        "region_ids": {
+                            "type": "array",
+                            "items": {"type": "string"},
+                        },
+                        "selection_method": {"type": "string"},
+                        "location_url": {
+                            "type": "string",
+                            "pattern": "^(data:image/(jpeg|png|webp);base64,|$)",
+                        },
+                    },
+                    "if": {"properties": {"url": {"const": ""}}},
+                    "then": {
+                        "properties": {"status": {"const": "unavailable"}},
+                        "required": ["status"],
                     },
                 },
             },

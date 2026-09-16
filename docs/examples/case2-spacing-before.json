@@ -17,7 +17,15 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "avg_score": 0.8239664008075802,
+          "height_cv": 0.13916847721036085
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 2,
@@ -36,7 +44,15 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "90 words"
+      "basedOn": "90 words",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "char_w_cv": 0.3670758455142114,
+          "avg_score": 0.8239664008075802
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 3,
@@ -55,7 +71,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "loop_ratio": 0.4476439790575916
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 4,
@@ -74,7 +97,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "width_cv": 0.4221948779989166
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 5,
@@ -93,7 +123,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "height_cv": 0.13916847721036085
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 6,
@@ -112,7 +149,21 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "zone_geometry",
+        "profile": {
+          "available": true,
+          "linesUsed": 30,
+          "xHeightPx": 36.5,
+          "targetReach": 2.0,
+          "ascReach": 2.0,
+          "descReach": 1.99,
+          "ascReachCv": 0.033,
+          "descReachCv": 0.038,
+          "flags": []
+        }
+      }
     },
     {
       "n": 7,
@@ -126,12 +177,19 @@
       "score100": 93,
       "band": "strong",
       "value": "93%",
-      "evidence": "Server-side OCR/layout heuristic based on baseline drift.",
+      "evidence": "Server-side OCR/layout heuristic based on baseline drift. Baseline tracked word-by-word across 10 line(s) with a smoothing filter (issue #31); word baselines scatter about the track by 0% of the line height.",
       "imuMeasured": false,
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_abs": 0.5403229686813769
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 8,
@@ -150,7 +208,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "90 words"
+      "basedOn": "90 words",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "word_gap_cv": 0.6152728042551722
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 9,
@@ -169,7 +234,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "char_w_cv": 0.3670758455142114
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 10,
@@ -188,7 +260,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "left_cv": 0.6979346385988368
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 11,
@@ -207,7 +286,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_abs": 0.5403229686813769
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 12,
@@ -226,7 +312,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_std": 0.2936341291719615
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 13,
@@ -234,18 +327,22 @@
       "name": "Speed Consistency",
       "ex": "wave",
       "target": "velocity CV ≤0.20",
-      "conf": "measured",
+      "conf": "imu",
       "tip": "Slow-writing timing drill; write to a steady 1-2-3 count.",
-      "score": 5.0,
-      "score100": 50,
-      "band": "dev",
-      "value": "50%",
-      "evidence": "Server-side OCR/layout heuristic based on speed proxy from stroke regularity.",
+      "score": 0.0,
+      "score100": 0,
+      "band": "focus",
+      "value": "Not measured",
+      "evidence": "A still photo cannot measure pen motion or pressure.",
       "imuMeasured": false,
-      "unmeasured": false,
-      "unmeasuredReason": null,
-      "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "unmeasured": true,
+      "unmeasuredReason": "Requires time-series data from the sensor pen.",
+      "unmeasuredKind": "imu",
+      "basedOn": null,
+      "scoringInputs": {
+        "method": "sensor_required",
+        "features": {}
+      }
     },
     {
       "n": 14,
@@ -253,18 +350,22 @@
       "name": "Pressure Consistency",
       "ex": "wave",
       "target": "CV ≤0.20",
-      "conf": "measured",
+      "conf": "imu",
       "tip": "Same-pressure line drills; keep one steady, relaxed force.",
-      "score": 8.4,
-      "score100": 84,
-      "band": "good",
-      "value": "84%",
-      "evidence": "Server-side OCR/layout heuristic based on pressure proxy from ink variance.",
+      "score": 0.0,
+      "score100": 0,
+      "band": "focus",
+      "value": "Not measured",
+      "evidence": "A still photo cannot measure pen motion or pressure.",
       "imuMeasured": false,
-      "unmeasured": false,
-      "unmeasuredReason": null,
-      "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "unmeasured": true,
+      "unmeasuredReason": "Requires time-series data from the sensor pen.",
+      "unmeasuredKind": "imu",
+      "basedOn": null,
+      "scoringInputs": {
+        "method": "sensor_required",
+        "features": {}
+      }
     },
     {
       "n": 15,
@@ -272,18 +373,22 @@
       "name": "Stroke Continuity",
       "ex": "rhythm",
       "target": "0 unintended breaks",
-      "conf": "measured",
+      "conf": "imu",
       "tip": "Cursive joining practice — connect letters within a word.",
-      "score": 8.5,
-      "score100": 85,
-      "band": "strong",
-      "value": "85%",
-      "evidence": "Server-side OCR/layout heuristic based on continuity proxy from word morphology. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
+      "score": 0.0,
+      "score100": 0,
+      "band": "focus",
+      "value": "Not measured",
+      "evidence": "A still photo cannot measure pen motion or pressure. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
       "imuMeasured": false,
-      "unmeasured": false,
-      "unmeasuredReason": null,
-      "unmeasuredKind": null,
-      "basedOn": "90 words"
+      "unmeasured": true,
+      "unmeasuredReason": "Requires time-series data from the sensor pen.",
+      "unmeasuredKind": "imu",
+      "basedOn": null,
+      "scoringInputs": {
+        "method": "sensor_required",
+        "features": {}
+      }
     },
     {
       "n": 16,
@@ -291,18 +396,22 @@
       "name": "Pen Lift Frequency",
       "ex": "rhythm",
       "target": "≤0.3 lifts/char",
-      "conf": "measured",
+      "conf": "imu",
       "tip": "Continuous-word writing without lifting mid-word.",
-      "score": 7.4,
-      "score100": 74,
-      "band": "good",
-      "value": "74%",
-      "evidence": "Server-side OCR/layout heuristic based on pen-lift proxy from segmentation.",
+      "score": 0.0,
+      "score100": 0,
+      "band": "focus",
+      "value": "Not measured",
+      "evidence": "A still photo cannot measure pen motion or pressure.",
       "imuMeasured": false,
-      "unmeasured": false,
-      "unmeasuredReason": null,
-      "unmeasuredKind": null,
-      "basedOn": "90 words"
+      "unmeasured": true,
+      "unmeasuredReason": "Requires time-series data from the sensor pen.",
+      "unmeasuredKind": "imu",
+      "basedOn": null,
+      "scoringInputs": {
+        "method": "sensor_required",
+        "features": {}
+      }
     },
     {
       "n": 17,
@@ -321,7 +430,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_std": 0.2936341291719615
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 18,
@@ -340,7 +456,17 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {},
+        "component_scores": {
+          "1": 8.342886349625568,
+          "5": 7.858946504455987,
+          "8": 5.605194255320198,
+          "7": 9.324596289148278
+        }
+      }
     },
     {
       "n": 19,
@@ -359,7 +485,15 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "avg_score": 0.8239664008075802,
+          "digits_ratio": 0.0
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 20,
@@ -378,14 +512,25 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {},
+        "component_scores": {
+          "5": 7.858946504455987,
+          "8": 5.605194255320198,
+          "10": 0.0,
+          "11": 9.459677031318623,
+          "17": 9.7553048923567
+        }
+      }
     }
   ],
   "sections": [
     {
       "id": "structure",
       "name": "Structure",
-      "weight": 0.3,
+      "weight": 0.375,
       "blurb": "Letter shapes, size & control",
       "avg": 8.2,
       "avg100": 82,
@@ -407,7 +552,15 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "avg_score": 0.8239664008075802,
+              "height_cv": 0.13916847721036085
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 2,
@@ -426,7 +579,15 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "90 words"
+          "basedOn": "90 words",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "char_w_cv": 0.3670758455142114,
+              "avg_score": 0.8239664008075802
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 3,
@@ -445,7 +606,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "loop_ratio": 0.4476439790575916
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 4,
@@ -464,7 +632,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "width_cv": 0.4221948779989166
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 5,
@@ -483,7 +658,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "height_cv": 0.13916847721036085
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 6,
@@ -502,7 +684,21 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "zone_geometry",
+            "profile": {
+              "available": true,
+              "linesUsed": 30,
+              "xHeightPx": 36.5,
+              "targetReach": 2.0,
+              "ascReach": 2.0,
+              "descReach": 1.99,
+              "ascReachCv": 0.033,
+              "descReachCv": 0.038,
+              "flags": []
+            }
+          }
         }
       ],
       "scoredCount": 6
@@ -510,7 +706,7 @@
     {
       "id": "spatial",
       "name": "Spatial",
-      "weight": 0.3,
+      "weight": 0.375,
       "blurb": "Spacing, baseline & layout",
       "avg": 6.8,
       "avg100": 68,
@@ -527,12 +723,19 @@
           "score100": 93,
           "band": "strong",
           "value": "93%",
-          "evidence": "Server-side OCR/layout heuristic based on baseline drift.",
+          "evidence": "Server-side OCR/layout heuristic based on baseline drift. Baseline tracked word-by-word across 10 line(s) with a smoothing filter (issue #31); word baselines scatter about the track by 0% of the line height.",
           "imuMeasured": false,
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "line_slope_abs": 0.5403229686813769
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 8,
@@ -551,7 +754,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "90 words"
+          "basedOn": "90 words",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "word_gap_cv": 0.6152728042551722
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 9,
@@ -570,7 +780,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "char_w_cv": 0.3670758455142114
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 10,
@@ -589,7 +806,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "left_cv": 0.6979346385988368
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 11,
@@ -608,7 +832,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "line_slope_abs": 0.5403229686813769
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 12,
@@ -627,7 +858,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "line_slope_std": 0.2936341291719615
+            },
+            "component_scores": {}
+          }
         }
       ],
       "scoredCount": 6
@@ -635,10 +873,10 @@
     {
       "id": "dynamics",
       "name": "Dynamics",
-      "weight": 0.2,
+      "weight": 0.0,
       "blurb": "Speed, pressure & flow",
-      "avg": 7.3,
-      "avg100": 73,
+      "avg": null,
+      "avg100": null,
       "factors": [
         {
           "n": 13,
@@ -646,18 +884,22 @@
           "name": "Speed Consistency",
           "ex": "wave",
           "target": "velocity CV ≤0.20",
-          "conf": "measured",
+          "conf": "imu",
           "tip": "Slow-writing timing drill; write to a steady 1-2-3 count.",
-          "score": 5.0,
-          "score100": 50,
-          "band": "dev",
-          "value": "50%",
-          "evidence": "Server-side OCR/layout heuristic based on speed proxy from stroke regularity.",
+          "score": 0.0,
+          "score100": 0,
+          "band": "focus",
+          "value": "Not measured",
+          "evidence": "A still photo cannot measure pen motion or pressure.",
           "imuMeasured": false,
-          "unmeasured": false,
-          "unmeasuredReason": null,
-          "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "unmeasured": true,
+          "unmeasuredReason": "Requires time-series data from the sensor pen.",
+          "unmeasuredKind": "imu",
+          "basedOn": null,
+          "scoringInputs": {
+            "method": "sensor_required",
+            "features": {}
+          }
         },
         {
           "n": 14,
@@ -665,18 +907,22 @@
           "name": "Pressure Consistency",
           "ex": "wave",
           "target": "CV ≤0.20",
-          "conf": "measured",
+          "conf": "imu",
           "tip": "Same-pressure line drills; keep one steady, relaxed force.",
-          "score": 8.4,
-          "score100": 84,
-          "band": "good",
-          "value": "84%",
-          "evidence": "Server-side OCR/layout heuristic based on pressure proxy from ink variance.",
+          "score": 0.0,
+          "score100": 0,
+          "band": "focus",
+          "value": "Not measured",
+          "evidence": "A still photo cannot measure pen motion or pressure.",
           "imuMeasured": false,
-          "unmeasured": false,
-          "unmeasuredReason": null,
-          "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "unmeasured": true,
+          "unmeasuredReason": "Requires time-series data from the sensor pen.",
+          "unmeasuredKind": "imu",
+          "basedOn": null,
+          "scoringInputs": {
+            "method": "sensor_required",
+            "features": {}
+          }
         },
         {
           "n": 15,
@@ -684,18 +930,22 @@
           "name": "Stroke Continuity",
           "ex": "rhythm",
           "target": "0 unintended breaks",
-          "conf": "measured",
+          "conf": "imu",
           "tip": "Cursive joining practice — connect letters within a word.",
-          "score": 8.5,
-          "score100": 85,
-          "band": "strong",
-          "value": "85%",
-          "evidence": "Server-side OCR/layout heuristic based on continuity proxy from word morphology. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
+          "score": 0.0,
+          "score100": 0,
+          "band": "focus",
+          "value": "Not measured",
+          "evidence": "A still photo cannot measure pen motion or pressure. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
           "imuMeasured": false,
-          "unmeasured": false,
-          "unmeasuredReason": null,
-          "unmeasuredKind": null,
-          "basedOn": "90 words"
+          "unmeasured": true,
+          "unmeasuredReason": "Requires time-series data from the sensor pen.",
+          "unmeasuredKind": "imu",
+          "basedOn": null,
+          "scoringInputs": {
+            "method": "sensor_required",
+            "features": {}
+          }
         },
         {
           "n": 16,
@@ -703,26 +953,30 @@
           "name": "Pen Lift Frequency",
           "ex": "rhythm",
           "target": "≤0.3 lifts/char",
-          "conf": "measured",
+          "conf": "imu",
           "tip": "Continuous-word writing without lifting mid-word.",
-          "score": 7.4,
-          "score100": 74,
-          "band": "good",
-          "value": "74%",
-          "evidence": "Server-side OCR/layout heuristic based on pen-lift proxy from segmentation.",
+          "score": 0.0,
+          "score100": 0,
+          "band": "focus",
+          "value": "Not measured",
+          "evidence": "A still photo cannot measure pen motion or pressure.",
           "imuMeasured": false,
-          "unmeasured": false,
-          "unmeasuredReason": null,
-          "unmeasuredKind": null,
-          "basedOn": "90 words"
+          "unmeasured": true,
+          "unmeasuredReason": "Requires time-series data from the sensor pen.",
+          "unmeasuredKind": "imu",
+          "basedOn": null,
+          "scoringInputs": {
+            "method": "sensor_required",
+            "features": {}
+          }
         }
       ],
-      "scoredCount": 4
+      "scoredCount": 0
     },
     {
       "id": "style",
       "name": "Style & Readability",
-      "weight": 0.2,
+      "weight": 0.25,
       "blurb": "Slant, legibility & neatness",
       "avg": 8.2,
       "avg100": 82,
@@ -744,7 +998,14 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "line_slope_std": 0.2936341291719615
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 18,
@@ -763,7 +1024,17 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {},
+            "component_scores": {
+              "1": 8.342886349625568,
+              "5": 7.858946504455987,
+              "8": 5.605194255320198,
+              "7": 9.324596289148278
+            }
+          }
         },
         {
           "n": 19,
@@ -782,7 +1053,15 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "382 letters"
+          "basedOn": "382 letters",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {
+              "avg_score": 0.8239664008075802,
+              "digits_ratio": 0.0
+            },
+            "component_scores": {}
+          }
         },
         {
           "n": 20,
@@ -801,15 +1080,26 @@
           "unmeasured": false,
           "unmeasuredReason": null,
           "unmeasuredKind": null,
-          "basedOn": "30 lines"
+          "basedOn": "30 lines",
+          "scoringInputs": {
+            "method": "image_heuristic",
+            "features": {},
+            "component_scores": {
+              "5": 7.858946504455987,
+              "8": 5.605194255320198,
+              "10": 0.0,
+              "11": 9.459677031318623,
+              "17": 9.7553048923567
+            }
+          }
         }
       ],
       "scoredCount": 4
     }
   ],
-  "overall": 76,
-  "overallMeasured": 76,
-  "measuredCount": 20,
+  "overall": 77,
+  "overallMeasured": 77,
+  "measuredCount": 16,
   "topWeak": [
     {
       "n": 10,
@@ -828,7 +1118,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "left_cv": 0.6979346385988368
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 4,
@@ -847,26 +1144,40 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "width_cv": 0.4221948779989166
+        },
+        "component_scores": {}
+      }
     },
     {
-      "n": 13,
-      "sec": "dynamics",
-      "name": "Speed Consistency",
-      "ex": "wave",
-      "target": "velocity CV ≤0.20",
+      "n": 8,
+      "sec": "spatial",
+      "name": "Word Spacing",
+      "ex": "rhythm",
+      "target": "≈1.0 x-h, CV ≤0.25",
       "conf": "measured",
-      "tip": "Slow-writing timing drill; write to a steady 1-2-3 count.",
-      "score": 5.0,
-      "score100": 50,
+      "tip": "“word␣␣word” spacing drill — one finger gap between words.",
+      "score": 5.6,
+      "score100": 56,
       "band": "dev",
-      "value": "50%",
-      "evidence": "Server-side OCR/layout heuristic based on speed proxy from stroke regularity.",
+      "value": "56%",
+      "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
       "imuMeasured": false,
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "90 words",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "word_gap_cv": 0.6152728042551722
+        },
+        "component_scores": {}
+      }
     }
   ],
   "topStrong": [
@@ -887,7 +1198,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "loop_ratio": 0.4476439790575916
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 6,
@@ -906,7 +1224,21 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "382 letters"
+      "basedOn": "382 letters",
+      "scoringInputs": {
+        "method": "zone_geometry",
+        "profile": {
+          "available": true,
+          "linesUsed": 30,
+          "xHeightPx": 36.5,
+          "targetReach": 2.0,
+          "ascReach": 2.0,
+          "descReach": 1.99,
+          "ascReachCv": 0.033,
+          "descReachCv": 0.038,
+          "flags": []
+        }
+      }
     },
     {
       "n": 17,
@@ -925,7 +1257,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_std": 0.2936341291719615
+        },
+        "component_scores": {}
+      }
     },
     {
       "n": 12,
@@ -944,7 +1283,14 @@
       "unmeasured": false,
       "unmeasuredReason": null,
       "unmeasuredKind": null,
-      "basedOn": "30 lines"
+      "basedOn": "30 lines",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "line_slope_std": 0.2936341291719615
+        },
+        "component_scores": {}
+      }
     }
   ],
   "source": "python",
@@ -1085,10 +1431,10 @@
       "id": "pen",
       "label": "Pen control",
       "question": "Are my strokes smooth and steady, not shaky or pressed too hard?",
-      "score": 6.8,
-      "score100": 68,
+      "score": 4.7,
+      "score100": 47,
       "band": "dev",
-      "estimated": false,
+      "estimated": true,
       "factors": [
         {
           "n": 4,
@@ -1100,33 +1446,33 @@
         {
           "n": 13,
           "name": "Speed Consistency",
-          "score": 5.0,
-          "band": "dev",
-          "unmeasured": false
+          "score": null,
+          "band": null,
+          "unmeasured": true
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
-          "score": 8.4,
-          "band": "good",
-          "unmeasured": false
+          "score": null,
+          "band": null,
+          "unmeasured": true
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
-          "score": 8.5,
-          "band": "strong",
-          "unmeasured": false
+          "score": null,
+          "band": null,
+          "unmeasured": true
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
-          "score": 7.4,
-          "band": "good",
-          "unmeasured": false
+          "score": null,
+          "band": null,
+          "unmeasured": true
         }
       ],
-      "measuredCount": 5
+      "measuredCount": 1
     },
     {
       "id": "read",
@@ -1204,10 +1550,10 @@
         "id": "pen",
         "label": "Pen control",
         "question": "Are my strokes smooth and steady, not shaky or pressed too hard?",
-        "score": 6.8,
+        "score": 4.7,
         "band": "dev",
         "measurable": true,
-        "note": null
+        "note": "estimated from the photo"
       },
       {
         "id": "read",
@@ -1237,7 +1583,7 @@
         "note": "Scan 2-3 pages as one assessment to measure this (endurance)."
       }
     ],
-    "measuredTotal": 46.3,
+    "measuredTotal": 44.2,
     "measuredOutOf": 60
   },
   "baselineDrift": {
@@ -1272,14 +1618,27 @@
   },
   "coachTips": [
     {
-      "id": "speed-three-ways",
+      "id": "finishing-letters",
       "kind": "coach",
-      "pillar": "practice",
-      "title": "Improve your writing speed",
-      "text": "Three habits that build real speed. One: when copying or making notes, do not write word-by-word with your eyes on the source - read the whole sentence, then write it from memory without looking back; this trains the mind-to-fingers link that speed comes from. Two: set a timer for 5, 10 or 15 minutes and write as fast as you can for just that window - short daily sprints make speed a habit. Three: read as many books as you can; words you have seen often live in your mind as pictures, and a word you can picture is a word your hand writes without hesitating.",
-      "why": "shown because Speed Consistency scored 5.0/10 on this page",
+      "pillar": "technique",
+      "title": "The 10 letters that improve your handwriting",
+      "text": "Ten letters - A, D, H, I, L, M, N, R, T, U - end on a downstroke. When a word ends with one of them (on this page: 'brown', 'over', 'a') finish it with a small upward stroke instead of stopping dead on the vertical. 'Hand' should not end abruptly on the 'd' stem - the small finishing flick is what makes the word look complete.",
+      "why": "shown because this page has 38 words ending in the ten finishing letters",
       "examples": [
-        "read the whole line - look away - write it"
+        "A D H I L M N R T U",
+        "sun  hat  pearl  drum"
+      ]
+    },
+    {
+      "id": "c-family-rhythm",
+      "kind": "coach",
+      "pillar": "technique",
+      "title": "Five letters, one c: the rhythm secret",
+      "text": "Five letters - a, d, g, q and o - are all built on the same c. When each of them carries an identically shaped c, the word gains a rhythm the eye reads as beautiful; when the c inside d is fatter than the c inside a, the same word looks unsettled. Always start these letters with the c as their base: practise one honest c, then extend that exact c into a, into d, into g, into q, and close it into o. Keep the c the same size and shape across all five and the rhythm takes care of itself.",
+      "why": "shown because this page uses 5 of the five c-built letters (a d g q o)",
+      "examples": [
+        "c -> a  d  g  q  o",
+        "dog  quad  good"
       ]
     },
     {
@@ -1292,18 +1651,6 @@
       "examples": [
         "x = reverse e + e",
         "box  taxi  exam"
-      ]
-    },
-    {
-      "id": "letter-z-easy-build",
-      "kind": "coach",
-      "pillar": "technique",
-      "title": "The easiest lowercase z",
-      "text": "The lowercase z takes more wrong turns than almost any letter. The easy build: think of the number 3, drawn as two reverse c curves - make the first one small and compact, the second a little wider - then finish with a descending tail that ends the way g, j and y do. On ruled paper, keep the first curve clear of the line, let the second reach about halfway into the line below, and lean the tail slightly left as it closes.",
-      "why": "shown because this page writes the letter z 1 time(s)",
-      "examples": [
-        "z = small 3 + a g-style tail",
-        "zoo  size  zigzag"
       ]
     },
     {
@@ -1320,15 +1667,15 @@
   ],
   "tipPillars": {
     "acronym": "TIP - Techniques, Interest, Practice",
-    "focus": "practice",
+    "focus": "technique",
     "pillars": {
       "technique": {
         "measured": true,
-        "score": 7.4
+        "score": 8.3
       },
       "practice": {
-        "measured": true,
-        "score": 5.0
+        "measured": false,
+        "score": null
       },
       "interest": {
         "measured": false,
