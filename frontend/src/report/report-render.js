@@ -278,7 +278,8 @@ function focusSVG(f){
 }
 
 /* ===================== MAIN RENDER ===================================== */
-/* Reader report: six pages, with one shared factor-based practice plan. */
+/* Classification panels are shown on printed-only refusals; the two-page
+   reader report below never appends them. */
 function classificationPanels(summary){
   if (!summary) return [];
   const panels = [];
