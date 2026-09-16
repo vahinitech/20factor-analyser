@@ -1,0 +1,126 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/health.schema.json",
+  "title": "GET /health response",
+  "type": "object",
+  "required": [
+    "ok",
+    "engine",
+    "ocr_backend",
+    "active_backend",
+    "backends",
+    "gpu",
+    "gpu_detected",
+    "langs",
+    "ocr_version"
+  ],
+  "properties": {
+    "ok": {
+      "const": true
+    },
+    "engine": {
+      "type": "string"
+    },
+    "ocr_backend": {
+      "type": "string"
+    },
+    "active_backend": {
+      "type": "string"
+    },
+    "backends": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ready",
+          "reason"
+        ],
+        "properties": {
+          "ready": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "gpu": {
+      "type": "boolean"
+    },
+    "gpu_detected": {
+      "type": "boolean"
+    },
+    "gpu_note": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "langs": {
+      "type": [
+        "array",
+        "string"
+      ],
+      "items": {
+        "type": "string"
+      }
+    },
+    "variants": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ocr_version": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "null when VAHINI_OCR_VERSION is set to an empty value."
+    },
+    "det_model": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "rec_model_map": {
+      "type": [
+        "object",
+        "string",
+        "null"
+      ]
+    },
+    "det_limit_side_len": {
+      "type": [
+        "integer",
+        "null"
+      ]
+    },
+    "printed_threshold": {
+      "type": "number"
+    },
+    "adaptive_engine_speed": {
+      "type": "object"
+    },
+    "layout_filter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled",
+        "built_tiers"
+      ],
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "built_tiers": {
+          "type": "array"
+        }
+      }
+    }
+  }
+}
