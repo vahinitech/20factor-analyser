@@ -2,8 +2,18 @@
 
 All notable changes to the Vahini 20-Factor Handwriting Analyser are
 documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/); until the first
-tagged release, entries are grouped by date of merge to `main`.
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows
+[vahini-umbrella/docs/VERSIONING.md](https://github.com/vahinitech/vahini-umbrella/blob/main/docs/VERSIONING.md):
+`version` in `package.json` is the single source, a release is the tag
+`v<version>` on `main`, and from the next release entries sit under
+`## X.Y.Z - YYYY-MM-DD`. Earlier entries are grouped by merge date. The tags
+`v0.1`, `v0.2`, `v0.3` and `v0.7` were milestone tags cut while `package.json`
+already said 3.1.0; they stay as they are.
+
+## Unreleased
+
+- Versioning policy adopted: `package.json` is the version source, releases
+  are `vX.Y.Z` tags, changelog headings become versions from the next release.
 
 ## 2026-07-26
 
