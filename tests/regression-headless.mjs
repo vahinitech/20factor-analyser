@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { checkReportLayout } from './report-layout.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const PORT = 4173;
@@ -64,7 +65,13 @@ async function runHeadlessChecks() {
       return !!(t && typeof t.total === 'number' && t.total > 0);
     }, { timeout: 120000 });
 
-    return await page.evaluate(() => window.__testResults);
+    const result=await page.evaluate(() => window.__testResults);
+    const layout=await checkReportLayout(page);
+    result.results.push(...layout);
+    result.total=result.results.length;
+    result.passed=result.results.filter(r=>r.ok).length;
+    result.allOk=result.total===result.passed;
+    return result;
   } finally {
     // Always close, not just on the success path -- an unclosed browser
     // process (e.g. after a waitForFunction timeout) keeps Node's event

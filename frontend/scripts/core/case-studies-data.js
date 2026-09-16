@@ -5,8 +5,8 @@
 window.VAHINI_CASE_STUDIES = {
   "case1": {
     "before": {
-      "overall": 80,
-      "overallMeasured": 80,
+      "overall": 78,
+      "overallMeasured": 78,
       "results": [
         {
           "n": 1,
@@ -96,29 +96,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 8.7,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 8.2,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 9.3,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,
@@ -257,29 +257,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 8.9,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 8.2,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 9.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,
@@ -329,8 +329,8 @@ window.VAHINI_CASE_STUDIES = {
   },
   "case2": {
     "before": {
-      "overall": 76,
-      "overallMeasured": 76,
+      "overall": 77,
+      "overallMeasured": 77,
       "results": [
         {
           "n": 1,
@@ -420,29 +420,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 5.0,
-          "band": "dev"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 8.4,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 7.4,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,
@@ -490,8 +490,8 @@ window.VAHINI_CASE_STUDIES = {
       }
     },
     "after": {
-      "overall": 92,
-      "overallMeasured": 92,
+      "overall": 93,
+      "overallMeasured": 93,
       "results": [
         {
           "n": 1,
@@ -581,29 +581,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 9.0,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 8.1,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 9.3,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,
@@ -653,8 +653,8 @@ window.VAHINI_CASE_STUDIES = {
   },
   "case3": {
     "before": {
-      "overall": 81,
-      "overallMeasured": 81,
+      "overall": 82,
+      "overallMeasured": 82,
       "results": [
         {
           "n": 1,
@@ -744,29 +744,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 8.3,
-          "band": "good"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 5.5,
-          "band": "dev"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 9.0,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,
@@ -816,8 +816,8 @@ window.VAHINI_CASE_STUDIES = {
       }
     },
     "after": {
-      "overall": 91,
-      "overallMeasured": 91,
+      "overall": 92,
+      "overallMeasured": 92,
       "results": [
         {
           "n": 1,
@@ -907,29 +907,29 @@ window.VAHINI_CASE_STUDIES = {
           "n": 13,
           "name": "Speed Consistency",
           "sec": "dynamics",
-          "score": 8.8,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 14,
           "name": "Pressure Consistency",
           "sec": "dynamics",
-          "score": 8.7,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 15,
           "name": "Stroke Continuity",
           "sec": "dynamics",
-          "score": 8.5,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 16,
           "name": "Pen Lift Frequency",
           "sec": "dynamics",
-          "score": 9.2,
-          "band": "strong"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 17,

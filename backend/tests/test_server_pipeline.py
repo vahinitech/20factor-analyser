@@ -357,8 +357,6 @@ class TestServerPipeline(unittest.TestCase):
     def test_pdf_restricted_to_first_page(self):
         # A multi-page PDF must decode to page 1 ONLY. Page 1 is 200x120,
         # page 2 is a different 400x300, so the decoded size proves which page.
-        if importlib.util.find_spec("pypdfium2") is None:
-            self.skipTest("pypdfium2 not installed")
         p1 = Image.new("RGB", (200, 120), "white")
         p2 = Image.new("RGB", (400, 300), "white")
         buf = io.BytesIO()

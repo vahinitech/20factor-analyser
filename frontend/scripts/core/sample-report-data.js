@@ -22,7 +22,15 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "avg_score": 0.84860213912478,
+            "height_cv": 0.1139006124989441
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 2,
@@ -41,7 +49,15 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "basedOn": "90 words",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "char_w_cv": 0.11739385782747919,
+            "avg_score": 0.84860213912478
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 3,
@@ -60,7 +76,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "loop_ratio": 0.4476439790575916
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 4,
@@ -79,7 +102,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "width_cv": 0.13244941914005126
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 5,
@@ -98,7 +128,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "height_cv": 0.1139006124989441
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 6,
@@ -117,7 +154,23 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "zone_geometry",
+          "profile": {
+            "available": true,
+            "linesUsed": 10,
+            "xHeightPx": 34.0,
+            "targetReach": 2.0,
+            "ascReach": 1.29,
+            "descReach": 2.53,
+            "ascReachCv": 0.055,
+            "descReachCv": 0.037,
+            "flags": [
+              "single-zone"
+            ]
+          }
+        }
       },
       {
         "n": 7,
@@ -136,7 +189,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_abs": 1.7053249673598583
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 8,
@@ -155,7 +215,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "basedOn": "90 words",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "word_gap_cv": 0.0
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 9,
@@ -174,7 +241,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "char_w_cv": 0.11739385782747919
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 10,
@@ -193,7 +267,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "left_cv": 0.3002245768611331
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 11,
@@ -212,7 +293,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_abs": 1.7053249673598583
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 12,
@@ -231,7 +319,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_std": 0.7276878740677436
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 13,
@@ -239,18 +334,22 @@ window.VAHINI_SAMPLE_REPORT = {
         "name": "Speed Consistency",
         "ex": "wave",
         "target": "velocity CV ≤0.20",
-        "conf": "measured",
+        "conf": "imu",
         "tip": "Slow-writing timing drill; write to a steady 1-2-3 count.",
-        "score": 8.4,
-        "score100": 84,
-        "band": "good",
-        "value": "84%",
-        "evidence": "Server-side OCR/layout heuristic based on speed proxy from stroke regularity.",
+        "score": 0.0,
+        "score100": 0,
+        "band": "focus",
+        "value": "Not measured",
+        "evidence": "A still photo cannot measure pen motion or pressure.",
         "imuMeasured": false,
-        "unmeasured": false,
-        "unmeasuredReason": null,
-        "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "unmeasured": true,
+        "unmeasuredReason": "Requires time-series data from the sensor pen.",
+        "unmeasuredKind": "imu",
+        "basedOn": null,
+        "scoringInputs": {
+          "method": "sensor_required",
+          "features": {}
+        }
       },
       {
         "n": 14,
@@ -258,18 +357,22 @@ window.VAHINI_SAMPLE_REPORT = {
         "name": "Pressure Consistency",
         "ex": "wave",
         "target": "CV ≤0.20",
-        "conf": "measured",
+        "conf": "imu",
         "tip": "Same-pressure line drills; keep one steady, relaxed force.",
-        "score": 8.6,
-        "score100": 86,
-        "band": "strong",
-        "value": "86%",
-        "evidence": "Server-side OCR/layout heuristic based on pressure proxy from ink variance.",
+        "score": 0.0,
+        "score100": 0,
+        "band": "focus",
+        "value": "Not measured",
+        "evidence": "A still photo cannot measure pen motion or pressure.",
         "imuMeasured": false,
-        "unmeasured": false,
-        "unmeasuredReason": null,
-        "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "unmeasured": true,
+        "unmeasuredReason": "Requires time-series data from the sensor pen.",
+        "unmeasuredKind": "imu",
+        "basedOn": null,
+        "scoringInputs": {
+          "method": "sensor_required",
+          "features": {}
+        }
       },
       {
         "n": 15,
@@ -277,18 +380,22 @@ window.VAHINI_SAMPLE_REPORT = {
         "name": "Stroke Continuity",
         "ex": "rhythm",
         "target": "0 unintended breaks",
-        "conf": "measured",
+        "conf": "imu",
         "tip": "Cursive joining practice — connect letters within a word.",
-        "score": 8.5,
-        "score100": 85,
-        "band": "strong",
-        "value": "85%",
-        "evidence": "Server-side OCR/layout heuristic based on continuity proxy from word morphology. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
+        "score": 0.0,
+        "score100": 0,
+        "band": "focus",
+        "value": "Not measured",
+        "evidence": "A still photo cannot measure pen motion or pressure. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
         "imuMeasured": false,
-        "unmeasured": false,
-        "unmeasuredReason": null,
-        "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "unmeasured": true,
+        "unmeasuredReason": "Requires time-series data from the sensor pen.",
+        "unmeasuredKind": "imu",
+        "basedOn": null,
+        "scoringInputs": {
+          "method": "sensor_required",
+          "features": {}
+        }
       },
       {
         "n": 16,
@@ -296,18 +403,22 @@ window.VAHINI_SAMPLE_REPORT = {
         "name": "Pen Lift Frequency",
         "ex": "rhythm",
         "target": "≤0.3 lifts/char",
-        "conf": "measured",
+        "conf": "imu",
         "tip": "Continuous-word writing without lifting mid-word.",
-        "score": 9.2,
-        "score100": 92,
-        "band": "strong",
-        "value": "92%",
-        "evidence": "Server-side OCR/layout heuristic based on pen-lift proxy from segmentation.",
+        "score": 0.0,
+        "score100": 0,
+        "band": "focus",
+        "value": "Not measured",
+        "evidence": "A still photo cannot measure pen motion or pressure.",
         "imuMeasured": false,
-        "unmeasured": false,
-        "unmeasuredReason": null,
-        "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "unmeasured": true,
+        "unmeasuredReason": "Requires time-series data from the sensor pen.",
+        "unmeasuredKind": "imu",
+        "basedOn": null,
+        "scoringInputs": {
+          "method": "sensor_required",
+          "features": {}
+        }
       },
       {
         "n": 17,
@@ -326,7 +437,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_std": 0.7276878740677436
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 18,
@@ -345,7 +463,17 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {},
+          "component_scores": {
+            "1": 8.591013686701373,
+            "5": 8.24768288463163,
+            "8": 10.0,
+            "7": 7.868343790800178
+          }
+        }
       },
       {
         "n": 19,
@@ -364,7 +492,15 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "avg_score": 0.84860213912478,
+            "digits_ratio": 0.0
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 20,
@@ -383,14 +519,25 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {},
+          "component_scores": {
+            "5": 8.24768288463163,
+            "8": 10.0,
+            "10": 4.541371329797581,
+            "11": 8.294675032640143,
+            "17": 9.39359343827688
+          }
+        }
       }
     ],
     "sections": [
       {
         "id": "structure",
         "name": "Structure",
-        "weight": 0.3,
+        "weight": 0.375,
         "blurb": "Letter shapes, size & control",
         "avg": 8.3,
         "avg100": 83,
@@ -412,7 +559,15 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "avg_score": 0.84860213912478,
+                "height_cv": 0.1139006124989441
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 2,
@@ -431,7 +586,15 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "90 words"
+            "basedOn": "90 words",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "char_w_cv": 0.11739385782747919,
+                "avg_score": 0.84860213912478
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 3,
@@ -450,7 +613,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "loop_ratio": 0.4476439790575916
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 4,
@@ -469,7 +639,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "width_cv": 0.13244941914005126
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 5,
@@ -488,7 +665,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "height_cv": 0.1139006124989441
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 6,
@@ -507,7 +691,23 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "zone_geometry",
+              "profile": {
+                "available": true,
+                "linesUsed": 10,
+                "xHeightPx": 34.0,
+                "targetReach": 2.0,
+                "ascReach": 1.29,
+                "descReach": 2.53,
+                "ascReachCv": 0.055,
+                "descReachCv": 0.037,
+                "flags": [
+                  "single-zone"
+                ]
+              }
+            }
           }
         ],
         "scoredCount": 6
@@ -515,7 +715,7 @@ window.VAHINI_SAMPLE_REPORT = {
       {
         "id": "spatial",
         "name": "Spatial",
-        "weight": 0.3,
+        "weight": 0.375,
         "blurb": "Spacing, baseline & layout",
         "avg": 8.2,
         "avg100": 82,
@@ -537,7 +737,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "line_slope_abs": 1.7053249673598583
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 8,
@@ -556,7 +763,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "90 words"
+            "basedOn": "90 words",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "word_gap_cv": 0.0
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 9,
@@ -575,7 +789,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "char_w_cv": 0.11739385782747919
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 10,
@@ -594,7 +815,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "left_cv": 0.3002245768611331
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 11,
@@ -613,7 +841,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "line_slope_abs": 1.7053249673598583
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 12,
@@ -632,7 +867,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "line_slope_std": 0.7276878740677436
+              },
+              "component_scores": {}
+            }
           }
         ],
         "scoredCount": 6
@@ -640,10 +882,10 @@ window.VAHINI_SAMPLE_REPORT = {
       {
         "id": "dynamics",
         "name": "Dynamics",
-        "weight": 0.2,
+        "weight": 0.0,
         "blurb": "Speed, pressure & flow",
-        "avg": 8.7,
-        "avg100": 87,
+        "avg": null,
+        "avg100": null,
         "factors": [
           {
             "n": 13,
@@ -651,18 +893,22 @@ window.VAHINI_SAMPLE_REPORT = {
             "name": "Speed Consistency",
             "ex": "wave",
             "target": "velocity CV ≤0.20",
-            "conf": "measured",
+            "conf": "imu",
             "tip": "Slow-writing timing drill; write to a steady 1-2-3 count.",
-            "score": 8.4,
-            "score100": 84,
-            "band": "good",
-            "value": "84%",
-            "evidence": "Server-side OCR/layout heuristic based on speed proxy from stroke regularity.",
+            "score": 0.0,
+            "score100": 0,
+            "band": "focus",
+            "value": "Not measured",
+            "evidence": "A still photo cannot measure pen motion or pressure.",
             "imuMeasured": false,
-            "unmeasured": false,
-            "unmeasuredReason": null,
-            "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "unmeasured": true,
+            "unmeasuredReason": "Requires time-series data from the sensor pen.",
+            "unmeasuredKind": "imu",
+            "basedOn": null,
+            "scoringInputs": {
+              "method": "sensor_required",
+              "features": {}
+            }
           },
           {
             "n": 14,
@@ -670,18 +916,22 @@ window.VAHINI_SAMPLE_REPORT = {
             "name": "Pressure Consistency",
             "ex": "wave",
             "target": "CV ≤0.20",
-            "conf": "measured",
+            "conf": "imu",
             "tip": "Same-pressure line drills; keep one steady, relaxed force.",
-            "score": 8.6,
-            "score100": 86,
-            "band": "strong",
-            "value": "86%",
-            "evidence": "Server-side OCR/layout heuristic based on pressure proxy from ink variance.",
+            "score": 0.0,
+            "score100": 0,
+            "band": "focus",
+            "value": "Not measured",
+            "evidence": "A still photo cannot measure pen motion or pressure.",
             "imuMeasured": false,
-            "unmeasured": false,
-            "unmeasuredReason": null,
-            "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "unmeasured": true,
+            "unmeasuredReason": "Requires time-series data from the sensor pen.",
+            "unmeasuredKind": "imu",
+            "basedOn": null,
+            "scoringInputs": {
+              "method": "sensor_required",
+              "features": {}
+            }
           },
           {
             "n": 15,
@@ -689,18 +939,22 @@ window.VAHINI_SAMPLE_REPORT = {
             "name": "Stroke Continuity",
             "ex": "rhythm",
             "target": "0 unintended breaks",
-            "conf": "measured",
+            "conf": "imu",
             "tip": "Cursive joining practice — connect letters within a word.",
-            "score": 8.5,
-            "score100": 85,
-            "band": "strong",
-            "value": "85%",
-            "evidence": "Server-side OCR/layout heuristic based on continuity proxy from word morphology. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
+            "score": 0.0,
+            "score100": 0,
+            "band": "focus",
+            "value": "Not measured",
+            "evidence": "A still photo cannot measure pen motion or pressure. Style check: print (cursive 0%, print 100%, mixed 0% of words).",
             "imuMeasured": false,
-            "unmeasured": false,
-            "unmeasuredReason": null,
-            "unmeasuredKind": null,
-            "basedOn": "90 words"
+            "unmeasured": true,
+            "unmeasuredReason": "Requires time-series data from the sensor pen.",
+            "unmeasuredKind": "imu",
+            "basedOn": null,
+            "scoringInputs": {
+              "method": "sensor_required",
+              "features": {}
+            }
           },
           {
             "n": 16,
@@ -708,26 +962,30 @@ window.VAHINI_SAMPLE_REPORT = {
             "name": "Pen Lift Frequency",
             "ex": "rhythm",
             "target": "≤0.3 lifts/char",
-            "conf": "measured",
+            "conf": "imu",
             "tip": "Continuous-word writing without lifting mid-word.",
-            "score": 9.2,
-            "score100": 92,
-            "band": "strong",
-            "value": "92%",
-            "evidence": "Server-side OCR/layout heuristic based on pen-lift proxy from segmentation.",
+            "score": 0.0,
+            "score100": 0,
+            "band": "focus",
+            "value": "Not measured",
+            "evidence": "A still photo cannot measure pen motion or pressure.",
             "imuMeasured": false,
-            "unmeasured": false,
-            "unmeasuredReason": null,
-            "unmeasuredKind": null,
-            "basedOn": "90 words"
+            "unmeasured": true,
+            "unmeasuredReason": "Requires time-series data from the sensor pen.",
+            "unmeasuredKind": "imu",
+            "basedOn": null,
+            "scoringInputs": {
+              "method": "sensor_required",
+              "features": {}
+            }
           }
         ],
-        "scoredCount": 4
+        "scoredCount": 0
       },
       {
         "id": "style",
         "name": "Style & Readability",
-        "weight": 0.2,
+        "weight": 0.25,
         "blurb": "Slant, legibility & neatness",
         "avg": 8.7,
         "avg100": 87,
@@ -749,7 +1007,14 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "line_slope_std": 0.7276878740677436
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 18,
@@ -768,7 +1033,17 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {},
+              "component_scores": {
+                "1": 8.591013686701373,
+                "5": 8.24768288463163,
+                "8": 10.0,
+                "7": 7.868343790800178
+              }
+            }
           },
           {
             "n": 19,
@@ -787,7 +1062,15 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "382 letters"
+            "basedOn": "382 letters",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {
+                "avg_score": 0.84860213912478,
+                "digits_ratio": 0.0
+              },
+              "component_scores": {}
+            }
           },
           {
             "n": 20,
@@ -806,7 +1089,18 @@ window.VAHINI_SAMPLE_REPORT = {
             "unmeasured": false,
             "unmeasuredReason": null,
             "unmeasuredKind": null,
-            "basedOn": "10 lines"
+            "basedOn": "10 lines",
+            "scoringInputs": {
+              "method": "image_heuristic",
+              "features": {},
+              "component_scores": {
+                "5": 8.24768288463163,
+                "8": 10.0,
+                "10": 4.541371329797581,
+                "11": 8.294675032640143,
+                "17": 9.39359343827688
+              }
+            }
           }
         ],
         "scoredCount": 4
@@ -814,7 +1108,7 @@ window.VAHINI_SAMPLE_REPORT = {
     ],
     "overall": 84,
     "overallMeasured": 84,
-    "measuredCount": 20,
+    "measuredCount": 16,
     "topWeak": [
       {
         "n": 10,
@@ -833,7 +1127,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "left_cv": 0.3002245768611331
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 6,
@@ -852,7 +1153,23 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "zone_geometry",
+          "profile": {
+            "available": true,
+            "linesUsed": 10,
+            "xHeightPx": 34.0,
+            "targetReach": 2.0,
+            "ascReach": 1.29,
+            "descReach": 2.53,
+            "ascReachCv": 0.055,
+            "descReachCv": 0.037,
+            "flags": [
+              "single-zone"
+            ]
+          }
+        }
       },
       {
         "n": 7,
@@ -871,7 +1188,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_abs": 1.7053249673598583
+          },
+          "component_scores": {}
+        }
       }
     ],
     "topStrong": [
@@ -892,7 +1216,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "382 letters"
+        "basedOn": "382 letters",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "loop_ratio": 0.4476439790575916
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 8,
@@ -911,7 +1242,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "basedOn": "90 words",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "word_gap_cv": 0.0
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 2,
@@ -930,7 +1268,15 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "90 words"
+        "basedOn": "90 words",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "char_w_cv": 0.11739385782747919,
+            "avg_score": 0.84860213912478
+          },
+          "component_scores": {}
+        }
       },
       {
         "n": 17,
@@ -949,7 +1295,14 @@ window.VAHINI_SAMPLE_REPORT = {
         "unmeasured": false,
         "unmeasuredReason": null,
         "unmeasuredKind": null,
-        "basedOn": "10 lines"
+        "basedOn": "10 lines",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "line_slope_std": 0.7276878740677436
+          },
+          "component_scores": {}
+        }
       }
     ],
     "source": "python",
@@ -1090,10 +1443,10 @@ window.VAHINI_SAMPLE_REPORT = {
         "id": "pen",
         "label": "Pen control",
         "question": "Are my strokes smooth and steady, not shaky or pressed too hard?",
-        "score": 8.6,
-        "score100": 86,
-        "band": "strong",
-        "estimated": false,
+        "score": 8.3,
+        "score100": 83,
+        "band": "good",
+        "estimated": true,
         "factors": [
           {
             "n": 4,
@@ -1105,33 +1458,33 @@ window.VAHINI_SAMPLE_REPORT = {
           {
             "n": 13,
             "name": "Speed Consistency",
-            "score": 8.4,
-            "band": "good",
-            "unmeasured": false
+            "score": null,
+            "band": null,
+            "unmeasured": true
           },
           {
             "n": 14,
             "name": "Pressure Consistency",
-            "score": 8.6,
-            "band": "strong",
-            "unmeasured": false
+            "score": null,
+            "band": null,
+            "unmeasured": true
           },
           {
             "n": 15,
             "name": "Stroke Continuity",
-            "score": 8.5,
-            "band": "strong",
-            "unmeasured": false
+            "score": null,
+            "band": null,
+            "unmeasured": true
           },
           {
             "n": 16,
             "name": "Pen Lift Frequency",
-            "score": 9.2,
-            "band": "strong",
-            "unmeasured": false
+            "score": null,
+            "band": null,
+            "unmeasured": true
           }
         ],
-        "measuredCount": 5
+        "measuredCount": 1
       },
       {
         "id": "read",
@@ -1209,10 +1562,10 @@ window.VAHINI_SAMPLE_REPORT = {
           "id": "pen",
           "label": "Pen control",
           "question": "Are my strokes smooth and steady, not shaky or pressed too hard?",
-          "score": 8.6,
-          "band": "strong",
+          "score": 8.3,
+          "band": "good",
           "measurable": true,
-          "note": null
+          "note": "estimated from the photo"
         },
         {
           "id": "read",
@@ -1242,7 +1595,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "note": "Scan 2-3 pages as one assessment to measure this (endurance)."
         }
       ],
-      "measuredTotal": 49.6,
+      "measuredTotal": 49.3,
       "measuredOutOf": 60
     },
     "baselineDrift": {
@@ -1279,17 +1632,6 @@ window.VAHINI_SAMPLE_REPORT = {
     },
     "coachTips": [
       {
-        "id": "speed-three-ways",
-        "kind": "coach",
-        "pillar": "practice",
-        "title": "Improve your writing speed",
-        "text": "Three habits that build real speed. One: when copying or making notes, do not write word-by-word with your eyes on the source - read the whole sentence, then write it from memory without looking back; this trains the mind-to-fingers link that speed comes from. Two: set a timer for 5, 10 or 15 minutes and write as fast as you can for just that window - short daily sprints make speed a habit. Three: read as many books as you can; words you have seen often live in your mind as pictures, and a word you can picture is a word your hand writes without hesitating.",
-        "why": "shown as a general practice habit for every writer",
-        "examples": [
-          "read the whole line - look away - write it"
-        ]
-      },
-      {
         "id": "finishing-letters",
         "kind": "coach",
         "pillar": "technique",
@@ -1314,6 +1656,17 @@ window.VAHINI_SAMPLE_REPORT = {
         ]
       },
       {
+        "id": "speed-three-ways",
+        "kind": "coach",
+        "pillar": "practice",
+        "title": "Improve your writing speed",
+        "text": "Three habits that build real speed. One: when copying or making notes, do not write word-by-word with your eyes on the source - read the whole sentence, then write it from memory without looking back; this trains the mind-to-fingers link that speed comes from. Two: set a timer for 5, 10 or 15 minutes and write as fast as you can for just that window - short daily sprints make speed a habit. Three: read as many books as you can; words you have seen often live in your mind as pictures, and a word you can picture is a word your hand writes without hesitating.",
+        "why": "shown as a general practice habit for every writer",
+        "examples": [
+          "read the whole line - look away - write it"
+        ]
+      },
+      {
         "id": "graphology-n",
         "kind": "fun",
         "pillar": "interest",
@@ -1327,15 +1680,15 @@ window.VAHINI_SAMPLE_REPORT = {
     ],
     "tipPillars": {
       "acronym": "TIP - Techniques, Interest, Practice",
-      "focus": "practice",
+      "focus": "technique",
       "pillars": {
         "technique": {
           "measured": true,
-          "score": 8.5
+          "score": 8.6
         },
         "practice": {
-          "measured": true,
-          "score": 8.4
+          "measured": false,
+          "score": null
         },
         "interest": {
           "measured": false,

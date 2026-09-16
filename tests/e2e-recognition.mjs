@@ -98,6 +98,10 @@ async function main() {
     // just that the network call succeeded -- rendering is synchronous JS
     // once the response arrives, so this needs only a short timeout.
     await page.waitForSelector('#screen-report.on', { timeout: 30000 });
+    const extra=await page.locator('#report-host .vl-insights').count();
+    const reportText=await page.locator('#report-host').textContent();
+    if(extra===0 && !reportText.includes('What kind of page is this?')) ok('document classification panel is absent from live report');
+    else fail('document classification panel is absent from live report','unexpected document-context appendix');
 
     if (pageErrors.length === 0) ok('no page errors'); else fail('no page errors', pageErrors.join('|').slice(0, 160));
   } catch (err) {

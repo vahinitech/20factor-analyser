@@ -45,6 +45,9 @@ import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
 import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
+from PIL import UnidentifiedImageError
+from pypdfium2 import PdfiumError
+
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
@@ -179,13 +182,6 @@ async def _read_upload(image):
     return raw
 
 
-def _decode_upload(raw):
-    try:
-        return _to_numpy(raw)
-    except computer_vision.UploadLimitError as exc:
-        raise HTTPException(413, str(exc)) from exc
-
-
 def _to_numpy(raw: bytes) -> np.ndarray:
     return computer_vision.to_numpy(raw, max_side=MAX_OCR_SIDE)
 
@@ -292,6 +288,7 @@ def _no_handwriting_payload(engine, lang, lines, extra=None):
             "printed text is always excluded from the analysis."
         ),
         "printed_lines": printed,
+        "text_classification": classify.classification_summary(lines),
         "rec_texts": [],
         "rec_polys": [],
         "rec_scores": [],
@@ -359,6 +356,9 @@ def _ocr_process(arr, raw, lang):
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
@@ -368,6 +368,19 @@ def _ocr_process(arr, raw, lang):
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
     }
+
+
+async def _decode_upload(raw):
+    """Decode outside the event loop. Oversized pages are 413; malformed
+    uploads are 422 client errors, never server errors."""
+    try:
+        return await run_in_threadpool(_to_numpy, raw)
+    except computer_vision.UploadLimitError as exc:
+        raise HTTPException(413, str(exc)) from exc
+    except (UnidentifiedImageError, OSError, ValueError, PdfiumError) as exc:
+        raise HTTPException(
+            status_code=422, detail="Upload a valid image or PDF."
+        ) from exc
 
 
 @app.post("/ocr")
@@ -389,7 +402,7 @@ async def ocr(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = await run_in_threadpool(_decode_upload, raw)
+    arr = await _decode_upload(raw)
     payload = await run_in_threadpool(_ocr_process, arr, raw, lang)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
@@ -488,6 +501,9 @@ def _analyze_vl_process(arr, raw, lang):
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
@@ -522,7 +538,7 @@ async def analyze_vl(
     if cached is not None:
         payload = cached
     else:
-        arr = await run_in_threadpool(_decode_upload, raw)
+        arr = await _decode_upload(raw)
         payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
@@ -578,6 +594,26 @@ def _report_python_process(
             lines = lines or hand_lines
             if hand_lines:
                 selected_backend = "cv-fallback"
+        if not hand_lines:
+            return _no_handwriting_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                lines,
+                extra={
+                    "error": "No handwriting found. Upload a clear photo of handwriting.",
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
+        # Classification and spelling must see the text as the OCR read it.
+        # align_to_expected() rewrites each accepted line's text to the
+        # supplied passage, so keep the original reading on the line.
+        for line in list(lines) + list(hand_lines):
+            line.setdefault("text_as_read", str(line.get("text") or ""))
         # Reference-passage alignment: if the writer copied a known passage,
         # correct the recognised text against it (consistent, dependable reading).
         align_info = recognizer.align_to_expected(hand_lines, expected_text)
@@ -634,6 +670,9 @@ def _report_python_process(
     # report show an honest accuracy/confidence indicator instead of implying a
     # certainty the engine doesn't have.
     if isinstance(analysis, dict):
+        analysis["textClassification"] = classify.classification_summary(
+            lines, hand_lines
+        )
         hand_conf = scoring.mean(
             [float(l.get("score", 0.0)) for l in hand_lines]
         )
@@ -711,6 +750,9 @@ def _report_python_process(
         "printed_hints": printed_hints,
         "hand_lines": hand_lines,
         "all_lines": lines,
+        "text_classification": classify.classification_summary(
+            lines, hand_lines
+        ),
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
@@ -735,7 +777,7 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = await run_in_threadpool(_decode_upload, raw)
+    arr = await _decode_upload(raw)
     if include_evidence:
         payload = await run_in_threadpool(
             _report_python_process, arr, raw, lang, expected_text

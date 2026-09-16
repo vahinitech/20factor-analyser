@@ -94,9 +94,13 @@ bottommost meaningful ink give the ascender/descender extents; reach =
 
 ## Honesty rules — what a score does and doesn't claim
 
-- **From a photo, Dynamics (13-16) are proxies.** True speed, pressure
-  and pen lifts are motion, not ink; the static-ink proxies above stand
-  in for them. The dual-IMU sensor pen measures them directly, and the
+- **From a photo, Dynamics (13-16) are not scored.** True speed, pressure
+  and pen lifts are motion, not ink. Photo reports mark these four factors
+  `unmeasured` (`conf: "imu"`, score `null` in the version-2 API), leave
+  them out of section and overall averages, rankings and coaching, and
+  serialize renormalised section weights (Dynamics 0). The static-ink
+  proxy formulas above remain only as documentation of what the pen path
+  replaces. The dual-IMU sensor pen measures them directly, and the
   report marks pen-measured factors (`imuMeasured`).
 - **Some factors lean on OCR text**: loop closure (#3), the factor-6
   proxy path and character distinction's confidence term. The rest is

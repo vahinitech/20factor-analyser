@@ -19,7 +19,7 @@ function serverFactorCrops(vl){
     const v = m[k] || {};
     if (!Number.isFinite(n) || n < 1 || n > 20) return;
     if (!v.url) return;
-    out[n] = { url: v.url, caption: v.caption || 'server vision evidence' };
+    out[n] = { ...v, caption: v.caption || 'server vision evidence' };
   });
   return out;
 }
@@ -56,69 +56,6 @@ function compressImageURL(url, maxW, q){
     img.onerror = ()=>res(url);
     img.src = url;
   });
-}
-
-function renderVLInsights(vl, recInfo){
-  if (!vl || !vl.document_context) return '';
-  const esc = s => String(s==null?'':s).replace(/[&<>\"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
-  const doc = vl.document_context || {};
-  const dt = (doc.document_type && doc.document_type.type) ? doc.document_type.type : 'unknown';
-  const conf = (doc.document_type && Number.isFinite(doc.document_type.confidence))
-    ? Math.round(doc.document_type.confidence * 100)
-    : null;
-  const layout = vl.layout || {};
-  const regions = Array.isArray(vl.regions) ? vl.regions.slice(0, 6) : [];
-  // Descriptive only, never scored: no curriculum treats cursive as more
-  // "correct" than print, so this is shown as context the same way
-  // document type is, not as a target a page can fall short of.
-  const STYLE_LABEL = { cursive: 'Cursive', semi_cursive: 'Semi-cursive', print: 'Print' };
-  const style = doc.writing_style && doc.writing_style.style;
-  const gapFindings = Array.isArray(vl.ambiguous_word_gaps) ? vl.ambiguous_word_gaps : [];
-  const chips = [
-    style ? `Writing style: ${STYLE_LABEL[style] || style}` : '',
-    doc.purpose ? `Purpose: ${doc.purpose}` : '',
-    doc.intended_audience ? `Audience: ${doc.intended_audience}` : '',
-    Number.isFinite(doc.formality_level) ? `Formality: ${Math.round(doc.formality_level*100)}%` : '',
-    Number.isFinite(doc.content_coherence) ? `Coherence: ${Math.round(doc.content_coherence*100)}%` : '',
-    Number.isFinite(layout.layout_complexity) ? `Layout complexity: ${Math.round(layout.layout_complexity*100)}%` : '',
-  ].filter(Boolean);
-  // Caption honesty: garbled low-confidence readings under each crop erode
-  // trust. Show the recognised text only when the engine was actually
-  // confident in it; otherwise label the region neutrally: always with the
-  // confidence percentage in brackets.
-  const regionCaption = (r)=>{
-    const sc = Math.round(((r && r.score) || 0) * 100);
-    const t = String((r && r.text) || '').trim();
-    return (r && r.score >= 0.8 && t) ? `“${esc(t.slice(0,42))}” (${sc}%)` : `handwriting region (${sc}%)`;
-  };
-  const recPct = (recInfo && Number.isFinite(recInfo.confidence_pct)) ? recInfo.confidence_pct : null;
-  const printedN = (recInfo && Number.isFinite(recInfo.printed_lines)) ? recInfo.printed_lines : 0;
-  return `<section class="vl-insights" style="max-width:210mm;margin:18px auto 0;background:#fff;border:1px solid rgba(34,40,49,.12);border-radius:14px;padding:14px 16px;">
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;">
-      <h3 style="margin:0;font-family:Spectral,serif;font-size:20px;color:#1d2938;">What kind of page is this?</h3>
-      <span style="font-size:12px;font-weight:700;color:#075E63;background:#DCF3F4;border-radius:999px;padding:4px 10px;">${dt}${conf!=null?` · ${conf}%`:''}</span>
-    </div>
-    <p style="margin:6px 0 0;font-size:11.5px;line-height:1.55;color:#4a5568;">
-      <b>Why this section:</b> before scoring, the analyser works out what your page is (a letter, an exam answer, a form) and which parts are pen handwriting.
-      That is how it keeps printed text out of your scores and compares your writing against the right kind of page.
-      ${printedN?`On this page it found and <b>excluded ${printedN} printed line${printedN>1?'s':''}</b>: only your handwriting was analysed.`:''}
-      ${style?' Writing style is shown for information only: cursive, semi-cursive and print are not scored differently, since schools teach them differently.':''}
-    </p>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 12px;">${chips.map(c=>`<span style="font-size:11px;background:#F5F7FA;border:1px solid rgba(34,40,49,.1);border-radius:999px;padding:4px 9px;color:#354052;">${c}</span>`).join('')}</div>
-    ${regions.length ? `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;">${regions.map(r=>`<figure style="margin:0;border:1px solid rgba(34,40,49,.12);border-radius:10px;overflow:hidden;background:#fafafa;">
-      <img src="${r.preview||''}" alt="Detected region" style="display:block;width:100%;height:86px;object-fit:cover;background:#fff;" />
-      <figcaption style="padding:6px 8px;font-size:10.5px;color:#4a5568;line-height:1.35;">${regionCaption(r)}</figcaption>
-    </figure>`).join('')}</div>` : ''}
-    ${gapFindings.length ? `<div style="margin-top:12px;background:#FBF3E3;border:1px solid #EFDCA8;border-radius:10px;padding:10px 12px;">
-      <p style="margin:0 0 8px;font-size:11.5px;line-height:1.5;color:#5c4a1f;"><b>Spacing check · ${gapFindings.length} word${gapFindings.length>1?'s':''} could be misread as two words.</b>
-      This is not about cursive vs print, both are fine: it is that a gap inside one word grew as wide as the gap between two separate words on this page. In print, keep the letters of one word closer together than the space before the next word. In cursive, try not to lift the pen in the middle of a word.</p>
-      <div style="display:flex;flex-wrap:wrap;gap:10px;">${gapFindings.slice(0,3).map(f=>`<img src="${f.crop_url||''}" alt="Word with an oversized internal gap" style="height:44px;border:1px solid #EFDCA8;border-radius:7px;background:#fff;" />`).join('')}</div>
-    </div>` : ''}
-    <p style="margin:12px 0 0;font-size:11px;line-height:1.55;color:#4a5568;background:#F5F7FA;border-radius:9px;padding:9px 12px;">
-      <b>Note · text recognition is under progress and will improve soon</b>: accuracy rises with every update, delivered in increments${recPct!=null?` (current reading confidence: ${recPct}%)`:''}. A wrong word here never changes the 20 factor scores: they are measured from the geometry of the writing, not from reading it.
-      Spotted a problem or have an idea? Please report it at <a href="https://github.com/vahinitech/20factor-analyser/issues" style="color:#075E63;font-weight:700;">github.com/vahinitech/20factor-analyser</a>.
-    </p>
-  </section>`;
 }
 
 /* Draw the server-detected word boxes (orange) and their fitted baselines
@@ -227,36 +164,37 @@ function setupUploadDrop(){
   input.addEventListener('change', e=>handleSample(e.target.files[0]));
   $('#dz-clear').addEventListener('click', e=>{ e.stopPropagation(); clearSample(); });
 }
-/* Lazy-load pdf.js (UMD) only when a PDF is actually uploaded. */
+/* Load the PDF reader only for PDF uploads; retry after a failed load. */
+let pdfJsPromise = null;
 function loadPdfJs(){
-  if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
-  return new Promise((res, rej)=>{
-    const s = document.createElement('script');
-    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-    s.onload = ()=>{
-      try { window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; } catch(_e){}
-      res(window.pdfjsLib);
-    };
-    s.onerror = ()=>rej(new Error('Could not load the PDF reader (offline?)'));
-    document.head.appendChild(s);
-  });
+  if (!pdfJsPromise){
+    pdfJsPromise = import('https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.min.mjs')
+      .then(lib=>{
+        lib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@6.3.289/build/pdf.worker.min.mjs';
+        return lib;
+      }).catch(error=>{ pdfJsPromise = null; throw error; });
+  }
+  return pdfJsPromise;
 }
 
-/* Render ONLY the first page of a PDF to an image. Multi-page PDFs are
-   restricted to page 1, matching the server. */
+/* Render page 1 only, and release the reader's worker after each upload. */
 async function pdfFirstPageToImage(file){
   const lib = await loadPdfJs();
-  const buf = await file.arrayBuffer();
-  const pdf = await lib.getDocument({ data: buf }).promise;
-  const page = await pdf.getPage(1);
-  const viewport = page.getViewport({ scale: 2.0 });
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(viewport.width);
-  canvas.height = Math.round(viewport.height);
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
-  const url = canvas.toDataURL('image/png');
-  const img = await new Promise((res)=>{ const i=new Image(); i.onload=()=>res(i); i.src=url; });
-  return { img, url, pages: pdf.numPages };
+  const task = lib.getDocument({ data: await file.arrayBuffer(), isEvalSupported: false });
+  try{
+    const pdf = await task.promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    const url = canvas.toDataURL('image/png');
+    const img = await new Promise((res, rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=rej; i.src=url; });
+    return { img, url, pages: pdf.numPages };
+  } finally {
+    await task.destroy();
+  }
 }
 
 function showSample(img, url){
@@ -416,6 +354,9 @@ function showReject(rej){
       <ul class="reject-tips">${tips}</ul>
       <button class="btn btn-primary" id="reject-retry"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Upload another photo</button>
     </div>`;
+  if (rej.classification && window.VahiniReport){
+    panel.insertAdjacentHTML('beforeend', VahiniReport.classificationPanels(rej.classification).join(''));
+  }
   const retry = $('#reject-retry');
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
@@ -495,8 +436,9 @@ async function runPipeline(){
     const n = Number(pyReport.printed_lines) || 0;
     showReject({
       reason: 'No handwriting found on this page',
-      detail: 'This page looks fully printed' + (n ? ' (' + n + ' printed line' + (n>1?'s':'') + ' detected)' : '')
-        + '. The analyser measures pen handwriting only, so printed text is never analysed or scored.',
+      classification: pyReport.text_classification,
+      detail: n ? 'This page looks fully printed (' + n + ' printed regions detected). Printed text is shown below for identification and is not scored.'
+        : 'No usable handwriting was detected. Upload a clear photo of a handwritten page.',
       tips: [
         'Upload a page written by hand with a pen or pencil',
         'Mixed pages are fine: printed parts are detected and ignored, only the handwriting is scored',
@@ -548,10 +490,6 @@ async function runPipeline(){
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
-  if (vlResult){
-    const html = renderVLInsights(vlResult, analysis && analysis.recognition);
-    if (html) $('#report-host').insertAdjacentHTML('beforeend', html);
-  }
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);
   stepState('score','done', `Report ready`);
   await sleep(400);

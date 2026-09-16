@@ -1,0 +1,56 @@
+[
+  {
+    "file": "spectral-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/OFL.txt",
+    "sha256": "501d6ceca8e552630fe3aa9442b9a818565680a1a2f79f3fb8c13d6f309a9e98",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "Spectral-Regular.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/Spectral-Regular.ttf",
+    "sha256": "c89021dc20720c8d0dcf40b0b2f6e00c13665fa8041717f581396f51b8c78f5d",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "Spectral-SemiBold.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/Spectral-SemiBold.ttf",
+    "sha256": "5f86915a744832ecf6e4a17ab04bea091b9fa992ef5164ff65ae34c1da2fe94b",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "HankenGrotesk.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/hankengrotesk/HankenGrotesk%5Bwght%5D.ttf",
+    "sha256": "813b3f8fa0965405669a89b38e51bbefd95eef6b8e20d1cb2d8c10cce062662f",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "hankengrotesk-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/hankengrotesk/OFL.txt",
+    "sha256": "e02ccb89a86839b22feff7872ff5cc355cc0f58318d29eee20e2cf83a612f16d",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "Caveat.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/Caveat%5Bwght%5D.ttf",
+    "sha256": "0bdb6b660482d31531b3945849fba5916b3ef8695da7024a9e6b9ee3c4157988",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "caveat-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/caveat/OFL.txt",
+    "sha256": "1f9d81d094273d82f3898a1ee8b598a717d050ecbf5ff7bede105b704880157b",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "EduSABeginner.ttf",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/edusabeginner/EduSABeginner%5Bwght%5D.ttf",
+    "sha256": "1ec0d8b4f3a6fda018079fa284570d2c4a3a514e3687d139b25b05dbb86c7ff4",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "edusabeginner-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/edusabeginner/OFL.txt",
+    "sha256": "9c50bb9d2dbfd864553688da113bf817a294f3721b7a35ac6569c63bb939a998",
+    "license": "OFL-1.1"
+  }
+]

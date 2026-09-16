@@ -129,6 +129,7 @@ _PADDLE_CFG = {
 
 _ENGINE_LOCKS_GUARD = threading.Lock()
 _ENGINE_LOCKS = {}
+_ENGINE_BUILD_LOCKS = {}
 
 
 def configure_paddle(**kwargs):
@@ -307,28 +308,36 @@ def _build_engine_safe_cached(lang: str):
         )
 
 
+def _engine_build_lock(kind, lang):
+    """Serialize cold starts per configuration; different models stay independent."""
+    with _ENGINE_LOCKS_GUARD:
+        return _ENGINE_BUILD_LOCKS.setdefault((kind, lang), threading.Lock())
+
+
 def get_engine(lang: str):
     """Cached engine builder with a failure memo (see _ENGINE_FAIL_TTL)."""
-    cached_err = _engine_fail_cached(("normal", lang))
-    if cached_err:
-        raise RuntimeError(cached_err)
-    try:
-        return _build_engine_cached(lang)
-    except Exception as e:
-        _ENGINE_FAIL_CACHE[("normal", lang)] = (time.monotonic(), str(e))
-        raise
+    with _engine_build_lock("normal", lang):
+        cached_err = _engine_fail_cached(("normal", lang))
+        if cached_err:
+            raise RuntimeError(cached_err)
+        try:
+            return _build_engine_cached(lang)
+        except Exception as e:
+            _ENGINE_FAIL_CACHE[("normal", lang)] = (time.monotonic(), str(e))
+            raise
 
 
 def get_engine_safe(lang: str):
     """Cached safe-engine builder with the same failure memo."""
-    cached_err = _engine_fail_cached(("safe", lang))
-    if cached_err:
-        raise RuntimeError(cached_err)
-    try:
-        return _build_engine_safe_cached(lang)
-    except Exception as e:
-        _ENGINE_FAIL_CACHE[("safe", lang)] = (time.monotonic(), str(e))
-        raise
+    with _engine_build_lock("safe", lang):
+        cached_err = _engine_fail_cached(("safe", lang))
+        if cached_err:
+            raise RuntimeError(cached_err)
+        try:
+            return _build_engine_safe_cached(lang)
+        except Exception as e:
+            _ENGINE_FAIL_CACHE[("safe", lang)] = (time.monotonic(), str(e))
+            raise
 
 
 def run(engine, arr: np.ndarray, lang: str):
