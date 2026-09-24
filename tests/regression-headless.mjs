@@ -68,6 +68,30 @@ async function runHeadlessChecks() {
     const result=await page.evaluate(() => window.__testResults);
     const layout=await checkReportLayout(page);
     result.results.push(...layout);
+    // Free access (five factors, no crops) must get the same illustrated
+    // pages as the stylesheet expects, not a separate unstyled summary.
+    const free=await browser.newPage();
+    await free.goto(`${BASE_URL}/frontend/sample-report.html`, { waitUntil: 'load' });
+    await free.waitForSelector('#report-host .free-report', { timeout: 30000 });
+    const freeReport=await free.evaluate(()=>{
+      const pages=[...document.querySelectorAll('#report-host .free-report.compact-report')];
+      return {
+        pages:pages.length,
+        paper:pages[0]?getComputedStyle(pages[0]).backgroundColor:'',
+        inline:[...document.querySelectorAll('#report-host [style]')].filter(e=>/grid-template-columns|max-width/.test(e.getAttribute('style'))).length,
+        cards:document.querySelectorAll('#report-host .priority-card').length,
+        practice:document.querySelectorAll('#report-host .coaching-card .writing-lines').length,
+        heading:[...document.querySelectorAll('#report-host h3')].map(h=>h.textContent).find(t=>/to practise|strengths/.test(t))||'',
+        pro:document.querySelector('#report-host .pro-note')?.textContent||''
+      };
+    });
+    await free.close();
+    result.results.push(
+      {ok:freeReport.pages===2 && freeReport.paper==='rgb(255, 253, 248)' && freeReport.inline===0, name:'Free report renders the two styled report pages', detail:JSON.stringify(freeReport)},
+      {ok:freeReport.cards>0 && freeReport.cards===freeReport.practice, name:'Free report pairs each priority with practice space'},
+      {ok:!/three/.test(freeReport.heading) || freeReport.cards===3, name:'Free priority heading matches the number of cards', detail:freeReport.heading},
+      {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'}
+    );
     result.total=result.results.length;
     result.passed=result.results.filter(r=>r.ok).length;
     result.allOk=result.total===result.passed;

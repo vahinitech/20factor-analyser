@@ -624,6 +624,16 @@ _INPUT_FEATURES = {
 }
 
 
+# Factors whose inputs come from OCR output: recognition confidence
+# (1, 19), recognised characters (2, 3, 6, 9, 15, 16), line polygon angles
+# (7, 11, 12, 17), word boxes within a row (8), and the composites built on
+# them (18, 20). Line-band height, width and left edge (4, 5, 10, 13) are
+# still measured from the ink when recognition is unavailable.
+_NEEDS_RECOGNITION = frozenset(
+    (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
+)
+
+
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
@@ -705,6 +715,12 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         20: f"{fx['n_lines']} lines",
     }
 
+    # Lines from computer_vision.fallback_line_regions() (no OCR engine
+    # produced any line) carry empty text, a placeholder 0.0 confidence
+    # and level rectangles. Factors that read those inputs would publish
+    # 0.0 for letter formation and a perfect 10.0 for line angle that the
+    # page never produced, so they are reported as not measured instead.
+    cv_only = all(bool(l.get("cv_fallback")) for l in lines)
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -724,6 +740,19 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             score = 0.0
             value = "Not measured"
             evidence = "A still photo cannot measure pen motion or pressure."
+        needs_ocr = (
+            cv_only
+            and not motion_only
+            and n in _NEEDS_RECOGNITION
+            and not (n == 6 and zone_based)
+        )
+        if needs_ocr:
+            score = 0.0
+            value = "Not measured"
+            evidence = (
+                "Text recognition did not read this page, so this factor "
+                "could not be measured."
+            )
         if n == 6 and zone_based:
             parts = []
             if zones.get("ascReach") is not None:
@@ -769,6 +798,24 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 "ride over the neighbouring tall letter - limit the "
                 "bar to the t stem."
             )
+        if motion_only:
+            scoring_inputs = {"method": "sensor_required", "features": {}}
+        elif needs_ocr:
+            scoring_inputs = {"method": "recognition_required", "features": {}}
+        elif n == 6 and zone_based:
+            scoring_inputs = {"method": "zone_geometry", "profile": zones}
+        else:
+            scoring_inputs = {
+                "method": "image_heuristic",
+                "features": {key: fx[key] for key in _INPUT_FEATURES[n]},
+                "component_scores": {
+                    str(key): scores[key]
+                    for key in {
+                        18: (1, 5, 8, 7),
+                        20: (5, 8, 10, 11, 17),
+                    }.get(n, ())
+                },
+            }
         results.append(
             FactorScore(
                 n=n,
@@ -782,38 +829,26 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 band=_band(score),
                 value=value,
                 evidence=evidence,
-                based_on=None if motion_only else basis.get(n),
-                conf="imu" if motion_only else "measured",
-                unmeasured=motion_only,
+                based_on=(None if motion_only or needs_ocr else basis.get(n)),
+                conf=(
+                    "imu"
+                    if motion_only
+                    else "ocr" if needs_ocr else "measured"
+                ),
+                unmeasured=motion_only or needs_ocr,
                 unmeasured_reason=(
                     "Requires time-series data from the sensor pen."
                     if motion_only
-                    else None
-                ),
-                unmeasured_kind="imu" if motion_only else None,
-                scoring_inputs=(
-                    {"method": "sensor_required", "features": {}}
-                    if motion_only
                     else (
-                        {"method": "zone_geometry", "profile": zones}
-                        if n == 6 and zone_based
-                        else {
-                            "method": "image_heuristic",
-                            "features": {
-                                key: fx[key] for key in _INPUT_FEATURES[n]
-                            },
-                            "component_scores": {
-                                str(key): scores[key]
-                                for key in (
-                                    {
-                                        18: (1, 5, 8, 7),
-                                        20: (5, 8, 10, 11, 17),
-                                    }.get(n, ())
-                                )
-                            },
-                        }
+                        "Requires recognised text from the page."
+                        if needs_ocr
+                        else None
                     )
                 ),
+                unmeasured_kind=(
+                    "imu" if motion_only else "ocr" if needs_ocr else None
+                ),
+                scoring_inputs=scoring_inputs,
             )
         )
 

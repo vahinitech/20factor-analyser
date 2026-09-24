@@ -22,6 +22,41 @@ class TestPhotoValidity(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "No handwriting"):
             scoring.build_analysis(np.full((40, 80, 3), 255, np.uint8), [], {})
 
+    def test_cv_fallback_does_not_score_recognition_factors(self):
+        # fallback_line_regions() output: no text, placeholder confidence,
+        # level rectangles. Letter formation must not read as 0.2 and line
+        # angle as a perfect 10 when no OCR line existed.
+        arr = np.full((400, 600, 3), 255, dtype=np.uint8)
+        for y in (40, 120, 200, 280):
+            arr[y : y + 30, 40:520] = 30
+        lines = computer_vision.fallback_line_regions(arr)
+        self.assertTrue(lines)
+        result = scoring.build_analysis(arr, lines, {}).to_dict()
+        by_n = {f["n"]: f for f in result["results"]}
+        for n in scoring._NEEDS_RECOGNITION:
+            if by_n[n]["sec"] == "dynamics":
+                continue
+            if (
+                n == 6
+                and by_n[n]["scoringInputs"]["method"] == "zone_geometry"
+            ):
+                continue
+            self.assertTrue(by_n[n]["unmeasured"], n)
+            self.assertEqual(by_n[n]["unmeasuredKind"], "ocr")
+            self.assertEqual(by_n[n]["value"], "Not measured")
+        for n in (4, 5, 10):
+            self.assertFalse(by_n[n]["unmeasured"], n)
+        self.assertTrue(
+            all(
+                not r["unmeasured"]
+                for r in result["topWeak"] + result["topStrong"]
+            )
+        )
+        self.assertEqual(
+            result["measuredCount"],
+            sum(not f["unmeasured"] for f in result["results"]),
+        )
+
     def test_photo_excludes_motion_from_scores_and_rankings(self):
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
         lines = [
