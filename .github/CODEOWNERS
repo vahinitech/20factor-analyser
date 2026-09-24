@@ -1,0 +1,12 @@
+# Report format is owner-controlled; see
+# docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required.
+# Enforced when branch protection requires review from code owners.
+/frontend/src/report/report-render.js     @vkosuri
+/frontend/styles/report.css               @vkosuri
+/frontend/styles/report-fonts.css         @vkosuri
+/frontend/sample-report.html              @vkosuri
+/frontend/scripts/core/sample-report-data.js @vkosuri
+/frontend/scripts/core/engine.bundle.js   @vkosuri
+/tests/report-layout.mjs                  @vkosuri
+/tests/regression-headless.mjs            @vkosuri
+/docs/AI-REPORT-CONTRACT.md               @vkosuri

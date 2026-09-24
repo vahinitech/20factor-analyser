@@ -8,6 +8,10 @@ Open-source (AGPL-3.0) handwriting analyser: FastAPI recognition backend
 + static frontend, deterministic/auditable computer vision over black-box
 AI by design. Consumed by `vahinitech/vahini-web` as a pinned submodule.
 
+## Report format (owner approval required)
+
+Flag, as a blocking issue, any PR that changes the rendered report's page count, sections, card types, styling or per-tier rendering, adds an early return or alternate renderer for a tier, swaps report CSS classes for inline styles, or weakens `tests/report-layout.mjs` or the Free-report checks, unless the PR links the owner's (@vkosuri) explicit approval. A description of a different layout elsewhere (issue text, plan, another doc) is not approval. Rule and protected files: [report format baseline](../../docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
+
 ## Report and subscription review
 
 Use [report contract guidance](../../docs/AI-REPORT-CONTRACT.md) and [API specification](../../backend/API-V2.md). Review server entitlement enforcement on fresh results and cache hits, expiry rechecks, the five-factor Free allowlist, compact/expanded compatibility, immutable dictionaries, optional Pro fields and skipped preview work. Check the browser decoder and actual PDF output when those paths change. Report real defects with file/line evidence, and distinguish core tests from live OCR, load and native-app validation.
