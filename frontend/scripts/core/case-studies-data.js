@@ -5,8 +5,8 @@
 window.VAHINI_CASE_STUDIES = {
   "case1": {
     "before": {
-      "overall": 78,
-      "overallMeasured": 78,
+      "overall": 77,
+      "overallMeasured": 77,
       "results": [
         {
           "n": 1,
@@ -61,7 +61,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 10.0,
+          "score": 8.9,
           "band": "strong"
         },
         {
@@ -131,7 +131,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 7.8,
+          "score": 7.6,
           "band": "good"
         },
         {
@@ -145,8 +145,8 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 7.1,
-          "band": "good"
+          "score": 6.9,
+          "band": "dev"
         }
       ],
       "drift": {
@@ -222,7 +222,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 10.0,
+          "score": 9.3,
           "band": "strong"
         },
         {
@@ -292,7 +292,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 8.8,
+          "score": 8.7,
           "band": "strong"
         },
         {
@@ -306,7 +306,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 8.6,
+          "score": 8.5,
           "band": "strong"
         }
       ],
@@ -329,8 +329,8 @@ window.VAHINI_CASE_STUDIES = {
   },
   "case2": {
     "before": {
-      "overall": 77,
-      "overallMeasured": 77,
+      "overall": 72,
+      "overallMeasured": 72,
       "results": [
         {
           "n": 1,
@@ -385,8 +385,8 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 5.6,
-          "band": "dev"
+          "score": 0.0,
+          "band": "focus"
         },
         {
           "n": 9,
@@ -455,8 +455,8 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 7.9,
-          "band": "good"
+          "score": 6.7,
+          "band": "dev"
         },
         {
           "n": 19,
@@ -469,7 +469,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 6.4,
+          "score": 5.2,
           "band": "dev"
         }
       ],
@@ -490,8 +490,8 @@ window.VAHINI_CASE_STUDIES = {
       }
     },
     "after": {
-      "overall": 93,
-      "overallMeasured": 93,
+      "overall": 92,
+      "overallMeasured": 92,
       "results": [
         {
           "n": 1,
@@ -546,7 +546,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 10.0,
+          "score": 9.6,
           "band": "strong"
         },
         {
@@ -616,7 +616,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 9.2,
+          "score": 9.1,
           "band": "strong"
         },
         {
@@ -630,7 +630,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 9.2,
+          "score": 9.1,
           "band": "strong"
         }
       ],
@@ -709,7 +709,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 10.0,
+          "score": 9.1,
           "band": "strong"
         },
         {
@@ -779,7 +779,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 8.7,
+          "score": 8.5,
           "band": "strong"
         },
         {
@@ -793,7 +793,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 8.0,
+          "score": 7.8,
           "band": "good"
         }
       ],
@@ -816,8 +816,8 @@ window.VAHINI_CASE_STUDIES = {
       }
     },
     "after": {
-      "overall": 92,
-      "overallMeasured": 92,
+      "overall": 91,
+      "overallMeasured": 91,
       "results": [
         {
           "n": 1,
@@ -872,7 +872,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 8,
           "name": "Word Spacing",
           "sec": "spatial",
-          "score": 10.0,
+          "score": 9.4,
           "band": "strong"
         },
         {
@@ -942,7 +942,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 18,
           "name": "Legibility Score",
           "sec": "style",
-          "score": 9.1,
+          "score": 9.0,
           "band": "strong"
         },
         {
@@ -956,7 +956,7 @@ window.VAHINI_CASE_STUDIES = {
           "n": 20,
           "name": "Overall Neatness",
           "sec": "style",
-          "score": 8.9,
+          "score": 8.8,
           "band": "strong"
         }
       ],

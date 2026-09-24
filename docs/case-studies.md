@@ -38,7 +38,7 @@ right margin to reset to the line"* (factor 11's) — then a rescan:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **78** | **90** |
+| **Overall** | **77** | **90** |
 | #7 Baseline Alignment | 5.4 | 8.6 |
 | #11 Line Straightness | 6.3 | 8.9 |
 | #12 Vertical Alignment | 6.5 | 9.5 |
@@ -71,14 +71,14 @@ the geometry every spatial factor reads is fragmented:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **77** | **93** |
-| #8 Word Spacing | 5.6 | 10.0 |
+| **Overall** | **72** | **92** |
+| #8 Word Spacing | 0.0 | 9.6 |
 | #10 Margin Discipline | 0.0 | 8.2 |
 | #4 Line Quality (Smoothness) | 4.7 | 8.9 |
-| #13 Speed Consistency | 5.0 | 9.0 |
 | #9 Letter Spacing | 6.9 | 9.2 |
-| #16 Pen Lift Frequency | 7.4 | 9.3 |
-| #20 Overall Neatness | 6.4 | 9.2 |
+| #20 Overall Neatness | 5.2 | 9.1 |
+
+Speed and pen lifts need the sensor pen, so a photo leaves them unscored.
 
 Margin Discipline reads 0.0 before practice not because the child's
 margin is that bad, but because the left-edge statistic sees every
@@ -87,8 +87,9 @@ inspectable behaviour of the current geometry — the criteria doc states
 it plainly — and it disappears the moment the writing itself heals: on
 the "after" page the gaps are regular (the drill: *"'word␣␣word'
 spacing drill — one finger gap between words"*), the detector returns
-whole lines again, and Word Spacing's 10.0 means exactly "no gap
-irregularity wide enough to split any line".
+whole lines again. Word Spacing is measured from the ink gaps inside
+each detected line, so it reads 0.0 on the erratic page and 9.6 once the
+gaps are even.
 
 Full JSON: [before](examples/case2-spacing-before.json) ·
 [after](examples/case2-spacing-after.json)
@@ -113,9 +114,8 @@ measures reach at 1.89x and 2.14x, and the flag clears:
 
 | | Before | After |
 |---|---|---|
-| **Overall** | **82** | **92** |
+| **Overall** | **82** | **91** |
 | #6 Ascender / Descender Control | 2.7 | 9.8 |
-| #14 Pressure Consistency | 5.5 | 8.7 |
 | #10 Margin Discipline | 4.5 | 7.2 |
 | #5 Size Consistency | 7.7 | 8.8 |
 | Ascender reach (target 2.0x) | 1.27x | 1.89x |

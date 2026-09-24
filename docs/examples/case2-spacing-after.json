@@ -199,10 +199,10 @@
       "target": "≈1.0 x-h, CV ≤0.25",
       "conf": "measured",
       "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-      "score": 10.0,
-      "score100": 100,
+      "score": 9.6,
+      "score100": 96,
       "band": "strong",
-      "value": "100%",
+      "value": "96%",
       "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
       "imuMeasured": false,
       "unmeasured": false,
@@ -212,7 +212,8 @@
       "scoringInputs": {
         "method": "image_heuristic",
         "features": {
-          "word_gap_cv": 0.0
+          "word_gap_cv": 0.06223434212051228,
+          "word_gap_count": 80
         },
         "component_scores": {}
       }
@@ -447,10 +448,10 @@
       "target": "even & clear",
       "conf": "measured",
       "tip": "Lift your two lowest factors first — legibility rises with them.",
-      "score": 9.2,
-      "score100": 92,
+      "score": 9.1,
+      "score100": 91,
       "band": "strong",
-      "value": "92%",
+      "value": "91%",
       "evidence": "Server-side OCR/layout heuristic based on composite readability.",
       "imuMeasured": false,
       "unmeasured": false,
@@ -463,7 +464,7 @@
         "component_scores": {
           "1": 8.790305853676381,
           "5": 9.041772980931405,
-          "8": 10.0,
+          "8": 9.555468984853484,
           "7": 9.304465912911743
         }
       }
@@ -503,10 +504,10 @@
       "target": "weighted variance",
       "conf": "measured",
       "tip": "Keep the page tidy — even size, even spacing, straight lines.",
-      "score": 9.2,
-      "score100": 92,
+      "score": 9.1,
+      "score100": 91,
       "band": "strong",
-      "value": "92%",
+      "value": "91%",
       "evidence": "Server-side OCR/layout heuristic based on layout neatness composite.",
       "imuMeasured": false,
       "unmeasured": false,
@@ -518,7 +519,7 @@
         "features": {},
         "component_scores": {
           "5": 9.041772980931405,
-          "8": 10.0,
+          "8": 9.555468984853484,
           "10": 8.228447248897488,
           "11": 9.443572730329395,
           "17": 9.669862233437259
@@ -708,8 +709,8 @@
       "name": "Spatial",
       "weight": 0.375,
       "blurb": "Spacing, baseline & layout",
-      "avg": 9.3,
-      "avg100": 93,
+      "avg": 9.2,
+      "avg100": 92,
       "factors": [
         {
           "n": 7,
@@ -745,10 +746,10 @@
           "target": "≈1.0 x-h, CV ≤0.25",
           "conf": "measured",
           "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-          "score": 10.0,
-          "score100": 100,
+          "score": 9.6,
+          "score100": 96,
           "band": "strong",
-          "value": "100%",
+          "value": "96%",
           "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
           "imuMeasured": false,
           "unmeasured": false,
@@ -758,7 +759,8 @@
           "scoringInputs": {
             "method": "image_heuristic",
             "features": {
-              "word_gap_cv": 0.0
+              "word_gap_cv": 0.06223434212051228,
+              "word_gap_count": 80
             },
             "component_scores": {}
           }
@@ -1015,10 +1017,10 @@
           "target": "even & clear",
           "conf": "measured",
           "tip": "Lift your two lowest factors first — legibility rises with them.",
-          "score": 9.2,
-          "score100": 92,
+          "score": 9.1,
+          "score100": 91,
           "band": "strong",
-          "value": "92%",
+          "value": "91%",
           "evidence": "Server-side OCR/layout heuristic based on composite readability.",
           "imuMeasured": false,
           "unmeasured": false,
@@ -1031,7 +1033,7 @@
             "component_scores": {
               "1": 8.790305853676381,
               "5": 9.041772980931405,
-              "8": 10.0,
+              "8": 9.555468984853484,
               "7": 9.304465912911743
             }
           }
@@ -1071,10 +1073,10 @@
           "target": "weighted variance",
           "conf": "measured",
           "tip": "Keep the page tidy — even size, even spacing, straight lines.",
-          "score": 9.2,
-          "score100": 92,
+          "score": 9.1,
+          "score100": 91,
           "band": "strong",
-          "value": "92%",
+          "value": "91%",
           "evidence": "Server-side OCR/layout heuristic based on layout neatness composite.",
           "imuMeasured": false,
           "unmeasured": false,
@@ -1086,7 +1088,7 @@
             "features": {},
             "component_scores": {
               "5": 9.041772980931405,
-              "8": 10.0,
+              "8": 9.555468984853484,
               "10": 8.228447248897488,
               "11": 9.443572730329395,
               "17": 9.669862233437259
@@ -1097,8 +1099,8 @@
       "scoredCount": 4
     }
   ],
-  "overall": 93,
-  "overallMeasured": 93,
+  "overall": 92,
+  "overallMeasured": 92,
   "measuredCount": 16,
   "topWeak": [
     {
@@ -1209,32 +1211,6 @@
       }
     },
     {
-      "n": 8,
-      "sec": "spatial",
-      "name": "Word Spacing",
-      "ex": "rhythm",
-      "target": "≈1.0 x-h, CV ≤0.25",
-      "conf": "measured",
-      "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-      "score": 10.0,
-      "score100": 100,
-      "band": "strong",
-      "value": "100%",
-      "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
-      "imuMeasured": false,
-      "unmeasured": false,
-      "unmeasuredReason": null,
-      "unmeasuredKind": null,
-      "basedOn": "90 words",
-      "scoringInputs": {
-        "method": "image_heuristic",
-        "features": {
-          "word_gap_cv": 0.0
-        },
-        "component_scores": {}
-      }
-    },
-    {
       "n": 6,
       "sec": "structure",
       "name": "Ascender / Descender Control",
@@ -1289,6 +1265,33 @@
         "method": "image_heuristic",
         "features": {
           "line_slope_std": 0.39616531987528847
+        },
+        "component_scores": {}
+      }
+    },
+    {
+      "n": 8,
+      "sec": "spatial",
+      "name": "Word Spacing",
+      "ex": "rhythm",
+      "target": "≈1.0 x-h, CV ≤0.25",
+      "conf": "measured",
+      "tip": "“word␣␣word” spacing drill — one finger gap between words.",
+      "score": 9.6,
+      "score100": 96,
+      "band": "strong",
+      "value": "96%",
+      "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
+      "imuMeasured": false,
+      "unmeasured": false,
+      "unmeasuredReason": null,
+      "unmeasuredKind": null,
+      "basedOn": "90 words",
+      "scoringInputs": {
+        "method": "image_heuristic",
+        "features": {
+          "word_gap_cv": 0.06223434212051228,
+          "word_gap_count": 80
         },
         "component_scores": {}
       }
@@ -1366,15 +1369,15 @@
       "id": "spaces",
       "label": "Spaces and gaps",
       "question": "Do my words and letters have enough room? Did I leave a margin?",
-      "score": 9.1,
-      "score100": 91,
+      "score": 9.0,
+      "score100": 90,
       "band": "strong",
       "estimated": false,
       "factors": [
         {
           "n": 8,
           "name": "Word Spacing",
-          "score": 10.0,
+          "score": 9.6,
           "band": "strong",
           "unmeasured": false
         },
@@ -1479,8 +1482,8 @@
       "id": "read",
       "label": "Easy to read",
       "question": "Can someone else read my page easily?",
-      "score": 9.4,
-      "score100": 94,
+      "score": 9.3,
+      "score100": 93,
       "band": "strong",
       "estimated": false,
       "factors": [
@@ -1494,14 +1497,14 @@
         {
           "n": 18,
           "name": "Legibility Score",
-          "score": 9.2,
+          "score": 9.1,
           "band": "strong",
           "unmeasured": false
         },
         {
           "n": 20,
           "name": "Overall Neatness",
-          "score": 9.2,
+          "score": 9.1,
           "band": "strong",
           "unmeasured": false
         }
@@ -1533,7 +1536,7 @@
         "id": "spaces",
         "label": "Spaces and gaps",
         "question": "Do my words and letters have enough room? Did I leave a margin?",
-        "score": 9.1,
+        "score": 9.0,
         "band": "strong",
         "measurable": true,
         "note": null
@@ -1560,7 +1563,7 @@
         "id": "read",
         "label": "Easy to read",
         "question": "Can someone else read my page easily?",
-        "score": 9.4,
+        "score": 9.3,
         "band": "strong",
         "measurable": true,
         "note": null
@@ -1584,7 +1587,7 @@
         "note": "Scan 2-3 pages as one assessment to measure this (endurance)."
       }
     ],
-    "measuredTotal": 55.4,
+    "measuredTotal": 55.2,
     "measuredOutOf": 60
   },
   "baselineDrift": {

@@ -32,6 +32,11 @@ import re
 
 import numpy as np
 
+try:
+    import cv2
+except ImportError:  # pragma: no cover - cv2 ships in core
+    cv2 = None
+
 from geometry import clamp_box
 
 # The coach's rule: reach two x-heights up and down.
@@ -122,6 +127,12 @@ def line_zone_bands(gray, box):
     meaningful = profile >= max(2.0, float(profile.max()) * INK_FRAC)
     rows = np.nonzero(meaningful)[0]
     asc_top, desc_bot = int(rows[0]), int(rows[-1])
+    own = _own_ink_extent(ink, midline, baseline)
+    if own is not None:
+        # The padded crop reaches into the lines above and below on
+        # closely ruled paper; their descenders and ascenders read as
+        # this line's reach (4.0x on tests' handwriting-sample.jpg).
+        asc_top, desc_bot = own
     h_u = max(0, midline - asc_top)
     h_l = max(0, desc_bot - baseline)
 
@@ -132,6 +143,29 @@ def line_zone_bands(gray, box):
         "asc_reach": (h_u + h_m) / float(h_m),
         "desc_reach": (h_l + h_m) / float(h_m),
     }
+
+
+def _own_ink_extent(ink, midline, baseline):
+    """Top and bottom rows of the ink blobs that belong to this line:
+    those covering at least half of its x-height band. A neighbour's
+    tail can dip into the band's edge but does not span it. None when
+    cv2 is unavailable or no blob qualifies."""
+    if cv2 is None:
+        return None
+    n, _, stats, _ = cv2.connectedComponentsWithStats(
+        (ink > 0).astype(np.uint8), connectivity=8
+    )
+    need = 0.5 * (baseline - midline + 1)
+    tops, bottoms = [], []
+    for i in range(1, n):
+        top = int(stats[i, cv2.CC_STAT_TOP])
+        bottom = top + int(stats[i, cv2.CC_STAT_HEIGHT]) - 1
+        if min(bottom, baseline) - max(top, midline) + 1 >= need:
+            tops.append(top)
+            bottoms.append(bottom)
+    if not tops:
+        return None
+    return min(tops), max(bottoms)
 
 
 def _median(vals):

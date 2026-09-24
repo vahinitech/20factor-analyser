@@ -25,12 +25,12 @@ explains every number the engine produces.
 
 ## Page 1 — Scorecard
 
-**Overall: 84 / 100** — the weighted average of the three sections a photo can score (Structure 37.5%, Spatial 37.5%, Style 25% after renormalising; Dynamics needs the sensor pen).
+**Overall: 83 / 100** — the weighted average of the three sections a photo can score (Structure 37.5%, Spatial 37.5%, Style 25% after renormalising; Dynamics needs the sensor pen).
 
 | Section | Weight | Score |
 |---|---|---|
 | Structure — letter shapes, size & control | 30% | 83 |
-| Spatial — spacing, baseline & layout | 30% | 82 |
+| Spatial — spacing, baseline & layout | 30% | 80 |
 | Dynamics — speed, pressure & flow | not scored from a photo | — |
 | Style & Readability — slant, legibility & neatness | 20% | 87 |
 
@@ -38,8 +38,8 @@ Every factor lands in one of four bands (cut-offs in
 [`scoring-criteria.md`](scoring-criteria.md)): **strong**, **good**,
 **developing**, **focus**.
 
-Strongest factors on this page: Loop Closure 10.0, Word Spacing 10.0,
-Stroke Order Consistency 9.4, Slant Consistency 9.4.
+Strongest factors on this page: Loop Closure 10.0, Stroke Order
+Consistency 9.4, Slant Consistency 9.4, Word Spacing 9.3.
 
 The three factors most worth practising, ranked weakest first:
 
@@ -135,7 +135,7 @@ Scores are 0-10; the scorecard shows them as percentages.
 | 5 | Size Consistency | 8.2 | good | height CV ≤0.12 | 382 letters |
 | 6 | Ascender / Descender Control | 5.5 | dev | ratio err ≤0.15 | 382 letters |
 | 7 | Baseline Alignment | 7.9 | good | RMS ≤0.08 x-h | 10 lines |
-| 8 | Word Spacing | 10.0 | strong | ≈1.0 x-h, CV ≤0.25 | 90 words |
+| 8 | Word Spacing | 9.3 | strong | ≈1.0 x-h, CV ≤0.25 | 90 words |
 | 9 | Letter Spacing | 9.0 | strong | gap CV ≤0.30 | 382 letters |
 | 10 | Margin Discipline | 4.5 | dev | left CV ≤0.05 | 10 lines |
 | 11 | Line Straightness | 8.3 | good | drift ≤1° | 10 lines |
@@ -145,9 +145,9 @@ Scores are 0-10; the scorecard shows them as percentages.
 | 15 | Stroke Continuity | 8.5 | good | 0 unintended breaks | 90 words |
 | 16 | Pen Lift Frequency | 9.2 | strong | ≤0.3 lifts/char | 90 words |
 | 17 | Slant Consistency | 9.4 | strong | angle CV low | 10 lines |
-| 18 | Legibility Score | 8.6 | strong | even & clear | 10 lines |
+| 18 | Legibility Score | 8.5 | strong | even & clear | 10 lines |
 | 19 | Character Distinction | 8.9 | strong | clear letter pairs | 382 letters |
-| 20 | Overall Neatness | 8.0 | good | weighted variance | 10 lines |
+| 20 | Overall Neatness | 7.9 | good | weighted variance | 10 lines |
 
 From a photo, the four Dynamics factors (13-16) are proxies read from
 the static ink — stroke-width regularity, ink-density variance, word

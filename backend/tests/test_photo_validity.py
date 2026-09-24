@@ -57,6 +57,30 @@ class TestPhotoValidity(unittest.TestCase):
             sum(not f["unmeasured"] for f in result["results"]),
         )
 
+    def test_word_spacing_is_measured_inside_one_ocr_line(self):
+        # PP-OCR returns one box per line. Five ink "words" with gaps of
+        # 20, 20, 60 and 20 px must give an uneven spacing score, not the
+        # perfect 10 an empty gap list used to produce.
+        arr = np.full((120, 700, 3), 255, dtype=np.uint8)
+        x = 20
+        for gap in (20, 20, 60, 20, 0):
+            arr[40:70, x : x + 80] = 20
+            x += 80 + gap
+        line = {
+            "text": "one two three four five",
+            "score": 0.9,
+            "box": [10, 30, x, 50],
+            "poly": [[10, 30], [10 + x, 30], [10 + x, 80], [10, 80]],
+        }
+        self.assertEqual(
+            sorted(computer_vision.line_word_gaps(arr, line)),
+            [20.0, 20.0, 20.0, 60.0],
+        )
+        result = scoring.build_analysis(arr, [line], {}).to_dict()
+        spacing = result["results"][7]
+        self.assertFalse(spacing["unmeasured"])
+        self.assertLess(spacing["score"], 10.0)
+
     def test_photo_excludes_motion_from_scores_and_rankings(self):
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
         lines = [
@@ -69,7 +93,12 @@ class TestPhotoValidity(unittest.TestCase):
         ]
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         self.assertEqual(len(result["results"]), 20)
-        self.assertEqual(result["measuredCount"], 16)
+        # The blank synthetic page has no ink between words, so Word
+        # Spacing is unmeasured rather than a perfect score.
+        spacing = result["results"][7]
+        self.assertTrue(spacing["unmeasured"])
+        self.assertEqual(spacing["unmeasuredKind"], "insufficient")
+        self.assertEqual(result["measuredCount"], 15)
         for factor in result["results"][12:16]:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")
