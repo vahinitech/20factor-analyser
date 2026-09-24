@@ -670,7 +670,7 @@ const CASE_STORIES = [
     persona:'A twelve year old writes fast before the school bell. In some places the words touch each other. In other places there are big empty gaps. The computer cannot tell where one word ends and the next one starts, so it reads each line as broken pieces.',
     drill:'The drill from the report: write "word word" with one finger of space between the words, until every line is read as one whole line again.',
     highlights:[8,10,4,13,9,16,20],
-    note:'Before practice, Margin Discipline shows 0.0. The margin is not really that bad. The computer measures the left edge of every piece it finds, and broken pieces start in the middle of the page. After practice the gaps are even, the computer reads full lines again, and the margin score comes back. Word Spacing at 10.0 means no gap was big enough to break a line.',
+    note:'Before practice, Margin Discipline shows 0.0. The margin is not really that bad. The computer measures the left edge of every piece it finds, and broken pieces start in the middle of the page. After practice the gaps are even, the computer reads full lines again, and the margin score comes back. Word Spacing is measured from the gaps inside each line, so it goes from 0.0 to 9.6 once the gaps are even.',
   },
   {
     id:'case3', title:'All letters the same size',

@@ -56,7 +56,7 @@ score falls linearly and hits zero at the stated limit.
 | 5 | Size Consistency | letter-height consistency across lines | `10 · (1 − min(1, height CV / 0.65))` | height CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
-| 8 | Word Spacing | consistency of gaps between detected segments sharing a row, in x-heights | `10 · (1 − min(1, gap CV / 1.4))` | ≈1.0 x-h, CV ≤0.25 |
+| 8 | Word Spacing | consistency of word gaps, in line heights: gaps between detected segments sharing a row, plus the widest (words − 1) ink gaps inside each line. Not measured below three gaps | `10 · (1 − min(1, gap CV / 1.4))` | ≈1.0 x-h, CV ≤0.25 |
 | 9 | Letter Spacing | intra-word spacing proxy: char-width consistency | `10 · (1 − min(1, char-width CV / 1.2))` | gap CV ≤0.30 |
 | 10 | Margin Discipline | left-edge consistency after page-tilt correction | `10 · (1 − min(1, left CV / 0.55))` | left CV ≤0.05 |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
@@ -80,8 +80,10 @@ Handwriting coaches teach letter size as a 1:2 proportion across three
 vertical zones: a `t` stands two x-heights tall, a `g` hangs two deep.
 When the page has enough Latin letters, factor 6 is scored from
 measured ink geometry (`zone_analysis.py`): per line, the densest
-horizontal band of ink is the middle zone (x-height); topmost and
-bottommost meaningful ink give the ascender/descender extents; reach =
+horizontal band of ink is the middle zone (x-height); the topmost and
+bottommost ink of the blobs that cover at least half of that band give
+the ascender/descender extents, so a neighbouring line on closely ruled
+paper does not count as reach; reach =
 (zone + middle) / middle, target 2.0.
 
 - Full credit within ±0.35 of 2.0; zero credit at an error of 1.0 or

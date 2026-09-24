@@ -22,6 +22,65 @@ class TestPhotoValidity(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "No handwriting"):
             scoring.build_analysis(np.full((40, 80, 3), 255, np.uint8), [], {})
 
+    def test_cv_fallback_does_not_score_recognition_factors(self):
+        # fallback_line_regions() output: no text, placeholder confidence,
+        # level rectangles. Letter formation must not read as 0.2 and line
+        # angle as a perfect 10 when no OCR line existed.
+        arr = np.full((400, 600, 3), 255, dtype=np.uint8)
+        for y in (40, 120, 200, 280):
+            arr[y : y + 30, 40:520] = 30
+        lines = computer_vision.fallback_line_regions(arr)
+        self.assertTrue(lines)
+        result = scoring.build_analysis(arr, lines, {}).to_dict()
+        by_n = {f["n"]: f for f in result["results"]}
+        for n in scoring._NEEDS_RECOGNITION:
+            if by_n[n]["sec"] == "dynamics":
+                continue
+            if (
+                n == 6
+                and by_n[n]["scoringInputs"]["method"] == "zone_geometry"
+            ):
+                continue
+            self.assertTrue(by_n[n]["unmeasured"], n)
+            self.assertEqual(by_n[n]["unmeasuredKind"], "ocr")
+            self.assertEqual(by_n[n]["value"], "Not measured")
+        for n in (4, 5, 10):
+            self.assertFalse(by_n[n]["unmeasured"], n)
+        self.assertTrue(
+            all(
+                not r["unmeasured"]
+                for r in result["topWeak"] + result["topStrong"]
+            )
+        )
+        self.assertEqual(
+            result["measuredCount"],
+            sum(not f["unmeasured"] for f in result["results"]),
+        )
+
+    def test_word_spacing_is_measured_inside_one_ocr_line(self):
+        # PP-OCR returns one box per line. Five ink "words" with gaps of
+        # 20, 20, 60 and 20 px must give an uneven spacing score, not the
+        # perfect 10 an empty gap list used to produce.
+        arr = np.full((120, 700, 3), 255, dtype=np.uint8)
+        x = 20
+        for gap in (20, 20, 60, 20, 0):
+            arr[40:70, x : x + 80] = 20
+            x += 80 + gap
+        line = {
+            "text": "one two three four five",
+            "score": 0.9,
+            "box": [10, 30, x, 50],
+            "poly": [[10, 30], [10 + x, 30], [10 + x, 80], [10, 80]],
+        }
+        self.assertEqual(
+            sorted(computer_vision.line_word_gaps(arr, line)),
+            [20.0, 20.0, 20.0, 60.0],
+        )
+        result = scoring.build_analysis(arr, [line], {}).to_dict()
+        spacing = result["results"][7]
+        self.assertFalse(spacing["unmeasured"])
+        self.assertLess(spacing["score"], 10.0)
+
     def test_photo_excludes_motion_from_scores_and_rankings(self):
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
         lines = [
@@ -34,7 +93,12 @@ class TestPhotoValidity(unittest.TestCase):
         ]
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         self.assertEqual(len(result["results"]), 20)
-        self.assertEqual(result["measuredCount"], 16)
+        # The blank synthetic page has no ink between words, so Word
+        # Spacing is unmeasured rather than a perfect score.
+        spacing = result["results"][7]
+        self.assertTrue(spacing["unmeasured"])
+        self.assertEqual(spacing["unmeasuredKind"], "insufficient")
+        self.assertEqual(result["measuredCount"], 15)
         for factor in result["results"][12:16]:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")

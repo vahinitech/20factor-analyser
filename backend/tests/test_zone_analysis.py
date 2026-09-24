@@ -78,6 +78,18 @@ def test_line_bands_recover_known_geometry():
     assert abs(z["desc_reach"] - 2.0) <= 0.25
 
 
+def test_tightly_ruled_neighbour_line_does_not_count_as_reach():
+    # The next line sits inside this line's padded crop, as on closely
+    # ruled notebook paper. Its ink must not read as a descender.
+    page = np.full((260, 400), 245, dtype=np.uint8)
+    _draw_line(page, 30, 100, 20, 20, 20, 320)
+    _draw_line(page, 35, 150, 20, 20, 20, 320)
+    z = line_zone_bands(page, [30, 80, 320, 60])
+    assert z is not None
+    assert abs(z["asc_reach"] - 2.0) <= 0.25
+    assert abs(z["desc_reach"] - 2.0) <= 0.25
+
+
 def test_unusable_crop_returns_none():
     page = np.full((60, 60), 245, dtype=np.uint8)  # blank paper
     assert line_zone_bands(page, [5, 5, 40, 20]) is None

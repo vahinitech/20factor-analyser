@@ -22,6 +22,7 @@ from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
 from baseline_track import track_rows
 from zone_analysis import analyze_zones, zone_score
+import computer_vision
 
 try:
     import cv2
@@ -488,6 +489,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
             b2 = items[i + 1].get("box") or [0, 0, 0, 0]
             gap = float(b2[0] - (b1[0] + b1[2]))
             word_gaps.append(max(0.0, gap) / max(1.0, row_h))
+    # Gaps inside each OCR line, from ink. Without them a page read as
+    # one box per line had no gaps at all, and _cv([]) == 0 scored Word
+    # Spacing a perfect 10 whatever the spacing.
+    for l in lines:
+        line_gaps = computer_vision.line_word_gaps(arr, l)
+        if line_gaps:
+            line_h = float(max(1.0, (l.get("box") or [0, 0, 0, 1])[3]))
+            word_gaps.extend(g / line_h for g in line_gaps)
 
     full = " ".join(texts)
     digits_ratio = (
@@ -540,6 +549,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "baseline_rows_tracked": kf["rows_used"],
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
+        "word_gap_count": len(word_gaps),
         "digits_ratio": digits_ratio,
         "loop_ratio": loop_ratio,
         "tall_ratio": tall_ratio,
@@ -548,6 +558,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
             layout.get("layout_complexity", 0.0) or 0.0
         ),
     }
+
+
+_MIN_WORD_GAPS = 3
+_UNMEASURED_REASONS = {
+    "imu": "Requires time-series data from the sensor pen.",
+    "ocr": "Requires recognised text from the page.",
+    "insufficient": "Needs at least three measurable word gaps.",
+}
 
 
 def _score_factor_map(fx):
@@ -583,19 +601,21 @@ def _score_factor_map(fx):
     )
     s[16] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.4)) * 10.0)
     s[17] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 12.0)) * 10.0)
-    s[18] = _clamp10(
-        (0.35 * s[1]) + (0.25 * s[5]) + (0.20 * s[8]) + (0.20 * s[7])
-    )
+
+    # Composites leave Word Spacing out, and reweight the rest, when too
+    # few word gaps were measured for it to mean anything.
+    def _blend(parts):
+        live = [(w, s[k]) for k, w in parts if k != 8 or spacing_ok]
+        return sum(w * v for w, v in live) / sum(w for w, _ in live)
+
+    spacing_ok = fx.get("word_gap_count", 3) >= _MIN_WORD_GAPS
+    s[18] = _clamp10(_blend(((1, 0.35), (5, 0.25), (8, 0.20), (7, 0.20))))
     s[19] = _clamp10(
         (fx["avg_score"] * 7.5)
         + ((1.0 - min(1.0, fx["digits_ratio"] / 0.5)) * 2.5)
     )
     s[20] = _clamp10(
-        (0.30 * s[5])
-        + (0.20 * s[8])
-        + (0.20 * s[10])
-        + (0.15 * s[11])
-        + (0.15 * s[17])
+        _blend(((5, 0.30), (8, 0.20), (10, 0.20), (11, 0.15), (17, 0.15)))
     )
     return s
 
@@ -608,7 +628,7 @@ _INPUT_FEATURES = {
     5: ("height_cv",),
     6: ("tall_ratio",),
     7: ("line_slope_abs",),
-    8: ("word_gap_cv",),
+    8: ("word_gap_cv", "word_gap_count"),
     9: ("char_w_cv",),
     10: ("left_cv",),
     11: ("line_slope_abs",),
@@ -622,6 +642,16 @@ _INPUT_FEATURES = {
     19: ("avg_score", "digits_ratio"),
     20: (),
 }
+
+
+# Factors whose inputs come from OCR output: recognition confidence
+# (1, 19), recognised characters (2, 3, 6, 9, 15, 16), line polygon angles
+# (7, 11, 12, 17), word boxes within a row (8), and the composites built on
+# them (18, 20). Line-band height, width and left edge (4, 5, 10, 13) are
+# still measured from the ink when recognition is unavailable.
+_NEEDS_RECOGNITION = frozenset(
+    (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
+)
 
 
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
@@ -705,6 +735,12 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         20: f"{fx['n_lines']} lines",
     }
 
+    # Lines from computer_vision.fallback_line_regions() (no OCR engine
+    # produced any line) carry empty text, a placeholder 0.0 confidence
+    # and level rectangles. Factors that read those inputs would publish
+    # 0.0 for letter formation and a perfect 10.0 for line angle that the
+    # page never produced, so they are reported as not measured instead.
+    cv_only = all(bool(l.get("cv_fallback")) for l in lines)
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -724,6 +760,31 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             score = 0.0
             value = "Not measured"
             evidence = "A still photo cannot measure pen motion or pressure."
+        needs_ocr = (
+            cv_only
+            and not motion_only
+            and n in _NEEDS_RECOGNITION
+            and not (n == 6 and zone_based)
+        )
+        few_gaps = (
+            n == 8
+            and not needs_ocr
+            and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
+        )
+        if few_gaps:
+            score = 0.0
+            value = "Not measured"
+            evidence = (
+                "Fewer than three gaps between words could be measured on "
+                "this page."
+            )
+        if needs_ocr:
+            score = 0.0
+            value = "Not measured"
+            evidence = (
+                "Text recognition did not read this page, so this factor "
+                "could not be measured."
+            )
         if n == 6 and zone_based:
             parts = []
             if zones.get("ascReach") is not None:
@@ -769,6 +830,34 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 "ride over the neighbouring tall letter - limit the "
                 "bar to the t stem."
             )
+        missing_kind = (
+            "imu"
+            if motion_only
+            else "ocr" if needs_ocr else "insufficient" if few_gaps else None
+        )
+        if motion_only:
+            scoring_inputs = {"method": "sensor_required", "features": {}}
+        elif needs_ocr:
+            scoring_inputs = {"method": "recognition_required", "features": {}}
+        elif few_gaps:
+            scoring_inputs = {
+                "method": "insufficient_data",
+                "features": {"word_gap_count": fx.get("word_gap_count", 0)},
+            }
+        elif n == 6 and zone_based:
+            scoring_inputs = {"method": "zone_geometry", "profile": zones}
+        else:
+            scoring_inputs = {
+                "method": "image_heuristic",
+                "features": {key: fx[key] for key in _INPUT_FEATURES[n]},
+                "component_scores": {
+                    str(key): scores[key]
+                    for key in {
+                        18: (1, 5, 8, 7),
+                        20: (5, 8, 10, 11, 17),
+                    }.get(n, ())
+                },
+            }
         results.append(
             FactorScore(
                 n=n,
@@ -782,38 +871,12 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
                 band=_band(score),
                 value=value,
                 evidence=evidence,
-                based_on=None if motion_only else basis.get(n),
-                conf="imu" if motion_only else "measured",
-                unmeasured=motion_only,
-                unmeasured_reason=(
-                    "Requires time-series data from the sensor pen."
-                    if motion_only
-                    else None
-                ),
-                unmeasured_kind="imu" if motion_only else None,
-                scoring_inputs=(
-                    {"method": "sensor_required", "features": {}}
-                    if motion_only
-                    else (
-                        {"method": "zone_geometry", "profile": zones}
-                        if n == 6 and zone_based
-                        else {
-                            "method": "image_heuristic",
-                            "features": {
-                                key: fx[key] for key in _INPUT_FEATURES[n]
-                            },
-                            "component_scores": {
-                                str(key): scores[key]
-                                for key in (
-                                    {
-                                        18: (1, 5, 8, 7),
-                                        20: (5, 8, 10, 11, 17),
-                                    }.get(n, ())
-                                )
-                            },
-                        }
-                    )
-                ),
+                based_on=None if missing_kind else basis.get(n),
+                conf=missing_kind or "measured",
+                unmeasured=missing_kind is not None,
+                unmeasured_reason=_UNMEASURED_REASONS.get(missing_kind),
+                unmeasured_kind=missing_kind,
+                scoring_inputs=scoring_inputs,
             )
         )
 

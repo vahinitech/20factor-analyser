@@ -206,10 +206,10 @@ window.VAHINI_SAMPLE_REPORT = {
         "target": "≈1.0 x-h, CV ≤0.25",
         "conf": "measured",
         "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-        "score": 10.0,
-        "score100": 100,
+        "score": 9.3,
+        "score100": 93,
         "band": "strong",
-        "value": "100%",
+        "value": "93%",
         "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
         "imuMeasured": false,
         "unmeasured": false,
@@ -219,7 +219,8 @@ window.VAHINI_SAMPLE_REPORT = {
         "scoringInputs": {
           "method": "image_heuristic",
           "features": {
-            "word_gap_cv": 0.0
+            "word_gap_cv": 0.10199609105570075,
+            "word_gap_count": 80
           },
           "component_scores": {}
         }
@@ -454,10 +455,10 @@ window.VAHINI_SAMPLE_REPORT = {
         "target": "even & clear",
         "conf": "measured",
         "tip": "Lift your two lowest factors first — legibility rises with them.",
-        "score": 8.6,
-        "score100": 86,
+        "score": 8.5,
+        "score100": 85,
         "band": "strong",
-        "value": "86%",
+        "value": "85%",
         "evidence": "Server-side OCR/layout heuristic based on composite readability.",
         "imuMeasured": false,
         "unmeasured": false,
@@ -470,7 +471,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "component_scores": {
             "1": 8.591013686701373,
             "5": 8.24768288463163,
-            "8": 10.0,
+            "8": 9.27145649245928,
             "7": 7.868343790800178
           }
         }
@@ -510,10 +511,10 @@ window.VAHINI_SAMPLE_REPORT = {
         "target": "weighted variance",
         "conf": "measured",
         "tip": "Keep the page tidy — even size, even spacing, straight lines.",
-        "score": 8.0,
-        "score100": 80,
+        "score": 7.9,
+        "score100": 79,
         "band": "good",
-        "value": "80%",
+        "value": "79%",
         "evidence": "Server-side OCR/layout heuristic based on layout neatness composite.",
         "imuMeasured": false,
         "unmeasured": false,
@@ -525,7 +526,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "features": {},
           "component_scores": {
             "5": 8.24768288463163,
-            "8": 10.0,
+            "8": 9.27145649245928,
             "10": 4.541371329797581,
             "11": 8.294675032640143,
             "17": 9.39359343827688
@@ -717,8 +718,8 @@ window.VAHINI_SAMPLE_REPORT = {
         "name": "Spatial",
         "weight": 0.375,
         "blurb": "Spacing, baseline & layout",
-        "avg": 8.2,
-        "avg100": 82,
+        "avg": 8.0,
+        "avg100": 80,
         "factors": [
           {
             "n": 7,
@@ -754,10 +755,10 @@ window.VAHINI_SAMPLE_REPORT = {
             "target": "≈1.0 x-h, CV ≤0.25",
             "conf": "measured",
             "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-            "score": 10.0,
-            "score100": 100,
+            "score": 9.3,
+            "score100": 93,
             "band": "strong",
-            "value": "100%",
+            "value": "93%",
             "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
             "imuMeasured": false,
             "unmeasured": false,
@@ -767,7 +768,8 @@ window.VAHINI_SAMPLE_REPORT = {
             "scoringInputs": {
               "method": "image_heuristic",
               "features": {
-                "word_gap_cv": 0.0
+                "word_gap_cv": 0.10199609105570075,
+                "word_gap_count": 80
               },
               "component_scores": {}
             }
@@ -1024,10 +1026,10 @@ window.VAHINI_SAMPLE_REPORT = {
             "target": "even & clear",
             "conf": "measured",
             "tip": "Lift your two lowest factors first — legibility rises with them.",
-            "score": 8.6,
-            "score100": 86,
+            "score": 8.5,
+            "score100": 85,
             "band": "strong",
-            "value": "86%",
+            "value": "85%",
             "evidence": "Server-side OCR/layout heuristic based on composite readability.",
             "imuMeasured": false,
             "unmeasured": false,
@@ -1040,7 +1042,7 @@ window.VAHINI_SAMPLE_REPORT = {
               "component_scores": {
                 "1": 8.591013686701373,
                 "5": 8.24768288463163,
-                "8": 10.0,
+                "8": 9.27145649245928,
                 "7": 7.868343790800178
               }
             }
@@ -1080,10 +1082,10 @@ window.VAHINI_SAMPLE_REPORT = {
             "target": "weighted variance",
             "conf": "measured",
             "tip": "Keep the page tidy — even size, even spacing, straight lines.",
-            "score": 8.0,
-            "score100": 80,
+            "score": 7.9,
+            "score100": 79,
             "band": "good",
-            "value": "80%",
+            "value": "79%",
             "evidence": "Server-side OCR/layout heuristic based on layout neatness composite.",
             "imuMeasured": false,
             "unmeasured": false,
@@ -1095,7 +1097,7 @@ window.VAHINI_SAMPLE_REPORT = {
               "features": {},
               "component_scores": {
                 "5": 8.24768288463163,
-                "8": 10.0,
+                "8": 9.27145649245928,
                 "10": 4.541371329797581,
                 "11": 8.294675032640143,
                 "17": 9.39359343827688
@@ -1106,8 +1108,8 @@ window.VAHINI_SAMPLE_REPORT = {
         "scoredCount": 4
       }
     ],
-    "overall": 84,
-    "overallMeasured": 84,
+    "overall": 83,
+    "overallMeasured": 83,
     "measuredCount": 16,
     "topWeak": [
       {
@@ -1226,32 +1228,6 @@ window.VAHINI_SAMPLE_REPORT = {
         }
       },
       {
-        "n": 8,
-        "sec": "spatial",
-        "name": "Word Spacing",
-        "ex": "rhythm",
-        "target": "≈1.0 x-h, CV ≤0.25",
-        "conf": "measured",
-        "tip": "“word␣␣word” spacing drill — one finger gap between words.",
-        "score": 10.0,
-        "score100": 100,
-        "band": "strong",
-        "value": "100%",
-        "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
-        "imuMeasured": false,
-        "unmeasured": false,
-        "unmeasuredReason": null,
-        "unmeasuredKind": null,
-        "basedOn": "90 words",
-        "scoringInputs": {
-          "method": "image_heuristic",
-          "features": {
-            "word_gap_cv": 0.0
-          },
-          "component_scores": {}
-        }
-      },
-      {
         "n": 2,
         "sec": "structure",
         "name": "Stroke Order Consistency",
@@ -1300,6 +1276,33 @@ window.VAHINI_SAMPLE_REPORT = {
           "method": "image_heuristic",
           "features": {
             "line_slope_std": 0.7276878740677436
+          },
+          "component_scores": {}
+        }
+      },
+      {
+        "n": 8,
+        "sec": "spatial",
+        "name": "Word Spacing",
+        "ex": "rhythm",
+        "target": "≈1.0 x-h, CV ≤0.25",
+        "conf": "measured",
+        "tip": "“word␣␣word” spacing drill — one finger gap between words.",
+        "score": 9.3,
+        "score100": 93,
+        "band": "strong",
+        "value": "93%",
+        "evidence": "Server-side OCR/layout heuristic based on inter-word spacing regularity.",
+        "imuMeasured": false,
+        "unmeasured": false,
+        "unmeasuredReason": null,
+        "unmeasuredKind": null,
+        "basedOn": "90 words",
+        "scoringInputs": {
+          "method": "image_heuristic",
+          "features": {
+            "word_gap_cv": 0.10199609105570075,
+            "word_gap_count": 80
           },
           "component_scores": {}
         }
@@ -1377,15 +1380,15 @@ window.VAHINI_SAMPLE_REPORT = {
         "id": "spaces",
         "label": "Spaces and gaps",
         "question": "Do my words and letters have enough room? Did I leave a margin?",
-        "score": 7.8,
-        "score100": 78,
+        "score": 7.6,
+        "score100": 76,
         "band": "good",
         "estimated": false,
         "factors": [
           {
             "n": 8,
             "name": "Word Spacing",
-            "score": 10.0,
+            "score": 9.3,
             "band": "strong",
             "unmeasured": false
           },
@@ -1490,8 +1493,8 @@ window.VAHINI_SAMPLE_REPORT = {
         "id": "read",
         "label": "Easy to read",
         "question": "Can someone else read my page easily?",
-        "score": 8.7,
-        "score100": 87,
+        "score": 8.6,
+        "score100": 86,
         "band": "strong",
         "estimated": false,
         "factors": [
@@ -1505,14 +1508,14 @@ window.VAHINI_SAMPLE_REPORT = {
           {
             "n": 18,
             "name": "Legibility Score",
-            "score": 8.6,
+            "score": 8.5,
             "band": "strong",
             "unmeasured": false
           },
           {
             "n": 20,
             "name": "Overall Neatness",
-            "score": 8.0,
+            "score": 7.9,
             "band": "good",
             "unmeasured": false
           }
@@ -1544,7 +1547,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "id": "spaces",
           "label": "Spaces and gaps",
           "question": "Do my words and letters have enough room? Did I leave a margin?",
-          "score": 7.8,
+          "score": 7.6,
           "band": "good",
           "measurable": true,
           "note": null
@@ -1571,7 +1574,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "id": "read",
           "label": "Easy to read",
           "question": "Can someone else read my page easily?",
-          "score": 8.7,
+          "score": 8.6,
           "band": "strong",
           "measurable": true,
           "note": null
@@ -1595,7 +1598,7 @@ window.VAHINI_SAMPLE_REPORT = {
           "note": "Scan 2-3 pages as one assessment to measure this (endurance)."
         }
       ],
-      "measuredTotal": 49.3,
+      "measuredTotal": 49.0,
       "measuredOutOf": 60
     },
     "baselineDrift": {

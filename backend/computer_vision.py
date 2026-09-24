@@ -692,6 +692,34 @@ def _line_ink_components(arr, box):
     return comps
 
 
+def line_word_gaps(arr, line):
+    """Word-to-word gaps in one OCR line, in pixels, measured from ink.
+
+    PP-OCR returns one box per line, so gaps between OCR boxes do not
+    exist on most pages. Ink blobs are merged where they overlap
+    horizontally (a dotted i, a crossed t), and the widest
+    (recognised word count - 1) gaps are taken as the word breaks, the
+    same split find_ambiguous_word_gaps uses. Returns None when the
+    line cannot be measured."""
+    text = str(line.get("text", "") or "")
+    n_words = len([w for w in re.split(r"\s+", text.strip()) if w])
+    if n_words < 2:
+        return None
+    comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+    if not comps or len(comps) < 2:
+        return None
+    spans = []
+    for x, _y, w, _h in comps:
+        if spans and x <= spans[-1][1]:
+            spans[-1][1] = max(spans[-1][1], x + w)
+        else:
+            spans.append([x, x + w])
+    gaps = [spans[i + 1][0] - spans[i][1] for i in range(len(spans) - 1)]
+    if len(gaps) < n_words - 1:
+        return None
+    return sorted(gaps, reverse=True)[: n_words - 1]
+
+
 def _line_ink_component_count(arr, box):
     comps = _line_ink_components(arr, box)
     return None if comps is None else len(comps)

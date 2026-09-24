@@ -350,12 +350,6 @@ function applyPenDynamics(analysis, imu){
 
 function render(host, data){
   const {analysis, intake={}, recognizedText='', crops={}, imu=null}=data;
-  if (analysis.access && analysis.access.tier === 'free') {
-    const cards = analysis.results.map(f => `<section style="padding:14px;border:1px solid #d9e0e8;border-radius:10px"><h3 style="margin:0 0 8px">${esc(f.name)}</h3><p><strong>${Number.isFinite(f.score) ? f.score.toFixed(1) + ' / 10' : 'Not available'}</strong></p><p>${esc(f.evidence || 'Image-based handwriting feedback.')}</p></section>`).join('');
-    host.innerHTML = `<section class="page report-page free-report" style="background:white;color:#253348;max-width:210mm;margin:20px auto;padding:28px;box-sizing:border-box"><header><img src="assets/vahini-logo.png" alt="Vahini" width="44" height="44"><p>FREE HANDWRITING REPORT</p><h1>Your handwriting, five things to explore.</h1><p>${esc(intake.writerName || 'Your sample')}</p></header><div class="free-factor-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px">${cards}</div><section style="margin-top:24px;padding-top:18px;border-top:1px solid #d9e0e8"><h2>More detail with Pro</h2><p>Pro includes all 20 factor scores, detailed evidence, coaching and personalised worksheet recommendations.</p><p>15 additional factor scores are not included in this Free report.</p><a href="${esc(window.VahiniWorksheets.base())}/practice.html">Browse the free practice worksheet library</a></section><footer style="margin-top:24px;font-size:13px">Image-based estimates support practice. They do not diagnose learning or medical conditions. Scores are not accuracy percentages.</footer></section>`;
-    wirePrintFit(host);
-    return;
-  }
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
@@ -492,11 +486,15 @@ function render(host, data){
   const regionSummary=regionCount==null?'We could not count the handwriting parts in this upload.':
     `${regionCount} handwriting ${regionCount===1?'part':'parts'} found in your upload. A part may be a word or a line.`;
   const coverage=shownIds.size?`${shownIds.size} different ${shownIds.size===1?'part is':'parts are'} shown below for up to three priorities.`:'This free review focuses on up to three priorities.';
+  // Free access returns five factors and no evidence crops. The same two
+  // illustrated pages render for it; only the Pro note is added.
+  const free=analysis.access?.tier==='free';
+  const worksheetLibrary=(window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com')+'/practice.html';
   const pages=[
     `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
       <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p></div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
       <p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
-      <h3>${maintenance?'Keep these strengths':'Your three things to practise'}</h3>
+      <h3>${maintenance?'Keep these strengths':priorities.length===1?'Your one thing to practise':`Your ${['','one','two','three'][priorities.length]||priorities.length} things to practise`}</h3>
       ${reportCards||empty}
       <p class="spelling-status">${esc(spellingStatus)}</p>
       ${rec.printed_lines>0?`<p class="report-note">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
@@ -505,6 +503,7 @@ function render(host, data){
       <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
       ${coaching||empty}
       <div class="guided-support"><h3>Demo handwriting report</h3><p>This PDF shows an example of your review and practice steps. Use Vahini App to explore your results.</p></div>
+      ${free?`<div class="guided-support pro-note"><h3>More detail with Pro</h3><p>This free review scores ${measured.length} skills. Pro adds the other ${Math.max(0,20-analysis.results.length)} skills, the examples from your page and worksheets chosen for you. <a href="${esc(worksheetLibrary)}">Browse the free worksheet library</a></p></div>`:''}
       <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');

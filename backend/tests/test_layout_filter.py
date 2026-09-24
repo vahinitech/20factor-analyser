@@ -57,6 +57,11 @@ class TestLayoutFilterGeometry(unittest.TestCase):
             layout_filter.filter_excluded_regions(lines, []), lines
         )
 
+    def test_filter_never_removes_every_line(self):
+        lines = [{"box": [10, 10, 20, 20]}, {"box": [10, 40, 20, 20]}]
+        kept = layout_filter.filter_excluded_regions(lines, [[0, 0, 99, 99]])
+        self.assertEqual(kept, lines)
+
     def test_partial_edge_touch_is_kept(self):
         # A caption box mostly outside a figure region (only a sliver
         # overlaps) must survive — only mostly-contained lines are dropped.
@@ -150,6 +155,38 @@ class TestExcludedRegionsIntegration(unittest.TestCase):
             sorted(tuple(r) for r in regions),
             [(20.0, 20.0, 50.0, 50.0), (60.0, 60.0, 80.0, 80.0)],
         )
+
+    def test_whole_page_image_region_is_not_excluded(self):
+        class _FakeModel:
+            def predict(
+                self, _arr, batch_size=1
+            ):  # pylint: disable=unused-argument
+                return [
+                    {
+                        "boxes": [
+                            {
+                                "label": "image",
+                                "coordinate": [12, 0, 100, 100],
+                            },
+                            {
+                                "label": "figure",
+                                "coordinate": [20, 20, 50, 50],
+                            },
+                        ]
+                    }
+                ]
+
+        with mock.patch.object(
+            layout_filter, "_build", return_value=_FakeModel()
+        ), mock.patch.object(
+            layout_filter, "available", return_value=(True, "")
+        ):
+            import numpy as np
+
+            regions = layout_filter.excluded_regions(
+                np.zeros((100, 100, 3), dtype=np.uint8)
+            )
+        self.assertEqual(regions, [[20.0, 20.0, 50.0, 50.0]])
 
     def test_excludes_header_and_footer_images_any_label_format(self):
         # PP-DocLayout-L/M/S (the tiers this module runs) document "header
