@@ -54,6 +54,13 @@ _EXCLUDE_LABELS = {
     "footer_image",
 }
 
+# A photographed notebook is often labelled one "image" covering the
+# whole frame (PP-DocLayout-M gave 0.66 on tests' handwriting-sample.jpg,
+# box over ~87% of the page), which dropped every handwritten line and
+# left the report scoring CV fallback regions. A region this large is the
+# page itself, not a figure on it.
+_MAX_REGION_PAGE_FRACTION = 0.5
+
 _MAX_MS = max(
     50.0, float(os.environ.get("VAHINI_LAYOUT_MAX_MS", "800") or "800")
 )
@@ -152,6 +159,7 @@ def excluded_regions(arr: np.ndarray):
     if model is None:
         return []  # not built yet (still downloading in the background)
 
+    page_area = float(max(1, arr.shape[0]) * max(1, arr.shape[1]))
     t0 = time.perf_counter()
     try:
         results = model.predict(arr, batch_size=1)
@@ -166,8 +174,14 @@ def excluded_regions(arr: np.ndarray):
                 # variants to underscore so the match doesn't depend on an
                 # exact, unverifiable-in-this-sandbox string format.
                 label = label.replace("-", "_").replace(" ", "_")
-                if label in _EXCLUDE_LABELS:
-                    boxes.append([float(v) for v in box["coordinate"][:4]])
+                if label not in _EXCLUDE_LABELS:
+                    continue
+                x0, y0, x1, y1 = [float(v) for v in box["coordinate"][:4]]
+                if (max(0.0, x1 - x0) * max(0.0, y1 - y0)) >= (
+                    _MAX_REGION_PAGE_FRACTION * page_area
+                ):
+                    continue
+                boxes.append([x0, y0, x1, y1])
     except Exception:
         return []
     ocr_backends.record_engine_speed(
@@ -200,4 +214,6 @@ def filter_excluded_regions(lines, regions):
         if any(_overlap_fraction(box, r) >= 0.6 for r in regions):
             continue
         kept.append(l)
-    return kept
+    # Fail-open, like the noise filter: a layout guess must not remove
+    # every line on the page.
+    return kept or lines
