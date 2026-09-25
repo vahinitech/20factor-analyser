@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="styles/report.css">
 <link rel="stylesheet" href="styles/studio.css">
 <link rel="stylesheet" href="styles/nav.css">
+<!-- vahinitech.com theme (--vahini-* tokens); served by vahini-web, absent when run alone -->
+<link rel="stylesheet" href="../site/theme/vahini-theme.css">
 <style>
   /* report actions sit at the top of the report and scroll away (not sticky) */
   .report-toolbar{ position:static; justify-content:flex-end; padding:14px 22px; }
@@ -55,11 +57,11 @@
   .uh-card p{ font-size:12.8px; color:var(--muted,#565D66); line-height:1.55; margin:0 0 9px; }
   .uh-try{ font-weight:600; color:var(--ink,#222831) !important; margin-bottom:6px !important; }
   .uh-samples{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:7px; }
-  .uh-samples li{ font-size:12.5px; line-height:1.5; color:var(--ink,#222831); background:var(--ivory-2,#F5F5F4); border-left:3px solid var(--accent,#00ADB5); border-radius:0 8px 8px 0; padding:8px 11px; font-style:italic; }
+  .uh-samples li{ font-size:12.5px; line-height:1.5; color:var(--ink,#222831); background:var(--ivory-2,#F5F5F4); border-left:3px solid var(--accent,#1F6FD1); border-radius:0 8px 8px 0; padding:8px 11px; font-style:italic; }
   .uh-samples li span{ display:block; font-style:normal; font-size:11px; color:var(--muted,#565D66); margin-top:2px; }
   .uh-list{ list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
   .uh-list li{ position:relative; padding-left:18px; font-size:12.5px; line-height:1.5; color:var(--muted,#565D66); }
-  .uh-list li::before{ content:""; position:absolute; left:3px; top:8px; width:6px; height:6px; border-radius:50%; background:var(--accent,#00ADB5); }
+  .uh-list li::before{ content:""; position:absolute; left:3px; top:8px; width:6px; height:6px; border-radius:50%; background:var(--accent,#1F6FD1); }
   .uh-list b{ color:var(--ink,#222831); font-weight:600; }
   .uh-note{ margin-top:16px; padding:15px 17px; background:var(--accent-soft,#DCF3F4); border-radius:11px; }
   .uh-note > b{ display:block; font-size:13px; color:var(--accent-ink,#075E63); margin-bottom:9px; }
@@ -74,7 +76,7 @@
   .sample-cta{ display:flex; align-items:center; gap:13px; padding:14px 16px;
     background:var(--surface,#fff); border:1px solid var(--rule,rgba(34,40,49,.14)); border-radius:14px;
     text-decoration:none; transition:border-color .15s, box-shadow .15s; }
-  .sample-cta:hover{ border-color:var(--accent,#00ADB5); box-shadow:0 6px 20px rgba(34,40,49,.08); }
+  .sample-cta:hover{ border-color:var(--accent,#1F6FD1); box-shadow:0 6px 20px rgba(34,40,49,.08); }
   .sample-cta svg{ width:22px; height:22px; color:var(--accent-deep,#048A91); flex:0 0 auto; }
   .sample-cta b{ display:block; font-size:13.5px; color:var(--ink,#222831); }
   .sample-cta small{ display:block; font-size:12px; color:var(--muted,#565D66); line-height:1.5; margin-top:2px; }
@@ -222,11 +224,11 @@
             <rect x="40" y="52" width="120" height="26" rx="13" fill="#393E46"/>
             <polygon points="370,52 418,65 370,78" fill="#39405a"/>
             <polygon points="418,65 432,65 424,65" fill="#222831"/>
-            <circle cx="430" cy="65" r="5" fill="#00ADB5"/>
+            <circle cx="430" cy="65" r="5" style="fill:var(--accent,#1F6FD1)"/>
             <!-- sensor nodes -->
             <g id="node-rear"><circle cx="95" cy="65" r="13" fill="#2F8F7F" opacity="0.3"/><circle cx="95" cy="65" r="6" fill="#2F8F7F"/></g>
             <g id="node-mag"><circle cx="180" cy="65" r="13" fill="#C29A45" opacity="0.3"/><circle cx="180" cy="65" r="6" fill="#C29A45"/></g>
-            <g id="node-front"><circle cx="300" cy="65" r="13" fill="#00ADB5" opacity="0.3"/><circle cx="300" cy="65" r="6" fill="#00ADB5"/></g>
+            <g id="node-front"><circle cx="300" cy="65" r="13" style="fill:var(--accent,#1F6FD1)" opacity="0.3"/><circle cx="300" cy="65" r="6" style="fill:var(--accent,#1F6FD1)"/></g>
             <g id="node-force"><circle cx="392" cy="65" r="11" fill="#4F5BD5" opacity="0.3"/><circle cx="392" cy="65" r="5" fill="#4F5BD5"/></g>
             <text x="95" y="98" text-anchor="middle" class="pl">6-axis IMU</text>
             <text x="180" y="98" text-anchor="middle" class="pl">Magneto</text>
@@ -244,7 +246,7 @@
       <div class="imu-right">
         <div class="scope"><div class="sc-h"><span class="sc-t" style="color:#4F5BD5">Tip force</span><span class="sc-v" id="rd-force">, </span></div><canvas id="chart-force" width="420" height="74"></canvas></div>
         <div class="scope"><div class="sc-h"><span class="sc-t" style="color:#2F8F7F">Pen tilt / slant</span><span class="sc-v" id="rd-tilt">, </span></div><canvas id="chart-tilt" width="420" height="74"></canvas></div>
-        <div class="scope"><div class="sc-h"><span class="sc-t" style="color:#00ADB5">Velocity</span><span class="sc-v" id="rd-vel">, </span></div><canvas id="chart-vel" width="420" height="74"></canvas></div>
+        <div class="scope"><div class="sc-h"><span class="sc-t" style="color:var(--accent,#1F6FD1)">Velocity</span><span class="sc-v" id="rd-vel">, </span></div><canvas id="chart-vel" width="420" height="74"></canvas></div>
         <div class="imu-stats">
           <div class="ist"><span class="ist-k">Samples</span><span class="ist-v" id="st-samples">0</span></div>
           <div class="ist"><span class="ist-k">Strokes</span><span class="ist-v" id="st-strokes">0</span></div>

@@ -8,17 +8,20 @@
    ========================================================================= */
 
 :root{
-  /* Brand (palette-consistent with the marketing site) */
-  --accent:        #00ADB5;   /* teal — primary accent */
-  --accent-deep:   #048A91;
-  --accent-soft:   #DCF3F4;
+  /* Brand. On vahinitech.com these follow the site's active theme through
+     the --vahini-* tokens in /site/theme/vahini-theme.css (vahini-web,
+     tools/gen-theme-export.mjs). The fallbacks are that theme's values
+     ("celestial", 2026-09) for when the analyser runs on its own. */
+  --accent:        var(--vahini-accent, #1F6FD1);
+  --accent-deep:   var(--vahini-accent-deep, #1A5DB0);
+  --accent-soft:   var(--vahini-accent-soft, #E2ECF9);
   --grow:          #1F9D74;   /* growth green */
   --grow-soft:     #DCF1E8;
   --good:          #3A6EA5;   /* "good" band blue, between developing and strong */
   --good-soft:     #DCE7F3;
   --gold:          #C29A45;
   --gold-soft:     #F3E9CF;
-  --hot:           #C0080B;   /* Vahini logo crimson — hover/highlight */
+  --hot:           var(--vahini-hot, #C0080B);   /* Vahini logo crimson — hover/highlight */
 
   /* Ink & paper (black / slate grey / light) */
   --ink:           #222831;
@@ -40,8 +43,8 @@
   --band-focus:    #C0392B;
 
   /* Type */
-  --serif: "Spectral", Georgia, serif;
-  --sans:  "Hanken Grotesk", system-ui, sans-serif;
+  --serif: var(--vahini-serif, "Spectral", Georgia, serif);
+  --sans:  var(--vahini-sans, "Hanken Grotesk", system-ui, sans-serif);
   --handA: "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
   --handB: "Caveat", cursive;                            /* actual, loose  */
 
@@ -781,10 +784,10 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .free-report.compact-report h2 { font-size:29px; margin:8px 0; }
 .free-report.compact-report h3 { font-size:19px; margin:5px 0; }
 .compact-report .compact-overview { display:flex; gap:18px; align-items:center; justify-content:space-between; }
-.compact-report .compact-score { display:flex; flex-direction:column; align-items:center; background:#173d42; color:white; border-radius:16px; padding:12px 22px; flex-shrink:0; }
+.compact-report .compact-score { display:flex; flex-direction:column; align-items:center; background:var(--vahini-accent-ink, #124079); color:white; border-radius:16px; padding:12px 22px; flex-shrink:0; }
 .compact-report .compact-score b { font-size:38px; line-height:1.1; }
 .compact-report .compact-score span { font-size:13px; }
-.compact-report .region-summary { background:#e6f3ee; border-radius:8px; padding:10px; }
+.compact-report .region-summary { background:var(--accent-soft); border-radius:8px; padding:10px; }
 .free-report.compact-report .priority-card,.free-report.compact-report .coaching-card { padding:10px 12px; margin:8px 0; }
 .compact-report .priority-score { float:right; font-family:var(--sans); font-size:17px; }
 .free-report.compact-report .priority-evidence { margin:5px 0; }
@@ -797,9 +800,9 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .free-report.compact-report .practice-label,.free-report.compact-report .self-check { font-size:13px; }
 .compact-report .writing-lines { height:28px; background:repeating-linear-gradient(to bottom,transparent 0,transparent 13px,#96b9bc 13px,#96b9bc 14px); }
 .compact-report .plan-comparison { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-.free-report.compact-report .guided-support { padding:12px; margin:10px 0; background:#e6f3ee; border:1px solid #87bcb3; }
+.free-report.compact-report .guided-support { padding:12px; margin:10px 0; background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 40%, transparent); }
 .free-report.compact-report .guided-support p { font-size:13px; }
-.compact-report .guided-support a { display:inline-block; background:#125d63; color:#fff; padding:8px 12px; border-radius:7px; margin:6px 0; font-size:15px; font-weight:600; }
+.compact-report .guided-support a { display:inline-block; background:var(--accent-deep); color:#fff; padding:8px 12px; border-radius:7px; margin:6px 0; font-size:15px; font-weight:600; }
 .free-report.compact-report .run-foot { margin-top:auto; padding-top:8px; }
 @media screen and (max-width:600px) {
   .free-report.compact-report { padding:18px; }

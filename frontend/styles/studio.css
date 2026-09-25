@@ -79,7 +79,7 @@ body.studio{ background:#EEEEEE; }
 .mode-card.pen{ background:linear-gradient(160deg,var(--dark,#222831),#11151a); border-color:#39405a; color:#eef0f7; }
 .mode-card.pen:hover{ border-color:var(--accent); }
 .mode-card .mode-ico{ width:58px;height:58px;border-radius:15px;background:var(--paper-2);color:var(--accent-deep);display:grid;place-items:center;margin-bottom:16px; }
-.mode-card.pen .mode-ico{ background:rgba(0,173,181,.22); color:#7FE2E7; }
+.mode-card.pen .mode-ico{ background:color-mix(in srgb, var(--accent) 22%, transparent); color:var(--vahini-accent-lite, #6DA1E1); }
 .mode-card .mode-ico svg{ width:30px;height:30px; }
 .mode-card h3{ font-family:var(--serif); font-size:23px; margin-bottom:8px; }
 .mode-card.pen h3{ color:#fff; }
