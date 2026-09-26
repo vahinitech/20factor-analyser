@@ -8,25 +8,24 @@
    ========================================================================= */
 
 :root{
-  /* Brand. On vahinitech.com these follow the site's active theme through
-     the --vahini-* tokens in /site/theme/vahini-theme.css (vahini-web,
-     tools/gen-theme-export.mjs). The fallbacks are that theme's values
-     ("celestial", 2026-09) for when the analyser runs on its own. */
-  --accent:        var(--vahini-accent, #1F6FD1);
-  --accent-deep:   var(--vahini-accent-deep, #1A5DB0);
-  --accent-soft:   var(--vahini-accent-soft, #E2ECF9);
+  /* Brand, type and ink come from the Vahini design system
+     (/site/design/v1/vahini.css, served by vahinitech.com). Only the
+     report's own colours (score bands, paper, rules) are defined here. */
+  --accent:        var(--v-accent);
+  --accent-deep:   var(--v-accent-strong);
+  --accent-soft:   var(--v-accent-soft);
   --grow:          #1F9D74;   /* growth green */
   --grow-soft:     #DCF1E8;
   --good:          #3A6EA5;   /* "good" band blue, between developing and strong */
   --good-soft:     #DCE7F3;
   --gold:          #C29A45;
   --gold-soft:     #F3E9CF;
-  --hot:           var(--vahini-hot, #C0080B);   /* Vahini logo crimson — hover/highlight */
+  --hot:           var(--v-highlight);
 
   /* Ink & paper (black / slate grey / light) */
-  --ink:           #222831;
-  --ink-2:         #393E46;
-  --ink-3:         #565D66;
+  --ink:           var(--v-text);
+  --ink-2:         var(--v-text-2);
+  --ink-3:         var(--v-text-muted);
   --muted:         #828A93;
   --paper:         #FFFFFF;
   --paper-2:       #EEEEEE;
@@ -43,8 +42,8 @@
   --band-focus:    #C0392B;
 
   /* Type */
-  --serif: var(--vahini-serif, "Spectral", Georgia, serif);
-  --sans:  var(--vahini-sans, "Hanken Grotesk", system-ui, sans-serif);
+  --serif: var(--v-font-serif);
+  --sans:  var(--v-font-sans);
   --handA: "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
   --handB: "Caveat", cursive;                            /* actual, loose  */
 
@@ -691,7 +690,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .cert-drill{ font-size:14px; font-weight:700; background:#fff; border:1.5px solid var(--gold); border-radius:99px; padding:9px 18px; color:var(--ink); }
 .cert-mascot{ width:104px; height:104px; margin-top:10px; }
 .cert-foot{ margin-top:auto; width:100%; display:flex; justify-content:space-between; font-size:12px; color:var(--muted); padding-top:14px; }
-.cert-sign{ font-family:var(--handB, 'Caveat'), cursive; font-size:21px; color:var(--accent-deep); }
+.cert-sign{ font-family:var(--handB), cursive; font-size:21px; color:var(--accent-deep); }
 
 /* ---- Letter-level findings (coach page) -------------------------------- */
 .ll-block{ background:var(--card); border:1px solid var(--hair); border-radius:13px; padding:10px 15px; margin-bottom:8px; break-inside:avoid; }
@@ -784,7 +783,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .free-report.compact-report h2 { font-size:29px; margin:8px 0; }
 .free-report.compact-report h3 { font-size:19px; margin:5px 0; }
 .compact-report .compact-overview { display:flex; gap:18px; align-items:center; justify-content:space-between; }
-.compact-report .compact-score { display:flex; flex-direction:column; align-items:center; background:var(--vahini-accent-ink, #124079); color:white; border-radius:16px; padding:12px 22px; flex-shrink:0; }
+.compact-report .compact-score { display:flex; flex-direction:column; align-items:center; background:var(--v-accent-text); color:white; border-radius:16px; padding:12px 22px; flex-shrink:0; }
 .compact-report .compact-score b { font-size:38px; line-height:1.1; }
 .compact-report .compact-score span { font-size:13px; }
 .compact-report .region-summary { background:var(--accent-soft); border-radius:8px; padding:10px; }
