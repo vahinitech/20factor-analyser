@@ -13,6 +13,8 @@
 <link rel="stylesheet" href="styles/report.css">
 <link rel="stylesheet" href="styles/studio.css">
 <link rel="stylesheet" href="styles/nav.css">
+<!-- The Vahini design system (--v-* tokens, v-* classes), served by vahinitech.com -->
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
 <style>
   #screen-cases{ max-width:1080px; }
   /* the toolbar is dark (studio.css): keep the note readable on it */
@@ -26,16 +28,16 @@
     box-shadow:0 10px 34px rgba(34,40,49,.06); }
   .cs-head{ display:flex; gap:16px; align-items:flex-start; margin-bottom:10px; }
   .cs-no{ font-family:"Hanken Grotesk",sans-serif; font-weight:800; font-size:13px; letter-spacing:.14em;
-    color:var(--accent-deep,#048A91); background:var(--accent-soft,#DCF3F4); border-radius:99px; padding:6px 12px; flex:0 0 auto; margin-top:4px; }
+    color:var(--accent-deep); background:var(--accent-soft); border-radius:99px; padding:6px 12px; flex:0 0 auto; margin-top:4px; }
   .cs-head h2{ font-family:"Spectral",Georgia,serif; font-weight:600; font-size:24px; color:#222831; margin:0 0 4px; letter-spacing:-.01em; }
   .cs-persona{ font-size:13px; color:#565D66; line-height:1.55; margin:0; font-style:italic; max-width:520px; }
   .cs-overall{ margin-left:auto; text-align:right; flex:0 0 auto; }
   .cs-ov-label{ display:block; font-size:9.5px; letter-spacing:.14em; text-transform:uppercase; font-weight:700; color:#565D66; margin-bottom:2px; }
   .cs-ov{ display:flex; gap:8px; align-items:baseline; justify-content:flex-end; font-family:"Spectral",Georgia,serif; }
   .cs-ov b{ font-size:32px; color:#222831; font-weight:600; }
-  .cs-ov b.cs-ov-after{ color:var(--band-strong,#1F9D74); }
-  .cs-ov-delta{ display:inline-block; font-size:12px; font-weight:800; color:#fff; background:var(--band-strong,#1F9D74); border-radius:99px; padding:2px 10px; margin-top:3px; }
-  .cs-drill{ font-size:12.5px; color:#354052; line-height:1.6; background:#F5F7FA; border-left:3px solid var(--accent,#00ADB5); border-radius:0 10px 10px 0; padding:9px 13px; margin:0 0 14px; }
+  .cs-ov b.cs-ov-after{ color:var(--band-strong); }
+  .cs-ov-delta{ display:inline-block; font-size:12px; font-weight:800; color:#fff; background:var(--band-strong); border-radius:99px; padding:2px 10px; margin-top:3px; }
+  .cs-drill{ font-size:12.5px; color:#354052; line-height:1.6; background:#F5F7FA; border-left:3px solid var(--accent); border-radius:0 10px 10px 0; padding:9px 13px; margin:0 0 14px; }
 
   .cs-frows{ display:flex; flex-direction:column; gap:7px; }
   .cs-frow{ display:grid; grid-template-columns:minmax(190px,1.15fr) 1fr 34px 18px 1fr 34px 44px; gap:9px; align-items:center; font-size:12px; }
@@ -44,12 +46,12 @@
   .cs-bar i{ display:block; height:100%; border-radius:99px; }
   .cs-frow b{ font-variant-numeric:tabular-nums; font-size:12.5px; text-align:right; }
   .cs-arrow{ color:#9AA3AE; text-align:center; }
-  .cs-delta{ font-style:normal; font-size:11px; font-weight:800; color:var(--band-strong,#1F9D74); text-align:right; }
-  .cs-delta.down{ color:var(--band-focus,#C0392B); }
-  .bd-strong{ background:var(--band-strong,#1F9D74); } .b-strong{ color:var(--band-strong,#1F9D74); }
-  .bd-good{ background:var(--band-good,#3A6EA5); }   .b-good{ color:var(--band-good,#3A6EA5); }
-  .bd-dev{ background:var(--band-dev,#C29A45); }     .b-dev{ color:var(--band-dev,#C29A45); }
-  .bd-focus{ background:var(--band-focus,#C0392B); } .b-focus{ color:var(--band-focus,#C0392B); }
+  .cs-delta{ font-style:normal; font-size:11px; font-weight:800; color:var(--band-strong); text-align:right; }
+  .cs-delta.down{ color:var(--band-focus); }
+  .bd-strong{ background:var(--band-strong); } .b-strong{ color:var(--band-strong); }
+  .bd-good{ background:var(--band-good); }   .b-good{ color:var(--band-good); }
+  .bd-dev{ background:var(--band-dev); }     .b-dev{ color:var(--band-dev); }
+  .bd-focus{ background:var(--band-focus); } .b-focus{ color:var(--band-focus); }
 
   .cs-evidence{ margin-top:14px; border:1px solid rgba(34,40,49,.10); border-radius:12px; overflow:hidden; }
   .cs-evrow{ display:grid; grid-template-columns:1fr auto 18px auto; gap:10px; align-items:baseline; font-size:12px;
@@ -58,7 +60,7 @@
   .cs-evrow b{ font-variant-numeric:tabular-nums; color:#222831; }
   .cs-note{ font-size:12.5px; color:#4a5568; line-height:1.65; margin:14px 0 0; }
   .cs-all{ margin-top:14px; border-top:1px dashed rgba(34,40,49,.14); padding-top:12px; }
-  .cs-all summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--accent-deep,#048A91); user-select:none; margin-bottom:10px; }
+  .cs-all summary{ cursor:pointer; font-size:12.5px; font-weight:700; color:var(--accent-deep); user-select:none; margin-bottom:10px; }
   .cs-legend{ font-size:11px; color:#565D66; line-height:1.6; margin:4px 0 26px; text-align:center; }
   @media (max-width:760px){
     .cs-head{ flex-wrap:wrap; }

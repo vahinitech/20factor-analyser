@@ -9,14 +9,13 @@
    never disturbs a host page's own body/section styling.
    ============================================================ */
 #site-nav, #site-footer, .veil{
-  /* derive from the global theme tokens when present (site pages),
-     fall back to the Vahini brand defaults otherwise (e.g. Analyser) */
-  --nv-ink:var(--ink,#222831); --nv-elephant:var(--elephant,#393E46); --nv-muted:var(--muted,#565D66); --nv-hint:var(--hint,#828A93);
-  --nv-surface:var(--surface,#FFFFFF); --nv-surface-2:var(--surface-2,#E3E5E7); --nv-ivory:var(--ivory,#EEEEEE);
-  --nv-teal:var(--accent,#00ADB5); --nv-teal-deep:var(--accent-deep,#048A91); --nv-soft:var(--accent-soft,#DCF3F4);
-  --nv-hot:var(--hot,#C0080B); --nv-dark:var(--dark,#222831); --nv-dark-2:var(--dark-2,#1A1E24);
-  --nv-rule:var(--rule,rgba(34,40,49,.12)); --nv-rule-2:var(--rule-2,rgba(34,40,49,.22)); --nv-rule-on:var(--rule-on,rgba(238,238,238,.16));
-  --nv-serif:"Spectral",Georgia,serif; --nv-sans:"Hanken Grotesk",-apple-system,"Segoe UI",Roboto,sans-serif;
+  /* Every value comes from the Vahini design system (/site/design/v1/vahini.css). */
+  --nv-ink:var(--v-text); --nv-elephant:var(--v-text-2); --nv-muted:var(--v-text-muted); --nv-hint:var(--v-text-faint);
+  --nv-surface:var(--v-surface); --nv-surface-2:var(--v-surface-alt); --nv-ivory:var(--v-bg);
+  --nv-teal:var(--v-accent); --nv-teal-deep:var(--v-accent-strong); --nv-soft:var(--v-accent-soft);
+  --nv-hot:var(--v-highlight); --nv-dark:var(--v-dark); --nv-dark-2:var(--v-dark-2);
+  --nv-rule:var(--v-border); --nv-rule-2:var(--v-border-strong); --nv-rule-on:var(--v-border-on-dark);
+  --nv-serif:var(--v-font-serif); --nv-sans:var(--v-font-sans);
   --nv-h:72px; --nv-maxw:1200px; --nv-ease:cubic-bezier(.22,.61,.36,1);
   --nv-shadow:0 18px 60px rgba(34,40,49,.16);
   --live:#0F6E56; --live-bg:#DCF1E8; --dev:#8A5410; --dev-bg:#F6E9D4; --research:#46505B; --research-bg:#E0E3E6;
@@ -27,7 +26,7 @@
   backdrop-filter:saturate(140%) blur(12px); -webkit-backdrop-filter:saturate(140%) blur(12px);
   border-bottom:1px solid transparent; transition:border-color .3s, background .3s; font-family:var(--nv-sans);}
 #site-nav .nav.scrolled{border-bottom-color:var(--nv-rule); background:rgba(238,238,238,.95);}
-#site-nav .nav__in{max-width:var(--nv-maxw); margin:0 auto; height:var(--nv-h); display:flex; align-items:center; gap:26px; padding:0 28px;}
+#site-nav .nav__in{max-width:var(--nv-maxw); margin:0 auto; height:var(--nv-h); display:flex; align-items:center; gap:18px; padding:0 28px;}
 #site-nav .logo{display:flex; align-items:center; gap:12px; text-decoration:none; flex:0 0 auto;}
 #site-nav .logo img{width:clamp(46px,4.4vw,58px); height:clamp(46px,4.4vw,58px); border-radius:50%; transition:transform .2s var(--nv-ease);}
 #site-nav .logo:hover img{transform:scale(1.05);}
@@ -122,7 +121,11 @@
 .drawer__actions .btn--ghost{color:var(--nv-ink); border-color:var(--nv-rule-2);}
 .drawer__actions .btn--crimson{color:#fff; background:var(--nv-teal); border-color:var(--nv-teal);}
 
-@media (max-width:920px){
+/* This nav is 1200px wide at every size (the site's widens), so the
+   secondary button stays in the drawer and the drawer takes over at the
+   site's breakpoint; the menu never overflows. */
+#site-nav .actions .btn--ghost{display:none;}
+@media (max-width:1240px){
   #site-nav .menu, #site-nav .actions{display:none;}
   #site-nav .burger{display:flex;}
   #site-nav .nav__in{justify-content:space-between;}
