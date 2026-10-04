@@ -13,7 +13,11 @@ on:
   # not just README/CLAUDE.md/docs/** -- those are just examples. A
   # push/PR that touches even one non-doc file still runs everything;
   # paths-ignore only fires when EVERY changed file matches.
+  # push is main-only on purpose: a branch push plus its pull_request run
+  # built everything twice per commit, and the concurrency group below does
+  # not dedupe them because the two events have different refs.
   push:
+    branches: [main]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
@@ -32,9 +36,12 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Every job sets timeout-minutes: without it a hung step runs to the 360
+# minute default (15 runs burned 363 minutes each in July 2026).
 jobs:
   python-tests:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -91,6 +98,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -123,6 +131,7 @@ jobs:
   # layer via the GHA cache backend, so warm runs skip it entirely.
   e2e-recognition:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
