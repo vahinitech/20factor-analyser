@@ -156,7 +156,7 @@ CI runs all three suites on every push and pull request.
 
 ## Versioning
 
-Semantic versioning as written in [vahini-umbrella/docs/VERSIONING.md](https://github.com/vahinitech/vahini-umbrella/blob/main/docs/VERSIONING.md). `version` in `package.json` is the single source. A release bumps it, moves the `## Unreleased` lines in `CHANGELOG.md` under `## X.Y.Z - YYYY-MM-DD`, and tags `vX.Y.Z` on `main`; a new report `schema_version` is a major bump. The tags `v0.1` to `v0.7` predate this rule and stay. Consumers (`vahini-web`, the Android app through the contracts tag) pin a release tag rather than a commit once one exists.
+Semantic versioning as written in [Umbrella/docs/VERSIONING.md](https://github.com/vahinitech/Umbrella/blob/main/docs/VERSIONING.md). `version` in `package.json` is the single source. A release bumps it, moves the `## Unreleased` lines in `CHANGELOG.md` under `## X.Y.Z - YYYY-MM-DD`, and tags `vX.Y.Z` on `main`; a new report `schema_version` is a major bump. The tags `v0.1` to `v0.7` predate this rule and stay. Consumers (`vahini-web`, the Android app through the contracts tag) pin a release tag rather than a commit once one exists.
 
 ## Contributing and license
 
