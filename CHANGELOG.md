@@ -3,7 +3,7 @@
 All notable changes to the Vahini 20-Factor Handwriting Analyser are
 documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Versioning follows
-[vahini-umbrella/docs/VERSIONING.md](https://github.com/vahinitech/vahini-umbrella/blob/main/docs/VERSIONING.md):
+[Umbrella/docs/VERSIONING.md](https://github.com/vahinitech/Umbrella/blob/main/docs/VERSIONING.md):
 `version` in `package.json` is the single source, a release is the tag
 `v<version>` on `main`, and from the next release entries sit under
 `## X.Y.Z - YYYY-MM-DD`. Earlier entries are grouped by merge date. The tags
@@ -11,6 +11,8 @@ documented here. The format follows
 already said 3.1.0; they stay as they are.
 
 ## Unreleased
+
+- Follow the repository renames: `vahini-umbrella` is now `Umbrella` and `vahini-educational-books` is now `EdTechBooks`. Links and the copied `repo-landscape` skill use the new names; released entries keep the old ones.
 
 - Versioning policy adopted: `package.json` is the version source, releases
   are `vX.Y.Z` tags, changelog headings become versions from the next release.

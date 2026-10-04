@@ -5,7 +5,7 @@ description: Know which Vahini repository you are in, what it owns, who consumes
 
 cd "$(git rev-parse --show-toplevel)"
 
-Read the landscape page once per task: https://github.com/vahinitech/vahini-umbrella/blob/main/docs/REPOSITORIES.md (in the umbrella checkout: `docs/REPOSITORIES.md`).
+Read the landscape page once per task: https://github.com/vahinitech/Umbrella/blob/main/docs/REPOSITORIES.md (in the umbrella checkout: `docs/REPOSITORIES.md`).
 
 1. Name this repository and its role from the table. Check `CLAUDE.md` here for the local code map.
 2. List who consumes what you are changing. Services own contracts: `20factor-analyser` owns the report schemas, `vahini-learning-api` owns `openapi.json`. Consumers today: the Android app pins a contracts tag; `vahini-web` pins an analyser submodule commit (a pinned release is planned); `20factor-analyser-pro` reads analyser report JSON directly (moving to the compact contract is planned). `vahini-web` also pins `imu2text` (public, Apache-2.0) as a submodule and serves its `playground/` folder at playground.vahinitech.com; the page is changed in imu2text, then the pin moves. `vahini-web` owns the Vahini design system (`docs/DESIGN-SYSTEM.md`): every product links `/site/design/v1/vahini.css` and uses only `var(--v-*)` tokens and `v-*` classes, with no colour codes or fallbacks. Change a colour, font or spacing in `vahini-web` and every product follows; products are listed under `design:` in `input-manifest.yaml`. Public repositories (imu2text, 20factor-analyser) must not name private ones.

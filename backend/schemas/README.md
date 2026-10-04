@@ -51,7 +51,7 @@ import contract_schemas
 contract_schemas.validate("report-compact", body)   # raises ValueError with paths
 ```
 
-Client repositories (Android, web) can vendor this directory or take the copy kept in `vahini-umbrella/contracts/analyser/`, where these commands do not apply, and validate
+Client repositories (Android, web) can vendor this directory or take the copy kept in `Umbrella/contracts/analyser/`, where these commands do not apply, and validate
 recorded fixtures in their own tests with any draft-07 validator. Resolve
 `$ref` links to `common.schema.json` offline: every file carries an `$id`
 under `https://vahinitech.com/schemas/analyser/v2/`, and the files are not
