@@ -1,0 +1,1 @@
+- Changelog entries are files: each PR adds `changelog.d/<topic>.md`, and `scripts/changelog.py` validates them and folds them into CHANGELOG.md at release, so open PRs stop conflicting on the shared Unreleased lines.
