@@ -249,6 +249,18 @@ function applyServiceGate(){
   if (go) go.disabled = down || !state.imageEl;
 }
 
+/* Developer instructions (docker compose, ppocr-server.py) only make sense on
+   the machine running the server; visitors on vahinitech.com get plain words. */
+function onLocalHost(){
+  return ['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+}
+function serverDownTips(devTips){
+  return onLocalHost() ? devTips : [
+    'Wait a minute, then try again',
+    'If it keeps failing, tell us with the Feedback button',
+  ];
+}
+
 async function checkService(){
   const detail = $('#service-banner-detail');
   if (detail && serviceUp === null) detail.textContent = 'Checking connection…';
@@ -258,7 +270,9 @@ async function checkService(){
   if (detail){
     detail.textContent = serviceUp
       ? 'Connected.'
-      : 'Start it with docker compose up -d, or python backend/ppocr-server.py. It reconnects automatically.';
+      : (onLocalHost()
+        ? 'Start it with docker compose up -d, or python backend/ppocr-server.py. It reconnects automatically.'
+        : 'The analyser is busy or offline. It reconnects by itself, or press Retry now.');
   }
   applyServiceGate();
 }
@@ -402,11 +416,11 @@ async function runPipeline(){
     showReject({
       reason: 'Recognition server not reachable',
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
-      tips: [
+      tips: serverDownTips([
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
         'Or start it directly: python backend/ppocr-server.py',
         'Then reload this page and upload the photo again',
-      ],
+      ]),
     });
     return;
   }
@@ -452,12 +466,12 @@ async function runPipeline(){
     showReject({
       reason: 'Recognition server not reachable',
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
-        + (why ? ' (' + why + ')' : '') + '. Start the server and try again.',
-      tips: [
+        + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
+      tips: serverDownTips([
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
         'Or start it directly: python backend/ppocr-server.py',
         'Then reload this page and upload the photo again',
-      ],
+      ]),
     });
     return;
   }
@@ -579,11 +593,12 @@ async function finishIMU(){
     go('process');
     showReject({
       reason: 'Recognition server not reachable',
-      detail: 'The pen report is computed on the Vahini recognition server, which isn’t responding right now. Start the server and capture again.',
-      tips: [
+      detail: 'The pen report is computed on the Vahini recognition server, which isn’t responding right now.'
+        + (onLocalHost() ? ' Start the server and capture again.' : ''),
+      tips: serverDownTips([
         'Run the server: docker compose up -d',
         'Or start it directly: python backend/ppocr-server.py',
-      ],
+      ]),
     });
     return;
   }
