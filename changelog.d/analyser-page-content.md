@@ -1,0 +1,1 @@
+- The analyser page explains itself under the tool, in static HTML: what the free check gives you, how to take the photo in four steps, and six questions (is it free, what happens to the photo, which scripts, accuracy, personality, what the pen adds). It also carries a BreadcrumbList. The report is untouched.
