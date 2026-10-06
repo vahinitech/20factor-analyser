@@ -13,6 +13,15 @@
   {"@type":"ListItem","position":1,"name":"Home","item":"https://vahinitech.com/"},
   {"@type":"ListItem","position":2,"name":"Free handwriting check","item":"https://vahinitech.com/analyser/analyser.html"}]}
 </script>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Vahini Technologies">
+<meta property="og:title" content="Free Handwriting Check &amp; Analysis | Vahini Analyser">
+<meta property="og:description" content="Free handwriting analysis from one photo of a page: up to three priorities, common English spelling suggestions, coaching and short drills.">
+<meta property="og:url" content="https://vahinitech.com/analyser/analyser.html">
+<meta property="og:image" content="https://vahinitech.com/site/assets/og/index.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Free Handwriting Check &amp; Analysis | Vahini Analyser">
+<meta name="twitter:image" content="https://vahinitech.com/site/assets/og/index.jpg">
 <meta name="color-scheme" content="only light">
 <title>Free Handwriting Check &amp; Analysis | Vahini Analyser</title>
 <link rel="stylesheet" href="styles/report.css">
@@ -93,6 +102,8 @@
      see-it-before-you-scan links come first, then the upload work */
   .sample-cta-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1180px; margin:0 auto 20px; }
   @media (max-width:900px){ .sample-cta-row{ grid-template-columns:1fr; } }
+  /* phones: the two buttons stack full width instead of squeezing into narrow columns */
+  @media (max-width:560px){ .intake-split .actions{ flex-direction:column-reverse; align-items:stretch; } .intake-split .actions .btn{ justify-content:center; } }
   .sample-cta{ display:flex; align-items:center; gap:13px; padding:14px 16px;
     background:var(--v-surface); border:1px solid var(--rule); border-radius:14px;
     text-decoration:none; transition:border-color .15s, box-shadow .15s; }
@@ -110,8 +121,8 @@
 <!-- ============ STEP 1, UPLOAD ============ -->
 <section class="screen on" id="screen-upload">
   <div class="screen-head">
-    <div class="eyebrow">Vahini · Free handwriting review</div>
-    <h1>Upload a handwriting sample</h1>
+    <div class="eyebrow">Vahini · 20-factor handwriting analysis</div>
+    <h1>Free handwriting check: upload a photo of your page</h1>
     <p>Upload a clear handwritten page. Get up to three priorities, including a possible English spelling mistake when detected, followed by coaching and short drills. Built for school students and open to anyone who wants to practise.</p>
   </div>
 
