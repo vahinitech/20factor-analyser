@@ -1,0 +1,1 @@
+- The README links the hosted free handwriting check on vahinitech.com, so people who find the repository can try the analyser without installing it.
