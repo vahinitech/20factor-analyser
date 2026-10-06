@@ -85,3 +85,10 @@ docker compose up -d --wait                   # full stack for live recognition 
 ## Repository landscape
 
 This repository is `20factor-analyser`: the open (AGPL-3.0) handwriting analyser: OCR backends, computer vision, 20-factor scoring, the version-2 report API with server-owned Free/Pro access, public catalogue versions and worksheets. Product repositories, this one included: `Umbrella` (shared skills, `dev` script, repository map), `vahini-api-contracts` (planned home of the JSON Schema and OpenAPI contracts; today `Umbrella/contracts/`), `vahini_app` (Android app, to be renamed `android`), `vahini-learning-api` (homework service, undeployed closed pilot), `20factor-analyser` (open handwriting analyser and version-2 report API, AGPL), `20factor-analyser-pro` (commercial layer: report comparison), `vahini-web` (vahinitech.com, worksheet library, analyser proxy). Full table, dependency direction, planned renames and the change order: https://github.com/vahinitech/Umbrella/blob/main/docs/REPOSITORIES.md. Cross-repo order: service PR first, then the contracts sync and tag, then consumer PRs. Never change a consumer to match an unmerged service change. It owns the report contract (`backend/schemas/*.schema.json`, catalogue versions). Consumers: `vahini-web` (git submodule pinned to a commit, to become a pinned release), `vahini_app` (anonymous Free client of the compact API), `20factor-analyser-pro` (reads report JSON). Short form: `.claude/skills/repo-landscape/SKILL.md`.
+
+## Changelog entries are files
+
+Every PR adds its changelog entry as a new file, `changelog.d/<branch topic>.md`,
+and never edits `CHANGELOG.md`: shared lines under `## Unreleased` made every
+two open PRs conflict. `python3 scripts/changelog.py --check` validates the files (run in CI);
+a release folds them in with `--release X.Y.Z`. See `changelog.d/README.md`.
