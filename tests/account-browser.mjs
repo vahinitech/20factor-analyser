@@ -11,6 +11,8 @@ try {
  let request;
  await page.route('**/api/v2/reports?**',route=>{request=route.request();return route.fulfill({json:{ok:false,error_code:'no_handwriting',error:'Synthetic empty sample'}});});
  await page.goto('http://127.0.0.1:4187/frontend/analyser.html',{waitUntil:'networkidle'});
+ // The access key sits under the upload screen's "More options".
+ await page.getByText('More options',{exact:true}).click();
  await page.getByText('Have a Vahini access key?',{exact:true}).click();
  await page.locator('#account-key').fill('vh_synthetic_browser_test');
  await page.getByRole('button',{name:'Connect account',exact:true}).click();
