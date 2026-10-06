@@ -13,11 +13,16 @@
 
 /* Candidate endpoints, tried in order:
    1. an explicit window.VAHINI_OCR_ENDPOINT
-   2. the local PP-OCRv5 helper server (ppocr-server.py) on this machine */
+   2. same-origin /ocr
+   3. the local PP-OCRv5 helper server (ppocr-server.py) on this machine,
+      only when the page itself is local: on vahinitech.com it would send
+      every visitor's browser to a port on their own computer. */
+const PAGE_IS_LOCAL = ['localhost', '127.0.0.1', '[::1]', '']
+  .includes(((global.location || {}).hostname) || '');
 const CANDIDATES = [
   window.VAHINI_OCR_ENDPOINT || null,
   '/ocr',
-  'http://127.0.0.1:8080/ocr',
+  PAGE_IS_LOCAL ? 'http://127.0.0.1:8080/ocr' : null,
 ].filter(Boolean);
 
 const VL_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/analyze-vl'));

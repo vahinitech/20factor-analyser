@@ -122,6 +122,8 @@ jobs:
             echo "::error::engine.bundle.js is stale. Run 'python frontend/build_bundle.py' and commit it."
             exit 1
           fi
+      - name: Verify the OCR client never probes loopback on a public host
+        run: node tests/ocr-candidates.test.mjs
       - name: Browser PDF upload checks
         run: npm run test:pdf
       - name: Headless print/handwriting checks
