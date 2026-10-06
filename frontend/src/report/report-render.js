@@ -495,14 +495,18 @@ function render(host, data){
   const firstFactors=priorities.filter(p=>p.factor).map(p=>p.factor);
   const skillList=[...firstFactors,...measured.filter(f=>!firstFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n)];
   const skillName=f=>explanations[f.n]?.[0]||f.name;
+  const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
+    return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
   const skillCard=(f,i)=>{
     const c=crops[f.n], band=bandOf(f.score), first=firstFactors.includes(f);
+    const wholePage=wholePageCrop(c);
     const why=c&&c.url?(reasonFor(f.n,c.selection_method)||'Chosen from your page for this skill.'):'';
     return `<article class="skill-card band-${band}" data-factor="${f.n}">
       <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(skillName(f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small></b></div>
       <p class="sk-meta"><span class="sk-band">${esc(BAND_LABEL[band])}</span>${first?'<span class="sk-tag">Practise first</span>':''}</p>
       <p class="sk-meaning">${esc(meaning[f.n]||explanations[f.n]?.[1]||'')}</p>
-      ${c&&c.url?`<img class="sk-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}"><p class="sk-why">${esc(why)}</p>`
+      ${wholePage?'<p class="sk-why">Measured across your whole page, shown above.</p>'
+        :c&&c.url?`<img class="sk-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}"><p class="sk-why">${esc(why)}</p>`
         :'<p class="sk-none">No clear example of this skill was found on your page, so there is no crop to show.</p>'}
     </article>`;
   };
@@ -510,8 +514,9 @@ function render(host, data){
   const marks=skillList.map((f,i)=>{
     const c=crops[f.n], b=c&&c.bbox, s=c&&c.source_size;
     if(!Array.isArray(b)||b.length!==4||!Array.isArray(s)||s.length!==2) return '';
-    if(b[2]*b[3]>0.8*s[0]*s[1]) return '';   // whole-page skills: a box would hide the page
-    return `<g><rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}"/><text x="${b[0]}" y="${Math.max(b[1]-6,18)}">${i+1}</text></g>`;
+    if(wholePageCrop(c)) return '';   // whole-page skills: a box would hide the page
+    const fs=Math.round(s[0]*0.07);
+    return `<g><rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}"/><text x="${Math.max(b[0]-fs*0.7,0)}" y="${b[1]+fs*0.8}" font-size="${fs}" stroke-width="${Math.round(fs/6)}">${i+1}</text></g>`;
   }).join('');
   const size=skillList.map(f=>crops[f.n]?.source_size).find(s=>Array.isArray(s)&&s.length===2);
   const pagePhoto=free&&det?`<figure class="page-photo"><div class="pp-frame"><img src="${esc(det)}" alt="Your uploaded handwriting page">${marks&&size?`<svg viewBox="0 0 ${size[0]} ${size[1]}" preserveAspectRatio="none" aria-hidden="true">${marks}</svg>`:''}</div>
