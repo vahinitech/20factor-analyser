@@ -62,6 +62,7 @@
   @media (max-width:560px){ .screen-head h1{ font-size:30px; line-height:1.15; } }
   .dz-status{ font-size:var(--v-text-sm); color:var(--v-text-2); text-align:center; margin:8px 0 0; }
   .dz-status:empty{ display:none; }
+  .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
   .more-options{ margin:14px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); padding:10px 14px; }
   .more-options > summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); }
@@ -82,15 +83,12 @@
   @media (max-width:900px){ .ns-cards{ grid-template-columns:1fr; } }
   @media print{ .next-steps{ display:none !important; } }
   /* about the check: what you get, steps, questions (under the tool) */
-  /* upload page grid: upload | about (what you get + steps), then questions | video */
+  /* upload page: upload beside the video, then what you get | steps | questions */
   #screen-upload{ max-width:1180px; }
-  .check-layout{ display:grid; grid-template-columns:minmax(0,7fr) minmax(0,5fr); grid-template-areas:"upload side" "faq video"; gap:24px 28px; align-items:start; }
-  .cl-upload{ grid-area:upload; margin:0; }
-  .cl-side{ grid-area:side; background:var(--v-surface); border:1px solid var(--v-border); border-radius:var(--v-radius-lg); padding:var(--v-space-4) var(--v-space-5); display:grid; gap:22px; }
-  .cl-faq{ grid-area:faq; }
-  .cl-video{ grid-area:video; }
-  .intake-split--one{ grid-template-columns:1fr; }
-  .cl-upload .intake-split .dropzone--solo{ aspect-ratio:auto; min-height:290px; display:flex; align-items:center; justify-content:center; }
+  .check-layout{ display:grid; gap:24px; }
+  .cl-upload{ margin:0; }
+  .cl-info{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:start; }
+  .cl-info > .v-card{ padding:var(--v-space-4) var(--v-space-5); }
   .check-guide h2{ font:var(--v-weight-semibold) var(--v-text-lg)/1.25 var(--v-font-serif); color:var(--v-text); margin:4px 0 12px; }
   .check-guide p, .check-guide li{ color:var(--v-text-2); line-height:1.55; font-size:var(--v-text-sm); }
   .check-guide a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
@@ -101,9 +99,7 @@
   .cg-faq details{ border-bottom:1px solid var(--v-border); padding:12px 0; }
   .cg-faq summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); font-size:var(--v-text-sm); }
   .cg-faq details p{ margin:8px 0 0; }
-  @media (max-width:900px){
-    .check-layout{ grid-template-columns:minmax(0,1fr); grid-template-areas:"upload" "side" "video" "faq"; }
-  }
+  @media (max-width:900px){ .cl-info{ grid-template-columns:minmax(0,1fr); } }
 
   /* "what to upload" guidance: collapsed by default, opens on click */
   .upload-help{ max-width:760px; margin:16px auto 0; border:1px solid var(--rule); border-radius:14px; background:var(--v-surface); overflow:hidden; }
@@ -161,11 +157,11 @@
     <div><b>Recognition server unavailable</b><p id="service-banner-detail">Checking connection…</p></div>
     <button class="btn btn-ghost" id="service-retry" type="button">Retry now</button>
   </div>
-  <!-- Desktop: upload | what you get + steps, then questions | video. Phones stack in that order,
-       video before questions. All of it is static HTML, so crawlers and no-JS readers get it. -->
+  <!-- Upload beside the video, then what you get | steps | questions in three columns.
+       Phones stack them in that order. All static HTML, so crawlers and no-JS readers get it. -->
   <div class="check-layout">
   <div class="panel cl-upload">
-    <div class="intake-split intake-split--one">
+    <div class="intake-split">
      <div class="intake-col">
       <div class="intake-cap"><div class="eyebrow">Step 1 · Your sample</div><h3>Add a photo of your page</h3></div>
       <div class="dropzone dropzone--solo" id="dropzone">
@@ -189,8 +185,6 @@
     <!-- reference passage: hidden. With recognition the written text is read for
          you; without it the engine falls back to a standard sample passage. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
-
-    <p class="upload-links"><a href="sample-report.html" target="_blank" rel="noopener">See a sample report</a> · <a href="case-studies.html" target="_blank" rel="noopener">Three before and after stories</a></p>
 
     <details class="more-options" id="more-options">
       <summary>More options</summary>
@@ -253,11 +247,21 @@
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
      </div>
+
+     <!-- ============ HOW IT WORKS, EXPLAINER VIDEO ============ -->
+     <aside class="intake-aside">
+      <div class="intake-cap"><div class="eyebrow">Watch · 60 seconds</div><h3>How the 20 factors work</h3></div>
+      <div class="video-frame">
+        <iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe>
+      </div>
+      <p class="video-cap">See how Vahini turns one vague word, "messy", into twenty things you can actually measure and fix.</p>
+      <p class="upload-links video-links"><a href="sample-report.html" target="_blank" rel="noopener">See a sample report</a> · <a href="case-studies.html" target="_blank" rel="noopener">Three before and after stories</a></p>
+     </aside>
     </div>
   </div>
 
-  <aside class="cl-side check-guide" aria-label="About the free check">
-    <section aria-labelledby="cg-get">
+  <div class="cl-info">
+    <section class="v-card check-guide" aria-labelledby="cg-get">
       <div class="v-eyebrow">The free check</div>
       <h2 id="cg-get">What you get from one photo</h2>
       <ul class="cg-list">
@@ -266,7 +270,7 @@
         <li><b>Spelling suggestions.</b> Common English spelling mistakes, when the words on the page are clear enough to read.</li>
       </ul>
     </section>
-    <section aria-labelledby="cg-how">
+    <section class="v-card check-guide" aria-labelledby="cg-how">
       <div class="v-eyebrow">Four steps</div>
       <h2 id="cg-how">How the handwriting check works</h2>
       <ol class="cg-steps">
@@ -276,36 +280,25 @@
         <li><b>Practise your first priority for a week</b>, then check again with the same pen and paper and compare the two reports.</li>
       </ol>
     </section>
-  </aside>
-
-  <div class="cl-faq check-guide">
-      <section aria-labelledby="cg-faq">
-        <div class="v-eyebrow">Questions</div>
-        <h2 id="cg-faq">Before you upload</h2>
-        <div class="cg-faq">
-          <details><summary>Is the handwriting check free?</summary>
-            <p>Yes. The free check gives you up to three priorities with coaching and drills. A Pro report includes scores for all twenty factors.</p></details>
-          <details><summary>What happens to my photo?</summary>
-            <p>It is processed on Vahini's servers to make your report and used for that report only, unless you separately choose to help the research dataset. You can ask for your uploads and reports to be deleted at any time. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
-          <details><summary>Which handwriting can it read?</summary>
-            <p>English and Telugu today. More scripts follow as the dataset grows; the <a href="/practice.html">practice worksheets</a> already cover Hindi, Tamil, Kannada and Malayalam.</p></details>
-          <details><summary>How accurate is it?</summary>
-            <p>The scores come from the picture, so a clear, straight, evenly lit photo matters more than anything else. Pressure and speed are estimated from the ink, so treat those two as a guide rather than a measurement. Each factor's page explains <a href="/factors.html">what is measured and the target</a>.</p></details>
-          <details><summary>Does it say anything about personality?</summary>
-            <p>No. It measures how readable and even the writing is: letter shapes, spacing, alignment, size and slant. It is not graphology, and it is not a medical or educational assessment.</p></details>
-          <details><summary>What would the Vahini pen add?</summary>
-            <p>A photo shows the finished page. The <a href="/product.html">Vahini pen</a>, in development, records how the page was written while you write on ordinary paper, so stroke order, speed and pressure can be measured instead of estimated.</p></details>
-        </div>
-      </section>
+    <section class="v-card check-guide cl-faq" aria-labelledby="cg-faq">
+      <div class="v-eyebrow">Questions</div>
+      <h2 id="cg-faq">Before you upload</h2>
+      <div class="cg-faq">
+        <details><summary>Is the handwriting check free?</summary>
+          <p>Yes. The free check gives you up to three priorities with coaching and drills. A Pro report includes scores for all twenty factors.</p></details>
+        <details><summary>What happens to my photo?</summary>
+          <p>It is processed on Vahini's servers to make your report and used for that report only, unless you separately choose to help the research dataset. You can ask for your uploads and reports to be deleted at any time. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
+        <details><summary>Which handwriting can it read?</summary>
+          <p>English and Telugu today. More scripts follow as the dataset grows; the <a href="/practice.html">practice worksheets</a> already cover Hindi, Tamil, Kannada and Malayalam.</p></details>
+        <details><summary>How accurate is it?</summary>
+          <p>The scores come from the picture, so a clear, straight, evenly lit photo matters more than anything else. Pressure and speed are estimated from the ink, so treat those two as a guide rather than a measurement. Each factor's page explains <a href="/factors.html">what is measured and the target</a>.</p></details>
+        <details><summary>Does it say anything about personality?</summary>
+          <p>No. It measures how readable and even the writing is: letter shapes, spacing, alignment, size and slant. It is not graphology, and it is not a medical or educational assessment.</p></details>
+        <details><summary>What would the Vahini pen add?</summary>
+          <p>A photo shows the finished page. The <a href="/product.html">Vahini pen</a>, in development, records how the page was written while you write on ordinary paper, so stroke order, speed and pressure can be measured instead of estimated.</p></details>
+      </div>
+    </section>
   </div>
-
-  <aside class="cl-video intake-aside">
-    <div class="intake-cap"><div class="eyebrow">Watch · 60 seconds</div><h3>How the 20 factors work</h3></div>
-    <div class="video-frame">
-      <iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe>
-    </div>
-    <p class="video-cap">See how Vahini turns one vague word, "messy", into twenty things you can actually measure and fix.</p>
-  </aside>
   </div>
 </section>
 
