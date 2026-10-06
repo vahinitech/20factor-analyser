@@ -1,0 +1,1 @@
+- Visitors no longer see developer commands (`docker compose up`, `ppocr-server.py`) when the recognition server is down; they get a plain "busy or offline, try again" message. The commands still show on localhost.
