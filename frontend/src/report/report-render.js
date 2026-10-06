@@ -428,7 +428,7 @@ function render(host, data){
     : spelling.length ? 'Possible English spelling mistakes found. One is included in your three priorities. Confirm it against the original page; text reading can make mistakes.'
     : 'We did not find a spelling mistake from our limited list of common English words. We may miss other mistakes. We do not check grammar or other languages.';
   const title=esc(intake.writerName || 'Your handwriting');
-  const head=label=>`<div class="run-head"><span class="rh-mark"><span class="rh-dot"></span><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
+  const head=label=>`<div class="run-head"><span class="rh-mark"><img class="rh-logo" src="assets/vahini-logo.png" alt="" width="22" height="22"><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
   const foot=n=>`<div class="run-foot"><span>Free handwriting review</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
   const cardStyle='';
   const selectionReasons={
@@ -486,16 +486,44 @@ function render(host, data){
   const regionSummary=regionCount==null?'We could not count the handwriting parts in this upload.':
     `${regionCount} handwriting ${regionCount===1?'part':'parts'} found in your upload. A part may be a word or a line.`;
   const coverage=shownIds.size?`${shownIds.size} different ${shownIds.size===1?'part is':'parts are'} shown below for up to three priorities.`:'This free review focuses on up to three priorities.';
-  // Free access returns five factors and no evidence crops. The same two
-  // illustrated pages render for it; only the Pro note is added.
+  // Free access returns five factors, each with an example cropped from the
+  // visitor's photo. Page 1 shows the photo and all five; Pro keeps its
+  // three priority cards. Page 2 (practice) is the same for both.
   const free=analysis.access?.tier==='free';
+  const meaning={1:'Each letter has a clear, usual shape.',5:'Small letters stay the same height.',
+    7:'Words sit on the writing line.',8:'Even gaps between words.',18:'How easily someone else can read the page.'};
+  const firstFactors=priorities.filter(p=>p.factor).map(p=>p.factor);
+  const skillList=[...firstFactors,...measured.filter(f=>!firstFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n)];
+  const skillName=f=>explanations[f.n]?.[0]||f.name;
+  const skillCard=(f,i)=>{
+    const c=crops[f.n], band=bandOf(f.score), first=firstFactors.includes(f);
+    const why=c&&c.url?(reasonFor(f.n,c.selection_method)||'Chosen from your page for this skill.'):'';
+    return `<article class="skill-card band-${band}" data-factor="${f.n}">
+      <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(skillName(f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small></b></div>
+      <p class="sk-meta"><span class="sk-band">${esc(BAND_LABEL[band])}</span>${first?'<span class="sk-tag">Practise first</span>':''}</p>
+      <p class="sk-meaning">${esc(meaning[f.n]||explanations[f.n]?.[1]||'')}</p>
+      ${c&&c.url?`<img class="sk-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}"><p class="sk-why">${esc(why)}</p>`
+        :'<p class="sk-none">No clear example of this skill was found on your page, so there is no crop to show.</p>'}
+    </article>`;
+  };
+  const det=data.detURL||'';
+  const marks=skillList.map((f,i)=>{
+    const c=crops[f.n], b=c&&c.bbox, s=c&&c.source_size;
+    if(!Array.isArray(b)||b.length!==4||!Array.isArray(s)||s.length!==2) return '';
+    if(b[2]*b[3]>0.8*s[0]*s[1]) return '';   // whole-page skills: a box would hide the page
+    return `<g><rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}"/><text x="${b[0]}" y="${Math.max(b[1]-6,18)}">${i+1}</text></g>`;
+  }).join('');
+  const size=skillList.map(f=>crops[f.n]?.source_size).find(s=>Array.isArray(s)&&s.length===2);
+  const pagePhoto=free&&det?`<figure class="page-photo"><div class="pp-frame"><img src="${esc(det)}" alt="Your uploaded handwriting page">${marks&&size?`<svg viewBox="0 0 ${size[0]} ${size[1]}" preserveAspectRatio="none" aria-hidden="true">${marks}</svg>`:''}</div>
+      <figcaption>Your page. ${marks?'Each number marks where the example for that skill comes from.':'The examples below are cut from this photo.'}</figcaption></figure>`:'';
+  const skillsBlock=free&&skillList.length?`<h3>Your ${skillList.length===5?'five':skillList.length} skills, with examples from your page</h3><div class="skill-grid">${skillList.map(skillCard).join('')}</div>`:'';
   const worksheetLibrary=(window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com')+'/practice.html';
   const pages=[
     `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
       <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p></div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
-      <p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
+      ${free&&skillsBlock?`${pagePhoto}${skillsBlock}`:`<p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
       <h3>${maintenance?'Keep these strengths':priorities.length===1?'Your one thing to practise':`Your ${['','one','two','three'][priorities.length]||priorities.length} things to practise`}</h3>
-      ${reportCards||empty}
+      ${reportCards||empty}`}
       <p class="spelling-status">${esc(spellingStatus)}</p>
       ${rec.printed_lines>0?`<p class="report-note">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
       <p class="report-note">Scores are practice guides, not school grades. Turn over for examples and space to try them.</p>${foot(1)}</section>`,
@@ -503,7 +531,7 @@ function render(host, data){
       <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
       ${coaching||empty}
       <div class="guided-support"><h3>Demo handwriting report</h3><p>This PDF shows an example of your review and practice steps. Use Vahini App to explore your results.</p></div>
-      ${free?`<div class="guided-support pro-note"><h3>More detail with Pro</h3><p>This free review scores ${measured.length} skills. Pro adds the other ${Math.max(0,20-analysis.results.length)} skills, the examples from your page and worksheets chosen for you. <a href="${esc(worksheetLibrary)}">Browse the free worksheet library</a></p></div>`:''}
+      ${free?`<div class="guided-support pro-note"><h3>More detail with Pro</h3><p>This free review scores ${measured.length} skills. Pro adds the other ${Math.max(0,20-analysis.results.length)} skills, the scoring details behind each one and worksheets chosen for you. <a href="${esc(worksheetLibrary)}">Browse the free worksheet library</a></p></div>`:''}
       <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');

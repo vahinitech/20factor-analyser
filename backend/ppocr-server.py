@@ -838,7 +838,9 @@ async def api_report(
     fields = set(filter(None, include.split(",")))
     if fields - compact_reports.OPTIONAL_FIELDS:
         raise HTTPException(422, "Unsupported include field")
-    if fields - {"text"} and access["tier"] != "pro":
+    # Free may request text and the evidence crops for its own five
+    # factors; scoring inputs and coaching stay Pro.
+    if fields - {"text", "evidence"} and access["tier"] != "pro":
         raise HTTPException(403, "Requested report details require Pro")
     if format == "compact":
         payload = await _report_payload(

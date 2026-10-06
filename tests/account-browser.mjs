@@ -24,6 +24,6 @@ try {
  await page.getByRole('button',{name:'Disconnect',exact:true}).click();
  await page.evaluate(()=>VahiniOCR.serverPythonReport(new Blob(['synthetic']),'test'));
  assert.equal(request.headers().authorization,undefined);
- assert.equal(new URL(request.url()).searchParams.get('include'),'text');
+ assert.equal(new URL(request.url()).searchParams.get('include'),'text,evidence');
  console.log('PASS browser key handoff, Pro fields, cleared input, no persisted key and Free after disconnect');
 } finally {if(browser)await browser.close();server.kill();}

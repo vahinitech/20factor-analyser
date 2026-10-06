@@ -7,8 +7,8 @@ const window={location:{href:'https://example.test/analyser/',origin:'https://ex
 const context={window,URL};vm.createContext(context);
 vm.runInContext(fs.readFileSync('frontend/src/engine/account.js','utf8'),context);
 const account=window.VahiniAccount;
-let request=await account.request('/api/v2/reports?format=compact&include=text');
-assert.equal(new URL(request.url).searchParams.get('include'),'text');
+let request=await account.request('/api/v2/reports?format=compact&include=text,evidence');
+assert.equal(new URL(request.url).searchParams.get('include'),'text,evidence');
 assert.equal(request.options.headers.Authorization,undefined);
 tier='pro';await account.connect('vh_synthetic_test_only');
 request=await account.request('/api/v2/reports?format=compact');
@@ -23,6 +23,6 @@ status=401;await assert.rejects(account.request('/api/v2/reports'));
 account.disconnect();assert.equal(account.hasKey(),false);
 status=200;tier='free';await account.connect('vh_synthetic_free');
 request=await account.request('/api/v2/reports');
-assert.equal(new URL(request.url).searchParams.get('include'),'text');
+assert.equal(new URL(request.url).searchParams.get('include'),'text,evidence');
 assert.equal(calls.at(-1).options.cache,'no-store');
 console.log('PASS server-resolved Free/Pro, per-scan recheck, memory credential, cross-origin rejection and disconnect');

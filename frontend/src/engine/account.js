@@ -33,7 +33,7 @@
     const secret=key,attempt=generation;
     const access=await identity(secret);
     if(attempt!==generation)throw new Error('Account changed. Please start the scan again.');
-    target.searchParams.set('include',access.tier==='pro'?'text,inputs,coaching,evidence':'text');
+    target.searchParams.set('include',access.tier==='pro'?'text,inputs,coaching,evidence':'text,evidence');
     return {url:target.href,options:{headers:secret?{Authorization:'Bearer '+secret}:{},credentials:'same-origin',redirect:'error',cache:'no-store'},access};
   }
   global.VahiniAccount={connect,request,disconnect,hasKey(){return !!key;}};

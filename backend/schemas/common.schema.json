@@ -571,7 +571,7 @@
     },
     "factorRegions": {
       "type": "object",
-      "description": "Keyed by factor number as a string. Present only with Pro evidence. Sensor-only factors carry status 'unavailable' with an empty url.",
+      "description": "Keyed by factor number as a string. Present only when evidence is requested: all twenty factors for Pro, the five Free factors otherwise. Sensor-only factors carry status 'unavailable' with an empty url.",
       "propertyNames": {
         "pattern": "^([1-9]|1[0-9]|20)$"
       },

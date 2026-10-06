@@ -246,8 +246,9 @@ def common():
             "factorRegions": {
                 "type": "object",
                 "description": (
-                    "Keyed by factor number as a string. Present only with "
-                    "Pro evidence. Sensor-only factors carry status "
+                    "Keyed by factor number as a string. Present only when "
+                    "evidence is requested: all twenty factors for Pro, the "
+                    "five Free factors otherwise. Sensor-only factors carry status "
                     "'unavailable' with an empty url."
                 ),
                 "propertyNames": {"pattern": NUMBER_KEY},
@@ -761,7 +762,15 @@ def compact():
                 "properties": {
                     "inputs": False,
                     "coaching": False,
-                    "evidence": False,
+                    "evidence": {
+                        "properties": {
+                            "factor_regions": {
+                                "propertyNames": {
+                                    "enum": [str(n) for n in FREE]
+                                }
+                            }
+                        }
+                    },
                     "factors": {
                         "maxItems": len(FREE),
                         "items": {"properties": {"n": {"enum": FREE}}},
