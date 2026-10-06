@@ -114,7 +114,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/ocr-candidates.test.mjs
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs
       - name: Verify the packed bundle is in sync with src/
         run: |
           python3 frontend/build_bundle.py
@@ -122,6 +122,8 @@ jobs:
             echo "::error::engine.bundle.js is stale. Run 'python frontend/build_bundle.py' and commit it."
             exit 1
           fi
+      - name: Verify the OCR client never probes loopback on a public host
+        run: node tests/ocr-candidates.test.mjs
       - name: Browser PDF upload checks
         run: npm run test:pdf
       - name: Headless print/handwriting checks
