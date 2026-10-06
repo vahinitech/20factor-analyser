@@ -1,0 +1,1 @@
+- The analyser pages load their scripts and stylesheets as `?v=<content hash>` URLs, written by `build_bundle.py`. Cloudflare and browsers keep these files for 30 days, so after a release visitors were getting the new page with the old code. CI fails when a stamp is stale.
