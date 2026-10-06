@@ -12,8 +12,6 @@ already said 3.1.0; they stay as they are.
 
 ## Unreleased
 
-- The note under the upload box no longer says the analysis starts automatically. It said "no extra steps", but the report starts only when the visitor presses Run analysis.
-
 - The analyser page's heading now reads "Free handwriting check: upload a photo of your page", the page carries Open Graph and Twitter tags, and on phones the two upload buttons stack full width instead of wrapping inside narrow columns. The report is untouched.
 
 - The analyser page's title and search description lead with what it costs: "Free Handwriting Check & Analysis". The page itself is unchanged.

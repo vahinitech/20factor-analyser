@@ -1,0 +1,1 @@
+- The note under the upload box no longer says the analysis starts automatically. It said "no extra steps", but the report starts only when the visitor presses Run analysis.
