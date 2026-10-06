@@ -1,0 +1,1 @@
+- The browser only tries the local helper server at `127.0.0.1:8080` when the page itself is served locally. On vahinitech.com every visitor's browser used to probe that port on their own computer.
