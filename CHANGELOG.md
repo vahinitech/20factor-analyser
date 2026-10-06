@@ -12,6 +12,8 @@ already said 3.1.0; they stay as they are.
 
 ## Unreleased
 
+- Visitors no longer see developer commands (`docker compose up`, `ppocr-server.py`) when the recognition server is down; they get a plain "busy or offline, try again" message. The commands still show on localhost.
+
 - The analyser page's title and search description lead with what it costs: "Free Handwriting Check & Analysis". The page itself is unchanged.
 
 - Follow the repository renames: `vahini-umbrella` is now `Umbrella` and `vahini-educational-books` is now `EdTechBooks`. Links and the copied `repo-landscape` skill use the new names; released entries keep the old ones.
