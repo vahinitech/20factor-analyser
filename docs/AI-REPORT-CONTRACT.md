@@ -8,10 +8,12 @@ The owner, @vkosuri, decides what the report looks like. Agents and contributors
 
 **The baseline** is the two-page illustrated report from #49, re-enabled for Free access in the fix that followed:
 
-1. **Page 1, "Your free review":** the Vahini running head, the writer's name, the score out of 100, up to three priority cards (each with its reason and its evidence from the page, when that evidence is available), the spelling status and the page footer.
+1. **Page 1, "Your free review":** the Vahini running head with the logo, the writer's name, the score out of 100 and, when this browser holds an earlier check, one line with the change since then. For **Free**, next comes the visitor's uploaded photo with a numbered box where each example was cut, then **all five Free factors** as cards: score out of 10 (with the earlier score, if any), band, a one-line meaning, "Practise first" on the priorities, and the example **cropped from the visitor's own photo**. A whole-page factor (legibility) says it is measured across the page shown above. For **Pro**, up to three priority cards (each with its reason and its evidence from the page) as before. Then the spelling status and the page footer.
 2. **Page 2, "See it, try it, check it":** one coaching card per priority, each with a handwriting example, practice lines and a self-check, followed by the demo-report note and, for Free access, the note on what Pro adds.
 
 The Pro report keeps its existing pages. Every tier, the sample report and the printed PDF go through the same `render()` in `frontend/src/report/report-render.js`, styled by `frontend/styles/report.css` and `frontend/styles/report-fonts.css`.
+
+Free page 1 changed to the five-factor layout with photo evidence on 2026-10-06, approved by the owner. Free evidence is never a stock or synthetic example: every crop comes from the photo the visitor uploaded, and a factor with no usable crop says so instead of showing something else. Locked factors never send or show crops.
 
 **Do not, without the owner's explicit approval in the issue or PR:**
 

@@ -68,7 +68,7 @@ async function runHeadlessChecks() {
     const result=await page.evaluate(() => window.__testResults);
     const layout=await checkReportLayout(page);
     result.results.push(...layout);
-    // Free access (five factors, no crops) must get the same illustrated
+    // Free access (five factors, crops from the visitor's photo) must get the same illustrated
     // pages as the stylesheet expects, not a separate unstyled summary.
     const free=await browser.newPage();
     await free.goto(`${BASE_URL}/frontend/sample-report.html`, { waitUntil: 'load' });
@@ -81,6 +81,13 @@ async function runHeadlessChecks() {
         inline:[...document.querySelectorAll('#report-host [style]')].filter(e=>/grid-template-columns|max-width/.test(e.getAttribute('style'))).length,
         cards:document.querySelectorAll('#report-host .priority-card').length,
         practice:document.querySelectorAll('#report-host .coaching-card .writing-lines').length,
+        // Free page 1 (owner-approved 2026-10-06): five skill cards, each with a
+        // crop from the visitor's photo or a note saying why there is none.
+        skills:document.querySelectorAll('#report-host .skill-card').length,
+        skillsExplained:[...document.querySelectorAll('#report-host .skill-card')].every(c=>c.querySelector('.sk-crop,.sk-none,.sk-why')),
+        photo:!!document.querySelector('#report-host .page-photo img'),
+        firstFactors:[...document.querySelectorAll('#report-host .skill-card')].filter(c=>c.querySelector('.sk-tag')).map(c=>c.dataset.factor).sort(),
+        practiceFactors:[...document.querySelectorAll('#report-host .coaching-card')].map(c=>c.dataset.factor).filter(f=>/^\d+$/.test(f)).sort(),
         heading:[...document.querySelectorAll('#report-host h3')].map(h=>h.textContent).find(t=>/to practise|strengths/.test(t))||'',
         pro:document.querySelector('#report-host .pro-note')?.textContent||''
       };
@@ -88,7 +95,10 @@ async function runHeadlessChecks() {
     await free.close();
     result.results.push(
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(255, 253, 248)' && freeReport.inline===0, name:'Free report renders the two styled report pages', detail:JSON.stringify(freeReport)},
-      {ok:freeReport.cards>0 && freeReport.cards===freeReport.practice, name:'Free report pairs each priority with practice space'},
+      {ok:freeReport.practice>0 && freeReport.firstFactors.length>0 && JSON.stringify(freeReport.firstFactors)===JSON.stringify(freeReport.practiceFactors), name:'Free report pairs each priority with practice space', detail:JSON.stringify({first:freeReport.firstFactors,practice:freeReport.practiceFactors})},
+      // The sample report is synthetic and has no photo; a real scan's photo and
+      // crops are checked against the live service, not here.
+      {ok:freeReport.skills===5 && freeReport.skillsExplained, name:'Free report shows all five skills, each with its example or a reason', detail:JSON.stringify({skills:freeReport.skills,explained:freeReport.skillsExplained,photo:freeReport.photo})},
       {ok:!/three/.test(freeReport.heading) || freeReport.cards===3, name:'Free priority heading matches the number of cards', detail:freeReport.heading},
       {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'}
     );
