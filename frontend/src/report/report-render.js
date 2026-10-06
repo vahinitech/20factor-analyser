@@ -349,7 +349,7 @@ function applyPenDynamics(analysis, imu){
 }
 
 function render(host, data){
-  const {analysis, intake={}, recognizedText='', crops={}, imu=null}=data;
+  const {analysis, intake={}, recognizedText='', crops={}, imu=null, history=null}=data;
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
@@ -495,6 +495,13 @@ function render(host, data){
   const firstFactors=priorities.filter(p=>p.factor).map(p=>p.factor);
   const skillList=[...firstFactors,...measured.filter(f=>!firstFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n)];
   const skillName=f=>explanations[f.n]?.[0]||f.name;
+  // The last check saved in this browser, for "was" scores and the change line.
+  const prev=history&&history.date?history:null;
+  const prevScore=Object.fromEntries((prev&&Array.isArray(prev.factors)?prev.factors:[]).map(f=>[f.n,f.score]));
+  const fmtDay=d=>{const t=new Date(d+'T00:00:00');return Number.isNaN(t.getTime())?d:t.toLocaleDateString('en-GB',{day:'numeric',month:'long'});};
+  const overallNow=Number.isFinite(analysis.overallMeasured??analysis.overall)?(analysis.overallMeasured??analysis.overall):null;
+  const sinceLine=prev&&Number.isFinite(prev.overall)&&overallNow!=null
+    ?`<p class="since-last">Since your check on ${esc(fmtDay(prev.date))}: ${esc(String(prev.overall))} → ${esc(String(overallNow))} out of 100 (${overallNow-prev.overall>0?'+':''}${esc(String(overallNow-prev.overall))}). Earlier scores are saved only in this browser.</p>`:'';
   const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
     return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
   const skillCard=(f,i)=>{
@@ -502,7 +509,7 @@ function render(host, data){
     const wholePage=wholePageCrop(c);
     const why=c&&c.url?(reasonFor(f.n,c.selection_method)||'Chosen from your page for this skill.'):'';
     return `<article class="skill-card band-${band}" data-factor="${f.n}">
-      <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(skillName(f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small></b></div>
+      <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(skillName(f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small>${Number.isFinite(prevScore[f.n])?`<small class="sk-was"> was ${esc(prevScore[f.n].toFixed(1))}</small>`:''}</b></div>
       <p class="sk-meta"><span class="sk-band">${esc(BAND_LABEL[band])}</span>${first?'<span class="sk-tag">Practise first</span>':''}</p>
       <p class="sk-meaning">${esc(meaning[f.n]||explanations[f.n]?.[1]||'')}</p>
       ${wholePage?'<p class="sk-why">Measured across your whole page, shown above.</p>'
@@ -525,7 +532,7 @@ function render(host, data){
   const worksheetLibrary=(window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com')+'/practice.html';
   const pages=[
     `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
-      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p></div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
+      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p>${free?sinceLine:''}</div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
       ${free&&skillsBlock?`${pagePhoto}${skillsBlock}`:`<p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
       <h3>${maintenance?'Keep these strengths':priorities.length===1?'Your one thing to practise':`Your ${['','one','two','three'][priorities.length]||priorities.length} things to practise`}</h3>
       ${reportCards||empty}`}

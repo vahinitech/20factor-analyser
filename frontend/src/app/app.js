@@ -315,15 +315,22 @@ function setupPassages(){
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
+/* Earlier checks, kept only in this browser's localStorage. A visitor who
+   gives no name has one anonymous history. "Try a sample" runs are neither
+   compared nor saved: they are not the visitor's handwriting. */
 function loadHistory(name){
+  if (window.VAHINI_SAMPLE_RUN) return null;
   try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    const mine=h.filter(e=>e.name && name && e.name.toLowerCase()===name.toLowerCase());
+    const key=(name||'').toLowerCase();
+    const mine=h.filter(e=>(e.name||'').toLowerCase()===key);
     return mine.length? mine[mine.length-1] : null; }catch(e){ return null; }
 }
-function saveHistory(name, overall, sections){
+function saveHistory(name, overall, sections, results){
+  if (window.VAHINI_SAMPLE_RUN) return;
   try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    h.push({ name, date:new Date().toISOString().slice(0,10), overall,
-      sections:(sections||[]).map(s=>({id:s.id,avg100:s.avg100})) });
+    h.push({ name:name||'', date:new Date().toISOString().slice(0,10), overall,
+      sections:(sections||[]).map(s=>({id:s.id,avg100:s.avg100})),
+      factors:(results||[]).filter(f=>!f.unmeasured && Number.isFinite(f.score)).map(f=>({n:f.n,score:f.score})) });
     localStorage.setItem('vahini_history', JSON.stringify(h.slice(-60))); }catch(e){}
 }
 
@@ -504,7 +511,7 @@ async function runPipeline(){
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
-  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);
+  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
   await sleep(400);
   go('report');
@@ -620,7 +627,7 @@ async function finishIMU(){
     pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
     imu: summary,
   });
-  saveHistory(state.intake.writerName, analysis.overall, analysis.sections);
+  saveHistory(state.intake.writerName, analysis.overall, analysis.sections, analysis.results);
   go('report');
 }
 
