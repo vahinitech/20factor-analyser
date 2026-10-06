@@ -7,3 +7,10 @@ Read [CLAUDE.md](CLAUDE.md), [report contract guidance](docs/AI-REPORT-CONTRACT.
 This is a separate open-source Git repository. The consuming website pins a companion commit. Do not bypass server-owned entitlements, edit generated bundles directly, or infer production deployment permission from an implementation task.
 
 Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriting analyser: OCR backends, computer vision, 20-factor scoring, the version-2 report API with server-owned Free/Pro access, public catalogue versions and worksheets). The product repos are `Umbrella`, `vahini-api-contracts` (planned), `vahini_app` (to be renamed `android`), `vahini-learning-api`, `20factor-analyser`, `20factor-analyser-pro` and `vahini-web`. Before touching a pin, a contract, a repo reference or another repository, read https://github.com/vahinitech/Umbrella/blob/main/docs/REPOSITORIES.md and use `.claude/skills/repo-landscape/SKILL.md`. Cross-repo order: service PR first, then the contracts sync and tag, then consumer PRs. Never change a consumer to match an unmerged service change.
+
+## Changelog entries are files
+
+Every PR adds its changelog entry as a new file, `changelog.d/<branch topic>.md`,
+and never edits `CHANGELOG.md`: shared lines under `## Unreleased` made every
+two open PRs conflict. `python3 scripts/changelog.py --check` validates the files (run in CI);
+a release folds them in with `--release X.Y.Z`. See `changelog.d/README.md`.

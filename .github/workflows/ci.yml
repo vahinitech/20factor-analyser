@@ -114,7 +114,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && python3 scripts/changelog.py --check
       - name: Verify the packed bundle is in sync with src/
         run: |
           python3 frontend/build_bundle.py
