@@ -10,6 +10,10 @@ compact, explainable 20-factor report: letter formation, spacing, baseline,
 slant, pressure, speed and more. Every score is a real measurement with a
 published reference range and a crop from your own page as evidence.
 
+**Try it without installing anything:** the
+[free handwriting check](https://vahinitech.com/analyser/analyser.html) on
+vahinitech.com runs this analyser. Upload one photo of a handwritten page.
+
 > **Not a diagnostic tool.** For handwriting improvement, education and
 > skill-building only. It makes no medical, psychological or personality claims.
 
