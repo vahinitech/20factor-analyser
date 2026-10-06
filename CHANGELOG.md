@@ -12,6 +12,8 @@ already said 3.1.0; they stay as they are.
 
 ## Unreleased
 
+- The browser only tries the local helper server at `127.0.0.1:8080` when the page itself is served locally. On vahinitech.com every visitor's browser used to probe that port on their own computer.
+
 - The analyser page's title and search description lead with what it costs: "Free Handwriting Check & Analysis". The page itself is unchanged.
 
 - Follow the repository renames: `vahini-umbrella` is now `Umbrella` and `vahini-educational-books` is now `EdTechBooks`. Links and the copied `repo-landscape` skill use the new names; released entries keep the old ones.
