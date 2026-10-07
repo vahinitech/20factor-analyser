@@ -836,3 +836,9 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .compact-report .sk-why, .compact-report .sk-none{ font-size:9.5px; color:var(--v-text-2); margin:3px 0 0; }
 .compact-report .since-last{ font-size:12px; color:var(--v-accent-text); font-weight:600; margin:4px 0 0; }
 .compact-report .sk-was{ display:block; text-align:right; font-size:9.5px; font-weight:400; color:var(--v-text-2); }
+/* #84: the practice sheet under each practice card (page 2) */
+.compact-report .practice-sheet{ margin:6px 0 0; padding-top:6px; border-top:1px dashed var(--v-border); font-size:11px; color:var(--v-text-2); }
+.compact-report .practice-sheet a{ color:var(--v-accent-text); font-weight:600; }
+/* #82: a skill that rose since the last check in this browser (page 1) */
+.compact-report .sk-better{ margin:2px 0 4px; font-size:10.5px; }
+.compact-report .sk-better span{ background:var(--v-success-bg); color:var(--v-success); border-radius:4px; padding:1px 6px; font-weight:600; }
