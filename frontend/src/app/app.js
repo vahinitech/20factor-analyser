@@ -8,7 +8,6 @@
 'use strict';
 const $ = s=>document.querySelector(s);
 const $$ = s=>[...document.querySelectorAll(s)];
-const sleep = ms=>new Promise(r=>setTimeout(r,ms));
 
 function serverFactorCrops(vl){
   const m = (vl && vl.factor_regions) ? vl.factor_regions : null;
@@ -238,6 +237,7 @@ function showSample(img, url){
   $('#dz-preview').src = url; $('#dz-preview').style.display='block';
   $('#dz-clear').style.display='block';
   $('#dz-prompt').style.display='none';
+  if (!window.VAHINI_SAMPLE_RUN) setDzStatus(photoWarning(img));
   applyServiceGate();
 }
 
@@ -250,7 +250,7 @@ function handleSample(file){
     setDzStatus('Reading PDF…');
     pdfFirstPageToImage(file).then(({ img, url, pages })=>{
       showSample(img, url);
-      setDzStatus(pages > 1 ? 'PDF has ' + pages + ' pages: only page 1 is analysed.' : '');
+      if (pages > 1) setDzStatus('PDF has ' + pages + ' pages: only page 1 is analysed.');
     }).catch(err=>{
       setDzStatus((err && err.message) ? err.message : 'Could not read this PDF.');
     });
@@ -372,13 +372,10 @@ function saveHistory(name, overall, sections, results){
 
 /* ---------- the pipeline ---------- */
 const STEPS = [
-  { id:'load', t:'Capture & normalise', d:'Decoding photo, downscaling for analysis' },
-  { id:'gray', t:'Grayscale + denoise', d:'Luminance conversion (§4 step 1)' },
-  { id:'bin',  t:'Binarization', d:'Otsu / adaptive threshold: ink vs paper' },
-  { id:'seg',  t:'Segment lines & words', d:'Connected components + gap thresholding' },
-  { id:'ocr',  t:'Text detect + recognise', d:'Detection boxes & recognition' },
-  { id:'meas', t:'Review handwriting factors', d:'Deterministic CV geometry (§4C)' },
-  { id:'score',t:'Aggregate & narrate', d:'Section weights → overall → report' },
+  { id:'load', t:'Prepare your photo', d:'Resized in your browser for a quick upload' },
+  { id:'ocr',  t:'Read and measure your page', d:'On Vahini\u2019s server: lines, words, letters and the 20 factors' },
+  { id:'meas', t:'Review handwriting factors', d:'Scores for the skills in your report' },
+  { id:'score',t:'Build your report', d:'Priorities, examples and practice' },
 ];
 function renderLog(){
   $('#proc-log-steps').innerHTML = STEPS.map(s=>`<div class="log-step" id="ls-${s.id}">
@@ -418,14 +415,65 @@ function showReject(rej){
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
 
-/* Rasterise an HTMLImageElement to a PNG blob to POST to the server. */
+/* The photo as uploaded: JPEG, long side capped at the server's own working
+   size (VAHINI_OCR_MAX_SIDE, 2600), which it would resize to anyway. A full-
+   size PNG was 1.2 MB for a 960x1280 photo and 6.1 MB for 3024x4032; the JPEG
+   is 236 KB and 757 KB with the same overall scores (74/74, 73/73) and
+   factor scores within 0.2 (measured on stage, 2026-10-07). */
+const UPLOAD_MAX_SIDE = 2600;
 function imageToBlob(img){
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+  const s = Math.min(1, UPLOAD_MAX_SIDE / Math.max(w0, h0));
   const c = document.createElement('canvas');
-  c.width = img.naturalWidth || img.width;
-  c.height = img.naturalHeight || img.height;
+  c.width = Math.max(1, Math.round(w0 * s));
+  c.height = Math.max(1, Math.round(h0 * s));
   const ctx = c.getContext('2d');
-  ctx.drawImage(img, 0, 0);
-  return VahiniOCR.canvasToBlob(c);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);  // transparent PNGs
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return new Promise(res=>{
+    if (!c.toBlob) return res(null);
+    c.toBlob(b=>res(b || null), 'image/jpeg', 0.92);
+  }).then(b=>b || VahiniOCR.canvasToBlob(c));
+}
+
+/* Warn, before upload, about the two photo problems that measurably change
+   the scores. Calibrated on stage (2026-10-07): a blurred copy of the test
+   page scored 68 or 49 against 73 and a quarter-size copy 53, while a dark
+   copy still scored 73, so darkness is not flagged. Sharpness is the
+   variance of the Laplacian on a grey copy 800 px on its long side, divided
+   by that copy's own variance so a dark photo (lower contrast) does not
+   read as blurred: 13 good photos scored 0.17-5.6, dark copies 0.18-0.35,
+   the blurred copies that changed scores 0.020 and 0.002, and a blurred
+   12 MP photo the server still read fine 0.049. */
+const MIN_LONG_SIDE = 500, MIN_SHARPNESS = 0.04;
+function photoQuality(img){
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+  const s = Math.min(1, 800 / Math.max(w0, h0));
+  const w = Math.max(3, Math.round(w0 * s)), h = Math.max(3, Math.round(h0 * s));
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const d = ctx.getImageData(0, 0, w, h).data, g = new Float32Array(w * h);
+  let total = 0;
+  for (let i = 0, p = 0; p < g.length; i += 4, p++){ g[p] = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]; total += g[p]; }
+  const grey = total / g.length;
+  let contrast = 0;
+  for (let p = 0; p < g.length; p++){ const dv = g[p] - grey; contrast += dv * dv; }
+  contrast /= g.length;
+  let n = 0, mean = 0, m2 = 0;
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++){
+    const p = y*w + x, lap = 4*g[p] - g[p-1] - g[p+1] - g[p-w] - g[p+w];
+    n++; const delta = lap - mean; mean += delta / n; m2 += delta * (lap - mean);
+  }
+  return { longSide: Math.max(w0, h0), sharpness: (m2 / Math.max(1, n - 1)) / Math.max(1, contrast) };
+}
+function photoWarning(img){
+  try{
+    const q = photoQuality(img);
+    if (q.longSide < MIN_LONG_SIDE) return 'This photo is small (' + q.longSide + ' px on its long side), which lowers the scores. A photo straight from the phone camera works best. You can still run it.';
+    if (q.sharpness < MIN_SHARPNESS) return 'This photo looks blurry, which lowers the scores. Hold the phone still and tap the writing to focus, then take it again. You can still run it.';
+  }catch(_e){ /* a check that cannot run never blocks the upload */ }
+  return '';
 }
 
 /* Sample size for the cover / summary, derived from the server's recognised
@@ -469,19 +517,19 @@ async function runPipeline(){
   }
 
   // 1 load: rasterise the upload and show it as the sample
-  stepState('load','active'); await sleep(300);
+  stepState('load','active');
   const blob = await imageToBlob(img);
   let detURL = await compressImageURL(img.src, 1100, 0.72);
   showProcStagePreview(img);
-  stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> uploaded`);
+  stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> photo, sent as ${Math.max(1, Math.round((blob && blob.size || 0)/1024))} KB`);
 
-  // 2-4 the heavy CV (grayscale, binarize, segment) now runs on the server.
-  stepState('gray','active'); await sleep(220); stepState('gray','done', 'Uploading to the recognition server');
-  stepState('bin','active');  await sleep(220); stepState('bin','done',  'Server binarizes ink vs paper');
-  stepState('seg','active');  await sleep(220); stepState('seg','done',  'Server segments lines · words · letters');
+  // Grayscale, binarisation, segmentation, OCR and scoring all run on the
+  // server inside the one request below; the page used to animate them with
+  // ~2 s of fixed pauses before and after it.
 
   // 5 recognise + score (single server call returns OCR + the 20-factor analysis)
-  stepState('ocr','active');
+  // Measured on the deploy box: 4-6 s alone, up to ~20 s while others queue.
+  stepState('ocr','active', 'On Vahini\u2019s server. This usually takes 5 to 20 seconds.');
   let pyReport = null;
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
     pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
@@ -545,12 +593,12 @@ async function runPipeline(){
   stepState('ocr','done', 'Recognition server: <b>detect + recognise</b>' + ctxTag);
 
   // 6 measure: the analysis is already computed server-side
-  stepState('meas','active'); await sleep(300);
+  stepState('meas','active');
   const analysis = pyReport.analysis;
   stepState('meas','done', `${analysis.results.length} factors in your report · overall <b>${analysis.overall}/100</b>`);
 
   // 7 render
-  stepState('score','active'); await sleep(300);
+  stepState('score','active');
   const counts = sampleCounts(pyReport);
   const recognizedText = pyReport.full_text
     || (Array.isArray(pyReport.hand_lines) ? pyReport.hand_lines.map(l=>l.text).filter(Boolean).join('\n') : '');
@@ -561,7 +609,6 @@ async function runPipeline(){
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
   renderNextSteps(analysis);
-  await sleep(400);
   go('report');
 }
 
