@@ -37,6 +37,25 @@ Run `python -m backend.tests.benchmark_concurrency` after installing core test d
 
 These timings demonstrate overlapping request handling, not real Paddle throughput, network latency, or a production capacity guarantee. Separate regressions verify decoding runs off the event-loop thread, invalid-upload responses on all three POST routes, and single-instance initialization under five concurrent callers. The existing Docker recognition CI verifies a real OCR path but is not a load test.
 
+## Real-model load test
+
+`backend/load_test.py` sends N scans at once to a running analyser and reports real readings, 503 refusals, latency and reports per minute. Every request gets a random tail after the image bytes, so the response cache never answers. Image decoders ignore the tail; the cache keys on raw bytes. It uses the standard library only. Run it against stage, straight at the analyser container rather than through nginx, which rate-limits bursts, and watch `docker events` for `oom`/`die` and the container's `memory.peak`:
+
+```bash
+docker run --rm --network container:vahini-analyser-stage -v "$PWD":/w -w /w \
+  python:3.12-slim python backend/load_test.py http://127.0.0.1:8868 --concurrency 1 4 8
+```
+
+Stage on 2026-10-07: 2.5 GB no-swap container, 4 cores, one slot and four queued, `tests/fixtures/handwriting-sample.jpg`:
+
+| Simultaneous | Real readings | Refused (503) | Median | Slowest | Reports/min |
+|---|---|---|---|---|---|
+| 1 | 1 | 0 | 3.1 s | 3.1 s | 19.2 |
+| 4 | 4 | 0 | 9.1 s | 12.4 s | 19.3 |
+| 8 | 5 | 3 | 8.8 s | 14.9 s | 20.1 |
+
+Kernel `memory.peak` was 1.43 GB; no `oom` or `die` events. Before the scan cap, 4 simultaneous scans got the container killed. Projections for bigger hosts and GPUs are in #97; measure them with this tool before relying on them.
+
 ## Dependency and inventory review
 
 Playwright is updated from 1.61.1 to 1.63.0. The compatible lockfile update moves `qs` to 6.16.0; npm audit reports zero known npm vulnerabilities at review time. `http-server` 14.1.1 remains its current release.
