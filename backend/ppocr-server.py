@@ -375,7 +375,7 @@ async def _decode_upload(raw):
     """Decode outside the event loop. Oversized pages are 413; malformed
     uploads are 422 client errors, never server errors."""
     try:
-        return await run_in_threadpool(_to_numpy, raw)
+        return await scan_slots.run(_to_numpy, raw)
     except computer_vision.UploadLimitError as exc:
         raise HTTPException(413, str(exc)) from exc
     except (UnidentifiedImageError, OSError, ValueError, PdfiumError) as exc:
@@ -405,7 +405,7 @@ async def ocr(
 
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
-        payload = await run_in_threadpool(_ocr_process, arr, raw, lang)
+        payload = await scan_slots.run(_ocr_process, arr, raw, lang)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
 
@@ -542,9 +542,7 @@ async def analyze_vl(
     else:
         async with scan_slots.SLOTS.slot():
             arr = await _decode_upload(raw)
-            payload = await run_in_threadpool(
-                _analyze_vl_process, arr, raw, lang
-            )
+            payload = await scan_slots.run(_analyze_vl_process, arr, raw, lang)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -785,11 +783,11 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
         if include_evidence:
-            payload = await run_in_threadpool(
+            payload = await scan_slots.run(
                 _report_python_process, arr, raw, lang, expected_text
             )
         else:
-            payload = await run_in_threadpool(
+            payload = await scan_slots.run(
                 _report_python_process, arr, raw, lang, expected_text, False
             )
     if not payload.get("ok"):

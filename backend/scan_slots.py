@@ -11,12 +11,20 @@ docker events "oom" then "die 137"), failing every scan in flight.
 So at most VAHINI_MAX_ACTIVE_SCANS run at once, up to VAHINI_MAX_QUEUED_SCANS
 wait their turn, and anything beyond that gets 503 with Retry-After instead
 of a crash. Cache hits never take a slot: callers ask for one only after a
-cache miss. One event loop owns the counters, so no lock is needed.
+cache miss.
+
+The work itself runs on a dedicated pool with one thread per slot, not on
+Starlette's shared pool of ~40. Paddle keeps working buffers per calling
+thread, so scans spread over many threads each kept a scan's peak: one scan
+at a time still climbed past 2.4 GB after a burst of queued requests.
 """
 
 import asyncio
 import collections
+import functools
 import os
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import HTTPException
@@ -33,61 +41,91 @@ def _env_int(name, default, minimum):
     return max(minimum, value)
 
 
+def _wake(turn):
+    if not turn.done():
+        turn.set_result(None)
+
+
 class ScanSlots:
-    """Counters plus a FIFO of waiters. Each waiter is a future on the loop
-    that is running when it waits, so the object is not tied to one event
-    loop (an asyncio.Semaphore binds to the first loop that waits on it)."""
+    """Counters plus a FIFO of waiters, safe across threads and event loops.
+
+    Each waiter is a future on the loop that is running when it waits, and
+    a released slot wakes it with call_soon_threadsafe on that loop. uvicorn
+    runs one loop, but Starlette's TestClient (and any embedding) can run
+    each request on its own; completing a future from a foreign thread left
+    such a waiter asleep forever."""
 
     def __init__(self, max_active, max_queued):
         self.max_active = max_active
         self.max_queued = max_queued
+        self._lock = threading.Lock()
         self._running = 0
         self._waiters = collections.deque()
 
     @asynccontextmanager
     async def slot(self):
-        if self._running >= self.max_active:
-            if len(self._waiters) >= self.max_queued:
+        turn = None
+        with self._lock:
+            if self._running < self.max_active:
+                self._running += 1
+            elif len(self._waiters) >= self.max_queued:
                 raise HTTPException(
                     503,
                     BUSY_DETAIL,
                     headers={"Retry-After": str(RETRY_AFTER_SEC)},
                 )
-            turn = asyncio.get_running_loop().create_future()
-            self._waiters.append(turn)
+            else:
+                turn = asyncio.get_running_loop().create_future()
+                self._waiters.append(turn)
+        if turn is not None:
             try:
                 await turn  # _release hands this waiter the slot
             except BaseException:
-                if turn in self._waiters:
-                    self._waiters.remove(turn)
-                elif not turn.cancelled():
+                with self._lock:
+                    handed = turn not in self._waiters
+                    if not handed:
+                        self._waiters.remove(turn)
+                if handed:
                     self._release()  # handed the slot, then cancelled
                 raise
-        else:
-            self._running += 1
         try:
             yield
         finally:
             self._release()
 
     def _release(self):
-        while self._waiters:
-            turn = self._waiters.popleft()
-            if not turn.done():
-                turn.set_result(None)  # slot passes on; _running unchanged
-                return
-        self._running -= 1
+        with self._lock:
+            while self._waiters:
+                turn = self._waiters.popleft()
+                if not turn.done():
+                    # The slot passes on; _running stays the same.
+                    turn.get_loop().call_soon_threadsafe(_wake, turn)
+                    return
+            self._running -= 1
 
     def stats(self):
-        return {
-            "running": self._running,
-            "waiting": len(self._waiters),
-            "max_active": self.max_active,
-            "max_queued": self.max_queued,
-        }
+        with self._lock:
+            return {
+                "running": self._running,
+                "waiting": len(self._waiters),
+                "max_active": self.max_active,
+                "max_queued": self.max_queued,
+            }
 
 
 SLOTS = ScanSlots(
     _env_int("VAHINI_MAX_ACTIVE_SCANS", 2, 1),
     _env_int("VAHINI_MAX_QUEUED_SCANS", 4, 0),
 )
+
+# One worker per slot: the same few threads run every scan, so Paddle's
+# per-thread buffers exist at most max_active times.
+EXECUTOR = ThreadPoolExecutor(
+    max_workers=SLOTS.max_active, thread_name_prefix="scan"
+)
+
+
+async def run(fn, *args):
+    """Run blocking scan work on the scan pool (use inside slot())."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(EXECUTOR, functools.partial(fn, *args))
