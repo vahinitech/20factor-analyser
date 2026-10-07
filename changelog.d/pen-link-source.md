@@ -1,0 +1,1 @@
+- The analyser page's pen links ("What the pen adds", the pen FAQ answer and the next step's pen and pre-order links) carry `?from=free-check`, so vahinitech.com's Friday report can count how many visitors go from the free check to the pen pages (vahini-web#152).
