@@ -51,12 +51,26 @@ async function main() {
     const { chromium } = await import('playwright');
     browser = await chromium.launch({ headless: true });
     const page = await browser.newPage();
+    // Record the photo the page hands to fetch: Playwright cannot read a
+    // multipart body built from a Blob.
+    await page.addInitScript(() => {
+      const send = window.fetch;
+      window.fetch = function (url, opts) {
+        const image = opts && opts.body instanceof FormData ? opts.body.get('image') : null;
+        if (image) window.__vahiniUpload = { type: image.type, kb: Math.round(image.size / 1024) };
+        return send.apply(this, arguments);
+      };
+    });
     const pageErrors = [];
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
     await page.goto(`${BASE}/analyser/analyser.html`, { waitUntil: 'load', timeout: 30000 });
     await page.setInputFiles('#file-input', FIXTURE);
     await page.waitForSelector('#go-process:not([disabled])', { timeout: 15000 });
+    // The in-browser photo check (#87) must stay quiet on a clear photo.
+    const warning = String(await page.textContent('#dz-status') || '').trim();
+    if (!warning) ok('no photo warning for a clear photo');
+    else fail('no photo warning for a clear photo', warning.slice(0, 120));
 
     // Assert against the compact /api/v2/reports response the app calls
     // (src/engine/ocr.js's serverPythonReport), not scraped report HTML --
@@ -73,6 +87,11 @@ async function main() {
     await page.click('#go-process');
     const resp = await respPromise;
     const json = await resp.json();
+
+    // The upload is a resized JPEG, not a full-size PNG (#87).
+    const upload = await page.evaluate(() => window.__vahiniUpload || {});
+    if (upload.type === 'image/jpeg') ok('photo uploaded as JPEG', `${upload.kb} KB`);
+    else fail('photo uploaded as JPEG', JSON.stringify(upload));
 
     if (resp.ok() && json.ok) ok('compact report request succeeded', `HTTP ${resp.status()}`);
     else fail('compact report request succeeded', `HTTP ${resp.status()} :: ${json.error || ''}`);
@@ -102,6 +121,17 @@ async function main() {
     const reportText=await page.locator('#report-host').textContent();
     if(extra===0 && !reportText.includes('What kind of page is this?')) ok('document classification panel is absent from live report');
     else fail('document classification panel is absent from live report','unexpected document-context appendix');
+
+    // Free report page 1 (#95) and the next step after it (#94, #87).
+    const skills = await page.locator('#report-host .skill-card').count();
+    const crops = await page.locator('#report-host .skill-card .sk-crop').count();
+    const photo = await page.locator('#report-host .page-photo img').count();
+    if (skills === 5 && crops > 0 && photo === 1) ok('free report shows the photo and five skills with crops', `${crops} crops`);
+    else fail('free report shows the photo and five skills with crops', `skills ${skills}, crops ${crops}, photo ${photo}`);
+    const nextVisible = await page.locator('#next-steps').isVisible();
+    const sheet = await page.getAttribute('#ns-practice-link', 'href');
+    if (nextVisible && /\.pdf$|practice\.html/.test(sheet || '')) ok('next step links a practice sheet', sheet);
+    else fail('next step links a practice sheet', `visible ${nextVisible}, href ${sheet}`);
 
     if (pageErrors.length === 0) ok('no page errors'); else fail('no page errors', pageErrors.join('|').slice(0, 160));
   } catch (err) {
