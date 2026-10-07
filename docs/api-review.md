@@ -19,9 +19,11 @@ Missing, empty or malformed image/PDF uploads return HTTP 422. A valid image wit
 
 Image/PDF decoding, OCR and scoring now run outside the async event loop. The cache is thread-safe and returns copies. Cold model initialization is serialized per language/configuration so simultaneous first requests reuse a single model instance.
 
-Inference on the same Paddle model instance remains serialized for safety. Requests can overlap in decoding and other processing, but adding users does not make one model run faster. The default deployment starts one Uvicorn process. Starlette also shares a finite worker-thread pool across blocking operations; increasing it alone does not establish OCR capacity.
+**Admission control (since #96).** Scans are capped and sized from the host. `backend/capacity.py` works out at startup how many can run at once from the container's memory limit (or the host's available memory), usable cores and GPUs in use. `backend/scan_slots.py` lets that many run, queues four per slot in order, and answers **503** with `Retry-After: 20` beyond that. Cache hits never take a slot. Scan work runs on a dedicated pool with one thread per slot, and each slot thread has its own OCR engine copy (`ocr_backends._replica_index`), limited to `cores // slots` threads. `/health` reports the plan as `scan_capacity`. `VAHINI_MAX_ACTIVE_SCANS` / `VAHINI_MAX_QUEUED_SCANS` override it.
 
-There is no application-level admission limit or durable job queue. Large uploads and queued requests can consume memory. Benchmark the deployed model and representative page sizes before setting a user-capacity target. Set gateway upload/request limits and origins for the intended deployment. Multiple processes or replicas each need their own models and memory budget, and do not share the in-memory cache.
+Why it exists, measured on the deploy box on 2026-10-07 (4 cores, 7.9 GB shared host): one scan peaks at about 1.6 GB, and four simultaneous scans had the process killed by the kernel (`docker events`: `oom`, `die 137`). Spreading queued scans over Starlette's ~40 threads also held one scan's peak per thread inside Paddle, so the work runs on its own threads. On a shared engine, OCR is serialized per instance, so extra slots only add throughput with their own engine copy. OCR took 2.74 s on 4 threads and 3.01 s on 2, so two 2-thread copies beat one 4-thread copy when memory allows. The model, constants and projections for bigger hosts are in #97.
+
+The deployment still starts one Uvicorn process and has no durable job queue. A queued request is lost if the process restarts. Multiple processes or replicas each need their own models and memory budget, and do not share the in-memory cache.
 
 ## Measured request test
 

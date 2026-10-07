@@ -11,6 +11,8 @@ Brand colours, type and ink come from the Vahini design system: pages link `/sit
 
 The Free report shows all five Free factors on page 1, each with an example cropped from the visitor's uploaded photo and the photo marked with where each crop came from (owner decision, 2026-10-06). The server sends Free the `evidence` regions of those five factors only; never show a locked factor's crop, a stock example in place of a missing crop, or a crop from any photo but the visitor's.
 
+Scan work runs through `scan_slots.slot()` and `scan_slots.run()` (capacity sized by `backend/capacity.py`, see #97); a new endpoint that decodes or scans must use them too. After any change under `frontend/src`, run `python frontend/build_bundle.py`: it rebuilds the bundle and the `?v=` stamps that keep Cloudflare from serving old scripts with a new page. Regenerate the sample report with `docs/examples/generate_photo_sample.py`, not by hand.
+
 Keep authorization server-owned, preserve the existing expanded contract, and update dictionary versions and the browser adapter together when their contract changes. Rebuild the frontend bundle after source edits. Verify returned values and actual printable output rather than only screenshots or fixture counts.
 
 For PR review, use [review instructions](../../../.github/instructions/code-review.instructions.md). Use synthetic samples and test credentials. Do not claim native app changes or store purchase verification from backend work. The consuming website owns its staging and production deployment workflow.

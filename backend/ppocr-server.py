@@ -55,6 +55,7 @@ import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
 import report_contract
 import compact_reports
+import scan_slots  # caps simultaneous scans so memory cannot run out
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
@@ -216,8 +217,17 @@ ocr_backends.init_registry(
         "use_textline_orientation": USE_TEXTLINE_ORIENTATION,
         "max_variants": MAX_VARIANTS,
         "adv_preproc": ADV_PREPROC,
+        # One engine copy per scan slot, each on its share of the cores
+        # (or spread over the GPUs). A single slot keeps Paddle's defaults.
+        "cpu_threads": (
+            scan_slots.PLAN["threads_per_engine"] or 0
+            if scan_slots.PLAN["active"] > 1
+            else 0
+        ),
+        "gpu_count": scan_slots.PLAN["gpus"],
     },
 )
+print(f"[capacity] {scan_slots.PLAN}", flush=True)
 
 
 # _to_data_url/_crop_rgb/_build_region_previews/_full_page_preview/
@@ -247,6 +257,7 @@ def health():
         "backends": backends,
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
+        "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
@@ -374,7 +385,7 @@ async def _decode_upload(raw):
     """Decode outside the event loop. Oversized pages are 413; malformed
     uploads are 422 client errors, never server errors."""
     try:
-        return await run_in_threadpool(_to_numpy, raw)
+        return await scan_slots.run(_to_numpy, raw)
     except computer_vision.UploadLimitError as exc:
         raise HTTPException(413, str(exc)) from exc
     except (UnidentifiedImageError, OSError, ValueError, PdfiumError) as exc:
@@ -402,8 +413,9 @@ async def ocr(
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = await _decode_upload(raw)
-    payload = await run_in_threadpool(_ocr_process, arr, raw, lang)
+    async with scan_slots.SLOTS.slot():
+        arr = await _decode_upload(raw)
+        payload = await scan_slots.run(_ocr_process, arr, raw, lang)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
 
@@ -538,8 +550,9 @@ async def analyze_vl(
     if cached is not None:
         payload = cached
     else:
-        arr = await _decode_upload(raw)
-        payload = await run_in_threadpool(_analyze_vl_process, arr, raw, lang)
+        async with scan_slots.SLOTS.slot():
+            arr = await _decode_upload(raw)
+            payload = await scan_slots.run(_analyze_vl_process, arr, raw, lang)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -777,15 +790,16 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
     if cached is not None:
         return _with_meta(cached, "hit", t0)
 
-    arr = await _decode_upload(raw)
-    if include_evidence:
-        payload = await run_in_threadpool(
-            _report_python_process, arr, raw, lang, expected_text
-        )
-    else:
-        payload = await run_in_threadpool(
-            _report_python_process, arr, raw, lang, expected_text, False
-        )
+    async with scan_slots.SLOTS.slot():
+        arr = await _decode_upload(raw)
+        if include_evidence:
+            payload = await scan_slots.run(
+                _report_python_process, arr, raw, lang, expected_text
+            )
+        else:
+            payload = await scan_slots.run(
+                _report_python_process, arr, raw, lang, expected_text, False
+            )
     if not payload.get("ok"):
         return payload
 
