@@ -1,0 +1,1 @@
+- The analyser page reports how each check ended (report, busy, server down, no handwriting, or a report without text) through vahinitech.com's `window.VahiniInsights.check()`, so the Friday report can count failed checks, which never reached the persist API. Sample runs are not reported; without the site script nothing is sent.

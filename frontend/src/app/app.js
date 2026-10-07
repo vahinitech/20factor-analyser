@@ -265,6 +265,16 @@ function clearSample(){
   applyServiceGate();
 }
 
+/* How each check ended, for vahinitech.com's Friday report
+   (window.VahiniInsights.check in the site's vahini-insights.js, loaded by
+   site.js). Failed checks never reach the persist API otherwise. Sample runs
+   are not the visitor's page and are not reported; without the site script
+   (self-hosted) this does nothing. */
+function reportOutcome(outcome){
+  if (!outcome || window.VAHINI_SAMPLE_RUN) return;
+  try{ if (window.VahiniInsights && typeof VahiniInsights.check === 'function') VahiniInsights.check(outcome); }catch(_e){}
+}
+
 /* ---------- recognition-server availability gate -----------------------
    Scoring runs entirely on the recognition server (see ocr.js); there is
    no offline fallback. Rather than let someone upload and sit through the
@@ -395,6 +405,7 @@ function stepState(id, st, detail){
    the pipeline panel with a clear, honest rejection instead of a fake report. */
 let processPanelHTML = null;
 function showReject(rej){
+  reportOutcome(rej.outcome);
   const panel = $('#screen-process .panel');
   if(!panel) return;
   if (processPanelHTML === null) processPanelHTML = panel.innerHTML;
@@ -505,6 +516,7 @@ async function runPipeline(){
   if (serviceUp === false) await checkService();
   if (serviceUp === false){
     showReject({
+      outcome: 'server_down',
       reason: 'Recognition server not reachable',
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
       tips: serverDownTips([
@@ -536,6 +548,7 @@ async function runPipeline(){
   }
   if (pyReport && pyReport.error_code === 'busy'){
     showReject({
+      outcome: 'busy',
       reason: 'The analyser is busy right now',
       detail: 'Several people are checking their handwriting at the same moment, so yours could not start yet. Your photo is fine.',
       tips: [
@@ -551,6 +564,7 @@ async function runPipeline(){
     // type) is the whole credibility rule of the product.
     const n = Number(pyReport.printed_lines) || 0;
     showReject({
+      outcome: 'no_handwriting',
       reason: 'No handwriting found on this page',
       classification: pyReport.text_classification,
       detail: n ? 'This page looks fully printed (' + n + ' printed regions detected). Printed text is shown below for identification and is not scored.'
@@ -566,6 +580,7 @@ async function runPipeline(){
   if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
     showReject({
+      outcome: 'server_down',
       reason: 'Recognition server not reachable',
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
         + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
@@ -609,6 +624,9 @@ async function runPipeline(){
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
   renderNextSteps(analysis);
+  // A report the reader could not read any text for is the silent failure
+  // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
+  reportOutcome(((analysis.recognition || {}).backend === 'cv-fallback') ? 'no_text' : 'report');
   go('report');
 }
 
@@ -727,6 +745,7 @@ async function finishIMU(){
   if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     go('process');
     showReject({
+      outcome: 'server_down',
       reason: 'Recognition server not reachable',
       detail: 'The pen report is computed on the Vahini recognition server, which isn’t responding right now.'
         + (onLocalHost() ? ' Start the server and capture again.' : ''),
