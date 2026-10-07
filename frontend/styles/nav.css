@@ -144,13 +144,23 @@
 #site-footer .foot__col a{display:flex; align-items:center; gap:8px; font-size:14.5px; padding:5px 0;}
 #site-footer .foot__bot{display:flex; justify-content:space-between; align-items:center; gap:18px; flex-wrap:wrap; margin-top:54px; padding-top:24px; border-top:1px solid var(--nv-rule-on); font-size:13px; color:rgba(238,238,238,.45);}
 #site-footer .foot__marks{display:flex; gap:18px; flex-wrap:wrap;}
-@media (max-width:820px){
+/* 1000px, as site.css: between 821 and 1000 four columns left the
+   "Get in touch" column too narrow for its icons. */
+@media (max-width:1000px){
   #site-footer .foot__grid{grid-template-columns:1fr 1fr;}
   #site-footer .foot__brand{grid-column:1 / -1;}
 }
 
 /* footer social icons (nav scope — pages without site.css, e.g. the Analyser) */
-#site-footer .foot__social{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+/* One row, as on the site's own pages (site.css): six 36px icons with 10px
+   gaps need 266px, and this column gets about 225px on desktop and 150px
+   on a phone, so they wrapped two-and-four or four-and-two. Desktop uses
+   site.css's 30px icons, and on phones the column spans the full width.
+   ".foot__col .foot__soc" outranks "#site-footer .foot__col a" above. */
+#site-footer .foot__social{display:flex; gap:6px; margin-top:16px; flex-wrap:wrap;}
+@media (max-width:560px){ #site-footer .foot__grid > .foot__col:last-child{grid-column:1 / -1;} #site-footer .foot__social{gap:8px;} }
+#site-footer .foot__col .foot__soc{padding:0; justify-content:center;}
+@media (min-width:1001px){ #site-footer .foot__col .foot__soc{width:30px; height:32px;} }
 #site-footer .foot__soc{display:grid; place-items:center; width:36px; height:36px; border-radius:9px; border:1px solid var(--nv-rule-on);
   background:rgba(255,255,255,.05); color:rgba(247,243,232,.82); transition:.16s; text-decoration:none;}
 #site-footer .foot__soc:hover{background:var(--nv-hot); border-color:var(--nv-hot); color:#fff; transform:translateY(-2px);}
