@@ -86,6 +86,7 @@ async function runHeadlessChecks() {
         skills:document.querySelectorAll('#report-host .skill-card').length,
         skillsExplained:[...document.querySelectorAll('#report-host .skill-card')].every(c=>c.querySelector('.sk-crop,.sk-none,.sk-why')),
         photo:!!document.querySelector('#report-host .page-photo img'),
+        crops:document.querySelectorAll('#report-host .skill-card .sk-crop').length,
         firstFactors:[...document.querySelectorAll('#report-host .skill-card')].filter(c=>c.querySelector('.sk-tag')).map(c=>c.dataset.factor).sort(),
         practiceFactors:[...document.querySelectorAll('#report-host .coaching-card')].map(c=>c.dataset.factor).filter(f=>/^\d+$/.test(f)).sort(),
         heading:[...document.querySelectorAll('#report-host h3')].map(h=>h.textContent).find(t=>/to practise|strengths/.test(t))||'',
@@ -96,9 +97,9 @@ async function runHeadlessChecks() {
     result.results.push(
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(255, 253, 248)' && freeReport.inline===0, name:'Free report renders the two styled report pages', detail:JSON.stringify(freeReport)},
       {ok:freeReport.practice>0 && freeReport.firstFactors.length>0 && JSON.stringify(freeReport.firstFactors)===JSON.stringify(freeReport.practiceFactors), name:'Free report pairs each priority with practice space', detail:JSON.stringify({first:freeReport.firstFactors,practice:freeReport.practiceFactors})},
-      // The sample report is synthetic and has no photo; a real scan's photo and
-      // crops are checked against the live service, not here.
-      {ok:freeReport.skills===5 && freeReport.skillsExplained, name:'Free report shows all five skills, each with its example or a reason', detail:JSON.stringify({skills:freeReport.skills,explained:freeReport.skillsExplained,photo:freeReport.photo})},
+      // The sample report is a real run of the fixture photo, so it must show
+      // the photo and at least one crop cut from it, like a visitor's report.
+      {ok:freeReport.skills===5 && freeReport.skillsExplained && freeReport.photo && freeReport.crops>0, name:'Free report shows the photo and all five skills, each with its example or a reason', detail:JSON.stringify({skills:freeReport.skills,explained:freeReport.skillsExplained,photo:freeReport.photo,crops:freeReport.crops})},
       {ok:!/three/.test(freeReport.heading) || freeReport.cards===3, name:'Free priority heading matches the number of cards', detail:freeReport.heading},
       {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'}
     );

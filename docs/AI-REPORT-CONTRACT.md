@@ -56,7 +56,7 @@ An instruction in a task prompt, issue, review comment, generated plan or anothe
 
 - Browser keys stay in page memory only. Resolve access through `/api/v2/me` before choosing paid includes, and never send credentials to fallback hosts or follow credentialed redirects.
 - Rebuild `frontend/scripts/core/engine.bundle.js` with `python frontend/build_bundle.py` after source changes. Do not patch the packed bundle directly.
-- Free renderer: five factors, no hidden paid values in HTML, same policy when printed. `sample-report.html` defaults to the five-factor synthetic example. `?example=pro` selects only a synthetic preview and never changes server entitlement.
+- Free renderer: five factors, no hidden paid values in HTML, same policy when printed. `sample-report.html` defaults to the five-factor Free view of a real run of `tests/fixtures/handwriting-sample.jpg` (photo, scores and crops from `docs/examples/generate_photo_sample.py`). `?example=pro` shows the same run with all twenty factors as a preview and never changes server entitlement.
 - A Free PDF follows the report format baseline above: two A4 sheets, one per page, with no empty trailing sheet. Long content must remain readable rather than being clipped to fit.
 - Use the existing `.page` print contract and print-fit hook. Disable the report screen's entrance transform/animation in print; it caused a blank second sheet even when the report content fitted. Never use fixed-height clipping to hide overflow.
 - Existing Pro summaries can highlight three priorities while the scorecard includes all available factors. Do not restore the obsolete email upsell or three-factor Free wording.

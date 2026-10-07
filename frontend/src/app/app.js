@@ -18,7 +18,9 @@ function serverFactorCrops(vl){
     const n = Number(k);
     const v = m[k] || {};
     if (!Number.isFinite(n) || n < 1 || n > 20) return;
-    if (!v.url) return;
+    // Keep a located region even without an image: a whole-page factor's
+    // box still tells the report to say "measured across your whole page".
+    if (!v.url && !(Array.isArray(v.bbox) && v.bbox.length === 4)) return;
     out[n] = { ...v, caption: v.caption || 'server vision evidence' };
   });
   return out;
@@ -663,9 +665,11 @@ function renderSampleReport(){
     expectedText: '',
     recognizedText: s.text || '',
     ocrEngine: 'server',
-    detURL: null,
+    // A real run of the fixture photo (docs/examples/generate_photo_sample.py):
+    // the photo and the crops cut from it, as a visitor's report shows them.
+    detURL: data.photo || null,
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
-    crops: {},
+    crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
     letterFindings: null,
     history: null,
   });
