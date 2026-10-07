@@ -118,8 +118,8 @@ jobs:
       - name: Verify the packed bundle is in sync with src/
         run: |
           python3 frontend/build_bundle.py
-          if ! git diff --quiet -- frontend/scripts/core/engine.bundle.js; then
-            echo "::error::engine.bundle.js is stale. Run 'python frontend/build_bundle.py' and commit it."
+          if ! git diff --quiet -- frontend/scripts/core/engine.bundle.js frontend/*.html; then
+            echo "::error::engine.bundle.js or a page's ?v= asset stamp is stale. Run 'python frontend/build_bundle.py' and commit the result."
             exit 1
           fi
       - name: Verify the OCR client never probes loopback on a public host

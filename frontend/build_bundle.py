@@ -20,7 +20,10 @@
 # renders with no console errors.
 
 import base64
+import glob
+import hashlib
 import os
+import re
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -43,6 +46,15 @@ SOURCES = [
 ]
 
 OUT = os.path.join(HERE, "scripts", "core", "engine.bundle.js")
+
+# Local scripts and stylesheets the pages load. Cloudflare and browsers keep
+# them for 30 days (vahini-web nginx), so an unversioned URL serves the old
+# file after a release while the HTML is already new. Each reference carries
+# ?v=<content hash>; a changed file gets a new URL.
+ASSET_REF = re.compile(
+    r'((?:src|href)=")((?:scripts/core|styles)/[\w.-]+\.(?:js|css))'
+    r'(?:\?v=[0-9a-f]*)?(")'
+)
 
 
 def build():
@@ -68,9 +80,34 @@ def build():
     return len(combined), len(b64)
 
 
+def file_hash(rel):
+    with open(os.path.join(HERE, *rel.split("/")), "rb") as f:
+        return hashlib.sha256(f.read()).hexdigest()[:10]
+
+
+def stamp_pages():
+    """Point every local css/js reference in frontend/*.html at ?v=<hash>."""
+    changed = []
+    for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
+        with open(page, "r", encoding="utf-8") as f:
+            text = f.read()
+        stamped = ASSET_REF.sub(
+            lambda m: f"{m.group(1)}{m.group(2)}?v={file_hash(m.group(2))}"
+            f"{m.group(3)}",
+            text,
+        )
+        if stamped != text:
+            with open(page, "w", encoding="utf-8", newline="\n") as f:
+                f.write(stamped)
+            changed.append(os.path.basename(page))
+    return changed
+
+
 if __name__ == "__main__":
     src_len, b64_len = build()
     print(
         f"[build] packed {len(SOURCES)} sources: {src_len} src chars -> {b64_len} base64 chars"
     )
     print(f"[build] wrote {OUT}")
+    for name in stamp_pages():
+        print(f"[build] stamped asset URLs in {name}")
