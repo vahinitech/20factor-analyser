@@ -473,7 +473,15 @@ function render(host, data){
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
   const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)} <span class="priority-score">${p.factor?esc(p.factor.score.toFixed(1))+'/10':''}</span></h3><p class="reason-text">${esc(p.explanation||p.reason)}</p><div class="concept-actual">${evidence(p)}</div></article>`).join('');
-  const coaching=priorities.map((p,i)=>`<article class="coaching-card practice-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example concept-target">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p class="practice-label">Look at the example. Copy it here, then try it on your own.</p><div class="writing-lines" aria-label="Space to practise writing"></div><p class="self-check">Check your next row: ${esc(p.explanation||'Check each letter against the example.')}</p></article>`).join('');
+  // #84: the practice sheet for each priority's skill, from the worksheet
+  // catalogue the website generates (same PDFs as the practice library).
+  const practiceSheet=p=>{
+    const sheet=p.factor&&(window.VahiniWorksheetCatalog||[]).find(w=>w.factors.includes(p.factor.n));
+    if(!sheet) return '';
+    const base=window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com';
+    return `<p class="practice-sheet">Practice sheet for this skill: <a href="${esc(base)}/assets/worksheets/${esc(sheet.id)}.pdf">${esc(sheet.title)} (PDF)</a> · print it and do one row a day</p>`;
+  };
+  const coaching=priorities.map((p,i)=>`<article class="coaching-card practice-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example concept-target">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p class="practice-label">Look at the example. Copy it here, then try it on your own.</p><div class="writing-lines" aria-label="Space to practise writing"></div><p class="self-check">Check your next row: ${esc(p.explanation||'Check each letter against the example.')}</p>${practiceSheet(p)}</article>`).join('');
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
   const overall=Number.isFinite(rawOverall)?rawOverall:null;
   const measured=analysis.results.filter(isLive);
@@ -500,8 +508,13 @@ function render(host, data){
   const prevScore=Object.fromEntries((prev&&Array.isArray(prev.factors)?prev.factors:[]).map(f=>[f.n,f.score]));
   const fmtDay=d=>{const t=new Date(d+'T00:00:00');return Number.isNaN(t.getTime())?d:t.toLocaleDateString('en-GB',{day:'numeric',month:'long'});};
   const overallNow=Number.isFinite(analysis.overallMeasured??analysis.overall)?(analysis.overallMeasured??analysis.overall):null;
+  // #82: a skill counts as better from +0.3. The same page sent as PNG and
+  // as JPEG moved factor scores by up to 0.2, so a smaller rise can be noise.
+  const BETTER_BY=0.3;
+  const gain=f=>Number.isFinite(prevScore[f.n])?f.score-prevScore[f.n]:null;
+  const improved=measured.filter(f=>gain(f)!==null&&gain(f)>=BETTER_BY-1e-9);
   const sinceLine=prev&&Number.isFinite(prev.overall)&&overallNow!=null
-    ?`<p class="since-last">Since your check on ${esc(fmtDay(prev.date))}: ${esc(String(prev.overall))} → ${esc(String(overallNow))} out of 100 (${overallNow-prev.overall>0?'+':''}${esc(String(overallNow-prev.overall))}). Earlier scores are saved only in this browser.</p>`:'';
+    ?`<p class="since-last">Since your check on ${esc(fmtDay(prev.date))}: ${esc(String(prev.overall))} → ${esc(String(overallNow))} out of 100 (${overallNow-prev.overall>0?'+':''}${esc(String(overallNow-prev.overall))}).${improved.length?` ${improved.length===1?'1 skill':improved.length+' skills'} got better.`:''} Earlier scores are saved only in this browser.</p>`:'';
   const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
     return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
   const skillCard=(f,i)=>{
@@ -511,6 +524,7 @@ function render(host, data){
     return `<article class="skill-card band-${band}" data-factor="${f.n}">
       <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(skillName(f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small>${Number.isFinite(prevScore[f.n])?`<small class="sk-was"> was ${esc(prevScore[f.n].toFixed(1))}</small>`:''}</b></div>
       <p class="sk-meta"><span class="sk-band">${esc(BAND_LABEL[band])}</span>${first?'<span class="sk-tag">Practise first</span>':''}</p>
+      ${improved.includes(f)?`<p class="sk-better"><span>↑ Better than last time: +${esc(gain(f).toFixed(1))}</span></p>`:''}
       <p class="sk-meaning">${esc(meaning[f.n]||explanations[f.n]?.[1]||'')}</p>
       ${wholePage?'<p class="sk-why">Measured across your whole page, shown above.</p>'
         :c&&c.url?`<img class="sk-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}"><p class="sk-why">${esc(why)}</p>`

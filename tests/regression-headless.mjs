@@ -93,6 +93,29 @@ async function runHeadlessChecks() {
         pro:document.querySelector('#report-host .pro-note')?.textContent||''
       };
     });
+    // #84: each practice card for a factor links that skill's worksheet PDF.
+    const sheets = await free.evaluate(() => {
+      const cards = [...document.querySelectorAll('#report-host .coaching-card')].filter(c => /^\d+$/.test(c.dataset.factor));
+      return { cards: cards.length, linked: cards.filter(c => /\/assets\/worksheets\/[\w-]+\.pdf$/.test(c.querySelector('.practice-sheet a')?.href || '')).length };
+    });
+    // #82: re-render the sample's real data with an earlier check; only rises
+    // of 0.3 or more get a badge (+0.8 and +0.4 here, not +0.1).
+    const better = await free.evaluate(() => {
+      const d = window.VAHINI_SAMPLE_REPORT;
+      const analysis = { ...d.analysis, access: { tier: 'free' }, results: d.analysis.results.filter(f => [1, 5, 7, 8, 18].includes(f.n)) };
+      const score = n => analysis.results.find(f => f.n === n).score;
+      const host = document.createElement('div');
+      document.body.append(host);
+      VahiniReport.render(host, { analysis, intake: {}, crops: {}, detURL: null, history: {
+        date: '2026-09-30', overall: (analysis.overallMeasured ?? analysis.overall) - 4,
+        factors: [{ n: 5, score: score(5) - 0.8 }, { n: 8, score: score(8) - 0.4 }, { n: 7, score: score(7) - 0.1 }] } });
+      const out = {
+        badges: [...host.querySelectorAll('.skill-card')].filter(c => c.querySelector('.sk-better')).map(c => c.dataset.factor).sort(),
+        text: host.querySelector('.since-last')?.textContent || '',
+      };
+      host.remove();
+      return out;
+    });
     await free.close();
     result.results.push(
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(255, 253, 248)' && freeReport.inline===0, name:'Free report renders the two styled report pages', detail:JSON.stringify(freeReport)},
@@ -101,7 +124,9 @@ async function runHeadlessChecks() {
       // the photo and at least one crop cut from it, like a visitor's report.
       {ok:freeReport.skills===5 && freeReport.skillsExplained && freeReport.photo && freeReport.crops>0, name:'Free report shows the photo and all five skills, each with its example or a reason', detail:JSON.stringify({skills:freeReport.skills,explained:freeReport.skillsExplained,photo:freeReport.photo,crops:freeReport.crops})},
       {ok:!/three/.test(freeReport.heading) || freeReport.cards===3, name:'Free priority heading matches the number of cards', detail:freeReport.heading},
-      {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'}
+      {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'},
+      {ok:sheets.cards>0 && sheets.linked===sheets.cards, name:'Each practice card links its skill worksheet', detail:JSON.stringify(sheets)},
+      {ok:JSON.stringify(better.badges)==='["5","8"]' && /2 skills got better/.test(better.text), name:'Skills that rose by 0.3 or more get a badge', detail:JSON.stringify(better)}
     );
     result.total=result.results.length;
     result.passed=result.results.filter(r=>r.ok).length;
