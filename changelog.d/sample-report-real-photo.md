@@ -1,0 +1,1 @@
+- The sample report is a real run of `tests/fixtures/handwriting-sample.jpg` (photo, scores and the crops cut from it), produced by `docs/examples/generate_photo_sample.py`, so it shows what a visitor's free report looks like. Whole-page factors keep their box without a duplicate page image, which keeps the data file near 500 KB.

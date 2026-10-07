@@ -809,3 +809,30 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .compact-report .compact-score { padding:10px; }
   .compact-report .plan-comparison { grid-template-columns:1fr; }
 }
+
+/* Free report, page 1: the visitor's photo with numbered boxes, then every
+   scored skill with the example cut from that photo. */
+.run-head .rh-logo{ width:22px; height:22px; border-radius:50%; display:block; }
+.compact-report .page-photo{ margin:10px 0 12px; }
+.compact-report .pp-frame{ position:relative; max-width:100%; width:fit-content; margin:0 auto; border:1px solid var(--v-border); border-radius:8px; overflow:hidden; }
+.compact-report .pp-frame img{ display:block; max-height:250px; width:auto; max-width:100%; }
+.compact-report .pp-frame svg{ position:absolute; inset:0; width:100%; height:100%; }
+.compact-report .pp-frame rect{ fill:none; stroke:var(--v-accent); stroke-width:2.5; vector-effect:non-scaling-stroke; }
+.compact-report .pp-frame text{ fill:var(--v-accent); font-family:var(--v-font-sans); font-weight:700; paint-order:stroke; stroke:var(--v-surface); }
+.compact-report .page-photo figcaption{ text-align:center; font-size:11px; color:var(--v-text-2); margin-top:4px; }
+.compact-report .skill-grid{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.compact-report .skill-card{ border:1px solid var(--v-border); border-top:3px solid var(--v-accent); border-radius:8px; padding:8px 10px; break-inside:avoid; }
+.compact-report .skill-card.band-strong, .compact-report .skill-card.band-good{ border-top-color:var(--v-success); }
+.compact-report .skill-card.band-focus{ border-top-color:var(--v-warning); }
+.compact-report .sk-head{ display:flex; align-items:baseline; gap:6px; }
+.compact-report .sk-head h3{ margin:0; font-size:14px; flex:1; }
+.compact-report .sk-num{ font-weight:700; color:var(--v-accent-text); font-size:12px; }
+.compact-report .sk-score{ font-size:15px; } .compact-report .sk-score small{ font-size:10px; font-weight:400; }
+.compact-report .sk-meta{ margin:2px 0; display:flex; gap:6px; font-size:10px; }
+.compact-report .sk-band{ color:var(--v-text-2); }
+.compact-report .sk-tag{ background:var(--v-accent-text); color:var(--v-on-dark); border-radius:4px; padding:0 5px; }
+.compact-report .sk-meaning{ margin:2px 0 4px; font-size:11px; color:var(--v-text-2); }
+.compact-report .sk-crop{ display:block; max-width:100%; max-height:58px; border:1px solid var(--v-border); border-radius:4px; }
+.compact-report .sk-why, .compact-report .sk-none{ font-size:9.5px; color:var(--v-text-2); margin:3px 0 0; }
+.compact-report .since-last{ font-size:12px; color:var(--v-accent-text); font-weight:600; margin:4px 0 0; }
+.compact-report .sk-was{ display:block; text-align:right; font-size:9.5px; font-weight:400; color:var(--v-text-2); }

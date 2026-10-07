@@ -26,13 +26,28 @@ class CompactTests(unittest.TestCase):
         self.assertEqual(payload, before)
         self.assertLess(len(json.dumps(report)), 2000)
 
-    def test_free_cannot_receive_requested_paid_fields(self):
+    def test_free_gets_evidence_only_for_its_five_factors(self):
         result = compact_reports.build_compact(
             sample(), {"tier": "free"}, {"inputs", "coaching", "evidence"}
         )
         self.assertEqual([f["n"] for f in result["factors"]], [1, 5, 7, 8, 18])
-        self.assertNotIn("PRIVATE", json.dumps(result))
         self.assertEqual(len(result["locked"]), 15)
+        # Crops of the Free factors, so a visitor can see what each score
+        # refers to on their own page; never a locked factor's crop.
+        self.assertEqual(
+            sorted(result["evidence"]["factor_regions"], key=int),
+            ["1", "5", "7", "8", "18"],
+        )
+        self.assertNotIn("inputs", result)
+        self.assertNotIn("coaching", result)
+        without_crops = dict(result, evidence=None)
+        self.assertNotIn("PRIVATE", json.dumps(without_crops))
+
+    def test_pro_evidence_covers_all_twenty_factors(self):
+        result = compact_reports.build_compact(
+            sample(), {"tier": "pro"}, {"evidence"}
+        )
+        self.assertEqual(len(result["evidence"]["factor_regions"]), 20)
 
     def test_missing_score_is_not_zero(self):
         payload = sample()
@@ -105,8 +120,19 @@ class CompactHTTPTests(unittest.TestCase):
                 ).status_code,
                 304,
             )
+            free_evidence = client.post(
+                "/api/v2/reports?format=compact&include=text,evidence",
+                files={"image": ("test.png", b"synthetic")},
+            )
+            self.assertEqual(free_evidence.status_code, 200)
+            self.assertEqual(
+                scorer.call_args.kwargs, {"include_evidence": True}
+            )
+            self.assertEqual(
+                len(free_evidence.json()["evidence"]["factor_regions"]), 5
+            )
             denied = client.post(
-                "/api/v2/reports?format=compact&include=evidence",
+                "/api/v2/reports?format=compact&include=inputs",
                 files={"image": ("test.png", b"synthetic")},
             )
             self.assertEqual(denied.status_code, 403)

@@ -354,7 +354,21 @@
         "properties": {
           "inputs": false,
           "coaching": false,
-          "evidence": false,
+          "evidence": {
+            "properties": {
+              "factor_regions": {
+                "propertyNames": {
+                  "enum": [
+                    "1",
+                    "5",
+                    "7",
+                    "8",
+                    "18"
+                  ]
+                }
+              }
+            }
+          },
           "factors": {
             "maxItems": 5,
             "items": {

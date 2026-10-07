@@ -191,7 +191,7 @@ async function serverPythonReport(blob, expectedText){
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.
       const t = setTimeout(()=>ctrl.abort(), 120000);
-      const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text');
+      const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text,evidence');
       let res;
       try {
         const account = await global.VahiniAccount.request(requestUrl);
