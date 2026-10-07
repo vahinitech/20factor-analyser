@@ -13,6 +13,23 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   sends Free the evidence regions of those five factors only. Details in the
   report format baseline.
 
+- **Scan capacity is planned, not fixed.** Blocking scan work goes through
+  `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
+  the slot cap and its one-thread-per-slot pool are what stopped
+  simultaneous scans running the host out of memory (OOM kill on stage,
+  2026-10-07). `backend/capacity.py` sizes the slots from memory, cores and
+  GPUs with constants measured on the deploy box; change a constant only
+  with a load-test measurement, and never remove the cap. Model and numbers:
+  #97 and `docs/api-review.md`.
+- **Asset URLs are stamped by `build_bundle.py`.** Pages load
+  `scripts/core/*.js` and `styles/*.css` as `?v=<hash>`, because vahini-web
+  and Cloudflare cache them for 30 days. A merge conflict in
+  `engine.bundle.js` or in a `?v=` stamp is generated output: take either
+  side and rerun `python frontend/build_bundle.py`, never hand-merge it.
+- **The sample report is a real run of the fixture photo.** Regenerate
+  `frontend/scripts/core/sample-report-data.js` with
+  `docs/examples/generate_photo_sample.py` inside the analyser image (it
+  needs the OCR models); never edit it by hand.
 - **Verify before claiming.** Read the code before describing behaviour.
   Never invent accuracy numbers, factor thresholds, or API shapes — every
   scored claim in reports and docs must trace to code in `backend/` or

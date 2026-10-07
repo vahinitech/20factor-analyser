@@ -10,6 +10,10 @@ This is a separate open-source Git repository. The consuming website pins a comp
 
 Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriting analyser: OCR backends, computer vision, 20-factor scoring, the version-2 report API with server-owned Free/Pro access, public catalogue versions and worksheets). The product repos are `Umbrella`, `vahini-api-contracts` (planned), `vahini_app` (to be renamed `android`), `vahini-learning-api`, `20factor-analyser`, `20factor-analyser-pro` and `vahini-web`. Before touching a pin, a contract, a repo reference or another repository, read https://github.com/vahinitech/Umbrella/blob/main/docs/REPOSITORIES.md and use `.claude/skills/repo-landscape/SKILL.md`. Cross-repo order: service PR first, then the contracts sync and tag, then consumer PRs. Never change a consumer to match an unmerged service change.
 
+**Scan capacity is planned, not fixed.** Scan work goes through `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`; `backend/capacity.py` sizes the slots from the host's memory, cores and GPUs with measured constants, and a full server answers 503. Change a constant only with a load-test measurement. Model and numbers: #97, `docs/api-review.md`.
+
+**Generated files are regenerated, not merged.** `engine.bundle.js`, the `?v=` asset stamps in `frontend/*.html` (`python frontend/build_bundle.py`) and `sample-report-data.js` (`docs/examples/generate_photo_sample.py`, in the analyser image).
+
 ## Changelog entries are files
 
 Every PR adds its changelog entry as a new file, `changelog.d/<branch topic>.md`,
