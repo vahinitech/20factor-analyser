@@ -12,7 +12,7 @@ Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriti
 
 **Scan capacity is planned, not fixed.** Scan work goes through `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`; `backend/capacity.py` sizes the slots from the host's memory, cores and GPUs with measured constants, and a full server answers 503. Change a constant only with a load-test measurement. Model and numbers: #97, `docs/api-review.md`.
 
-**Generated files are regenerated, not merged.** `engine.bundle.js`, the `?v=` asset stamps in `frontend/*.html` (`python frontend/build_bundle.py`) and `sample-report-data.js` (`docs/examples/generate_photo_sample.py`, in the analyser image).
+**Generated files are not committed.** `engine.bundle.js` and the `?v=` asset stamps are produced by `python frontend/build_bundle.py --stamp` in the image build and by CI; never commit them (they made every pair of frontend PRs conflict). `sample-report-data.js` is committed but regenerated with `docs/examples/generate_photo_sample.py`, never edited by hand.
 
 ## Changelog entries are files
 

@@ -57,15 +57,16 @@ pip install -r backend/requirements-core.txt
 ```
 
 The packed bundle `frontend/scripts/core/engine.bundle.js` is generated from
-`frontend/src/`. CI fails if it is out of sync, so commit the rebuilt bundle
-together with your `src/` changes.
+`frontend/src/` and is not committed (it is gitignored): build it to try the
+pages from a checkout. The Docker image builds it and stamps the pages'
+asset URLs; CI fails if a bundle or a `?v=` stamp is committed.
 
 ## Before you open a PR
 
 Run what CI runs:
 
 ```bash
-python frontend/build_bundle.py          # then `git diff --exit-code` the bundle
+python frontend/build_bundle.py          # build output, not committed
 python -m unittest -v \
   backend.tests.test_backends_classify \
   backend.tests.test_server_pipeline \

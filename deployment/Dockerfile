@@ -65,6 +65,9 @@ RUN if [ "$VAHINI_WITH_SURYA" = "1" ]; then \
 
 COPY backend /app/backend
 COPY frontend /app/frontend
+# The packed bundle and the ?v= asset stamps are build output, not committed
+# (they made every pair of frontend PRs conflict); produce them here.
+RUN python /app/frontend/build_bundle.py --stamp
 
 ENV PADDLE_PDX_CACHE_HOME=/opt/paddle-models
 ENV PADDLEOCR_HOME=/opt/paddle-models/.paddleocr

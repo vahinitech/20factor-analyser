@@ -22,11 +22,14 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   with a load-test measurement (`backend/load_test.py`, stage only), and
   never remove the cap. Model and numbers:
   #97 and `docs/api-review.md`.
-- **Asset URLs are stamped by `build_bundle.py`.** Pages load
-  `scripts/core/*.js` and `styles/*.css` as `?v=<hash>`, because vahini-web
-  and Cloudflare cache them for 30 days. A merge conflict in
-  `engine.bundle.js` or in a `?v=` stamp is generated output: take either
-  side and rerun `python frontend/build_bundle.py`, never hand-merge it.
+- **The bundle and the asset stamps are build output, never committed.**
+  `engine.bundle.js` and the `?v=<hash>` on each page's `scripts/core/*.js`
+  and `styles/*.css` (vahini-web and Cloudflare cache those for 30 days)
+  are produced by `python frontend/build_bundle.py --stamp` in the image
+  build (`deployment/Dockerfile`) and by CI. They used to be committed, and
+  every frontend PR then changed the same generated lines, so any two open
+  PRs conflicted. CI fails on a committed bundle or stamp. To serve
+  `frontend/` from a checkout, run `python frontend/build_bundle.py` first.
 - **The sample report is a real run of the fixture photo.** Regenerate
   `frontend/scripts/core/sample-report-data.js` with
   `docs/examples/generate_photo_sample.py` inside the analyser image (it
@@ -72,10 +75,9 @@ black --check --line-length 79 backend/*.py backend/tests/*.py frontend/build_bu
 # glob (individual .py files, in the order ci.yml lists them)
 python -m pytest backend/tests/               # unit + integration
 
-# frontend bundle — REBUILD WHENEVER frontend/src changes:
+# frontend bundle: build output, gitignored; build it to run the pages
 npm run build:bundle                          # python frontend/build_bundle.py
-# CI fails if engine.bundle.js is out of sync with src/ — this is the
-# single most common avoidable CI failure in this repo.
+# the image build adds --stamp; CI fails on a committed bundle or ?v= stamp
 
 npm run test:regression:headless              # print/handwriting checks
 docker compose up -d --wait                   # full stack for live recognition tests

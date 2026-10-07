@@ -1,0 +1,1 @@
+- `engine.bundle.js` and the pages' `?v=` asset stamps are no longer committed: the image build runs `build_bundle.py --stamp` and CI builds the bundle before the browser tests. Committed, they made every pair of open frontend PRs conflict; CI now fails if either is committed again.

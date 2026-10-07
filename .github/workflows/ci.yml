@@ -116,11 +116,15 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
         run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && python3 scripts/changelog.py --check
-      - name: Verify the packed bundle is in sync with src/
+      - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
-          if ! git diff --quiet -- frontend/scripts/core/engine.bundle.js frontend/*.html; then
-            echo "::error::engine.bundle.js or a page's ?v= asset stamp is stale. Run 'python frontend/build_bundle.py' and commit the result."
+          if git ls-files --error-unmatch frontend/scripts/core/engine.bundle.js >/dev/null 2>&1; then
+            echo "::error::engine.bundle.js is committed. It is build output: git rm --cached it."
+            exit 1
+          fi
+          if grep -nE '(src|href)="(scripts/core|styles)/[^"]*\?v=' frontend/*.html; then
+            echo "::error::A page carries a committed ?v= asset stamp. Run 'python frontend/build_bundle.py --strip'."
             exit 1
           fi
       - name: Verify the OCR client never probes loopback on a public host

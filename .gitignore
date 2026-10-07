@@ -46,3 +46,6 @@ export/
 
 # Browser layout regression screenshots and PDF
 test-results/
+
+# Build output: the image build and CI produce it (frontend/build_bundle.py).
+frontend/scripts/core/engine.bundle.js
