@@ -1,0 +1,1 @@
+- Each practice card in the report links the practice sheet PDF for its skill (#84), and when this browser holds an earlier check, Free page 1 marks every skill that rose by 0.3 or more with "Better than last time: +N" and says how many skills got better (#82). Both approved by the owner on 2026-10-07; the contract baseline says so.
