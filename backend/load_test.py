@@ -96,7 +96,9 @@ def burst(base, photo, content_type, concurrency):
 
 
 def main():
-    parser = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
+    parser = argparse.ArgumentParser(
+        description=__doc__.split("\n", maxsplit=1)[0]
+    )
     parser.add_argument("base", help="analyser base URL, e.g. http://...:8868")
     parser.add_argument(
         "--photo", default="tests/fixtures/handwriting-sample.jpg"
