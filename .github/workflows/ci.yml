@@ -55,7 +55,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -67,6 +67,7 @@ jobs:
             backend/warmup_models.py backend/geometry.py \
             backend/model_map.py backend/gpu_detect.py \
             backend/computer_vision.py backend/scoring.py \
+            backend/scan_slots.py \
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py \

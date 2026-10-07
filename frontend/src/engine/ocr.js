@@ -198,6 +198,12 @@ async function serverPythonReport(blob, expectedText){
         res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
       } finally { clearTimeout(t); }
       const raw = await res.text();
+      // 503 is the server's scan cap (backend/scan_slots.py): it is up but
+      // full. A definitive answer, so do not try other endpoints.
+      if (res.status === 503){
+        lastServerError = 'busy';
+        return { ok:false, error_code:'busy', retry_after:Number(res.headers.get('Retry-After'))||20 };
+      }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }

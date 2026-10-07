@@ -443,6 +443,17 @@ async function runPipeline(){
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
     pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
   }
+  if (pyReport && pyReport.error_code === 'busy'){
+    showReject({
+      reason: 'The analyser is busy right now',
+      detail: 'Several people are checking their handwriting at the same moment, so yours could not start yet. Your photo is fine.',
+      tips: [
+        'Wait about ' + (pyReport.retry_after || 20) + ' seconds, then upload the photo again',
+        'If it keeps happening, tell us with the Feedback button',
+      ],
+    });
+    return;
+  }
   if (pyReport && pyReport.error_code === 'no_handwriting'){
     // The server found text but ALL of it is printed. The analyser scores
     // pen handwriting only: refusing here (instead of scoring machine
