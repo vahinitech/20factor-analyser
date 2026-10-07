@@ -7,6 +7,11 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 ## Working rules (apply to every change)
 
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
+- **The Free report has five factors, each with evidence from the visitor's photo.**
+  Page 1 shows the uploaded photo with numbered boxes and a card per Free
+  factor (1, 5, 7, 8, 18) holding the crop cut from that photo; the server
+  sends Free the evidence regions of those five factors only. Details in the
+  report format baseline.
 
 - **Verify before claiming.** Read the code before describing behaviour.
   Never invent accuracy numbers, factor thresholds, or API shapes — every

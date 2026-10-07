@@ -21,7 +21,8 @@ Use the same request with the customer's Bearer header for Pro. Never put creden
 | --- | --- | --- |
 | Factor scores | 1, 5, 7, 8, 18 | All 20 |
 | Brief score reason | Yes | Yes |
-| Detailed evidence and scoring inputs | No | Yes |
+| Example crops from the visitor's photo (`evidence`) | Its five factors | All 20 |
+| Scoring inputs (`inputs`) | No | Yes |
 | Targets and coaching | No | Yes |
 | Personalised worksheet links | No | Up to three |
 | Public worksheet library | Available | Available |
@@ -103,7 +104,7 @@ Generic definitions are public educational content. They contain no customer sco
 | `text` | Free / Pro | Recognized text, line count and recognition metadata |
 | `inputs` | Pro | Actual per-factor evidence, score basis and numeric inputs |
 | `coaching` | Pro | Scan-specific coaching tips |
-| `evidence` | Pro | Image dimensions and factor evidence regions, including previews |
+| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only |
 
 Combine values with commas, for example `?format=compact&include=text,inputs,coaching`. Request image evidence only when needed; it is the largest part of an expanded response. Unauthorized paid fields return 403 before inference. Compact scans without `evidence` skip crop-preview construction and base64 encoding. Evidence and basic scan cache entries are separate, so requesting evidence later can require another processing pass. This version does not provide a stored-report detail GET endpoint.
 

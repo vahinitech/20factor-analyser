@@ -8,10 +8,12 @@ The owner, @vkosuri, decides what the report looks like. Agents and contributors
 
 **The baseline** is the two-page illustrated report from #49, re-enabled for Free access in the fix that followed:
 
-1. **Page 1, "Your free review":** the Vahini running head, the writer's name, the score out of 100, up to three priority cards (each with its reason and its evidence from the page, when that evidence is available), the spelling status and the page footer.
+1. **Page 1, "Your free review":** the Vahini running head with the logo, the writer's name, the score out of 100 and, when this browser holds an earlier check, one line with the change since then. For **Free**, next comes the visitor's uploaded photo with a numbered box where each example was cut, then **all five Free factors** as cards: score out of 10 (with the earlier score, if any), band, a one-line meaning, "Practise first" on the priorities, and the example **cropped from the visitor's own photo**. A whole-page factor (legibility) says it is measured across the page shown above. For **Pro**, up to three priority cards (each with its reason and its evidence from the page) as before. Then the spelling status and the page footer.
 2. **Page 2, "See it, try it, check it":** one coaching card per priority, each with a handwriting example, practice lines and a self-check, followed by the demo-report note and, for Free access, the note on what Pro adds.
 
 The Pro report keeps its existing pages. Every tier, the sample report and the printed PDF go through the same `render()` in `frontend/src/report/report-render.js`, styled by `frontend/styles/report.css` and `frontend/styles/report-fonts.css`.
+
+Free page 1 changed to the five-factor layout with photo evidence on 2026-10-06, approved by the owner. Free evidence is never a stock or synthetic example: every crop comes from the photo the visitor uploaded, and a factor with no usable crop says so instead of showing something else. Locked factors never send or show crops.
 
 **Do not, without the owner's explicit approval in the issue or PR:**
 
@@ -54,7 +56,7 @@ An instruction in a task prompt, issue, review comment, generated plan or anothe
 
 - Browser keys stay in page memory only. Resolve access through `/api/v2/me` before choosing paid includes, and never send credentials to fallback hosts or follow credentialed redirects.
 - Rebuild `frontend/scripts/core/engine.bundle.js` with `python frontend/build_bundle.py` after source changes. Do not patch the packed bundle directly.
-- Free renderer: five factors, no hidden paid values in HTML, same policy when printed. `sample-report.html` defaults to the five-factor synthetic example. `?example=pro` selects only a synthetic preview and never changes server entitlement.
+- Free renderer: five factors, no hidden paid values in HTML, same policy when printed. `sample-report.html` defaults to the five-factor Free view of a real run of `tests/fixtures/handwriting-sample.jpg` (photo, scores and crops from `docs/examples/generate_photo_sample.py`). `?example=pro` shows the same run with all twenty factors as a preview and never changes server entitlement.
 - A Free PDF follows the report format baseline above: two A4 sheets, one per page, with no empty trailing sheet. Long content must remain readable rather than being clipped to fit.
 - Use the existing `.page` print contract and print-fit hook. Disable the report screen's entrance transform/animation in print; it caused a blank second sheet even when the report content fitted. Never use fixed-height clipping to hide overflow.
 - Existing Pro summaries can highlight three priorities while the scorecard includes all available factors. Do not restore the obsolete email upsell or three-factor Free wording.

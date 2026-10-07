@@ -18,7 +18,9 @@ function serverFactorCrops(vl){
     const n = Number(k);
     const v = m[k] || {};
     if (!Number.isFinite(n) || n < 1 || n > 20) return;
-    if (!v.url) return;
+    // Keep a located region even without an image: a whole-page factor's
+    // box still tells the report to say "measured across your whole page".
+    if (!v.url && !(Array.isArray(v.bbox) && v.bbox.length === 4)) return;
     out[n] = { ...v, caption: v.caption || 'server vision evidence' };
   });
   return out;
@@ -349,15 +351,22 @@ function setupPassages(){
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
+/* Earlier checks, kept only in this browser's localStorage. A visitor who
+   gives no name has one anonymous history. "Try a sample" runs are neither
+   compared nor saved: they are not the visitor's handwriting. */
 function loadHistory(name){
+  if (window.VAHINI_SAMPLE_RUN) return null;
   try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    const mine=h.filter(e=>e.name && name && e.name.toLowerCase()===name.toLowerCase());
+    const key=(name||'').toLowerCase();
+    const mine=h.filter(e=>(e.name||'').toLowerCase()===key);
     return mine.length? mine[mine.length-1] : null; }catch(e){ return null; }
 }
-function saveHistory(name, overall, sections){
+function saveHistory(name, overall, sections, results){
+  if (window.VAHINI_SAMPLE_RUN) return;
   try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    h.push({ name, date:new Date().toISOString().slice(0,10), overall,
-      sections:(sections||[]).map(s=>({id:s.id,avg100:s.avg100})) });
+    h.push({ name:name||'', date:new Date().toISOString().slice(0,10), overall,
+      sections:(sections||[]).map(s=>({id:s.id,avg100:s.avg100})),
+      factors:(results||[]).filter(f=>!f.unmeasured && Number.isFinite(f.score)).map(f=>({n:f.n,score:f.score})) });
     localStorage.setItem('vahini_history', JSON.stringify(h.slice(-60))); }catch(e){}
 }
 
@@ -538,7 +547,7 @@ async function runPipeline(){
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
-  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);
+  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
   renderNextSteps(analysis);
   await sleep(400);
@@ -688,7 +697,7 @@ async function finishIMU(){
     pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
     imu: summary,
   });
-  saveHistory(state.intake.writerName, analysis.overall, analysis.sections);
+  saveHistory(state.intake.writerName, analysis.overall, analysis.sections, analysis.results);
   const ns = $('#next-steps'); if (ns) ns.hidden = true;
   go('report');
 }
@@ -725,9 +734,11 @@ function renderSampleReport(){
     expectedText: '',
     recognizedText: s.text || '',
     ocrEngine: 'server',
-    detURL: null,
+    // A real run of the fixture photo (docs/examples/generate_photo_sample.py):
+    // the photo and the crops cut from it, as a visitor's report shows them.
+    detURL: data.photo || null,
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
-    crops: {},
+    crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
     letterFindings: null,
     history: null,
   });

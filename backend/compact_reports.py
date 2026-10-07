@@ -159,12 +159,17 @@ def build_compact(payload, access, include=()):
             }
         if "coaching" in include:
             report["coaching"] = analysis.get("coachTips") or []
-        if "evidence" in include:
-            report["evidence"] = {
-                "width": payload.get("proc_w"),
-                "height": payload.get("proc_h"),
-                "factor_regions": payload.get("factor_regions") or {},
-            }
+    if "evidence" in include:
+        regions = payload.get("factor_regions") or {}
+        report["evidence"] = {
+            "width": payload.get("proc_w"),
+            "height": payload.get("proc_h"),
+            "factor_regions": {
+                str(k): v
+                for k, v in regions.items()
+                if str(k).isdigit() and int(k) in allowed
+            },
+        }
     if not report["ok"]:
         report["error"] = {
             "code": payload.get("error_code", "analysis_failed")
