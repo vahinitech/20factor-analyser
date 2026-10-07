@@ -368,8 +368,17 @@ class TestServerPipeline(unittest.TestCase):
     def test_concurrent_analyses_run_in_parallel_not_serialized(self):
         # Several users (or tabs) analysing at the same time must not fully
         # queue up behind one slow request: /report-python offloads its heavy
-        # work via run_in_threadpool, so the event loop stays free to
-        # dispatch the others while it runs.
+        # work off the event loop, so it stays free to dispatch the others.
+        # How many scans run at once is the capacity plan's choice for the
+        # host (scan_slots.PLAN); pin five slots and five scan threads so
+        # this checks the server, not the free memory of the machine.
+        slots = sys.modules["scan_slots"]
+        pinned = ThreadPoolExecutor(max_workers=5, thread_name_prefix="scan")
+        orig_slots, orig_executor = slots.SLOTS, slots.EXECUTOR
+        slots.SLOTS, slots.EXECUTOR = slots.ScanSlots(5, 5), pinned
+        self.addCleanup(pinned.shutdown, wait=False)
+        self.addCleanup(setattr, slots, "EXECUTOR", orig_executor)
+        self.addCleanup(setattr, slots, "SLOTS", orig_slots)
         orig_collect = self.mod.recognizer.collect_lines
         delay = 0.35
 

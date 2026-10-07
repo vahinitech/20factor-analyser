@@ -115,6 +115,10 @@ class OCRBackend:
 # --------------------------------------------------------------------------- #
 _PADDLE_CFG = {
     "use_gpu": False,
+    # From the capacity plan (capacity.py): CPU threads per engine copy
+    # (0 = Paddle's default) and how many GPUs to spread copies over.
+    "cpu_threads": 0,
+    "gpu_count": 0,
     "ocr_version": None,
     "det_model_name": None,
     "rec_model_map": {},
@@ -181,6 +185,8 @@ def _paddle_engine_kwargs(lang, safe=False):
             "cpu" if safe else ("gpu" if _PADDLE_CFG["use_gpu"] else "cpu")
         ),
     }
+    if not safe and kwargs["device"] == "cpu" and _PADDLE_CFG["cpu_threads"]:
+        kwargs["cpu_threads"] = _PADDLE_CFG["cpu_threads"]
     if _PADDLE_CFG["ocr_version"]:
         kwargs["ocr_version"] = _PADDLE_CFG["ocr_version"]
     if _PADDLE_CFG["det_model_name"]:
@@ -292,6 +298,32 @@ def _build_engine_cached(lang: str):
         )
 
 
+def _replica_index():
+    """Which engine copy this thread uses. Scan work runs on threads named
+    scan_0, scan_1, ... (scan_slots.EXECUTOR), one per slot; each gets its
+    own copy, so slots no longer queue on one engine's lock. Any other
+    thread uses copy 0."""
+    name = threading.current_thread().name
+    if name.startswith("scan_"):
+        suffix = name.rsplit("_", 1)[-1]
+        if suffix.isdigit():
+            return int(suffix)
+    return 0
+
+
+@lru_cache(maxsize=32)
+def _build_engine_replica(lang: str, replica: int):
+    """Engine copy `replica` (>= 1) for a language: same models and
+    options as copy 0, placed on GPU replica % gpu_count when GPUs are in
+    use. Measured cost on CPU: 70-210 MB each."""
+    from paddleocr import PaddleOCR
+
+    kwargs = _paddle_engine_kwargs(lang, safe=False)
+    if kwargs["device"] == "gpu" and _PADDLE_CFG["gpu_count"] > 1:
+        kwargs["device"] = f"gpu:{replica % _PADDLE_CFG['gpu_count']}"
+    return PaddleOCR(**kwargs)
+
+
 @lru_cache(maxsize=8)
 def _build_engine_safe_cached(lang: str):
     """Fallback engine with minimal pre/post modules for max compatibility."""
@@ -321,6 +353,9 @@ def get_engine(lang: str):
         if cached_err:
             raise RuntimeError(cached_err)
         try:
+            replica = _replica_index()
+            if replica:
+                return _build_engine_replica(lang, replica)
             return _build_engine_cached(lang)
         except Exception as e:
             _ENGINE_FAIL_CACHE[("normal", lang)] = (time.monotonic(), str(e))

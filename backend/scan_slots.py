@@ -8,37 +8,32 @@ about 0.5 GB. Without a cap, four simultaneous visitors pushed the stage
 analyser out of memory and the kernel killed it mid-request (2026-10-07,
 docker events "oom" then "die 137"), failing every scan in flight.
 
-So at most VAHINI_MAX_ACTIVE_SCANS run at once, up to VAHINI_MAX_QUEUED_SCANS
-wait their turn, and anything beyond that gets 503 with Retry-After instead
-of a crash. Cache hits never take a slot: callers ask for one only after a
-cache miss.
+So at most PLAN["active"] scans run at once (capacity.py works it out from
+memory, cores and GPUs), up to PLAN["queued"] wait their turn, and anything
+beyond that gets 503 with Retry-After instead of a crash. Cache hits never
+take a slot: callers ask for one only after a cache miss.
 
 The work itself runs on a dedicated pool with one thread per slot, not on
 Starlette's shared pool of ~40. Paddle keeps working buffers per calling
 thread, so scans spread over many threads each kept a scan's peak: one scan
-at a time still climbed past 2.4 GB after a burst of queued requests.
+at a time still climbed past 2.4 GB after a burst of queued requests. Each
+slot thread also has its own OCR engine copy (ocr_backends._replica_index),
+so slots no longer queue on one engine's lock.
 """
 
 import asyncio
 import collections
 import functools
-import os
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 
 from fastapi import HTTPException
 
+import capacity
+
 RETRY_AFTER_SEC = 20
 BUSY_DETAIL = "The analyser is busy. Please try again in a moment."
-
-
-def _env_int(name, default, minimum):
-    try:
-        value = int(os.environ.get(name, default))
-    except ValueError:
-        value = default
-    return max(minimum, value)
 
 
 def _wake(turn):
@@ -113,10 +108,10 @@ class ScanSlots:
             }
 
 
-SLOTS = ScanSlots(
-    _env_int("VAHINI_MAX_ACTIVE_SCANS", 2, 1),
-    _env_int("VAHINI_MAX_QUEUED_SCANS", 4, 0),
-)
+# Sized from this host's memory, cores and GPUs (capacity.py); the
+# VAHINI_MAX_ACTIVE_SCANS / VAHINI_MAX_QUEUED_SCANS overrides still win.
+PLAN = capacity.detect_plan()
+SLOTS = ScanSlots(PLAN["active"], PLAN["queued"])
 
 # One worker per slot: the same few threads run every scan, so Paddle's
 # per-thread buffers exist at most max_active times.

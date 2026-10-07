@@ -48,18 +48,6 @@ class ScanSlotsTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(slots.stats()["running"], 0)
         self.assertEqual(slots.stats()["waiting"], 0)
 
-    async def test_env_values_are_clamped(self):
-        with patch.dict(
-            "os.environ",
-            {"VAHINI_MAX_ACTIVE_SCANS": "0", "VAHINI_MAX_QUEUED_SCANS": "x"},
-        ):
-            self.assertEqual(
-                scan_slots._env_int("VAHINI_MAX_ACTIVE_SCANS", 2, 1), 1
-            )
-            self.assertEqual(
-                scan_slots._env_int("VAHINI_MAX_QUEUED_SCANS", 4, 0), 4
-            )
-
 
 class ScanSlotsHTTPTests(unittest.IsolatedAsyncioTestCase):
     async def test_full_server_answers_503_and_cache_hits_still_work(self):

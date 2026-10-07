@@ -217,8 +217,17 @@ ocr_backends.init_registry(
         "use_textline_orientation": USE_TEXTLINE_ORIENTATION,
         "max_variants": MAX_VARIANTS,
         "adv_preproc": ADV_PREPROC,
+        # One engine copy per scan slot, each on its share of the cores
+        # (or spread over the GPUs). A single slot keeps Paddle's defaults.
+        "cpu_threads": (
+            scan_slots.PLAN["threads_per_engine"] or 0
+            if scan_slots.PLAN["active"] > 1
+            else 0
+        ),
+        "gpu_count": scan_slots.PLAN["gpus"],
     },
 )
+print(f"[capacity] {scan_slots.PLAN}", flush=True)
 
 
 # _to_data_url/_crop_rgb/_build_region_previews/_full_page_preview/
@@ -248,6 +257,7 @@ def health():
         "backends": backends,
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
+        "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
