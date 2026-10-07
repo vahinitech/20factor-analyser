@@ -24,9 +24,9 @@
 <meta name="twitter:image" content="https://vahinitech.com/site/assets/og/index.jpg">
 <meta name="color-scheme" content="only light">
 <title>Free Handwriting Check &amp; Analysis | Vahini Analyser</title>
-<link rel="stylesheet" href="styles/report.css">
-<link rel="stylesheet" href="styles/studio.css">
-<link rel="stylesheet" href="styles/nav.css">
+<link rel="stylesheet" href="styles/report.css?v=98f1335c9b">
+<link rel="stylesheet" href="styles/studio.css?v=89f8acdd92">
+<link rel="stylesheet" href="styles/nav.css?v=6b36cd9e45">
 <!-- The Vahini design system (--v-* tokens, v-* classes), served by vahinitech.com -->
 <link rel="stylesheet" href="/site/design/v1/vahini.css">
 <style>
@@ -51,22 +51,55 @@
     .intake-cap{ min-height:0; }
     .intake-split .dropzone--solo{ aspect-ratio:auto; min-height:280px; }
   }
+  /* upload screen: one promise, three facts, then the photo */
+  .trust-ticks{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; list-style:none; padding:0; margin:12px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); }
+  .trust-ticks li::before{ content:"\2713"; color:var(--v-success); font-weight:var(--v-weight-bold); margin-right:6px; }
+  #dz-prompt .dz-btns{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:6px 0 4px; }
+  #dz-prompt .dz-hint{ font-size:var(--v-text-sm); color:var(--v-text-2); }
+  #dz-prompt .dz-hint a, .upload-links a, .pen-option a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
+  .dz-phone{ display:none; }
+  #dz-prompt .dz-ico{ margin-left:auto; margin-right:auto; }
+  @media (max-width:560px){ .screen-head h1{ font-size:30px; line-height:1.15; } }
+  .dz-status{ font-size:var(--v-text-sm); color:var(--v-text-2); text-align:center; margin:8px 0 0; }
+  .dz-status:empty{ display:none; }
+  .upload-links.video-links{ text-align:left; margin-top:10px; }
+  .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
+  .more-options{ margin:14px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); padding:10px 14px; }
+  .more-options > summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); }
+  .more-options__body{ padding-top:10px; }
+  .pen-option{ font-size:var(--v-text-sm); color:var(--v-text-2); margin:12px 0 2px; }
+  .intake-split .actions #go-process{ flex:1; justify-content:center; }
+  @media (hover:none) and (pointer:coarse), (max-width:560px){
+    .dz-phone{ display:inline-flex; }
+    .dz-desk{ display:none; }
+  }
+  /* after the report: next step, outside the report pages */
+  .next-steps{ max-width:1080px; margin:28px auto 56px; padding:0 22px; }
+  .next-steps h2{ font:var(--v-weight-semibold) var(--v-text-xl)/1.25 var(--v-font-serif); color:var(--v-text); margin:6px 0 16px; }
+  .ns-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .ns-cards .v-card p{ margin:0; font-size:var(--v-text-sm); line-height:1.6; }
+  .ns-cards .ns-link{ margin-top:10px; }
+  .ns-cards a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
+  @media (max-width:900px){ .ns-cards{ grid-template-columns:1fr; } }
+  @media print{ .next-steps{ display:none !important; } }
   /* about the check: what you get, steps, questions (under the tool) */
-  .check-guide{ max-width:1180px; margin:56px auto 0; display:grid; gap:48px; }
-  .check-guide h2{ font:var(--v-weight-semibold) var(--v-text-xl)/1.25 var(--v-font-serif); color:var(--v-text); margin:6px 0 18px; }
-  .check-guide p, .check-guide li{ color:var(--v-text-2); line-height:1.6; }
+  /* upload page: upload beside the video, then what you get | steps | questions */
+  #screen-upload{ max-width:1180px; }
+  .check-layout{ display:grid; gap:24px; }
+  .cl-upload{ margin:0; }
+  .cl-info{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:start; }
+  .cl-info > .v-card{ padding:var(--v-space-4) var(--v-space-5); }
+  .check-guide h2{ font:var(--v-weight-semibold) var(--v-text-lg)/1.25 var(--v-font-serif); color:var(--v-text); margin:4px 0 12px; }
+  .check-guide p, .check-guide li{ color:var(--v-text-2); line-height:1.55; font-size:var(--v-text-sm); }
   .check-guide a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
-  .cg-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-  .cg-cards .v-card p{ margin:0; font-size:var(--v-text-sm); }
-  .cg-more{ margin:14px 0 0; font-size:var(--v-text-sm); }
-  .cg-steps{ margin:0; padding-left:22px; display:grid; gap:10px; max-width:760px; }
-  .cg-steps b{ color:var(--v-text); }
-  .cg-faq{ max-width:760px; border-top:1px solid var(--v-border); }
-  .cg-faq details{ border-bottom:1px solid var(--v-border); padding:14px 0; }
-  .cg-faq summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); }
-  .cg-faq details p{ margin:10px 0 0; font-size:var(--v-text-sm); }
-  @media (max-width:900px){ .cg-cards{ grid-template-columns:1fr; } .check-guide{ margin-top:40px; gap:36px; } }
-  .upload-note{ text-align:center; font-size:12.5px; color:var(--muted); margin:16px auto 0; max-width:560px; line-height:1.5; }
+  .check-guide b{ color:var(--v-text); }
+  .cg-list{ list-style:none; margin:0; padding:0; display:grid; gap:10px; }
+  .cg-steps{ margin:0; padding-left:20px; display:grid; gap:8px; }
+  .cg-faq{ border-top:1px solid var(--v-border); }
+  .cg-faq details{ border-bottom:1px solid var(--v-border); padding:12px 0; }
+  .cg-faq summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); font-size:var(--v-text-sm); }
+  .cg-faq details p{ margin:8px 0 0; }
+  @media (max-width:900px){ .cl-info{ grid-template-columns:minmax(0,1fr); } }
 
   /* "what to upload" guidance: collapsed by default, opens on click */
   .upload-help{ max-width:760px; margin:16px auto 0; border:1px solid var(--rule); border-radius:14px; background:var(--v-surface); overflow:hidden; }
@@ -100,18 +133,6 @@
   .video-frame iframe{ position:absolute; inset:0; width:100%; height:100%; border:0; display:block; }
   /* sample-report / case-studies cards above the intake split: the
      see-it-before-you-scan links come first, then the upload work */
-  .sample-cta-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; max-width:1180px; margin:0 auto 20px; }
-  @media (max-width:900px){ .sample-cta-row{ grid-template-columns:1fr; } }
-  /* phones: the two buttons stack full width instead of squeezing into narrow columns */
-  @media (max-width:560px){ .intake-split .actions{ flex-direction:column-reverse; align-items:stretch; } .intake-split .actions .btn{ justify-content:center; } }
-  .sample-cta{ display:flex; align-items:center; gap:13px; padding:14px 16px;
-    background:var(--v-surface); border:1px solid var(--rule); border-radius:14px;
-    text-decoration:none; transition:border-color .15s, box-shadow .15s; }
-  .sample-cta:hover{ border-color:var(--accent); box-shadow:0 6px 20px rgba(34,40,49,.08); }
-  .sample-cta svg{ width:22px; height:22px; color:var(--accent-deep); flex:0 0 auto; }
-  .sample-cta b{ display:block; font-size:13.5px; color:var(--ink); }
-  .sample-cta small{ display:block; font-size:12px; color:var(--muted); line-height:1.5; margin-top:2px; }
-  .sample-cta .cta-arrow{ margin-left:auto; color:var(--accent-deep); font-weight:700; flex:0 0 auto; }
 </style>
 </head>
 <body class="studio">
@@ -123,20 +144,12 @@
   <div class="screen-head">
     <div class="eyebrow">Vahini · 20-factor handwriting analysis</div>
     <h1>Free handwriting check: upload a photo of your page</h1>
-    <p>Upload a clear handwritten page. Get up to three priorities, including a possible English spelling mistake when detected, followed by coaching and short drills. Built for school students and open to anyone who wants to practise.</p>
-  </div>
-
-  <div class="sample-cta-row">
-    <a class="sample-cta" href="sample-report.html" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-      <span><b>See a sample report first</b><small>See the free review, coaching and drills. Print it or save it as a PDF.</small></span>
-      <span class="cta-arrow">&rarr;</span>
-    </a>
-    <a class="sample-cta" href="case-studies.html" target="_blank" rel="noopener">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>
-      <span><b>Three before and after stories</b><small>Lines that slide down, words too close together, letters all one size. See how the scores rise after practice.</small></span>
-      <span class="cta-arrow">&rarr;</span>
-    </a>
+    <p>One photo of a handwritten page. You get up to three things to practise, with coaching and short drills.</p>
+    <ul class="trust-ticks">
+      <li>Free</li>
+      <li>No account needed</li>
+      <li>Photo used for your report only</li>
+    </ul>
   </div>
 
   <div class="service-banner" id="service-banner" style="display:none;">
@@ -144,27 +157,38 @@
     <div><b>Recognition server unavailable</b><p id="service-banner-detail">Checking connection…</p></div>
     <button class="btn btn-ghost" id="service-retry" type="button">Retry now</button>
   </div>
-  <div class="panel">
+  <!-- Upload beside the video, then what you get | steps | questions in three columns.
+       Phones stack them in that order. All static HTML, so crawlers and no-JS readers get it. -->
+  <div class="check-layout">
+  <div class="panel cl-upload">
     <div class="intake-split">
      <div class="intake-col">
-      <div class="intake-cap"><div class="eyebrow">Step 1 · Your sample</div><h3>Drop your handwriting page</h3></div>
+      <div class="intake-cap"><div class="eyebrow">Step 1 · Your sample</div><h3>Add a photo of your page</h3></div>
       <div class="dropzone dropzone--solo" id="dropzone">
-      <button class="dz-clear" id="dz-clear" style="display:none;">✕</button>
-      <img class="preview" id="dz-preview" style="display:none;" alt="sample preview">
+      <button class="dz-clear" id="dz-clear" style="display:none;" aria-label="Remove this photo">✕</button>
+      <img class="preview" id="dz-preview" style="display:none;" alt="Your handwriting photo">
       <div id="dz-prompt">
         <div class="dz-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg></div>
-        <h3>Drop a handwriting photo</h3>
-        <p>or click to browse. A clear, well-lit shot of a few lines on plain or ruled paper works best.</p>
+        <h3 class="dz-desk">Drop a photo of your page here</h3>
+        <div class="dz-btns">
+          <button type="button" class="btn btn-primary dz-phone" id="take-photo">Take a photo</button>
+          <button type="button" class="btn btn-ghost" id="choose-photo">Choose a photo</button>
+        </div>
+        <p class="dz-hint">JPG, PNG or PDF, up to 25 MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
       </div>
+      <p class="dz-status" id="dz-status" role="status" aria-live="polite"></p>
       <input id="file-input" type="file" accept="image/*,application/pdf,.pdf" style="display:none;">
     </div>
+    <!-- Outside the dropzone so its click does not bubble into the dropzone's own file picker. -->
+    <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none;">
 
     <!-- reference passage: hidden. With recognition the written text is read for
          you; without it the engine falls back to a standard sample passage. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
 
-    <p class="upload-note">Choose your photo, then press <b>Run analysis</b> for the report. New here? <a href="../site/factors.html" style="color:var(--accent-deep);font-weight:600;">See what the 20 factors mean &rarr;</a></p>
-
+    <details class="more-options" id="more-options">
+      <summary>More options</summary>
+      <div class="more-options__body">
     <details class="upload-help" id="upload-help">
       <summary>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4M12 8h.01"/></svg>
@@ -216,9 +240,10 @@
           <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
         </form>
       </details>
+        <p class="pen-option">Have the Vahini pen? <a href="#" id="use-pen">Capture live with the pen</a> · <a href="/product.html">What the pen adds</a></p>
+      </div>
+    </details>
     <div class="actions">
-      <a href="#" class="btn btn-ghost" id="use-pen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l3-1 12-12-2-2L4 18z"/><path d="M15 5l2 2"/><circle cx="19.5" cy="4.5" r="1.6"/></svg>Capture live with the sensor pen</a>
-
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
      </div>
@@ -230,24 +255,22 @@
         <iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe>
       </div>
       <p class="video-cap">See how Vahini turns one vague word, "messy", into twenty things you can actually measure and fix.</p>
+      <p class="upload-links video-links"><a href="sample-report.html" target="_blank" rel="noopener">See a sample report</a> · <a href="case-studies.html" target="_blank" rel="noopener">Three before and after stories</a></p>
      </aside>
     </div>
   </div>
 
-  <!-- ============ ABOUT THE CHECK (static HTML, so crawlers and no-JS readers get it) ============ -->
-  <div class="check-guide">
-    <section aria-labelledby="cg-get">
+  <div class="cl-info">
+    <section class="v-card check-guide" aria-labelledby="cg-get">
       <div class="v-eyebrow">The free check</div>
       <h2 id="cg-get">What you get from one photo</h2>
-      <div class="cg-cards">
-        <div class="v-card"><h3>Up to three priorities</h3><p>The parts of your handwriting that would improve the page most, in the order to practise them.</p></div>
-        <div class="v-card"><h3>Coaching and short drills</h3><p>What to change for each priority, with a few minutes of practice you can print and do at a table.</p></div>
-        <div class="v-card"><h3>Spelling suggestions</h3><p>Common English spelling mistakes, when the words on the page are clear enough to read.</p></div>
-      </div>
-      <p class="cg-more"><a href="sample-report.html">See a sample report</a> before you upload.</p>
+      <ul class="cg-list">
+        <li><b>Up to three priorities.</b> The parts of your handwriting that would improve the page most, in the order to practise them.</li>
+        <li><b>Coaching and short drills.</b> What to change for each priority, with a few minutes of practice you can print and do at a table.</li>
+        <li><b>Spelling suggestions.</b> Common English spelling mistakes, when the words on the page are clear enough to read.</li>
+      </ul>
     </section>
-
-    <section aria-labelledby="cg-how">
+    <section class="v-card check-guide" aria-labelledby="cg-how">
       <div class="v-eyebrow">Four steps</div>
       <h2 id="cg-how">How the handwriting check works</h2>
       <ol class="cg-steps">
@@ -257,8 +280,7 @@
         <li><b>Practise your first priority for a week</b>, then check again with the same pen and paper and compare the two reports.</li>
       </ol>
     </section>
-
-    <section aria-labelledby="cg-faq">
+    <section class="v-card check-guide cl-faq" aria-labelledby="cg-faq">
       <div class="v-eyebrow">Questions</div>
       <h2 id="cg-faq">Before you upload</h2>
       <div class="cg-faq">
@@ -276,6 +298,7 @@
           <p>A photo shows the finished page. The <a href="/product.html">Vahini pen</a>, in development, records how the page was written while you write on ordinary paper, so stroke order, speed and pressure can be measured instead of estimated.</p></details>
       </div>
     </section>
+  </div>
   </div>
 </section>
 
@@ -368,11 +391,21 @@
     <button class="btn btn-dark" id="print-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button>
   </div>
   <div class="report-host" id="report-host"></div>
+  <!-- After the report, outside its pages and never printed: filled by app.js. -->
+  <section class="next-steps" id="next-steps" aria-labelledby="ns-title" hidden>
+    <div class="v-eyebrow">After your report</div>
+    <h2 id="ns-title">Your next step</h2>
+    <div class="ns-cards">
+      <div class="v-card"><h3 id="ns-practice-title">1. Practise one thing</h3><p id="ns-practice-text">Start with your first priority, a few minutes a day for a week.</p><p class="ns-link"><a id="ns-practice-link" href="/practice.html">Open the practice worksheets</a></p></div>
+      <div class="v-card"><h3 id="ns-again-title">2. Check again in a week</h3><p>Same pen, same paper, the same kind of page. Then compare the two reports.</p><p class="ns-link"><a id="ns-calendar" href="#" download="handwriting-check-again.ics">Add a reminder to your calendar</a></p></div>
+      <div class="v-card"><h3>3. What a photo cannot see</h3><p>Stroke order, speed and pressure were estimated from the ink. The Vahini pen, in development, records how the page was written.</p><p class="ns-link"><a href="/product.html">What the pen adds</a> · <a href="/reach.html">Pre-order</a></p></div>
+    </div>
+  </section>
 </section>
 
 
 <div id="site-footer"></div>
-<script src="scripts/core/protect.js"></script>
+<script src="scripts/core/protect.js?v=247f0b968d"></script>
 <script>
   window.VAHINI_OCR_ENDPOINT = '/ocr';
   window.VAHINI_OCR_LANG = 'auto';
@@ -380,7 +413,7 @@
   window.VAHINI_PYTHON_REPORT = true;
   window.VAHINI_PERSIST_ENDPOINT = '/persist';
 </script>
-<script src="scripts/core/engine.bundle.js"></script>
+<script src="scripts/core/engine.bundle.js?v=7cc2b54272"></script>
 <script>
 (function(){
   "use strict";
@@ -496,6 +529,8 @@
 
   function persistReport(trigger){
     if (state.reportSaved) return;
+    // "Try a sample" runs our own photo: not a visitor's report, so not stored or counted.
+    if (window.VAHINI_SAMPLE_RUN) return;
     var host = document.getElementById("report-host");
     if (!host) return;
     var rawHtml = String(host.innerHTML || "");
