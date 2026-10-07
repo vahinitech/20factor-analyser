@@ -1,0 +1,1 @@
+- The footer's social icons on the analyser page sit in one row, as on the rest of the site, instead of wrapping onto two uneven rows.
