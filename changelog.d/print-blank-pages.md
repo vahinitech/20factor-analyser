@@ -1,0 +1,1 @@
+- Printing the free report gives two A4 pages again. A real photo's text could leave the second sheet just too tall to shrink, and a sheet that filled the page to the pixel tipped onto a blank one, so prints came out as 3 or 4 pages with blank ones between. The layout test now counts the printed pages, including at the length a real photo produces.

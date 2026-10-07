@@ -46,5 +46,24 @@ export async function checkReportLayout(page){
     await page.screenshot({path:'test-results/report-layout/'+mode+'.png',fullPage:true});
   }
   await page.pdf({path:'test-results/report-layout/report.pdf',format:'A4',printBackground:true});
+  // Count the printed pages, not only each sheet's height. Heights passed
+  // while stage printed the free report as 3-4 pages with blank ones between
+  // (2026-10-07): a real photo's text runs longer than this fixture's.
+  const pdfPages=async()=>((await page.pdf({format:'A4',printBackground:true})).toString('latin1').match(/\/Type\s*\/Page[^s]/g)||[]).length;
+  await page.emulateMedia({media:'print'});
+  await page.evaluate(()=>VahiniReport.fitPrintPages(document.getElementById('host')));
+  add(await pdfPages()===2,'print: the free report prints on exactly two A4 pages');
+  // The heights stage measured before fitting: sheet 1 filled the sheet to
+  // the pixel, sheet 2 was 1335px.
+  const stretched=await page.evaluate(()=>{
+    const sheets=[...document.querySelectorAll('.free-report')];
+    sheets.forEach(p=>{p.style.zoom='';p.style.width='';p.style.minHeight='';});
+    [1119,1335].forEach((target,i)=>{const pad=document.createElement('div');pad.className='layout-stretch';pad.style.height=Math.max(0,target-sheets[i].scrollHeight)+'px';sheets[i].append(pad);});
+    const natural=sheets.map(p=>p.scrollHeight);
+    VahiniReport.fitPrintPages(document.getElementById('host'));
+    return natural;
+  });
+  add(await pdfPages()===2,'print: sheets as long as a real photo makes them still print on two pages',JSON.stringify(stretched));
+  await page.evaluate(()=>document.querySelectorAll('.layout-stretch').forEach(e=>e.remove()));
   return results;
 }

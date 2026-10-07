@@ -15,4 +15,6 @@ Scan work runs through `scan_slots.slot()` and `scan_slots.run()` (capacity size
 
 Keep authorization server-owned, preserve the existing expanded contract, and update dictionary versions and the browser adapter together when their contract changes. Rebuild the frontend bundle after source edits. Verify returned values and actual printable output rather than only screenshots or fixture counts.
 
+Printable output means the page count, not only each sheet's height. The free report is two A4 sheets; `tests/report-layout.mjs` prints the PDF and fails on any other count, once with the fixture and once with sheets stretched to the length a real photo produces (the fixture's text is shorter, which is how 3-4 page prints with blank pages passed every check on 2026-10-07). Any change to report content, spacing or `fitPrintPages()` reruns it; when real content grows, update the stretched heights from a real print, not from the fixture.
+
 For PR review, use [review instructions](../../../.github/instructions/code-review.instructions.md). Use synthetic samples and test credentials. Do not claim native app changes or store purchase verification from backend work. The consuming website owns its staging and production deployment workflow.

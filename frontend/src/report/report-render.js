@@ -577,20 +577,39 @@ function render(host, data){
    instead. */
 const A4_MM = { w:210, h:296 };  /* 296: see report.css print note on 297mm */
 const FIT_MIN = 0.84;            /* scale floor: below this, spill instead */
+/* The free report is two sheets by design, and a real photo's text runs
+   longer than the test fixture's: on 2026-10-07 its second sheet needed
+   0.838, just under FIT_MIN, so it spilled and printed as 3-4 pages with
+   blank ones between. Its pages may shrink a little further instead. */
+const FIT_MIN_FREE = 0.78;
+/* Fit to a little less than the sheet. A page that fills the sheet to the
+   pixel (sheet 1 measured 1119px against 1118.7px) still tips onto a blank
+   extra page in a real print dialog, through rounding. */
+const FIT_SLACK_PX = 6;
 function fitPrintPages(host){
   const pxPerMM = 96/25.4;
-  const sheetH = A4_MM.h * pxPerMM;
+  const sheetH = A4_MM.h * pxPerMM - FIT_SLACK_PX;
   host.querySelectorAll('section.page').forEach(pageEl=>{
     pageEl.style.zoom = ''; pageEl.style.width = ''; pageEl.style.minHeight = '';
-    /* two passes: width compensation reflows text, which changes height */
-    for (let i=0; i<2; i++){
-      const h = pageEl.scrollHeight;
+    const floor = pageEl.classList.contains('free-report') ? FIT_MIN_FREE : FIT_MIN;
+    /* Width compensation reflows the text, which changes the height, so
+       measure the rendered (zoomed) content again after each step and keep
+       shrinking until it fits. Two fixed passes were not enough: the second
+       left a sheet at 1129px for a 1113px target. Content is measured with
+       min-height off, or every page would read as a full sheet. */
+    let z = 1;
+    for (let i=0; i<5; i++){
+      const minH = pageEl.style.minHeight;
+      pageEl.style.minHeight = '0px';
+      const h = pageEl.getBoundingClientRect().height;
+      pageEl.style.minHeight = minH;
       if (h <= sheetH + 1) break;
-      const z = Math.max(FIT_MIN, sheetH / h);
-      if (z <= FIT_MIN + 0.001){          /* too tall to shrink readably */
+      const next = Math.max(floor, z * sheetH / h);
+      if (next <= floor + 0.001){         /* too tall to shrink readably */
         pageEl.style.zoom=''; pageEl.style.width=''; pageEl.style.minHeight='';
         break;
       }
+      z = Math.min(next, z - 0.002);      /* always progress */
       pageEl.style.zoom = String(z);
       pageEl.style.width = 'calc('+A4_MM.w+'mm / '+z+')';
       pageEl.style.minHeight = 'calc('+A4_MM.h+'mm / '+z+')';
