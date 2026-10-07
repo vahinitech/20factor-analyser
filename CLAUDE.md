@@ -19,7 +19,8 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   simultaneous scans running the host out of memory (OOM kill on stage,
   2026-10-07). `backend/capacity.py` sizes the slots from memory, cores and
   GPUs with constants measured on the deploy box; change a constant only
-  with a load-test measurement, and never remove the cap. Model and numbers:
+  with a load-test measurement (`backend/load_test.py`, stage only), and
+  never remove the cap. Model and numbers:
   #97 and `docs/api-review.md`.
 - **Asset URLs are stamped by `build_bundle.py`.** Pages load
   `scripts/core/*.js` and `styles/*.css` as `?v=<hash>`, because vahini-web

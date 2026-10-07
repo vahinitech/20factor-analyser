@@ -1,0 +1,1 @@
+- `backend/load_test.py` measures how many simultaneous scans a running analyser completes with a real reading, how many it refuses with 503, and how long they take, with the deployed models and no cache hits. `docs/api-review.md` documents how to run it on stage and records the 2026-10-07 numbers behind #97.
