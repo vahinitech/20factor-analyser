@@ -24,6 +24,7 @@ import glob
 import hashlib
 import os
 import re
+import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -103,11 +104,39 @@ def stamp_pages():
     return changed
 
 
+def strip_pages():
+    """Remove every ?v= stamp from frontend/*.html (the committed form)."""
+    changed = []
+    for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
+        with open(page, "r", encoding="utf-8") as f:
+            text = f.read()
+        plain = ASSET_REF.sub(
+            lambda m: m.group(1) + m.group(2) + m.group(3), text
+        )
+        if plain != text:
+            with open(page, "w", encoding="utf-8", newline="\n") as f:
+                f.write(plain)
+            changed.append(os.path.basename(page))
+    return changed
+
+
 if __name__ == "__main__":
+    # The bundle and the ?v= stamps are build output, never committed: every
+    # frontend PR changed both, so any two open PRs conflicted on them. The
+    # image build (deployment/Dockerfile) and CI run this; so does anyone
+    # serving frontend/ straight from a checkout.
+    #   python frontend/build_bundle.py           build engine.bundle.js
+    #   python frontend/build_bundle.py --stamp   ...and stamp the pages
+    #   python frontend/build_bundle.py --strip   remove stamps from pages
+    if "--strip" in sys.argv:
+        for name in strip_pages():
+            print(f"[build] removed asset stamps from {name}")
+        sys.exit(0)
     src_len, b64_len = build()
     print(
         f"[build] packed {len(SOURCES)} sources: {src_len} src chars -> {b64_len} base64 chars"
     )
     print(f"[build] wrote {OUT}")
-    for name in stamp_pages():
-        print(f"[build] stamped asset URLs in {name}")
+    if "--stamp" in sys.argv:
+        for name in stamp_pages():
+            print(f"[build] stamped asset URLs in {name}")

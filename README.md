@@ -128,8 +128,9 @@ tests/                    headless Chrome e2e + fixtures
 
 ## Development
 
-The client ships as one packed file. After editing anything in `frontend/src/`,
-rebuild it (CI fails if it is out of date):
+The client ships as one packed file, built from `frontend/src/` and not
+committed. Build it before serving `frontend/` from a checkout (the Docker image
+builds it for you):
 
 ```bash
 python frontend/build_bundle.py

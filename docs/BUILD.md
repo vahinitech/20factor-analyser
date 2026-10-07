@@ -48,8 +48,10 @@ earlier modules, so it must come last. The canonical list lives in `frontend/bui
    } catch (e) { console.error("engine load failed", e); } })();
    ```
 
-3. Commit the regenerated bundle. CI (`e2e` job) re-runs `build_bundle.py` and fails if the
-   committed `engine.bundle.js` is stale.
+3. Don't commit it: `engine.bundle.js` is gitignored build output. The image build runs
+   `build_bundle.py --stamp` (bundle plus `?v=` stamps on the pages' scripts and styles), and
+   CI builds it before the browser tests and fails if a bundle or stamp is committed. Both used
+   to be committed, and every frontend PR conflicted with every other one on them.
 4. With the recognition server running (`docker compose up -d`), open
    `http://localhost:8080/analyser/analyser.html`, upload a sample, and confirm a report renders
    with no console errors.
