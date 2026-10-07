@@ -163,6 +163,40 @@ function setupUploadDrop(){
   dz.addEventListener('drop', e=>{ const f=e.dataTransfer.files[0]; handleSample(f); });
   input.addEventListener('change', e=>handleSample(e.target.files[0]));
   $('#dz-clear').addEventListener('click', e=>{ e.stopPropagation(); clearSample(); });
+  // Buttons inside the dropzone must not also trigger its own click-to-browse.
+  const choose = $('#choose-photo'), take = $('#take-photo'), camera = $('#camera-input'), trySample = $('#try-sample');
+  if (choose) choose.addEventListener('click', e=>{ e.stopPropagation(); input.click(); });
+  if (take && camera) take.addEventListener('click', e=>{ e.stopPropagation(); camera.click(); });
+  // A camera photo goes through #file-input, so it is handled and stored like any other upload.
+  if (camera) camera.addEventListener('change', ()=>{
+    const f = camera.files && camera.files[0]; if (!f) return;
+    const dt = new DataTransfer(); dt.items.add(f); input.files = dt.files;
+    camera.value = '';
+    input.dispatchEvent(new Event('change', { bubbles:true }));
+  });
+  if (trySample) trySample.addEventListener('click', e=>{ e.preventDefault(); e.stopPropagation(); loadBundledSample(); });
+}
+
+/* "Try a sample": our own photo, loaded straight into the preview. It never
+   passes through #file-input, so it is not stored as a visitor's upload, and
+   VAHINI_SAMPLE_RUN stops a printed sample report from being stored too. */
+async function loadBundledSample(){
+  if (serviceUp === false) return;
+  setDzStatus('Loading the sample page…');
+  try{
+    const res = await fetch('assets/samples/handwriting-sample.jpg');
+    if (!res.ok) throw new Error('sample unavailable');
+    const blob = await res.blob();
+    readImageFile(new File([blob], 'handwriting-sample.jpg', { type:'image/jpeg' }), (img, url)=>{
+      window.VAHINI_SAMPLE_RUN = true;
+      showSample(img, url);
+      setDzStatus('Sample page loaded. Press Run analysis to see its report.');
+    });
+  }catch(_e){ setDzStatus('The sample page could not be loaded. Try your own photo.'); }
+}
+
+function setDzStatus(text){
+  const s = $('#dz-status'); if (s) s.textContent = text || '';
 }
 /* Load the PDF reader only for PDF uploads; retry after a failed load. */
 let pdfJsPromise = null;
@@ -207,17 +241,16 @@ function showSample(img, url){
 
 function handleSample(file){
   if (!file || serviceUp === false) return;
+  window.VAHINI_SAMPLE_RUN = false;
+  setDzStatus('');
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf){
-    $('#dz-prompt').textContent = 'Reading PDF…';
+    setDzStatus('Reading PDF…');
     pdfFirstPageToImage(file).then(({ img, url, pages })=>{
       showSample(img, url);
-      if (pages > 1){
-        const p = $('#dz-prompt');
-        if (p){ p.style.display='block'; p.textContent = 'PDF has ' + pages + ' pages: only page 1 is analysed.'; }
-      }
+      setDzStatus(pages > 1 ? 'PDF has ' + pages + ' pages: only page 1 is analysed.' : '');
     }).catch(err=>{
-      const p = $('#dz-prompt'); if (p){ p.style.display='block'; p.textContent = (err && err.message) ? err.message : 'Could not read this PDF.'; }
+      setDzStatus((err && err.message) ? err.message : 'Could not read this PDF.');
     });
     return;
   }
@@ -226,6 +259,7 @@ function handleSample(file){
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';
   $('#dz-prompt').style.display='block'; $('#file-input').value='';
+  window.VAHINI_SAMPLE_RUN = false; setDzStatus('');
   applyServiceGate();
 }
 
@@ -506,8 +540,42 @@ async function runPipeline(){
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections);
   stepState('score','done', `Report ready`);
+  renderNextSteps(analysis);
   await sleep(400);
   go('report');
+}
+
+/* The "next step" block under a photo report (outside the report pages, not
+   printed): the worksheet for the lowest measured score, a calendar reminder
+   to check again in a week, and what the pen would add. */
+function renderNextSteps(analysis){
+  const box = $('#next-steps'); if (!box) return;
+  const ws = window.VahiniWorksheets;
+  const sheet = ws ? ws.recommend(analysis && analysis.results)[0] : null;
+  const link = $('#ns-practice-link');
+  if (sheet && link){
+    $('#ns-practice-title').textContent = '1. Practise: ' + sheet.title;
+    $('#ns-practice-text').textContent = 'Matched to your lowest score. Print the sheet and do one page a day for a week.';
+    link.href = ws.base() + '/assets/worksheets/' + sheet.id + '.pdf';
+    link.textContent = 'Download the worksheet (PDF)';
+  }
+  const when = new Date(Date.now() + 7*864e5);
+  $('#ns-again-title').textContent = '2. Check again on ' + when.toLocaleDateString('en-GB', { day:'numeric', month:'long' });
+  const cal = $('#ns-calendar');
+  if (cal){
+    if (cal.dataset.url) URL.revokeObjectURL(cal.dataset.url);
+    const ymd = d=>d.toISOString().slice(0,10).replace(/-/g,'');
+    const ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Vahini//Handwriting check//EN','BEGIN:VEVENT',
+      'UID:' + Date.now() + '-' + Math.random().toString(36).slice(2) + '@vahinitech.com',
+      'DTSTAMP:' + new Date().toISOString().replace(/[-:]/g,'').replace(/\.\d+/,''),
+      'DTSTART;VALUE=DATE:' + ymd(when), 'DTEND;VALUE=DATE:' + ymd(new Date(when.getTime() + 864e5)),
+      'SUMMARY:Check your handwriting again',
+      'DESCRIPTION:Same pen\\, same paper. Upload a new photo and compare it with last week\'s report.',
+      'URL:https://vahinitech.com/analyser/analyser.html','END:VEVENT','END:VCALENDAR'].join('\r\n');
+    cal.dataset.url = URL.createObjectURL(new Blob([ics], { type:'text/calendar' }));
+    cal.href = cal.dataset.url;
+  }
+  box.hidden = false;
 }
 
 /* ---------- IMU live capture ---------- */
@@ -621,6 +689,7 @@ async function finishIMU(){
     imu: summary,
   });
   saveHistory(state.intake.writerName, analysis.overall, analysis.sections);
+  const ns = $('#next-steps'); if (ns) ns.hidden = true;
   go('report');
 }
 
