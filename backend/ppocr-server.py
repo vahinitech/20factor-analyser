@@ -77,7 +77,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
-from upload_limits import UploadBodyLimit
+from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
 import numpy as np
 
 # PaddleOCR 3.x (PP-OCRv5) is imported LAZILY inside get_engine() so this module
@@ -177,9 +177,9 @@ _decode_image = computer_vision.decode_image
 
 
 async def _read_upload(image):
-    raw = await image.read(30 * 1024 * 1024 + 1)
-    if len(raw) > 30 * 1024 * 1024:
-        raise HTTPException(413, "Upload exceeds 30 MiB")
+    raw = await image.read(MAX_UPLOAD_BYTES + 1)
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Upload exceeds 5 MiB")
     return raw
 
 

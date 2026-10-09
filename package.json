@@ -15,6 +15,7 @@
     "test:recognition": "node tests/e2e-recognition.mjs",
     "test:regression:install": "playwright install chromium",
     "test:pdf": "node tests/pdf-upload.mjs",
+    "test:unreadable": "node tests/unreadable-image.mjs",
     "sbom:update": "python backend/update_sbom.py",
     "sbom:check": "python backend/update_sbom.py --check"
   },

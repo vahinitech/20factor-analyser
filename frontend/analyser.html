@@ -62,6 +62,12 @@
   @media (max-width:560px){ .screen-head h1{ font-size:30px; line-height:1.15; } }
   .dz-status{ font-size:var(--v-text-sm); color:var(--v-text-2); text-align:center; margin:8px 0 0; }
   .dz-status:empty{ display:none; }
+  .dz-notice{ text-align:left; max-width:520px; margin:10px auto 0; padding:14px 16px; border-radius:var(--v-radius-md);
+    background:color-mix(in srgb, var(--v-warning) 12%, var(--v-surface)); border:1px solid color-mix(in srgb, var(--v-warning) 50%, transparent);
+    color:var(--v-text); font-size:var(--v-text-sm); line-height:1.5; }
+  .dz-notice[hidden]{ display:none; }
+  .dz-notice p{ margin:2px 0 0; }
+  .dz-notice ul{ margin:6px 0 0 18px; padding:0; }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
   .more-options{ margin:14px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); padding:10px 14px; }
@@ -174,9 +180,10 @@
           <button type="button" class="btn btn-primary dz-phone" id="take-photo">Take a photo</button>
           <button type="button" class="btn btn-ghost" id="choose-photo">Choose a photo</button>
         </div>
-        <p class="dz-hint">JPG, PNG or PDF, up to 25 MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
+        <p class="dz-hint">JPG, PNG, WebP, iPhone HEIC or PDF, up to 10 MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
       </div>
       <p class="dz-status" id="dz-status" role="status" aria-live="polite"></p>
+      <div class="dz-notice" id="dz-notice" role="alert" hidden></div>
       <input id="file-input" type="file" accept="image/*,application/pdf,.pdf" style="display:none;">
     </div>
     <!-- Outside the dropzone so its click does not bubble into the dropzone's own file picker. -->
@@ -276,7 +283,7 @@
       <ol class="cg-steps">
         <li><b>Write four to six lines</b> on plain or ruled paper with a dark pen, in your everyday handwriting.</li>
         <li><b>Take the photo from straight above</b> in even light, with the whole page in the picture. A tilted photo makes straight lines look slanted.</li>
-        <li><b>Upload it and press Run analysis.</b> A photo (JPG, PNG and other image types) or a PDF, up to 25 MB.</li>
+        <li><b>Upload it and press Run analysis.</b> A photo (JPG, PNG and other image types) or a PDF, up to 10 MB.</li>
         <li><b>Practise your first priority for a week</b>, then check again with the same pen and paper and compare the two reports.</li>
       </ol>
     </section>
@@ -287,7 +294,7 @@
         <details><summary>Is the handwriting check free?</summary>
           <p>Yes. The free check gives you up to three priorities with coaching and drills. A Pro report includes scores for all twenty factors.</p></details>
         <details><summary>What happens to my photo?</summary>
-          <p>It is processed on Vahini's servers to make your report and used for that report only, unless you separately choose to help the research dataset. You can ask for your uploads and reports to be deleted at any time. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
+          <p>It is sent to Vahini's server to make your report, and it is not kept: it is never written to disk. We keep only a record that a photo was checked (its type and size) and, if you print or save your report, the report's text and scores, without any picture of your handwriting. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
         <details><summary>Which handwriting can it read?</summary>
           <p>English and Telugu today. More scripts follow as the dataset grows; the <a href="/practice.html">practice worksheets</a> already cover Hindi, Tamil, Kannada and Malayalam.</p></details>
         <details><summary>How accurate is it?</summary>
@@ -452,15 +459,6 @@
     }
   }
 
-  function readAsDataURL(file){
-    return new Promise(function(resolve, reject){
-      var fr = new FileReader();
-      fr.onload = function(){ resolve(String(fr.result || "")); };
-      fr.onerror = reject;
-      fr.readAsDataURL(file);
-    });
-  }
-
   // The consent banner is same-origin site.js code (vahinitech.com/site/),
   // so its "vahini_consent" localStorage entry is readable here too even
   // though this page never loads site.js itself. Null means no consent
@@ -484,87 +482,51 @@
     return null;
   }
 
+  // Photos are never stored (vahinitech.com privacy statement, 4.2; the
+  // store refuses image data, vahini-web services/persist-api/lib/photoguard.js).
+  // The store gets a record that a photo was checked: its type, extension,
+  // size, the page and the visitor's consent. Not the photo, and not its name,
+  // which can carry a child's name.
+  var PHOTO_TYPES = /^(image\/(jpeg|png|webp|gif|heic|heif)|application\/pdf)$/i;
+  function photoRecord(file, source){
+    var type = String(file.type || "").toLowerCase();
+    var ext = (String(file.name || "").match(/\.([A-Za-z0-9]{1,5})$/) || ["", ""])[1].toLowerCase();
+    return {
+      fileName: ext ? "photo." + ext : "",
+      mimeType: PHOTO_TYPES.test(type) ? type : "",
+      source: source || "upload",
+      meta: {
+        size: file.size,
+        modified: file.lastModified || 0,
+        page: location.pathname,
+        consent: readConsent()
+      }
+    };
+  }
+
   function persistUpload(file, source){
-    if (!file || !file.size || file.size > 24 * 1024 * 1024) return;
-    readAsDataURL(file).then(function(dataUrl){
-      return postJSON("/upload-image", {
-        fileName: file.name || "upload.jpg",
-        mimeType: file.type || "image/jpeg",
-        dataUrl: dataUrl,
-        source: source || "upload",
-        meta: {
-          size: file.size,
-          modified: file.lastModified || 0,
-          page: location.pathname,
-          consent: readConsent()
-        }
-      });
-    }).then(function(resp){
+    if (!file || !file.size) return;
+    postJSON("/upload-image", photoRecord(file, source)).then(function(resp){
       if (resp && resp.ok) state.upload = resp;
     }).catch(function(){});
   }
 
-  function parseLead(){
-    try {
-      var one = localStorage.getItem("vahini_report_lead");
-      if (one) return JSON.parse(one);
-    } catch (e) {}
-    try {
-      var all = JSON.parse(localStorage.getItem("vahini_leads") || "[]");
-      if (all && all.length) return all[all.length - 1];
-    } catch (e2) {}
-    return null;
-  }
-
-  function compactReportHtml(html){
-    var s = String(html || "");
-    if (!s) return s;
-    // Large inline image payloads can exceed API body limits; keep structure,
-    // but replace only very large data-URLs.
-    return s.replace(/src=(['"])data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)\1/g, function(_, q, b64){
-      if (b64.length < 2 * 1024 * 1024) return _;
-      return "src=" + q + "[omitted-large-inline-image]" + q;
-    });
-  }
-
+  // A printed report is stored as its scores and quality facts only, which
+  // app.js builds as window.VAHINI_CHECK_FACTS (checkFacts): no report text
+  // (the words the child wrote), no HTML, no name, email, URL or browser
+  // details. The PDF form's contact goes to the feedback store on its own.
   function persistReport(trigger){
     if (state.reportSaved) return;
     // "Try a sample" runs our own photo: not a visitor's report, so not stored or counted.
     if (window.VAHINI_SAMPLE_RUN) return;
-    var host = document.getElementById("report-host");
-    if (!host) return;
-    var rawHtml = String(host.innerHTML || "");
-    if (!rawHtml.trim()) return;
-    var text = String(host.textContent || "").slice(0, 40000);
-    var payload = {
+    var facts = window.VAHINI_CHECK_FACTS;
+    if (!facts) return;
+    postJSON("/generated-report", {
       trigger: trigger || "manual",
-      url: location.href.split("#")[0],
-      lead: parseLead(),
-      upload: state.upload,
-      reportHtml: compactReportHtml(rawHtml),
-      reportText: text,
-      extra: {
-        ua: navigator.userAgent,
-        lang: navigator.language
-      }
-    };
-    postJSON("/generated-report", payload).then(function(resp){
-      if (resp && resp.ok) {
-        state.reportSaved = true;
-        return;
-      }
-      // Fallback: persist a lightweight record even if full HTML save failed.
-      return postJSON("/generated-report", {
-        trigger: (trigger || "manual") + "-fallback",
-        url: location.href.split("#")[0],
-        lead: parseLead(),
-        upload: state.upload,
-        reportHtml: "",
-        reportText: text,
-        extra: { fallback: true }
-      }).then(function(resp2){
-        if (resp2 && resp2.ok) state.reportSaved = true;
-      });
+      upload: state.upload && state.upload.id ? { id: state.upload.id } : null,
+      facts: facts
+    }).then(function(resp){
+      if (resp && resp.ok) state.reportSaved = true;
     }).catch(function(){});
   }
 

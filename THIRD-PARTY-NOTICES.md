@@ -69,6 +69,14 @@ client and APIs through FastAPI/Uvicorn; nginx is not included in that image.
 from jsDelivr only for browser PDF uploads. Its worker uses the same pinned
 version. Source: <https://github.com/mozilla/pdf.js>.
 
+**libheif-js 1.23.5** (libheif 1.23.5), Kiril Vatev, struktur AG and the
+libheif contributors, LGPL-3.0, is loaded from jsDelivr only when someone
+picks a HEIC photo (the iPhone's format) that their browser cannot open, and
+converts it to JPEG in the browser. It is loaded unmodified as separate files:
+the script with an SRI hash, the wasm file checked against its SHA-384 before
+it runs. Sources: <https://github.com/catdad-experiments/libheif-js> and
+<https://github.com/strukturag/libheif>.
+
 **pypdfium2 5.13.0** is a required core server dependency for PDF decoding.
 Binding licensing and PDFium third-party notices are recorded by the package;
 retain the upstream notices when distributing its binaries. Source:

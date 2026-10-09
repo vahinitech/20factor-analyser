@@ -149,12 +149,131 @@ function collectIntake(){
 }
 
 /* ---------- file inputs ---------- */
-function readImageFile(file, cb){
-  if(!file || !file.type.startsWith('image/')) return;
+/* A photo the browser cannot open used to do nothing at all: no preview,
+   no message, "Run analysis" left greyed out. On 2026-10-06 a visitor on
+   Chrome for Mac, between JPEG uploads that worked, tried one iPhone HEIC
+   photo five times and saw nothing happen each time. Chrome and Firefox
+   cannot decode HEIC; Safari can. Where the browser cannot, heicToJpeg
+   converts it; if that fails too, the upload box says what to do. */
+function isHeic(file){ return /^image\/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || ''); }
+function readImageFile(file, cb, onFail){
+  const fail = ()=>{ if (onFail) onFail(); };
+  if(!file) return;
+  if(!(file.type || '').startsWith('image/') && !isHeic(file)) return fail();
   const fr = new FileReader();
-  fr.onload = e=>{ const img=new Image(); img.onload=()=>cb(img, e.target.result); img.src=e.target.result; };
+  fr.onerror = fail;
+  fr.onload = e=>{ const img=new Image(); img.onload=()=>cb(img, e.target.result); img.onerror=fail; img.src=e.target.result; };
   fr.readAsDataURL(file);
 }
+
+/* HEIC to JPEG for browsers without a HEIC decoder. libheif (LGPL-3.0,
+   https://github.com/strukturag/libheif) as built by libheif-js, loaded from
+   a pinned jsDelivr URL only when such a photo is picked: about 520 KB
+   compressed. The script carries SRI; the wasm file is checked against its
+   own SHA-384 before it runs. One conversion per file. The photo and its
+   JPEG stay in this tab: photos are never stored. */
+const LIBHEIF = {
+  js: 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.js',
+  jsSri: 'sha384-VEbrgTthZ3xiJrRrD1QszeA+mvSzQAazOjulZBOV9mXAH+SfRdtQWjzL6E0JYlmP',
+  wasm: 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.wasm',
+  wasmSha384: 'ykFVIusV2Vzqq7NMzIk4GpbFlKHmcCbdhLPI50qMGtV14CpMr+A+5ry6npw4e8z7',
+};
+const HEIC_MAX_SIDE = 4000;      // same cap as the upload store's own conversion
+let libheifPromise = null;
+const heicJpegs = new WeakMap();
+
+function loadLibheif(){
+  if (!libheifPromise){
+    const script = new Promise((res, rej)=>{
+      if (window.libheif) return res();
+      const s = document.createElement('script');
+      s.src = LIBHEIF.js; s.integrity = LIBHEIF.jsSri; s.crossOrigin = 'anonymous';
+      s.onload = ()=>res(); s.onerror = ()=>rej(new Error('HEIC reader did not load'));
+      document.head.appendChild(s);
+    });
+    const wasm = fetch(LIBHEIF.wasm).then(r=>{
+      if (!r.ok) throw new Error('HEIC reader did not load');
+      return r.arrayBuffer();
+    }).then(async buf=>{
+      // crypto.subtle exists only on https (and localhost) pages.
+      if (!(window.crypto && crypto.subtle)) throw new Error('HEIC reader needs an https page for its integrity check');
+      const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', buf));
+      if (btoa(String.fromCharCode(...digest)) !== LIBHEIF.wasmSha384) throw new Error('HEIC reader failed its integrity check');
+      return buf;
+    });
+    libheifPromise = Promise.all([script, wasm]).then(([, wasmBinary])=>new Promise(res=>{
+      // libheif fills in the object it is given and calls back when ready.
+      const mod = { wasmBinary, onRuntimeInitialized: ()=>res(mod) };
+      window.libheif(mod);
+    })).catch(err=>{ libheifPromise = null; throw err; });
+  }
+  return libheifPromise;
+}
+
+function heicToJpeg(file){
+  if (!heicJpegs.has(file)){
+    const job = (async ()=>{
+      const [lib, buf] = await Promise.all([loadLibheif(), file.arrayBuffer()]);
+      const decoder = new lib.HeifDecoder();
+      let images = [];
+      try{
+        images = decoder.decode(new Uint8Array(buf));
+        const image = images.find(i=>i.is_primary()) || images[0];
+        if (!image) throw new Error('not a HEIC photo');
+        const w = image.get_width(), h = image.get_height();
+        const full = document.createElement('canvas'); full.width = w; full.height = h;
+        const fctx = full.getContext('2d');
+        const pixels = fctx.createImageData(w, h);
+        await new Promise((res, rej)=>image.display(pixels, d=>d ? res() : rej(new Error('HEIC decode failed'))));
+        fctx.putImageData(pixels, 0, 0);
+        const scale = Math.min(1, HEIC_MAX_SIDE / Math.max(w, h));
+        let out = full;
+        if (scale < 1){
+          out = document.createElement('canvas');
+          out.width = Math.round(w * scale); out.height = Math.round(h * scale);
+          out.getContext('2d').drawImage(full, 0, 0, out.width, out.height);
+        }
+        const blob = await new Promise(res=>out.toBlob(res, 'image/jpeg', 0.92));
+        if (!blob) throw new Error('HEIC decode failed');
+        return new File([blob], String(file.name || 'photo').replace(/\.[^.]*$/, '') + '.jpg', { type:'image/jpeg', lastModified: file.lastModified || Date.now() });
+      } finally {
+        images.forEach(i=>i.free());
+        if (decoder.decoder) lib.heif_context_free(decoder.decoder);
+      }
+    })();
+    job.catch(()=>heicJpegs.delete(file));
+    heicJpegs.set(file, job);
+  }
+  return heicJpegs.get(file);
+}
+
+/* A page photo never needs more: what reaches the server is at most 2600 px
+   as JPEG (imageToBlob), and the largest of 127 real uploads was 5.8 MB
+   (2026-10-09). A bigger file is refused here, before it is decoded. */
+const MAX_PICK_BYTES = 10 * 1024 * 1024;
+
+/* The upload box's notice for a photo that could not be used: a bold line,
+   then what to do. Built from text nodes only. */
+function showDzNotice(file, tooBig){
+  const box = $('#dz-notice'); if (!box) return;
+  box.textContent = '';
+  const add = (tag, text, parent)=>{ const el = document.createElement(tag); el.textContent = text; (parent || box).appendChild(el); return el; };
+  if (tooBig){
+    add('strong', 'This file is ' + (file.size / 1048576).toFixed(1) + ' MB, over the 10 MB limit.');
+    add('p', 'One page needs much less. A photo straight from the phone camera is usually 1 to 5 MB; for a PDF, save just the page with the writing.');
+  } else if (isHeic(file)){
+    add('strong', 'This is an iPhone photo (HEIC), and it could not be opened here.');
+    add('p', 'Send a JPEG copy instead:');
+    const ul = add('ul', '');
+    add('li', 'On a Mac: open it in Preview, then File, Export, Format: JPEG.', ul);
+    add('li', 'On an iPhone: Settings, Camera, Formats, Most Compatible. New photos are then JPEG.', ul);
+  } else {
+    add('strong', 'This file could not be opened as a photo.');
+    add('p', 'Please choose a JPEG or PNG picture of the page.');
+  }
+  box.hidden = false;
+}
+function clearDzNotice(){ const box = $('#dz-notice'); if (box){ box.hidden = true; box.textContent = ''; } }
 
 function setupUploadDrop(){
   const dz = $('#dropzone'), input = $('#file-input');
@@ -244,7 +363,13 @@ function showSample(img, url){
 function handleSample(file){
   if (!file || serviceUp === false) return;
   window.VAHINI_SAMPLE_RUN = false;
-  setDzStatus('');
+  setDzStatus(''); clearDzNotice();
+  if (file.size > MAX_PICK_BYTES){
+    clearSample();
+    showDzNotice(file, true);
+    reportOutcome('too_big');
+    return;
+  }
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf){
     setDzStatus('Reading PDF…');
@@ -256,12 +381,24 @@ function handleSample(file){
     });
     return;
   }
-  readImageFile(file, (img, url)=>showSample(img, url));
+  const unreadable = ()=>{
+    clearSample();
+    showDzNotice(file);
+    reportOutcome(isHeic(file) ? 'heic' : 'unreadable');
+  };
+  readImageFile(file, (img, url)=>showSample(img, url), ()=>{
+    if (!isHeic(file)) return unreadable();
+    setDzStatus('Converting your iPhone photo (HEIC) to JPEG…');
+    heicToJpeg(file).then(jpeg=>readImageFile(jpeg, (img, url)=>{
+      showSample(img, url);
+      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Run analysis.');
+    }, unreadable)).catch(unreadable);
+  });
 }
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';
   $('#dz-prompt').style.display='block'; $('#file-input').value='';
-  window.VAHINI_SAMPLE_RUN = false; setDzStatus('');
+  window.VAHINI_SAMPLE_RUN = false; setDzStatus(''); clearDzNotice();
   applyServiceGate();
 }
 
@@ -501,6 +638,7 @@ function sampleCounts(pyReport){
    the 20-factor analysis). The browser sends the image and renders the result;
    there is no in-browser scorer or offline fallback. */
 async function runPipeline(){
+  window.VAHINI_CHECK_FACTS = null;   // facts belong to one report; a new run starts with none
   go('process');
   // restore the pipeline panel + heading if a previous run replaced them with a rejection
   if (processPanelHTML !== null){ const pp=$('#screen-process .panel'); if(pp) pp.innerHTML = processPanelHTML; }
@@ -623,11 +761,39 @@ async function runPipeline(){
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
+  window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
   renderNextSteps(analysis);
   // A report the reader could not read any text for is the silent failure
   // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
   reportOutcome(((analysis.recognition || {}).backend === 'cv-fallback') ? 'no_text' : 'report');
   go('report');
+}
+
+/* What a printed report is stored as on vahinitech.com (analyser.html
+   persistReport; the store's own schema is vahini-web
+   services/persist-api/lib/records.js): the scores and quality facts only.
+   Numbers and short codes, no text, so no name or recognised words go with
+   it; the photo's size and sharpness in bands, not exact values. */
+function checkFacts(analysis, counts, img){
+  const rec = analysis.recognition || {};
+  let photo = { size:null, sharp:null };
+  try{
+    const q = photoQuality(img);
+    photo = {
+      size: q.longSide < 1000 ? 'small' : q.longSide < 2000 ? 'medium' : q.longSide < 3500 ? 'large' : 'very-large',
+      sharp: q.sharpness < MIN_SHARPNESS ? 'blurry' : q.sharpness < 2 * MIN_SHARPNESS ? 'soft' : 'sharp',
+    };
+  }catch(_e){ /* the facts go without photo quality */ }
+  const num = v=>(typeof v === 'number' && isFinite(v)) ? Math.round(v) : null;
+  return {
+    overall: num(analysis.overallMeasured != null ? analysis.overallMeasured : analysis.overall),
+    tier: (analysis.access && analysis.access.tier) || null,
+    factors: (analysis.results || []).map(f=>({ n:f.n, score: f.unmeasured ? null : num(f.score100), band: f.band || null, measured: !f.unmeasured })),
+    priorities: (analysis.topWeak || []).slice(0, 3).map(f=>f.n),
+    recognition: { backend: rec.backend || null, level: rec.level || null, confidence: num(rec.confidence_pct), handLines: num(rec.hand_lines), printedLines: num(rec.printed_lines) },
+    words: num(counts && counts.nWords),
+    photo,
+  };
 }
 
 /* The "next step" block under a photo report (outside the report pages, not

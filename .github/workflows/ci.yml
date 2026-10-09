@@ -131,6 +131,8 @@ jobs:
         run: node tests/ocr-candidates.test.mjs
       - name: Browser PDF upload checks
         run: npm run test:pdf
+      - name: Unreadable photos (iPhone HEIC in Chrome) are explained, not sent to the store
+        run: npm run test:unreadable
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
 

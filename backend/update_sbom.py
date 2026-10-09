@@ -172,12 +172,28 @@ def synchronize(document):
     pdf["comment"] = (
         "Optional browser PDF reader, lazy-loaded as an ES module from jsDelivr. Version-pinned worker; released after each upload."
     )
+    heif_version = re.search(
+        r"libheif-js@([0-9.]+)/",
+        (ROOT / "frontend/src/app/app.js").read_text(),
+    ).group(1)
+    heif = next(
+        p
+        for p in document["packages"]
+        if p["SPDXID"] == "SPDXRef-Package-LibheifJs"
+    )
+    heif["versionInfo"] = heif_version
+    heif["downloadLocation"] = (
+        f"https://cdn.jsdelivr.net/npm/libheif-js@{heif_version}/libheif-wasm/libheif.js"
+    )
+    heif["externalRefs"][0][
+        "referenceLocator"
+    ] = f"pkg:npm/libheif-js@{heif_version}"
     app = next(p for p in document["packages"] if p["SPDXID"] == APP)
     app["comment"] = (
         "First-party browser client and report renderer; scoring runs on the Python server. Some scores use OCR/layout proxies."
     )
     document["comment"] = (
-        "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js, "
+        "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, "
         "and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. "
         "This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. "
         "Rolling font and hosted-service entries describe runtime integrations."
