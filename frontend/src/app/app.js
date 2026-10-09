@@ -149,10 +149,24 @@ function collectIntake(){
 }
 
 /* ---------- file inputs ---------- */
-function readImageFile(file, cb){
-  if(!file || !file.type.startsWith('image/')) return;
+/* A photo the browser cannot open used to do nothing at all: no preview,
+   no message, "Run analysis" left greyed out. On 2026-10-06 a visitor on
+   Chrome for Mac tried the same iPhone HEIC photo five times before giving
+   up on it. Chrome and Firefox cannot decode HEIC; Safari can. Say what
+   happened and what to do instead. */
+function isHeic(file){ return /^image\/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || ''); }
+function unreadableMessage(file){
+  return isHeic(file)
+    ? 'This is an iPhone photo in HEIC format, which this browser cannot open. Open this page in Safari, or save the photo as a JPEG first (on a Mac: open it in Preview, then File, Export, JPEG).'
+    : 'This file could not be opened as a photo. Please choose a JPEG or PNG picture of the page.';
+}
+function readImageFile(file, cb, onFail){
+  const fail = ()=>{ if (onFail) onFail(); };
+  if(!file) return;
+  if(!(file.type || '').startsWith('image/') && !isHeic(file)) return fail();
   const fr = new FileReader();
-  fr.onload = e=>{ const img=new Image(); img.onload=()=>cb(img, e.target.result); img.src=e.target.result; };
+  fr.onerror = fail;
+  fr.onload = e=>{ const img=new Image(); img.onload=()=>cb(img, e.target.result); img.onerror=fail; img.src=e.target.result; };
   fr.readAsDataURL(file);
 }
 
@@ -256,7 +270,11 @@ function handleSample(file){
     });
     return;
   }
-  readImageFile(file, (img, url)=>showSample(img, url));
+  readImageFile(file, (img, url)=>showSample(img, url), ()=>{
+    clearSample();
+    setDzStatus(unreadableMessage(file));
+    reportOutcome(isHeic(file) ? 'heic' : 'unreadable');
+  });
 }
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';

@@ -484,13 +484,39 @@
     return null;
   }
 
+  // The upload store keeps JPEG, PNG and WebP only (it checks the bytes).
+  // Anything else the browser can open, such as an iPhone HEIC photo in
+  // Safari, is stored as a JPEG made here; a file the browser cannot open
+  // is not sent at all, so it is not counted as a failed upload (the page
+  // tells the visitor what to do instead).
+  var STORED_TYPES = /^image\/(jpeg|png|webp)$/i;
+  function asStorable(file){
+    if (STORED_TYPES.test(file.type || "")) {
+      return readAsDataURL(file).then(function(dataUrl){ return { dataUrl: dataUrl, name: file.name || "upload.jpg", type: file.type }; });
+    }
+    return new Promise(function(resolve, reject){
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function(){
+        var c = document.createElement("canvas");
+        c.width = img.naturalWidth; c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        resolve({ dataUrl: c.toDataURL("image/jpeg", 0.92), name: String(file.name || "upload").replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" });
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("unreadable")); };
+      img.src = url;
+    });
+  }
+
   function persistUpload(file, source){
     if (!file || !file.size || file.size > 24 * 1024 * 1024) return;
-    readAsDataURL(file).then(function(dataUrl){
+    // A PDF is not an image the store accepts; it was always refused there.
+    if (/^application\/pdf$/i.test(file.type || "") || /\.pdf$/i.test(file.name || "")) return;
+    asStorable(file).then(function(stored){
       return postJSON("/upload-image", {
-        fileName: file.name || "upload.jpg",
-        mimeType: file.type || "image/jpeg",
-        dataUrl: dataUrl,
+        fileName: stored.name,
+        mimeType: stored.type,
+        dataUrl: stored.dataUrl,
         source: source || "upload",
         meta: {
           size: file.size,
