@@ -476,7 +476,8 @@
     try {
       var c = JSON.parse(localStorage.getItem("vahini_consent"));
       if (c && typeof c === "object" && c.v === CONSENT_VERSION) {
-        return { decision: c.decision || "", analytics: !!c.analytics, ts: c.ts || null };
+        // Not c.ts: the moment of the choice is a time of day, which no record keeps.
+        return { decision: c.decision || "", analytics: !!c.analytics };
       }
     } catch (e) {}
     return null;
@@ -504,8 +505,12 @@
     };
   }
 
+  // A file over the upload box's limit (app.js MAX_PICK_BYTES) is refused
+  // there and never checked, so it gets no record either (stage, 2026-10-09:
+  // an 11 MB file was counted as checked, and the report linked to it).
+  var PICK_LIMIT_BYTES = 10 * 1024 * 1024;
   function persistUpload(file, source){
-    if (!file || !file.size) return;
+    if (!file || !file.size || file.size > PICK_LIMIT_BYTES) return;
     postJSON("/upload-image", photoRecord(file, source)).then(function(resp){
       if (resp && resp.ok) state.upload = resp;
     }).catch(function(){});
