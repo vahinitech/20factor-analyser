@@ -17,6 +17,7 @@
     "test:pdf": "node tests/pdf-upload.mjs",
     "test:unreadable": "node tests/unreadable-image.mjs",
     "test:keep": "node tests/keep-my-pages.mjs",
+    "test:daily-limit": "node tests/daily-limit.mjs",
     "sbom:update": "python backend/update_sbom.py",
     "sbom:check": "python backend/update_sbom.py --check"
   },

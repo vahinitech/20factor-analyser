@@ -45,7 +45,9 @@ Each factor score includes the original 0–10 value, normalized 0–100 value, 
 
 Pro `reason.scoring_inputs` contains the actual inputs supplied by the scoring engine. Feature names ending in `_cv` are coefficients of variation, slope values are degrees, `n_chars`/`n_words` are counts, `_ratio` values are fractions, and `avg_score` is OCR confidence. Zone geometry includes its own profile. Composite factors list their component scores. These inputs and normalized scores are not clinically validated confidence probabilities. `confidence_probability` remains null because the current model does not produce one.
 
-Check both HTTP status and JSON `ok`. An analysis failure returns `ok:false` with an error code; authentication failures use HTTP 401/503. The gateway applies the existing 25 MB upload and request-rate limits. There are no paid usage quotas or usage-based charges in this implementation.
+Check both HTTP status and JSON `ok`. An analysis failure returns `ok:false` with an error code; authentication failures use HTTP 401/503. The gateway applies the upload and request-rate limits described below. There are no paid usage quotas or usage-based charges in this implementation.
+
+**Free tier: 3 checks a day per IP address** (`backend/daily_limit.py`, `VAHINI_DAILY_SCANS_PER_IP`; owner decision 2026-10-09). `/ocr`, `/analyze-vl`, `/report-python` and `/api/v2/reports` share one allowance per client address. Only a check that produced a result counts; a refusal (busy, too large, no handwriting) does not, and a repeat of a cached photo does. The day turns over at midnight India time. The fourth check gets HTTP 429 with `detail: {error_code: "daily_limit", error, limit}` and `Retry-After` in seconds. **A Pro access key is never limited.** Private and loopback addresses (CI, the docker network) and the addresses in `VAHINI_DAILY_LIMIT_EXEMPT` are not counted. Counts are kept in memory and start again when the analyser restarts.
 
 ## Server provisioning
 

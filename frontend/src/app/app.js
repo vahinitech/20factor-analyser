@@ -697,6 +697,21 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'daily_limit'){
+    // The free tier allows a few checks a day per connection; a Pro access
+    // key is never limited (backend/daily_limit.py).
+    showReject({
+      outcome: 'daily_limit',
+      reason: 'Today\u2019s free checks are used',
+      detail: 'The free check allows ' + (pyReport.limit || 3) + ' pages a day from each internet connection, and this connection has used them. Your photo is fine and nothing was kept.',
+      tips: [
+        'Come back tomorrow: the count starts again at midnight, India time',
+        'Practise in the meantime with the <a href="/practice.html">free worksheets</a>',
+        'Checking a whole class? <a href="/reach.html?topic=handwriting">Ask our team</a> about access for schools',
+      ],
+    });
+    return;
+  }
   if (pyReport && pyReport.error_code === 'no_handwriting'){
     // The server found text but ALL of it is printed. The analyser scores
     // pen handwriting only: refusing here (instead of scoring machine

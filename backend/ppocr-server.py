@@ -67,6 +67,7 @@ os.environ.setdefault("PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK", "True")
 
 from fastapi import (
     FastAPI,
+    Request,
     UploadFile,
     File,
     Form,
@@ -78,6 +79,7 @@ from fastapi.responses import JSONResponse, Response
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
+from daily_limit import LIMIT as DAILY
 import numpy as np
 
 # PaddleOCR 3.x (PP-OCRv5) is imported LAZILY inside get_engine() so this module
@@ -396,11 +398,14 @@ async def _decode_upload(raw):
 
 @app.post("/ocr")
 async def ocr(
+    request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     det: str = Form("true"),
     rec: str = Form("true"),
+    authorization: str = Header(default=None),
 ):
+    charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
     raw = await _read_upload(image)
     ckey = _cache_key(
@@ -411,6 +416,7 @@ async def ocr(
     )
     cached = _cache_get(ckey)
     if cached is not None:
+        DAILY.spend(charge)
         return _with_meta(cached, "hit", t0)
 
     async with scan_slots.SLOTS.slot():
@@ -420,6 +426,7 @@ async def ocr(
         return JSONResponse(status_code=200, content=payload)
 
     _cache_set(ckey, payload)
+    DAILY.spend(charge)
     return _with_meta(payload, "miss", t0)
 
 
@@ -529,6 +536,7 @@ def _analyze_vl_process(arr, raw, lang):
 
 @app.post("/analyze-vl")
 async def analyze_vl(
+    request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     authorization: str = Header(default=None),
@@ -538,6 +546,7 @@ async def analyze_vl(
             "tier"
         ] != "pro":
             raise HTTPException(403, "Detailed factor evidence requires Pro")
+    charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
     raw = await _read_upload(image)
     ckey = _cache_key(
@@ -562,6 +571,7 @@ async def analyze_vl(
         return JSONResponse(status_code=200, content=payload)
 
     _cache_set(ckey, payload)
+    DAILY.spend(charge)
     return _with_meta(payload, "hit" if cached is not None else "miss", t0)
 
 
@@ -807,8 +817,28 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
     return _with_meta(payload, "miss", t0)
 
 
+async def _is_pro(authorization):
+    """A Pro access key is not counted against the daily free checks."""
+    if not authorization:
+        return False
+    try:
+        access = await run_in_threadpool(
+            entitlements.access_for, authorization
+        )
+    except HTTPException:
+        return False
+    return access.get("tier") == "pro"
+
+
+def _spend_if_report(charge, payload):
+    """Only a check that produced a report counts (daily_limit.py)."""
+    if payload.get("ok") is not False and not payload.get("error_code"):
+        DAILY.spend(charge)
+
+
 @app.post("/report-python")
 async def report_python(
+    request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
@@ -817,7 +847,9 @@ async def report_python(
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
+    charge = DAILY.check(request, exempt=await _is_pro(authorization))
     payload = await _report_payload(image, lang, expected_text)
+    _spend_if_report(charge, payload)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
         return report_contract.legacy_report(
@@ -841,6 +873,7 @@ async def api_identity(authorization: str = Header(default=None)):
 
 @app.post("/api/v2/reports")
 async def api_report(
+    request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
@@ -856,15 +889,18 @@ async def api_report(
     # factors; scoring inputs and coaching stay Pro.
     if fields - {"text", "evidence"} and access["tier"] != "pro":
         raise HTTPException(403, "Requested report details require Pro")
+    charge = DAILY.check(request, exempt=access["tier"] == "pro")
     if format == "compact":
         payload = await _report_payload(
             image, lang, expected_text, include_evidence="evidence" in fields
         )
+        _spend_if_report(charge, payload)
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
         return compact_reports.build_compact(payload, access, fields)
     payload = await _report_payload(image, lang, expected_text)
+    _spend_if_report(charge, payload)
     return report_contract.public_report(
         payload,
         await run_in_threadpool(entitlements.access_for, authorization),
