@@ -70,13 +70,14 @@ jobs:
             backend/scan_slots.py backend/capacity.py \
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
-            backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py \
+            backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py backend/daily_limit.py \
             backend/contract_schemas.py backend/generate_schemas.py backend/tests/test_schemas.py \
             backend/tests/test_backends_classify.py \
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
-            backend/tests/test_layout_filter.py
+            backend/tests/test_layout_filter.py \
+            backend/tests/test_daily_limit.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Verify generated JSON Schemas
@@ -95,7 +96,8 @@ jobs:
             backend.tests.test_layout_filter \
             backend.tests.test_photo_validity \
             backend.tests.test_factor_evidence \
-            backend.tests.test_api_concurrency
+            backend.tests.test_api_concurrency \
+            backend.tests.test_daily_limit
 
   e2e:
     runs-on: ubuntu-latest
@@ -135,6 +137,8 @@ jobs:
         run: npm run test:unreadable
       - name: Keep my pages sends nothing unless ticked
         run: npm run test:keep
+      - name: The free tier's daily limit is explained, not blamed on the server
+        run: npm run test:daily-limit
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
 

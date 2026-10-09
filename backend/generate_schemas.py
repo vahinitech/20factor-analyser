@@ -887,6 +887,20 @@ def error():
                 "oneOf": [
                     {"type": "string", "minLength": 1},
                     {
+                        "type": "object",
+                        "description": (
+                            "429: the free tier's daily checks for this "
+                            "connection are used (daily_limit.py)."
+                        ),
+                        "required": ["error_code", "error", "limit"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"const": "daily_limit"},
+                            "error": {"type": "string", "minLength": 1},
+                            "limit": {"type": "integer", "minimum": 1},
+                        },
+                    },
+                    {
                         "type": "array",
                         "minItems": 1,
                         "description": "FastAPI request validation errors.",
@@ -908,12 +922,17 @@ def error():
                 ]
             }
         },
-        title="HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 503)",
+        title=(
+            "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, 503)"
+        ),
         description=(
             "FastAPI's HTTPException shape. 401 invalid or revoked "
             "credential, 403 paid include= fields requested by Free, 404 "
             "unknown catalogue version, 413 upload too large, 422 "
-            "unsupported include field or invalid form/query, 503 "
+            "unsupported include field or invalid form/query, 429 the free "
+            "tier's daily checks for this connection are used (a Pro key "
+            "is never limited; Retry-After gives the seconds to midnight, "
+            "India time), 503 "
             "subscription service not configured or unavailable. Analysis "
             "failures are not HTTP errors: they return 200 with ok:false "
             "and an error block in the report schema."
