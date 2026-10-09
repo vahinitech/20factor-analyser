@@ -77,6 +77,7 @@ jobs:
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
             backend/tests/test_layout_filter.py \
+            backend/tests/test_image_formats.py \
             backend/tests/test_daily_limit.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
@@ -97,6 +98,7 @@ jobs:
             backend.tests.test_photo_validity \
             backend.tests.test_factor_evidence \
             backend.tests.test_api_concurrency \
+            backend.tests.test_image_formats \
             backend.tests.test_daily_limit
 
   e2e:

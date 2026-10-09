@@ -30,6 +30,13 @@ except Exception:  # pragma: no cover - cv2 optional
 # --------------------------------------------------------------------------- #
 MAX_DECODE_PIXELS = 24_000_000
 MAX_PDF_PAGES = 100
+# The only image formats this server decodes. The analyser page and the
+# Android app send JPEG (the page sends PNG only where a canvas cannot make
+# JPEG); WebP is allowed for direct API callers. Pillow can open about forty
+# formats, each with its own decoder, and every one reachable from the public
+# /ocr endpoint was attack surface we never use. Anything else is a 422
+# before a decoder runs. PDFs take their own path (pypdfium2, page 1).
+IMAGE_FORMATS = ("JPEG", "PNG", "WEBP")
 
 
 class UploadLimitError(ValueError):
@@ -72,7 +79,7 @@ def decode_image(raw: bytes) -> Image.Image:
     for a PDF only the first page is used."""
     if raw[:4] == b"%PDF":
         return _pdf_first_page(raw)
-    with Image.open(io.BytesIO(raw)) as image:
+    with Image.open(io.BytesIO(raw), formats=IMAGE_FORMATS) as image:
         _check_dimensions(*image.size)
         return ImageOps.exif_transpose(image).convert("RGB")
 

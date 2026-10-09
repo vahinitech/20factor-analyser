@@ -12,6 +12,8 @@ Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriti
 
 **Scan capacity is planned, not fixed.** Scan work goes through `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`; `backend/capacity.py` sizes the slots from the host's memory, cores and GPUs with measured constants, and a full server answers 503. Change a constant only with a load-test measurement. Model and numbers: #97, `docs/api-review.md`.
 
+**Upload and image security limits are deliberate and tested.** Sizes (5 MiB, 24 MP), formats (JPEG, PNG, WebP, PDF), the pinned Pillow, nothing written to disk, the free daily limit and the non-root, read-only container: read [SECURITY.md](SECURITY.md#upload-and-image-security-rules-for-every-change) before touching uploads, decoding, the Dockerfile or rate limits, and never loosen one without the owner.
+
 **Generated files are not committed.** `engine.bundle.js` and the `?v=` asset stamps are produced by `python frontend/build_bundle.py --stamp` in the image build and by CI; never commit them (they made every pair of frontend PRs conflict). `sample-report-data.js` is committed but regenerated with `docs/examples/generate_photo_sample.py`, never edited by hand.
 
 ## Changelog entries are files
