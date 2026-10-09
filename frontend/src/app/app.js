@@ -639,6 +639,7 @@ function sampleCounts(pyReport){
    there is no in-browser scorer or offline fallback. */
 async function runPipeline(){
   window.VAHINI_CHECK_FACTS = null;   // facts belong to one report; a new run starts with none
+  keepStatus('');
   go('process');
   // restore the pipeline panel + heading if a previous run replaced them with a rejection
   if (processPanelHTML !== null){ const pp=$('#screen-process .panel'); if(pp) pp.innerHTML = processPanelHTML; }
@@ -762,6 +763,7 @@ async function runPipeline(){
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
+  keepIfAsked(blob, window.VAHINI_CHECK_FACTS);
   renderNextSteps(analysis);
   // A report the reader could not read any text for is the silent failure
   // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
@@ -794,6 +796,40 @@ function checkFacts(analysis, counts, img){
     words: num(counts && counts.nWords),
     photo,
   };
+}
+
+/* "Keep my pages" (vahinitech.com services/persist-api/lib/keepstore.js).
+   Only when the box is ticked, and never for the sample: after the report,
+   the same JPEG the analyser received and the check's facts go to the keep
+   store, which mails the address a link. Nothing is kept until it is
+   opened. The report itself is the same either way. */
+const KEEP_EMAIL_RE = /^[^\s@<>()",;:\\]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,}$/;
+function setupKeepPages(){
+  const box = $('#keep-pages'), row = $('#keep-email-row');
+  if (!box || !row) return;
+  box.addEventListener('change', ()=>{ row.hidden = !box.checked; if (box.checked){ const i = $('#keep-email'); if (i) i.focus(); } });
+}
+function keepStatus(text, error){
+  const s = $('#keep-status'); if (!s) return;
+  s.textContent = text || ''; s.hidden = !text; s.classList.toggle('is-error', !!error);
+}
+async function keepIfAsked(blob, facts){
+  const box = $('#keep-pages');
+  if (!box || !box.checked || window.VAHINI_SAMPLE_RUN || !facts) return;
+  const email = String(($('#keep-email') || {}).value || '').trim();
+  if (!KEEP_EMAIL_RE.test(email)){ keepStatus('This page was not kept: the email address looks wrong. Run the check again to keep it.', true); return; }
+  if (!blob || blob.type !== 'image/jpeg'){ keepStatus('This page could not be kept. Your report is below.', true); return; }
+  const base = String(window.VAHINI_PERSIST_ENDPOINT || '/persist').replace(/\/+$/, '') + '/keep/';
+  try{
+    const start = await fetch(base + 'start', { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify({ email, facts, consent:{ keep:true } }) });
+    const s = await start.json().catch(()=>({}));
+    if (!start.ok || !s.id) throw new Error(s.error || ('keep ' + start.status));
+    const put = await fetch(base + 'image/' + s.id, { method:'POST', headers:{ 'Content-Type':'image/jpeg', 'X-Upload-Token': s.uploadToken }, body: blob });
+    if (!put.ok) throw new Error('keep ' + put.status);
+    keepStatus('Check your email: we sent a link to ' + email + '. Open it within 24 hours to keep this page; until then nothing is kept.');
+  }catch(_e){
+    keepStatus('This page could not be kept right now. Your report is below; try keeping it again later.', true);
+  }
 }
 
 /* The "next step" block under a photo report (outside the report pages, not
@@ -1091,7 +1127,7 @@ function renderCaseStudies(){
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
-  setupUploadDrop(); setupPassages(); setupLogo();
+  setupUploadDrop(); setupKeepPages(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', runPipeline);
   // optional: capture live with the sensor pen instead
