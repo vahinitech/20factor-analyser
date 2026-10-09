@@ -18,7 +18,7 @@ const app = await readFile('frontend/src/app/app.js', 'utf8');
 const reader = app.slice(app.indexOf('function isHeic('), app.indexOf('\nfunction setupUploadDrop('));
 assert.ok(reader.includes('function readImageFile('), 'readImageFile not found in app.js');
 const page = await readFile('frontend/analyser.html', 'utf8');
-const store = page.slice(page.indexOf('  var PHOTO_TYPES'), page.indexOf('  function persistUpload('));
+const store = page.slice(page.indexOf('  var CONSENT_VERSION'), page.indexOf('  // A printed report is stored'));
 assert.ok(store.includes('function photoRecord('), 'photoRecord not found in analyser.html');
 // The upload screen says what happens to the photo, where it is chosen.
 assert.match(page, /<p id="photo-note-lead"><b>Your photo:<\/b> we analyse it and do not keep it, unless you choose to below\./, 'the upload screen says the photo is not kept');
@@ -65,7 +65,7 @@ try {
     const p = await context.newPage();
     await p.goto('https://unreadable-test.local/');
     await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${reader}\nwindow.t = { isHeic, readImageFile, heicToJpeg, showDzNotice, MAX_PICK_BYTES };` });
-    await p.addScriptTag({ content: `const readConsent = () => null;\n${store}\n${facts}\nwindow.s = { photoRecord, checkFacts };` });
+    await p.addScriptTag({ content: `window.posted = []; const state = {}; const postJSON = (path, body) => { window.posted.push([path, body]); return Promise.resolve({ ok: true, id: 'upload_x' }); };\n${store}\n${facts}\nwindow.s = { photoRecord, checkFacts, persistUpload };` });
     await p.addScriptTag({ content: sample });
     return p;
   };
@@ -95,6 +95,12 @@ try {
       maxPick: window.t.MAX_PICK_BYTES,
       bigMsg: (() => { window.t.showDzNotice(new File([new Uint8Array(12 * 1024 * 1024)], 'scan.pdf', { type: 'application/pdf' }), true); return document.querySelector('#dz-notice').textContent; })(),
       recHeic: record(heic), recNamed: record(named), recNoType: record(heicNoType),
+      posted: (() => {
+        localStorage.setItem('vahini_consent', JSON.stringify({ v: 1, decision: 'accept_all', analytics: true, ts: 1791202392134 }));
+        window.s.persistUpload(new File([new Uint8Array(11 * 1024 * 1024)], 'big.jpg', { type: 'image/jpeg' }), 'file-input');
+        window.s.persistUpload(heic, 'file-input');
+        return JSON.stringify(window.posted);
+      })(),
       facts: JSON.stringify(window.s.checkFacts(window.VAHINI_SAMPLE_REPORT.analysis, { nWords: 63 }, await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = URL.createObjectURL(png); }))),
     };
   }, { PNG, BROKEN_HEIC, REAL_HEIC });
@@ -127,6 +133,10 @@ try {
   }
   assert.ok(!/Ravi|homework/i.test(r.recNamed) && JSON.parse(r.recNamed).fileName === 'photo.png', 'the record keeps the extension, not the file name');
   assert.equal(JSON.parse(r.recNoType).mimeType, '', 'a file with no type is sent with no type');
+  const posted = JSON.parse(r.posted);
+  assert.equal(posted.length, 1, 'a file over the 10 MB limit gets no record; only the HEIC does');
+  assert.equal(posted[0][1].fileName, 'photo.heic');
+  assert.deepEqual(posted[0][1].meta.consent, { decision: 'accept_all', analytics: true }, 'the consent goes without the time it was given');
   // A printed report is stored as numbers and short codes: no factor names,
   // tips, evidence or recognised text from the analysis it came from.
   const f = JSON.parse(r.facts);

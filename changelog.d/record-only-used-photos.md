@@ -1,0 +1,1 @@
+- No store record for a file the upload box refused as over 10 MB, so it is not counted as a checked photo and a report never links to it; the consent sent with a record leaves out the time it was given (found on stage, 2026-10-09).
