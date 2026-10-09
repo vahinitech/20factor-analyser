@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-8ad395b5c43ba5385ae1",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-c1905bba19637c9da939",
   "creationInfo": {
-    "created": "2026-10-09T06:23:38Z",
+    "created": "2026-10-09T17:19:30Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -331,7 +331,8 @@
           "referenceLocator": "pkg:pypi/pillow"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: pillow>=10.0.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements-core.txt: pillow==12.3.0. Resolved container versions require a build SBOM.",
+      "versionInfo": "12.3.0"
     },
     {
       "SPDXID": "SPDXRef-Package-Pypdfium2",

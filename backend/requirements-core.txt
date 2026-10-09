@@ -8,7 +8,10 @@ uvicorn[standard]>=0.29
 python-multipart>=0.0.9
 # Required by computer_vision._pdf_first_page in core-only installs.
 pypdfium2==5.13.0
-pillow>=10.0.0
+# Pinned exactly: Pillow parses visitors' files, so a version change is a
+# security change. Raise it deliberately, with the image tests
+# (tests/test_image_formats.py), when a release fixes a decoder.
+pillow==12.3.0
 numpy>=1.24
 opencv-python-headless>=4.9.0
 # Used by starlette/fastapi TestClient in the regression suite.

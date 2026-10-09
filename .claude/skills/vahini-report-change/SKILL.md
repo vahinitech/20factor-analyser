@@ -17,4 +17,6 @@ Keep authorization server-owned, preserve the existing expanded contract, and up
 
 Printable output means the page count, not only each sheet's height. The free report is two A4 sheets; `tests/report-layout.mjs` prints the PDF and fails on any other count, once with the fixture and once with sheets stretched to the length a real photo produces (the fixture's text is shorter, which is how 3-4 page prints with blank pages passed every check on 2026-10-07). Any change to report content, spacing or `fitPrintPages()` reruns it; when real content grows, update the stretched heights from a real print, not from the fixture.
 
+Uploads and decoding follow [SECURITY.md](../../../SECURITY.md#upload-and-image-security-rules-for-every-change): a new endpoint that takes a file uses `_read_upload` (5 MiB), `computer_vision.decode_image` (24 MP, JPEG/PNG/WebP/PDF only), `scan_slots` and `daily_limit.DAILY`, and writes nothing to disk. The container runs as user 10001 on a read-only filesystem; anything it must write goes to `/tmp` or a volume.
+
 For PR review, use [review instructions](../../../.github/instructions/code-review.instructions.md). Use synthetic samples and test credentials. Do not claim native app changes or store purchase verification from backend work. The consuming website owns its staging and production deployment workflow.

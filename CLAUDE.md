@@ -34,6 +34,12 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   `frontend/scripts/core/sample-report-data.js` with
   `docs/examples/generate_photo_sample.py` inside the analyser image (it
   needs the OCR models); never edit it by hand.
+- **Upload and image security is a set of tested limits, not defaults.**
+  5 MiB per file, 24 MP, JPEG/PNG/WebP (+ PDF) only, Pillow pinned, nothing
+  written to disk, 3 free checks a day per IP (Pro unlimited), the container
+  as user 10001 with a read-only filesystem. The full rules and the tests
+  that hold them: [SECURITY.md](SECURITY.md#upload-and-image-security-rules-for-every-change).
+  Never loosen one to make a feature fit; ask the owner.
 - **Verify before claiming.** Read the code before describing behaviour.
   Never invent accuracy numbers, factor thresholds, or API shapes — every
   scored claim in reports and docs must trace to code in `backend/` or
