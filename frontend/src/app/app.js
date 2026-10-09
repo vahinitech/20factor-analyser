@@ -624,6 +624,7 @@ function sampleCounts(pyReport){
    the 20-factor analysis). The browser sends the image and renders the result;
    there is no in-browser scorer or offline fallback. */
 async function runPipeline(){
+  window.VAHINI_CHECK_FACTS = null;   // facts belong to one report; a new run starts with none
   go('process');
   // restore the pipeline panel + heading if a previous run replaced them with a rejection
   if (processPanelHTML !== null){ const pp=$('#screen-process .panel'); if(pp) pp.innerHTML = processPanelHTML; }
@@ -746,11 +747,39 @@ async function runPipeline(){
   VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
   stepState('score','done', `Report ready`);
+  window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
   renderNextSteps(analysis);
   // A report the reader could not read any text for is the silent failure
   // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
   reportOutcome(((analysis.recognition || {}).backend === 'cv-fallback') ? 'no_text' : 'report');
   go('report');
+}
+
+/* What a printed report is stored as on vahinitech.com (analyser.html
+   persistReport; the store's own schema is vahini-web
+   services/persist-api/lib/records.js): the scores and quality facts only.
+   Numbers and short codes, no text, so no name or recognised words go with
+   it; the photo's size and sharpness in bands, not exact values. */
+function checkFacts(analysis, counts, img){
+  const rec = analysis.recognition || {};
+  let photo = { size:null, sharp:null };
+  try{
+    const q = photoQuality(img);
+    photo = {
+      size: q.longSide < 1000 ? 'small' : q.longSide < 2000 ? 'medium' : q.longSide < 3500 ? 'large' : 'very-large',
+      sharp: q.sharpness < MIN_SHARPNESS ? 'blurry' : q.sharpness < 2 * MIN_SHARPNESS ? 'soft' : 'sharp',
+    };
+  }catch(_e){ /* the facts go without photo quality */ }
+  const num = v=>(typeof v === 'number' && isFinite(v)) ? Math.round(v) : null;
+  return {
+    overall: num(analysis.overallMeasured != null ? analysis.overallMeasured : analysis.overall),
+    tier: (analysis.access && analysis.access.tier) || null,
+    factors: (analysis.results || []).map(f=>({ n:f.n, score: f.unmeasured ? null : num(f.score100), band: f.band || null, measured: !f.unmeasured })),
+    priorities: (analysis.topWeak || []).slice(0, 3).map(f=>f.n),
+    recognition: { backend: rec.backend || null, level: rec.level || null, confidence: num(rec.confidence_pct), handLines: num(rec.hand_lines), printedLines: num(rec.printed_lines) },
+    words: num(counts && counts.nWords),
+    photo,
+  };
 }
 
 /* The "next step" block under a photo report (outside the report pages, not

@@ -511,62 +511,22 @@
     }).catch(function(){});
   }
 
-  function parseLead(){
-    try {
-      var one = localStorage.getItem("vahini_report_lead");
-      if (one) return JSON.parse(one);
-    } catch (e) {}
-    try {
-      var all = JSON.parse(localStorage.getItem("vahini_leads") || "[]");
-      if (all && all.length) return all[all.length - 1];
-    } catch (e2) {}
-    return null;
-  }
-
-  // A saved report keeps its text and scores, never the pictures of the
-  // handwriting it shows: photos are never stored (the store strips them too).
-  function compactReportHtml(html){
-    return String(html || "").replace(/data:image\/[^"'()\s>]*/gi, "").replace(/blob:[^"'()\s>]*/gi, "");
-  }
-
+  // A printed report is stored as its scores and quality facts only, which
+  // app.js builds as window.VAHINI_CHECK_FACTS (checkFacts): no report text
+  // (the words the child wrote), no HTML, no name, email, URL or browser
+  // details. The PDF form's contact goes to the feedback store on its own.
   function persistReport(trigger){
     if (state.reportSaved) return;
     // "Try a sample" runs our own photo: not a visitor's report, so not stored or counted.
     if (window.VAHINI_SAMPLE_RUN) return;
-    var host = document.getElementById("report-host");
-    if (!host) return;
-    var rawHtml = String(host.innerHTML || "");
-    if (!rawHtml.trim()) return;
-    var text = String(host.textContent || "").slice(0, 40000);
-    var payload = {
+    var facts = window.VAHINI_CHECK_FACTS;
+    if (!facts) return;
+    postJSON("/generated-report", {
       trigger: trigger || "manual",
-      url: location.href.split("#")[0],
-      lead: parseLead(),
-      upload: state.upload,
-      reportHtml: compactReportHtml(rawHtml),
-      reportText: text,
-      extra: {
-        ua: navigator.userAgent,
-        lang: navigator.language
-      }
-    };
-    postJSON("/generated-report", payload).then(function(resp){
-      if (resp && resp.ok) {
-        state.reportSaved = true;
-        return;
-      }
-      // Fallback: persist a lightweight record even if full HTML save failed.
-      return postJSON("/generated-report", {
-        trigger: (trigger || "manual") + "-fallback",
-        url: location.href.split("#")[0],
-        lead: parseLead(),
-        upload: state.upload,
-        reportHtml: "",
-        reportText: text,
-        extra: { fallback: true }
-      }).then(function(resp2){
-        if (resp2 && resp2.ok) state.reportSaved = true;
-      });
+      upload: state.upload && state.upload.id ? { id: state.upload.id } : null,
+      facts: facts
+    }).then(function(resp){
+      if (resp && resp.ok) state.reportSaved = true;
     }).catch(function(){});
   }
 

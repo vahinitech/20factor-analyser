@@ -18,9 +18,14 @@ const app = await readFile('frontend/src/app/app.js', 'utf8');
 const reader = app.slice(app.indexOf('function isHeic('), app.indexOf('\nfunction setupUploadDrop('));
 assert.ok(reader.includes('function readImageFile('), 'readImageFile not found in app.js');
 const page = await readFile('frontend/analyser.html', 'utf8');
-const store = page.slice(page.indexOf('  var PHOTO_TYPES'), page.indexOf('  function persistUpload('))
-  + page.slice(page.indexOf('  function compactReportHtml('), page.indexOf('  function persistReport('));
-assert.ok(store.includes('function photoRecord(') && store.includes('function compactReportHtml('), 'photoRecord or compactReportHtml not found in analyser.html');
+const store = page.slice(page.indexOf('  var PHOTO_TYPES'), page.indexOf('  function persistUpload('));
+assert.ok(store.includes('function photoRecord('), 'photoRecord not found in analyser.html');
+// What a printed report is stored as: checkFacts and the photo-quality
+// measure it uses, run on the sample report's real analysis.
+const facts = app.slice(app.indexOf('const MIN_LONG_SIDE'), app.indexOf('\nfunction photoWarning('))
+  + app.slice(app.indexOf('function checkFacts('), app.indexOf('\n/* The "next step" block'));
+assert.ok(facts.includes('function checkFacts(') && facts.includes('function photoQuality('), 'checkFacts or photoQuality not found in app.js');
+const sample = await readFile('frontend/scripts/core/sample-report-data.js', 'utf8');
 
 // The libheif files the page loads, fetched once and served to the browser
 // from the test, and checked against the hashes app.js pins.
@@ -57,7 +62,8 @@ try {
     const p = await context.newPage();
     await p.goto('https://unreadable-test.local/');
     await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${reader}\nwindow.t = { isHeic, readImageFile, heicToJpeg, showDzNotice };` });
-    await p.addScriptTag({ content: `const readConsent = () => null;\n${store}\nwindow.s = { photoRecord, compactReportHtml };` });
+    await p.addScriptTag({ content: `const readConsent = () => null;\n${store}\n${facts}\nwindow.s = { photoRecord, checkFacts };` });
+    await p.addScriptTag({ content: sample });
     return p;
   };
   const p = await open(false);
@@ -73,7 +79,6 @@ try {
     const text = new File(['hello'], 'notes.txt', { type: 'text/plain' });
     const named = new File([bytes(PNG)], 'Ravi Kumar homework.PNG', { type: 'image/png' });
     const record = (f) => JSON.stringify(window.s.photoRecord(f, 'file-input'));
-    const crop = 'data:image/jpeg;base64,' + btoa(String.fromCharCode(...REAL_HEIC.slice(0, 300)));
     const jpeg = await window.t.heicToJpeg(heic);
     const again = await window.t.heicToJpeg(heic);
     const jpegNoType = await window.t.heicToJpeg(heicNoType);
@@ -85,7 +90,7 @@ try {
       convertedNoType: [jpegNoType.name, ...await size(jpegNoType)], brokenErr,
       heicMsg: notice(heic), textMsg: notice(text),
       recHeic: record(heic), recNamed: record(named), recNoType: record(heicNoType),
-      report: window.s.compactReportHtml(`<img src="${crop}"><div style="background:url(${crop})"></div><img src="blob:https://vahinitech.com/1"><p>Spacing 64</p>`),
+      facts: JSON.stringify(window.s.checkFacts(window.VAHINI_SAMPLE_REPORT.analysis, { nWords: 63 }, await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = URL.createObjectURL(png); }))),
     };
   }, { PNG, BROKEN_HEIC, REAL_HEIC });
 
@@ -115,8 +120,16 @@ try {
   }
   assert.ok(!/Ravi|homework/i.test(r.recNamed) && JSON.parse(r.recNamed).fileName === 'photo.png', 'the record keeps the extension, not the file name');
   assert.equal(JSON.parse(r.recNoType).mimeType, '', 'a file with no type is sent with no type');
-  assert.ok(!/data:image|blob:/.test(r.report) && r.report.includes('Spacing 64'), 'a saved report keeps its text, never its images');
-  console.log('unreadable-image: HEIC converted in Chromium, unreadable photos explained, no photo leaves for the store');
+  // A printed report is stored as numbers and short codes: no factor names,
+  // tips, evidence or recognised text from the analysis it came from.
+  const f = JSON.parse(r.facts);
+  assert.equal(f.overall, 74); assert.equal(f.factors.length, 20); assert.deepEqual(f.priorities.length, 3);
+  assert.equal(f.recognition.confidence, 78); assert.equal(f.words, 63); assert.deepEqual(f.photo, { size: 'small', sharp: f.photo.sharp });
+  const strings = JSON.stringify(f).match(/"[^"]*"/g).map((x) => x.slice(1, -1));
+  const allowed = new Set(['overall', 'tier', 'factors', 'n', 'score', 'band', 'measured', 'priorities', 'recognition', 'backend', 'level', 'confidence', 'handLines', 'printedLines', 'words', 'photo', 'size', 'sharp',
+    'good', 'strong', 'dev', 'focus', 'paddle', 'moderate', 'small', 'blurry', 'soft', 'sharp']);
+  assert.deepEqual(strings.filter((x) => !allowed.has(x)), [], 'the stored facts hold no text beyond the schema');
+  console.log('unreadable-image: HEIC converted in Chromium, unreadable photos explained, no photo or text leaves for the store');
 } finally {
   await browser.close();
 }
