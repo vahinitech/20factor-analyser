@@ -152,14 +152,10 @@ function collectIntake(){
 /* A photo the browser cannot open used to do nothing at all: no preview,
    no message, "Run analysis" left greyed out. On 2026-10-06 a visitor on
    Chrome for Mac, between JPEG uploads that worked, tried one iPhone HEIC
-   photo five times and saw nothing happen each time. Chrome and Firefox cannot decode HEIC; Safari can. Say what
-   happened and what to do instead. */
+   photo five times and saw nothing happen each time. Chrome and Firefox
+   cannot decode HEIC; Safari can. Where the browser cannot, heicToJpeg
+   converts it; if that fails too, the upload box says what to do. */
 function isHeic(file){ return /^image\/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || ''); }
-function unreadableMessage(file){
-  return isHeic(file)
-    ? 'This is an iPhone photo in HEIC format, which this browser cannot open. Open this page in Safari, or save the photo as a JPEG first (on a Mac: open it in Preview, then File, Export, JPEG).'
-    : 'This file could not be opened as a photo. Please choose a JPEG or PNG picture of the page.';
-}
 function readImageFile(file, cb, onFail){
   const fail = ()=>{ if (onFail) onFail(); };
   if(!file) return;
@@ -169,6 +165,108 @@ function readImageFile(file, cb, onFail){
   fr.onload = e=>{ const img=new Image(); img.onload=()=>cb(img, e.target.result); img.onerror=fail; img.src=e.target.result; };
   fr.readAsDataURL(file);
 }
+
+/* HEIC to JPEG for browsers without a HEIC decoder. libheif (LGPL-3.0,
+   https://github.com/strukturag/libheif) as built by libheif-js, loaded from
+   a pinned jsDelivr URL only when such a photo is picked: about 520 KB
+   compressed. The script carries SRI; the wasm file is checked against its
+   own SHA-384 before it runs. One conversion per file, shared with the
+   upload store in analyser.html (window.VahiniHeic). */
+const LIBHEIF = {
+  js: 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.js',
+  jsSri: 'sha384-VEbrgTthZ3xiJrRrD1QszeA+mvSzQAazOjulZBOV9mXAH+SfRdtQWjzL6E0JYlmP',
+  wasm: 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.wasm',
+  wasmSha384: 'ykFVIusV2Vzqq7NMzIk4GpbFlKHmcCbdhLPI50qMGtV14CpMr+A+5ry6npw4e8z7',
+};
+const HEIC_MAX_SIDE = 4000;      // same cap as the upload store's own conversion
+let libheifPromise = null;
+const heicJpegs = new WeakMap();
+
+function loadLibheif(){
+  if (!libheifPromise){
+    const script = new Promise((res, rej)=>{
+      if (window.libheif) return res();
+      const s = document.createElement('script');
+      s.src = LIBHEIF.js; s.integrity = LIBHEIF.jsSri; s.crossOrigin = 'anonymous';
+      s.onload = ()=>res(); s.onerror = ()=>rej(new Error('HEIC reader did not load'));
+      document.head.appendChild(s);
+    });
+    const wasm = fetch(LIBHEIF.wasm).then(r=>{
+      if (!r.ok) throw new Error('HEIC reader did not load');
+      return r.arrayBuffer();
+    }).then(async buf=>{
+      // crypto.subtle exists only on https (and localhost) pages.
+      if (!(window.crypto && crypto.subtle)) throw new Error('HEIC reader needs an https page for its integrity check');
+      const digest = new Uint8Array(await crypto.subtle.digest('SHA-384', buf));
+      if (btoa(String.fromCharCode(...digest)) !== LIBHEIF.wasmSha384) throw new Error('HEIC reader failed its integrity check');
+      return buf;
+    });
+    libheifPromise = Promise.all([script, wasm]).then(([, wasmBinary])=>new Promise(res=>{
+      // libheif fills in the object it is given and calls back when ready.
+      const mod = { wasmBinary, onRuntimeInitialized: ()=>res(mod) };
+      window.libheif(mod);
+    })).catch(err=>{ libheifPromise = null; throw err; });
+  }
+  return libheifPromise;
+}
+
+function heicToJpeg(file){
+  if (!heicJpegs.has(file)){
+    const job = (async ()=>{
+      const [lib, buf] = await Promise.all([loadLibheif(), file.arrayBuffer()]);
+      const decoder = new lib.HeifDecoder();
+      let images = [];
+      try{
+        images = decoder.decode(new Uint8Array(buf));
+        const image = images.find(i=>i.is_primary()) || images[0];
+        if (!image) throw new Error('not a HEIC photo');
+        const w = image.get_width(), h = image.get_height();
+        const full = document.createElement('canvas'); full.width = w; full.height = h;
+        const fctx = full.getContext('2d');
+        const pixels = fctx.createImageData(w, h);
+        await new Promise((res, rej)=>image.display(pixels, d=>d ? res() : rej(new Error('HEIC decode failed'))));
+        fctx.putImageData(pixels, 0, 0);
+        const scale = Math.min(1, HEIC_MAX_SIDE / Math.max(w, h));
+        let out = full;
+        if (scale < 1){
+          out = document.createElement('canvas');
+          out.width = Math.round(w * scale); out.height = Math.round(h * scale);
+          out.getContext('2d').drawImage(full, 0, 0, out.width, out.height);
+        }
+        const blob = await new Promise(res=>out.toBlob(res, 'image/jpeg', 0.92));
+        if (!blob) throw new Error('HEIC decode failed');
+        return new File([blob], String(file.name || 'photo').replace(/\.[^.]*$/, '') + '.jpg', { type:'image/jpeg', lastModified: file.lastModified || Date.now() });
+      } finally {
+        images.forEach(i=>i.free());
+        if (decoder.decoder) lib.heif_context_free(decoder.decoder);
+      }
+    })();
+    job.catch(()=>heicJpegs.delete(file));
+    heicJpegs.set(file, job);
+  }
+  return heicJpegs.get(file);
+}
+window.VahiniHeic = { isHeic, toJpeg: heicToJpeg };
+
+/* The upload box's notice for a photo that could not be opened or converted:
+   a bold line, then the ways to get a JPEG. Built from text nodes only. */
+function showDzNotice(file){
+  const box = $('#dz-notice'); if (!box) return;
+  box.textContent = '';
+  const add = (tag, text, parent)=>{ const el = document.createElement(tag); el.textContent = text; (parent || box).appendChild(el); return el; };
+  if (isHeic(file)){
+    add('strong', 'This is an iPhone photo (HEIC), and it could not be opened here.');
+    add('p', 'Send a JPEG copy instead:');
+    const ul = add('ul', '');
+    add('li', 'On a Mac: open it in Preview, then File, Export, Format: JPEG.', ul);
+    add('li', 'On an iPhone: Settings, Camera, Formats, Most Compatible. New photos are then JPEG.', ul);
+  } else {
+    add('strong', 'This file could not be opened as a photo.');
+    add('p', 'Please choose a JPEG or PNG picture of the page.');
+  }
+  box.hidden = false;
+}
+function clearDzNotice(){ const box = $('#dz-notice'); if (box){ box.hidden = true; box.textContent = ''; } }
 
 function setupUploadDrop(){
   const dz = $('#dropzone'), input = $('#file-input');
@@ -258,7 +356,7 @@ function showSample(img, url){
 function handleSample(file){
   if (!file || serviceUp === false) return;
   window.VAHINI_SAMPLE_RUN = false;
-  setDzStatus('');
+  setDzStatus(''); clearDzNotice();
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf){
     setDzStatus('Reading PDF…');
@@ -270,16 +368,24 @@ function handleSample(file){
     });
     return;
   }
-  readImageFile(file, (img, url)=>showSample(img, url), ()=>{
+  const unreadable = ()=>{
     clearSample();
-    setDzStatus(unreadableMessage(file));
+    showDzNotice(file);
     reportOutcome(isHeic(file) ? 'heic' : 'unreadable');
+  };
+  readImageFile(file, (img, url)=>showSample(img, url), ()=>{
+    if (!isHeic(file)) return unreadable();
+    setDzStatus('Converting your iPhone photo (HEIC) to JPEG…');
+    heicToJpeg(file).then(jpeg=>readImageFile(jpeg, (img, url)=>{
+      showSample(img, url);
+      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Run analysis.');
+    }, unreadable)).catch(unreadable);
   });
 }
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';
   $('#dz-prompt').style.display='block'; $('#file-input').value='';
-  window.VAHINI_SAMPLE_RUN = false; setDzStatus('');
+  window.VAHINI_SAMPLE_RUN = false; setDzStatus(''); clearDzNotice();
   applyServiceGate();
 }
 

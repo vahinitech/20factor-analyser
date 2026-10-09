@@ -3,16 +3,16 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-29aa424e96876d2505d8",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-8ad395b5c43ba5385ae1",
   "creationInfo": {
-    "created": "2026-09-16T02:39:38Z",
+    "created": "2026-10-09T06:23:38Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
     ],
     "licenseListVersion": "3.22"
   },
-  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
+  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
   "packages": [
     {
       "SPDXID": "SPDXRef-LocalFont-Caveat",
@@ -196,6 +196,26 @@
         }
       ],
       "comment": "Declared in backend/requirements-core.txt: httpx>=0.27. Resolved container versions require a build SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-LibheifJs",
+      "name": "libheif-js",
+      "versionInfo": "1.23.5",
+      "supplier": "Person: Kiril Vatev (libheif-js); libheif by struktur AG",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.js",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LGPL-3.0-only",
+      "licenseDeclared": "LGPL-3.0-only",
+      "copyrightText": "Copyright struktur AG and libheif contributors",
+      "primaryPackagePurpose": "LIBRARY",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/libheif-js@1.23.5"
+        }
+      ],
+      "comment": "Optional browser HEIC decoder, loaded from jsDelivr only for a HEIC photo the browser cannot open. Script pinned by SRI, wasm by SHA-384."
     },
     {
       "SPDXID": "SPDXRef-Package-NumPy",
@@ -1678,6 +1698,11 @@
     {
       "spdxElementId": "SPDXRef-Package-Httpx",
       "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-LibheifJs",
+      "relationshipType": "OPTIONAL_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
