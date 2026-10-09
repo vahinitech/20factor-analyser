@@ -170,8 +170,8 @@ function readImageFile(file, cb, onFail){
    https://github.com/strukturag/libheif) as built by libheif-js, loaded from
    a pinned jsDelivr URL only when such a photo is picked: about 520 KB
    compressed. The script carries SRI; the wasm file is checked against its
-   own SHA-384 before it runs. One conversion per file, shared with the
-   upload store in analyser.html (window.VahiniHeic). */
+   own SHA-384 before it runs. One conversion per file. The photo and its
+   JPEG stay in this tab: photos are never stored. */
 const LIBHEIF = {
   js: 'https://cdn.jsdelivr.net/npm/libheif-js@1.23.5/libheif-wasm/libheif.js',
   jsSri: 'sha384-VEbrgTthZ3xiJrRrD1QszeA+mvSzQAazOjulZBOV9mXAH+SfRdtQWjzL6E0JYlmP',
@@ -246,7 +246,6 @@ function heicToJpeg(file){
   }
   return heicJpegs.get(file);
 }
-window.VahiniHeic = { isHeic, toJpeg: heicToJpeg };
 
 /* The upload box's notice for a photo that could not be opened or converted:
    a bold line, then the ways to get a JPEG. Built from text nodes only. */

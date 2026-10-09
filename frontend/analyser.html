@@ -294,7 +294,7 @@
         <details><summary>Is the handwriting check free?</summary>
           <p>Yes. The free check gives you up to three priorities with coaching and drills. A Pro report includes scores for all twenty factors.</p></details>
         <details><summary>What happens to my photo?</summary>
-          <p>It is processed on Vahini's servers to make your report and used for that report only, unless you separately choose to help the research dataset. You can ask for your uploads and reports to be deleted at any time. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
+          <p>It is sent to Vahini's server to make your report, and it is not kept: it is never written to disk. We keep only a record that a photo was checked (its type and size) and, if you print or save your report, the report's text and scores, without any picture of your handwriting. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
         <details><summary>Which handwriting can it read?</summary>
           <p>English and Telugu today. More scripts follow as the dataset grows; the <a href="/practice.html">practice worksheets</a> already cover Hindi, Tamil, Kannada and Malayalam.</p></details>
         <details><summary>How accurate is it?</summary>
@@ -459,15 +459,6 @@
     }
   }
 
-  function readAsDataURL(file){
-    return new Promise(function(resolve, reject){
-      var fr = new FileReader();
-      fr.onload = function(){ resolve(String(fr.result || "")); };
-      fr.onerror = reject;
-      fr.readAsDataURL(file);
-    });
-  }
-
   // The consent banner is same-origin site.js code (vahinitech.com/site/),
   // so its "vahini_consent" localStorage entry is readable here too even
   // though this page never loads site.js itself. Null means no consent
@@ -491,62 +482,31 @@
     return null;
   }
 
-  // The upload store keeps JPEG, PNG and WebP only (it checks the bytes).
-  // Anything else the browser can open, such as an iPhone HEIC photo in
-  // Safari, is stored as a JPEG made here. A HEIC photo the browser cannot
-  // open is stored as the JPEG app.js converts it to (window.VahiniHeic, one
-  // conversion shared with the preview); any other file the browser cannot
-  // open is not sent at all, so it is not counted as a failed upload (the
-  // page tells the visitor what to do instead).
-  var STORED_TYPES = /^image\/(jpeg|png|webp)$/i;
-  function asStorable(file){
-    return asStorableImage(file).catch(function(err){
-      var heic = window.VahiniHeic;
-      if (!heic || !heic.isHeic(file)) throw err;
-      return heic.toJpeg(file).then(asStorableImage);
-    });
-  }
-  function asStorableImage(file){
-    if (STORED_TYPES.test(file.type || "")) {
-      return readAsDataURL(file).then(function(dataUrl){ return { dataUrl: dataUrl, name: file.name || "upload.jpg", type: file.type }; });
-    }
-    return new Promise(function(resolve, reject){
-      var url = URL.createObjectURL(file), img = new Image();
-      img.onload = function(){
-        // A 24 MP iPhone photo (5712 x 4284) is over iOS Safari's canvas
-        // limit of about 16.7 million pixels, where toDataURL returns an
-        // empty "data:,". 4000 px on the long side stays well inside it and
-        // keeps a 48 MP photo's JPEG under the upload cap.
-        var scale = Math.min(1, 4000 / Math.max(img.naturalWidth, img.naturalHeight));
-        var c = document.createElement("canvas");
-        c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
-        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-        URL.revokeObjectURL(url);
-        resolve({ dataUrl: c.toDataURL("image/jpeg", 0.92), name: String(file.name || "upload").replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" });
-      };
-      img.onerror = function(){ URL.revokeObjectURL(url); reject(new Error("unreadable")); };
-      img.src = url;
-    });
+  // Photos are never stored (vahinitech.com privacy statement, 4.2; the
+  // store refuses image data, vahini-web services/persist-api/lib/photoguard.js).
+  // The store gets a record that a photo was checked: its type, extension,
+  // size, the page and the visitor's consent. Not the photo, and not its name,
+  // which can carry a child's name.
+  var PHOTO_TYPES = /^(image\/(jpeg|png|webp|gif|heic|heif)|application\/pdf)$/i;
+  function photoRecord(file, source){
+    var type = String(file.type || "").toLowerCase();
+    var ext = (String(file.name || "").match(/\.([A-Za-z0-9]{1,5})$/) || ["", ""])[1].toLowerCase();
+    return {
+      fileName: ext ? "photo." + ext : "",
+      mimeType: PHOTO_TYPES.test(type) ? type : "",
+      source: source || "upload",
+      meta: {
+        size: file.size,
+        modified: file.lastModified || 0,
+        page: location.pathname,
+        consent: readConsent()
+      }
+    };
   }
 
   function persistUpload(file, source){
-    if (!file || !file.size || file.size > 24 * 1024 * 1024) return;
-    // A PDF is not an image the store accepts; it was always refused there.
-    if (/^application\/pdf$/i.test(file.type || "") || /\.pdf$/i.test(file.name || "")) return;
-    asStorable(file).then(function(stored){
-      return postJSON("/upload-image", {
-        fileName: stored.name,
-        mimeType: stored.type,
-        dataUrl: stored.dataUrl,
-        source: source || "upload",
-        meta: {
-          size: file.size,
-          modified: file.lastModified || 0,
-          page: location.pathname,
-          consent: readConsent()
-        }
-      });
-    }).then(function(resp){
+    if (!file || !file.size) return;
+    postJSON("/upload-image", photoRecord(file, source)).then(function(resp){
       if (resp && resp.ok) state.upload = resp;
     }).catch(function(){});
   }
@@ -563,15 +523,10 @@
     return null;
   }
 
+  // A saved report keeps its text and scores, never the pictures of the
+  // handwriting it shows: photos are never stored (the store strips them too).
   function compactReportHtml(html){
-    var s = String(html || "");
-    if (!s) return s;
-    // Large inline image payloads can exceed API body limits; keep structure,
-    // but replace only very large data-URLs.
-    return s.replace(/src=(['"])data:image\/[^;]+;base64,([A-Za-z0-9+/=]+)\1/g, function(_, q, b64){
-      if (b64.length < 2 * 1024 * 1024) return _;
-      return "src=" + q + "[omitted-large-inline-image]" + q;
-    });
+    return String(html || "").replace(/data:image\/[^"'()\s>]*/gi, "").replace(/blob:[^"'()\s>]*/gi, "");
   }
 
   function persistReport(trigger){
