@@ -200,6 +200,20 @@ async function serverPythonReport(blob, expectedText){
       const raw = await res.text();
       // 503 is the server's scan cap (backend/scan_slots.py): it is up but
       // full. A definitive answer, so do not try other endpoints.
+      // 429: the free tier's daily checks for this connection are used
+      // (backend/daily_limit.py), or nginx's per-minute burst limit. Both are
+      // definitive answers from a server that is up.
+      if (res.status === 429){
+        let detail = null;
+        try { detail = (JSON.parse(raw) || {}).detail; } catch(_e){ /* nginx's own 429 page */ }
+        const retry = Number(res.headers.get('Retry-After')) || 60;
+        if (detail && detail.error_code === 'daily_limit'){
+          lastServerError = detail.error || 'daily limit';
+          return { ok:false, error_code:'daily_limit', limit:Number(detail.limit)||3, retry_after:retry };
+        }
+        lastServerError = 'busy';
+        return { ok:false, error_code:'busy', retry_after:Math.min(retry, 60) };
+      }
       if (res.status === 503){
         lastServerError = 'busy';
         return { ok:false, error_code:'busy', retry_after:Number(res.headers.get('Retry-After'))||20 };
