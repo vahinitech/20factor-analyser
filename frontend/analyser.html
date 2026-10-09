@@ -70,6 +70,9 @@
   .dz-notice ul{ margin:6px 0 0 18px; padding:0; }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
+  .photo-note{ margin:12px 0 0; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }
+  .photo-note b{ color:var(--v-text); }
+  .photo-note a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .more-options{ margin:14px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); padding:10px 14px; }
   .more-options > summary{ cursor:pointer; font-weight:var(--v-weight-semibold); color:var(--v-text); }
   .more-options__body{ padding-top:10px; }
@@ -180,7 +183,7 @@
           <button type="button" class="btn btn-primary dz-phone" id="take-photo">Take a photo</button>
           <button type="button" class="btn btn-ghost" id="choose-photo">Choose a photo</button>
         </div>
-        <p class="dz-hint">JPG, PNG, WebP, iPhone HEIC or PDF, up to 10 MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
+        <p class="dz-hint">JPG, PNG, WebP, iPhone HEIC or PDF, up to 10&nbsp;MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
       </div>
       <p class="dz-status" id="dz-status" role="status" aria-live="polite"></p>
       <div class="dz-notice" id="dz-notice" role="alert" hidden></div>
@@ -192,6 +195,10 @@
     <!-- reference passage: hidden. With recognition the written text is read for
          you; without it the engine falls back to a standard sample passage. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
+
+    <!-- Photos are never stored (vahinitech.com privacy statement, 4.2), and
+         the page says so where the photo is chosen. -->
+    <p class="photo-note" id="photo-note"><b>Your photo:</b> we analyse it and do not keep it. <a href="/privacy.html#what">What we keep</a></p>
 
     <details class="more-options" id="more-options">
       <summary>More options</summary>

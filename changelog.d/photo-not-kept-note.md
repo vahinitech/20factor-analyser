@@ -1,0 +1,1 @@
+- The upload screen says what happens to the photo where it is chosen: "Your photo: we analyse it and do not keep it", linking to what is kept. The size hint no longer breaks "10 MB" across lines.
