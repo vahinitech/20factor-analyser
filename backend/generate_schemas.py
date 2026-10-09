@@ -938,10 +938,10 @@ def request():
             "size_bytes": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 30 * 1024 * 1024,
+                "maximum": 5 * 1024 * 1024,
                 "description": (
-                    "30 MiB per upload; the whole request body must stay "
-                    "under 32 MiB."
+                    "5 MiB per upload; the whole request body must stay "
+                    "under 6 MiB."
                 ),
             },
             "width": {"type": "integer", "minimum": 1, "maximum": 24000000},

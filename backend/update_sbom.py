@@ -185,7 +185,9 @@ def synchronize(document):
     heif["downloadLocation"] = (
         f"https://cdn.jsdelivr.net/npm/libheif-js@{heif_version}/libheif-wasm/libheif.js"
     )
-    heif["externalRefs"][0]["referenceLocator"] = f"pkg:npm/libheif-js@{heif_version}"
+    heif["externalRefs"][0][
+        "referenceLocator"
+    ] = f"pkg:npm/libheif-js@{heif_version}"
     app = next(p for p in document["packages"] if p["SPDXID"] == APP)
     app["comment"] = (
         "First-party browser client and report renderer; scoring runs on the Python server. Some scores use OCR/layout proxies."

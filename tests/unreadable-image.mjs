@@ -61,7 +61,7 @@ try {
     });
     const p = await context.newPage();
     await p.goto('https://unreadable-test.local/');
-    await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${reader}\nwindow.t = { isHeic, readImageFile, heicToJpeg, showDzNotice };` });
+    await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${reader}\nwindow.t = { isHeic, readImageFile, heicToJpeg, showDzNotice, MAX_PICK_BYTES };` });
     await p.addScriptTag({ content: `const readConsent = () => null;\n${store}\n${facts}\nwindow.s = { photoRecord, checkFacts };` });
     await p.addScriptTag({ content: sample });
     return p;
@@ -89,6 +89,8 @@ try {
       converted: [jpeg.name, jpeg.type, ...await size(jpeg)], same: jpeg === again,
       convertedNoType: [jpegNoType.name, ...await size(jpegNoType)], brokenErr,
       heicMsg: notice(heic), textMsg: notice(text),
+      maxPick: window.t.MAX_PICK_BYTES,
+      bigMsg: (() => { window.t.showDzNotice(new File([new Uint8Array(12 * 1024 * 1024)], 'scan.pdf', { type: 'application/pdf' }), true); return document.querySelector('#dz-notice').textContent; })(),
       recHeic: record(heic), recNamed: record(named), recNoType: record(heicNoType),
       facts: JSON.stringify(window.s.checkFacts(window.VAHINI_SAMPLE_REPORT.analysis, { nWords: 63 }, await new Promise((ok) => { const i = new Image(); i.onload = () => ok(i); i.src = URL.createObjectURL(png); }))),
     };
@@ -111,6 +113,8 @@ try {
   assert.match(r.heicMsg, /iPhone photo \(HEIC\)/); assert.match(r.heicMsg, /Preview/); assert.match(r.heicMsg, /Most Compatible/);
   assert.doesNotMatch(r.heicMsg, /^hidden/, 'the notice is shown');
   assert.match(r.textMsg, /JPEG or PNG/);
+  assert.equal(r.maxPick, 10 * 1024 * 1024, 'a picked file is limited to 10 MB');
+  assert.match(r.bigMsg, /12\.0 MB, over the 10 MB limit/); assert.match(r.bigMsg, /1 to 5 MB/);
   assert.match(tampered, /integrity/, 'a wasm file that fails its hash is refused');
   // Photos are never stored: the store gets a record, never the photo or its name.
   const recHeic = JSON.parse(r.recHeic);

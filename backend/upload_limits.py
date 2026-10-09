@@ -1,14 +1,25 @@
 # SPDX-License-Identifier: AGPL-3.0-only
-"""Bound multipart bodies before FastAPI spools or decodes uploads."""
+"""Bound multipart bodies before FastAPI spools or decodes uploads.
+
+One page photo is all an upload ever is: the website sends at most 2600 px
+and the Android app 2200 px, both re-encoded as JPEG (1.8 MB was the largest
+of 127 real uploads, measured 2026-10-09). 5 MiB per file leaves room for a
+direct API caller's single-page PDF; anything bigger is refused before it is
+spooled or decoded."""
 
 from starlette.exceptions import HTTPException
+
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+MAX_REQUEST_BYTES = (
+    6 * 1024 * 1024
+)  # the upload plus multipart framing and fields
 from starlette.responses import JSONResponse
 
 
 class UploadBodyLimit:
     """Count actual streamed bytes, including requests without Content-Length."""
 
-    def __init__(self, app, max_bytes=32 * 1024 * 1024):
+    def __init__(self, app, max_bytes=MAX_REQUEST_BYTES):
         self.app = app
         self.max_bytes = max_bytes
 
@@ -23,7 +34,7 @@ class UploadBodyLimit:
             if message["type"] == "http.request":
                 total += len(message.get("body", b""))
                 if total > self.max_bytes:
-                    raise HTTPException(413, "Request exceeds 32 MiB")
+                    raise HTTPException(413, "Request exceeds 6 MiB")
             return message
 
         for key, value in scope.get("headers", []):
@@ -34,7 +45,7 @@ class UploadBodyLimit:
                     oversized = True
                 if oversized:
                     response = JSONResponse(
-                        {"detail": "Request exceeds 32 MiB"},
+                        {"detail": "Request exceeds 6 MiB"},
                         status_code=413,
                         headers={"Cache-Control": "no-store"},
                     )

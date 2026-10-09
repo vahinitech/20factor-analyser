@@ -16,7 +16,7 @@ from PIL import Image
 import computer_vision as cv
 import entitlements
 import subscription_admin
-from upload_limits import UploadBodyLimit
+from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
 
 
 class ReviewSafetyTests(unittest.TestCase):
@@ -42,6 +42,37 @@ class ReviewSafetyTests(unittest.TestCase):
             self.assertEqual(
                 client.post("/upload", content=body).status_code, 413
             )
+
+    def test_one_page_limits(self):
+        """A page photo is at most 2600 px JPEG from the website: 5 MiB per
+        file and 6 MiB per request, refused before anything is decoded."""
+        self.assertEqual(MAX_UPLOAD_BYTES, 5 * 1024 * 1024)
+        app = FastAPI()
+        app.add_middleware(UploadBodyLimit)
+
+        @app.post("/upload")
+        async def upload(image: UploadFile = File(...)):
+            return {"bytes": len(await image.read())}
+
+        def body(size):
+            return (
+                b'--abc\r\nContent-Disposition: form-data; name="image"; '
+                b'filename="page.jpg"\r\n\r\n'
+                + b"x" * size
+                + b"\r\n--abc--\r\n"
+            )
+
+        headers = {"Content-Type": "multipart/form-data; boundary=abc"}
+        with TestClient(app) as client:
+            ok = client.post(
+                "/upload", content=body(2 * 1024 * 1024), headers=headers
+            )
+            self.assertEqual(ok.status_code, 200)
+            big = client.post(
+                "/upload", content=body(7 * 1024 * 1024), headers=headers
+            )
+            self.assertEqual(big.status_code, 413)
+            self.assertIn("6 MiB", big.json()["detail"])
 
     def test_pixel_bound_precedes_color_conversion(self):
         image = Mock(size=(6000, 5000))

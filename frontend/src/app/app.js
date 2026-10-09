@@ -247,13 +247,21 @@ function heicToJpeg(file){
   return heicJpegs.get(file);
 }
 
-/* The upload box's notice for a photo that could not be opened or converted:
-   a bold line, then the ways to get a JPEG. Built from text nodes only. */
-function showDzNotice(file){
+/* A page photo never needs more: what reaches the server is at most 2600 px
+   as JPEG (imageToBlob), and the largest of 127 real uploads was 5.8 MB
+   (2026-10-09). A bigger file is refused here, before it is decoded. */
+const MAX_PICK_BYTES = 10 * 1024 * 1024;
+
+/* The upload box's notice for a photo that could not be used: a bold line,
+   then what to do. Built from text nodes only. */
+function showDzNotice(file, tooBig){
   const box = $('#dz-notice'); if (!box) return;
   box.textContent = '';
   const add = (tag, text, parent)=>{ const el = document.createElement(tag); el.textContent = text; (parent || box).appendChild(el); return el; };
-  if (isHeic(file)){
+  if (tooBig){
+    add('strong', 'This file is ' + (file.size / 1048576).toFixed(1) + ' MB, over the 10 MB limit.');
+    add('p', 'One page needs much less. A photo straight from the phone camera is usually 1 to 5 MB; for a PDF, save just the page with the writing.');
+  } else if (isHeic(file)){
     add('strong', 'This is an iPhone photo (HEIC), and it could not be opened here.');
     add('p', 'Send a JPEG copy instead:');
     const ul = add('ul', '');
@@ -356,6 +364,12 @@ function handleSample(file){
   if (!file || serviceUp === false) return;
   window.VAHINI_SAMPLE_RUN = false;
   setDzStatus(''); clearDzNotice();
+  if (file.size > MAX_PICK_BYTES){
+    clearSample();
+    showDzNotice(file, true);
+    reportOutcome('too_big');
+    return;
+  }
   const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
   if (isPdf){
     setDzStatus('Reading PDF…');
