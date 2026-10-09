@@ -21,7 +21,8 @@ const page = await readFile('frontend/analyser.html', 'utf8');
 const store = page.slice(page.indexOf('  var PHOTO_TYPES'), page.indexOf('  function persistUpload('));
 assert.ok(store.includes('function photoRecord('), 'photoRecord not found in analyser.html');
 // The upload screen says what happens to the photo, where it is chosen.
-assert.match(page, /<p class="photo-note" id="photo-note"><b>Your photo:<\/b> we analyse it and do not keep it\./, 'the upload screen says the photo is not kept');
+assert.match(page, /<p id="photo-note-lead"><b>Your photo:<\/b> we analyse it and do not keep it, unless you choose to below\./, 'the upload screen says the photo is not kept');
+assert.match(page, /<input type="checkbox" id="keep-pages">/, '"Keep my pages" is offered, unticked');
 // What a printed report is stored as: checkFacts and the photo-quality
 // measure it uses, run on the sample report's real analysis.
 const facts = app.slice(app.indexOf('const MIN_LONG_SIDE'), app.indexOf('\nfunction photoWarning('))
