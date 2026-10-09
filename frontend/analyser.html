@@ -497,9 +497,14 @@
     return new Promise(function(resolve, reject){
       var url = URL.createObjectURL(file), img = new Image();
       img.onload = function(){
+        // A 24 MP iPhone photo (5712 x 4284) is over iOS Safari's canvas
+        // limit of about 16.7 million pixels, where toDataURL returns an
+        // empty "data:,". 4000 px on the long side stays well inside it and
+        // keeps a 48 MP photo's JPEG under the upload cap.
+        var scale = Math.min(1, 4000 / Math.max(img.naturalWidth, img.naturalHeight));
         var c = document.createElement("canvas");
-        c.width = img.naturalWidth; c.height = img.naturalHeight;
-        c.getContext("2d").drawImage(img, 0, 0);
+        c.width = Math.round(img.naturalWidth * scale); c.height = Math.round(img.naturalHeight * scale);
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
         URL.revokeObjectURL(url);
         resolve({ dataUrl: c.toDataURL("image/jpeg", 0.92), name: String(file.name || "upload").replace(/\.[^.]*$/, "") + ".jpg", type: "image/jpeg" });
       };

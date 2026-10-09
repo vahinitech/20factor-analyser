@@ -151,8 +151,8 @@ function collectIntake(){
 /* ---------- file inputs ---------- */
 /* A photo the browser cannot open used to do nothing at all: no preview,
    no message, "Run analysis" left greyed out. On 2026-10-06 a visitor on
-   Chrome for Mac tried the same iPhone HEIC photo five times before giving
-   up on it. Chrome and Firefox cannot decode HEIC; Safari can. Say what
+   Chrome for Mac, between JPEG uploads that worked, tried one iPhone HEIC
+   photo five times and saw nothing happen each time. Chrome and Firefox cannot decode HEIC; Safari can. Say what
    happened and what to do instead. */
 function isHeic(file){ return /^image\/hei[cf]/i.test(file.type || '') || /\.(heic|heif)$/i.test(file.name || ''); }
 function unreadableMessage(file){

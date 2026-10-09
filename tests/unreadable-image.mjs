@@ -41,7 +41,18 @@ try {
     const gif = new File([bytes(GIF)], 'page.gif', { type: 'image/gif' });
     const text = new File(['hello'], 'notes.txt', { type: 'text/plain' });
     const stored = async (f) => { try { const v = await window.s.asStorable(f); return v.type + ' ' + v.name + ' ' + v.dataUrl.slice(0, 23); } catch (e) { return 'not sent: ' + e.message; } };
+    // A wide image of a type the store does not keep (BMP), to check the
+    // conversion stays inside iOS Safari's canvas limit (4000 px long side).
+    const bmp = (w, h) => {
+      const row = Math.ceil(w * 3 / 4) * 4, size = 54 + row * h, b = new DataView(new ArrayBuffer(size));
+      b.setUint16(0, 0x4d42, true); b.setUint32(2, size, true); b.setUint32(10, 54, true); b.setUint32(14, 40, true);
+      b.setInt32(18, w, true); b.setInt32(22, h, true); b.setUint16(26, 1, true); b.setUint16(28, 24, true); b.setUint32(34, row * h, true);
+      return new File([b.buffer], 'wide.bmp', { type: 'image/bmp' });
+    };
+    const wide = await window.s.asStorable(bmp(5000, 4));
+    const wideSize = await new Promise((ok) => { const i = new Image(); i.onload = () => ok([i.naturalWidth, i.naturalHeight, wide.type]); i.onerror = () => ok(['unreadable']); i.src = wide.dataUrl; });
     return {
+      wideSize,
       heic: await read(heic), heicNoType: await read(heicNoType), png: await read(png), text: await read(text),
       heicMsg: window.t.unreadableMessage(heic), heicNoTypeMsg: window.t.unreadableMessage(heicNoType), textMsg: window.t.unreadableMessage(text),
       storePng: await stored(png), storeGif: await stored(gif), storeHeic: await stored(heic),
@@ -57,6 +68,7 @@ try {
   assert.match(r.textMsg, /JPEG or PNG/);
   assert.match(r.storePng, /^image\/png page\.png data:image\/png;base64/, 'a PNG goes to the store as it is');
   assert.match(r.storeGif, /^image\/jpeg page\.jpg data:image\/jpeg;base64/, 'an image the store does not keep is sent as a JPEG made in the browser');
+  assert.deepEqual(r.wideSize, [4000, 3, 'image/jpeg'], 'a large image is scaled to 4000 px on its long side before it is converted');
   assert.match(r.storeHeic, /^not sent: unreadable/, 'a photo the browser cannot open is not sent to the store');
   console.log('unreadable-image: unreadable photos explained, HEIC named, store gets only what it keeps');
 } finally {
