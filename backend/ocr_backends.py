@@ -225,16 +225,11 @@ def _engine_fail_cached(key):
 
 
 # --------------------------------------------------------------------------- #
-# Adaptive engine speed (hybrid mode) — decide whether THIS machine's CPU can
-# afford a specialist's per-line cost from a REAL measured latency, not a
-# synthetic benchmark or a manual "is this machine fast?" env var. Every
-# refine call times itself and records the result here; once an engine is
-# measured too slow, recognizer.refine_handwriting_text skips calling it for
-# the rest of the page (and for VAHINI_HYBRID_RETRY_SEC afterwards) and keeps
-# paddle's own reading instead — the same fail-fast-then-retry-later shape as
-# _ENGINE_FAIL_CACHE above, so hybrid mode is safe to enable on any machine:
-# fast hardware gets the accuracy win, slow hardware quietly behaves like
-# plain paddle after one measurement instead of stalling every scan.
+# Measured engine speed, for /health. Every hybrid/trocr refine call times
+# itself and records the result here, so /health shows the real
+# milliseconds per line on this machine. It must not decide whether an
+# engine runs: hybrid mode used to skip engines measured slow, which made
+# the text read from one photo depend on server load (#112).
 # --------------------------------------------------------------------------- #
 _SPEED_TTL = max(30.0, float(_env("VAHINI_HYBRID_RETRY_SEC", "600") or "600"))
 _MAX_MS_PER_LINE = max(

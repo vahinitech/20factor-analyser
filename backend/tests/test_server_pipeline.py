@@ -186,6 +186,49 @@ class TestServerPipeline(unittest.TestCase):
         finally:
             mod.ocr_backends.get_backend = orig
 
+    def test_refinement_ignores_measured_speed(self):
+        # #112: one slow line used to stop refinement for the rest of the
+        # page and for 10 minutes after, so the same photo read differently
+        # on a busy server. Every line is re-read, whatever was measured.
+        mod = self.mod
+        proc = np.full((100, 300, 3), 255, np.uint8)
+        buf = io.BytesIO()
+        Image.fromarray(proc).save(buf, format="PNG")
+        raw = buf.getvalue()
+        orig = mod.ocr_backends.get_backend
+        orig_memo = dict(mod.ocr_backends._SPEED_MEMO)
+
+        class _Fake:
+            def available(self):
+                return True, ""
+
+            def recognize_crop(self, _crop):
+                return "management", 0.9
+
+        def page():
+            return [
+                {"text": "manay ment", "box": [10, 10, 200, 30]},
+                {"text": "manay ment", "box": [10, 50, 200, 30]},
+            ]
+
+        try:
+            mod.ocr_backends.get_backend = lambda n: _Fake()
+            first = page()
+            mod.recognizer.refine_handwriting_text(raw, proc, first, "trocr")
+            mod.ocr_backends.record_engine_speed("trocr", 60000.0)
+            second = page()
+            mod.recognizer.refine_handwriting_text(raw, proc, second, "trocr")
+            self.assertEqual(
+                [l["text"] for l in first], ["management", "management"]
+            )
+            self.assertEqual(
+                [l["text"] for l in second], [l["text"] for l in first]
+            )
+        finally:
+            mod.ocr_backends.get_backend = orig
+            mod.ocr_backends._SPEED_MEMO.clear()
+            mod.ocr_backends._SPEED_MEMO.update(orig_memo)
+
     def test_refinement_trusts_a_confident_specialist_over_paddle(self):
         # Paddle is not a handwriting specialist: on genuinely hard writing
         # its own reading can itself be wrong, so requiring agreement with a
@@ -314,11 +357,9 @@ class TestServerPipeline(unittest.TestCase):
             mod.ocr_backends._SPEED_MEMO.clear()
             mod.ocr_backends._SPEED_MEMO.update(orig_memo)
 
-    def test_refinement_measures_speed_and_skips_a_slow_engine(self):
-        # A real, measured latency on THIS machine decides whether hybrid
-        # mode keeps using a specialist — not a synthetic benchmark. A
-        # fresh engine gets one real measurement; once it is slow, later
-        # lines (and later calls) skip it entirely without invoking it.
+    def test_refinement_records_speed_without_skipping(self):
+        # Each re-read is timed for /health's adaptive_engine_speed, and an
+        # engine already measured slow is still called (#112).
         mod = self.mod
         proc = np.full((100, 300, 3), 255, np.uint8)
         buf = io.BytesIO()
@@ -341,14 +382,13 @@ class TestServerPipeline(unittest.TestCase):
 
         try:
             mod.ocr_backends.get_backend = lambda n: _SlowFake()
-            # Force the "too slow" verdict directly (real hardware would
-            # take real elapsed time to prove this; the memo is what
-            # subsequent lines/calls actually consult).
             mod.ocr_backends.record_engine_speed("trocr", 9000.0)
             hl = [{"text": "manay ment", "box": [10, 10, 200, 30]}]
             mod.recognizer.refine_handwriting_text(raw, proc, hl, "trocr")
-            self.assertEqual(hl[0]["text"], "manay ment")  # untouched
-            self.assertEqual(calls, [])  # engine was never even called
+            self.assertEqual(hl[0]["text"], "corrected")
+            self.assertEqual(calls, [1])
+            measured_ms, _fast = mod.ocr_backends.engine_speed_verdict("trocr")
+            self.assertLess(measured_ms, 9000.0)  # the new measurement
         finally:
             mod.ocr_backends.get_backend = orig_get_backend
             mod.ocr_backends._SPEED_MEMO.clear()

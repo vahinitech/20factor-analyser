@@ -1,0 +1,1 @@
+- Hybrid and trocr modes re-read every handwriting line on every scan. They used to stop after one slow line, for the rest of the page and for ten minutes after, so the same photo could read differently on a busy server (#112). `/health` still shows the measured speed, for information.

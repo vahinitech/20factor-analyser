@@ -97,20 +97,17 @@ To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
 `docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
 llama.cpp). `hybrid` mode needs both.
 
-### Hybrid mode adapts to this machine's real speed
+### Hybrid mode re-reads every line, every time
 
-There's no manual "is this box fast enough?" setting. Every re-read is
-timed, and the elapsed time is what decides: once an engine measures
-slower than `VAHINI_HYBRID_MAX_MS_PER_LINE` (default 2.5s), it's skipped
-for the rest of that page and for `VAHINI_HYBRID_RETRY_SEC` (default 10
-minutes) afterwards: paddle's own reading is kept instead, and the next
-scan tries the specialist again once the cooldown passes. A fast machine
-gets every handwriting line re-read; a slow one quietly behaves like plain
-`paddle` after the first slow measurement instead of stalling every scan.
-So `VAHINI_OCR_BACKEND=hybrid` is safe to set on any machine: check
-`GET /health`'s `adaptive_engine_speed` field to see the actual measured
-milliseconds per line and whether each engine is currently considered fast
-enough on this box.
+Hybrid and trocr modes re-read every handwriting line (up to 40) on every
+scan. They used to skip an engine after one line slower than
+`VAHINI_HYBRID_MAX_MS_PER_LINE`, for the rest of the page and for
+`VAHINI_HYBRID_RETRY_SEC` afterwards, so the same photo could read
+differently on a busy server (#112). Speed no longer changes the result.
+`GET /health`'s `adaptive_engine_speed` still shows the measured
+milliseconds per line, and whether that is under
+`VAHINI_HYBRID_MAX_MS_PER_LINE`, so you can see whether this machine can
+afford hybrid mode. If it cannot, run `paddle`.
 
 **Proof a specialist engine actually ran, not just that hybrid mode was
 requested:** `POST /report-python`'s response has
@@ -121,9 +118,9 @@ handwriting lines it actually refined this scan (e.g.
 in order: (1) `VAHINI_OCR_BACKEND` is actually `hybrid` or `trocr` (the
 default is `paddle`, which never refines anything); (2) `GET /health`
 lists `trocr`/`surya` as available, not skipped (they must be baked into
-the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3)
-`adaptive_engine_speed` hasn't marked the engine too slow on this machine
-(see above).
+the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3) the
+engine's `recognize_crop` did not raise on these lines (a failing call
+keeps paddle's reading for that line).
 
 ### Layout pre-filter (excludes photos, seals, charts: never handwriting)
 
@@ -179,8 +176,8 @@ which model tier is actually built and ready on this machine.
 | `VAHINI_OCR_ORIGINS` | `*` | CORS allowlist for cross-origin deployments |
 | `VAHINI_REFINE_MIN_SIM` | `0.70` | in `trocr`/`hybrid` mode, accept a re-read line if it's at least this similar to paddle's reading |
 | `VAHINI_REFINE_MIN_CONF` | `0.75` | in `trocr`/`hybrid` mode, accept a re-read line if the specialist's own confidence is at least this high, even if it disagrees with paddle |
-| `VAHINI_HYBRID_MAX_MS_PER_LINE` | `2500` | above this measured latency, hybrid mode stops using that specialist engine until the retry cooldown passes |
-| `VAHINI_HYBRID_RETRY_SEC` | `600` | how long a "too slow" verdict is remembered before trying that engine again |
+| `VAHINI_HYBRID_MAX_MS_PER_LINE` | `2500` | `/health` marks an engine slower than this per line as not `fast_enough`; information only, it never skips the engine |
+| `VAHINI_HYBRID_RETRY_SEC` | `600` | how long a speed measurement stays in `/health` |
 
 GPU is auto-detected per engine; force it per engine with `VAHINI_OCR_GPU`,
 `VAHINI_TROCR_GPU`, `VAHINI_SURYA_GPU`.

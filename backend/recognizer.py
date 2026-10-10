@@ -254,15 +254,12 @@ def refine_handwriting_text(
     (paddle's working image is downscaled), which materially improves
     recognition.
 
-    Adaptive to CPU speed: every call is timed and recorded via
-    ocr_backends.record_engine_speed(). Once an engine measures slower than
-    VAHINI_HYBRID_MAX_MS_PER_LINE, it is skipped for the rest of THIS page
-    (keeping paddle's reading) and for VAHINI_HYBRID_RETRY_SEC afterwards —
-    a real measured latency on this exact machine, not a synthetic
-    benchmark or a manual "is this box fast?" setting. This is what makes
-    hybrid mode safe to enable everywhere: a fast machine gets every
-    handwriting line re-read, a slow one quietly behaves like plain paddle
-    after the first slow measurement instead of stalling every scan.
+    Every handwriting line (up to 40) is re-read, every time. The engines
+    used to be skipped after one slow line, for the rest of the page and
+    for VAHINI_HYBRID_RETRY_SEC afterwards, so the text read from one photo
+    depended on server load (#112). Calls are still timed for /health's
+    adaptive_engine_speed, which is information only. A machine too slow
+    for every line should not run hybrid or trocr mode.
     """
     try:
         full = np.array(computer_vision.decode_image(raw_bytes))
@@ -290,9 +287,6 @@ def refine_handwriting_text(
 
     for l in hand_lines[:40]:
         engine_name = _refine_engine_for_line(l.get("lang"), backend_name)
-        verdict = ocr_backends.engine_speed_verdict(engine_name)
-        if verdict is not None and not verdict[1]:
-            continue  # measured too slow on this machine recently; skip
         be = _get_ready(engine_name)
         if be is None:
             continue
@@ -314,9 +308,9 @@ def refine_handwriting_text(
             cand, conf = be.recognize_crop(crop)
         except Exception:
             continue
-        # Only a successful call counts as a speed measurement — an
-        # exception is a reliability problem, not a latency one, and
-        # recording it here would let an instant crash look "fast".
+        # Only a successful call counts as a speed measurement (for
+        # /health): an exception is a reliability problem, not a latency
+        # one, and recording it would let an instant crash look "fast".
         ocr_backends.record_engine_speed(
             engine_name, (time.perf_counter() - t0) * 1000.0
         )
