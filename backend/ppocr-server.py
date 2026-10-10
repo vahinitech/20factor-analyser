@@ -275,12 +275,11 @@ def health():
         # first relevant call has actually run. The layout filter's model is
         # fixed by configuration, so it records nothing here (#112).
         "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
-        # The one configured layout model and whether it loaded (see
-        # layout_filter.py). A scan waits for the load, never skips it.
+        # Which layout model is loaded (see layout_filter.py). A scan waits
+        # for the load, never skips it, so this is the model every scan uses.
         "layout_filter": {
             "enabled": layout_filter.is_enabled(),
             "built_tiers": layout_filter.built_tiers(),
-            **layout_filter.status(),
         },
     }
 

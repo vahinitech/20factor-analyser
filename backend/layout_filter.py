@@ -130,16 +130,6 @@ def built_tiers():
     return sorted(_MODELS.keys())
 
 
-def status():
-    """The configured model and whether it loaded, for /health."""
-    tier = _TIERS[_MODEL_NAME]
-    return {
-        "model": _MODEL_NAME,
-        "loaded": tier in _MODELS,
-        "error": _FAILED.get(tier, ""),
-    }
-
-
 def _select_tier():
     """The configured (tier_key, model_name). Always the same for a given
     deployment: measured speed must not change which lines get scored."""
