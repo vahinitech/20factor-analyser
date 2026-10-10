@@ -11,8 +11,6 @@
 #   ./backend/setup.sh all              # paddle + trocr + surya
 #   NO_DOWNLOAD=1 ./backend/setup.sh    # skip model warm-up
 #
-# Chandra on a CPU-only box: use the hosted API (no install) —
-#   export VAHINI_OCR_BACKEND=chandra VAHINI_CHANDRA_METHOD=api DATALAB_API_KEY=...
 set -euo pipefail
 
 SERVER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

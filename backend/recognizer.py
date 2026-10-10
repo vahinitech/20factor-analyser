@@ -28,6 +28,7 @@ import time
 
 import numpy as np
 
+import config
 import ocr_backends
 import classify
 import detector
@@ -147,12 +148,9 @@ def collect_lines(arr: np.ndarray, lang: str):
     paddle, so the caller ALWAYS gets a usable result on this CPU-only box.
     """
     ocr_backend = _CFG["ocr_backend"]
-    mode = (
-        ocr_backend
-        if ocr_backend
-        in ("paddle", "trocr", "surya", "hybrid", "paddleocr-vl", "auto")
-        else "paddle"
-    )
+    # config.load() refuses any other value at start-up; this guard only
+    # covers a caller that set _CFG directly.
+    mode = ocr_backend if ocr_backend in config.OCR_BACKENDS else "paddle"
     compare = {}
 
     paddle_lines, paddle_err = collect_lines_paddle(arr, lang)

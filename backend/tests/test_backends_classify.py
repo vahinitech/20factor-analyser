@@ -15,6 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
+import config  # noqa: E402
 import ocr_backends  # noqa: E402
 import classify  # noqa: E402
 import gpu_detect  # noqa: E402
@@ -50,6 +51,26 @@ def _hand_strip(w=240, h=40):
         x += sw + 6 + (i % 4)  # irregular spacing
         i += 1
     return img
+
+
+class TestBackendSetting(unittest.TestCase):
+    def test_unknown_backend_stops_start_up(self):
+        # vahini-web stage set "chandra" (dropped in #7); it ran as paddle
+        # while /health reported chandra.
+        with mock.patch.dict(os.environ, {"VAHINI_OCR_BACKEND": "chandra"}):
+            with self.assertRaises(ValueError) as ctx:
+                config.load()
+        self.assertIn("chandra", str(ctx.exception))
+
+    def test_every_known_backend_loads(self):
+        for name in config.OCR_BACKENDS:
+            with mock.patch.dict(os.environ, {"VAHINI_OCR_BACKEND": name}):
+                self.assertEqual(config.load().ocr_backend, name)
+
+    def test_unset_means_paddle(self):
+        with mock.patch.dict(os.environ, {}, clear=False):
+            os.environ.pop("VAHINI_OCR_BACKEND", None)
+            self.assertEqual(config.load().ocr_backend, "paddle")
 
 
 class TestReversePrint(unittest.TestCase):

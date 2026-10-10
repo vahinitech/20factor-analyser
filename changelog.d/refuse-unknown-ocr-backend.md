@@ -1,0 +1,1 @@
+- The server refuses to start when `VAHINI_OCR_BACKEND` names an engine it does not have. An unknown name used to run as paddle while `/health` reported the unknown name, which hid that vahini-web's stage asked for Chandra, dropped in #7. The leftover Chandra note in `backend/setup.sh` is gone.
