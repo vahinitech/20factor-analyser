@@ -166,6 +166,7 @@ def _warm_startup_engines():
                 ocr_backends.get_engine_safe(lg)
             except Exception:
                 pass
+        layout_filter.warm()
 
     threading.Thread(
         target=_warm, name="vahini-engine-warmup", daemon=True
@@ -270,13 +271,12 @@ def health():
         "printed_threshold": classify.PRINTED_THRESHOLD,
         # Real, measured per-engine speed on THIS machine, not a synthetic
         # benchmark: hybrid mode's trocr/surya refine calls (see
-        # recognizer.refine_handwriting_text) and the layout pre-filter's
-        # PP-DocLayout-M/S tier choice (see layout_filter.py) both record
-        # here. Empty until the first relevant call has actually run.
+        # recognizer.refine_handwriting_text) record here. Empty until the
+        # first relevant call has actually run. The layout filter's model is
+        # fixed by configuration, so it records nothing here (#112).
         "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
-        # Whether a layout model is built and ready yet (see layout_filter.py
-        # — the build never blocks a request, so this can be empty for a
-        # while after startup even with VAHINI_LAYOUT_FILTER=1).
+        # Which layout model is loaded (see layout_filter.py). A scan waits
+        # for the load, never skips it, so this is the model every scan uses.
         "layout_filter": {
             "enabled": layout_filter.is_enabled(),
             "built_tiers": layout_filter.built_tiers(),

@@ -18,21 +18,19 @@
 # chart, seal. Everything else (including formula and table) still goes
 # through the normal detection + classify.py pipeline unchanged.
 #
-# Speed-adaptive, same shape as ocr_backends' hybrid-engine speed memo: try
-# the more accurate PP-DocLayout-M first; if a real measured call is too
-# slow on this machine, fall back to the cheaper PP-DocLayout-S; if even
-# that is too slow, skip layout filtering entirely for the retry window.
-# Filtering is a pure accuracy nice-to-have, never a hard requirement, so a
-# slow or unavailable model must never block a scan.
+# One model, chosen by configuration (VAHINI_LAYOUT_MODEL, default
+# PP-DocLayout-M), never by how fast the last call was. It used to switch
+# to PP-DocLayout-S, or skip filtering, after one slow call, and to skip it
+# while the model loaded in the background. The two models and "no filter"
+# keep different lines, so the same photo scored differently depending on
+# server load (20factor-analyser#112). The model is preloaded in the image
+# and warmed at start-up; a scan that arrives first waits for it.
 
 import os
 import threading
-import time
 import importlib.util
 
 import numpy as np
-
-import ocr_backends
 
 # Categories that are never ink/text content (see module docstring for why
 # "formula" and "table" are deliberately NOT here). "header_image" and
@@ -61,43 +59,50 @@ _EXCLUDE_LABELS = {
 # page itself, not a figure on it.
 _MAX_REGION_PAGE_FRACTION = 0.5
 
-_MAX_MS = max(
-    50.0, float(os.environ.get("VAHINI_LAYOUT_MAX_MS", "800") or "800")
-)
 _ENABLED = (os.environ.get("VAHINI_LAYOUT_FILTER", "1") or "1").strip() == "1"
 
+_TIERS = {"PP-DocLayout-M": "layout_m", "PP-DocLayout-S": "layout_s"}
+_MODEL_NAME = (
+    os.environ.get("VAHINI_LAYOUT_MODEL", "PP-DocLayout-M") or ""
+).strip()
+if _MODEL_NAME not in _TIERS:
+    _MODEL_NAME = "PP-DocLayout-M"
+
 _MODELS = {}  # tier name ("layout_m"/"layout_s") -> built LayoutDetection
-_ATTEMPTED = set()  # tier names a background build has been started for
+_FAILED = {}  # tier name -> load error, kept for the life of the process
+_LOCK = threading.Lock()
 
 
 def _build(tier_key, model_name):
-    """Return the already-built model for `tier_key`, or None if it isn't
-    ready yet. NEVER blocks the caller (a request must never be slowed
-    down by a model download): a not-yet-built model kicks off a
-    background thread the FIRST time it's asked for — once, ever, per
-    tier per process — and returns None immediately. A failed download
-    doesn't fail fast (paddlex walks several mirror hosts, each with its
-    own retry/backoff, before giving up — real seconds), which is exactly
-    why this must run in the background rather than block a scan waiting
-    for it. Warm this ahead of time with warmup_models.py so it's normally
-    already built by the time real traffic arrives; the live path degrades
-    to "not available yet" for free otherwise."""
+    """Return the model for `tier_key`, loading it on first use. Callers
+    wait for the load: skipping the filter until a background load finished
+    made the first scans after a start score differently from later ones.
+    A failed load is remembered for the life of the process, so every scan
+    on this server takes the same path instead of flipping on a retry."""
     model = _MODELS.get(tier_key)
-    if model is not None:
+    if model is not None or tier_key in _FAILED:
         return model
-    if tier_key not in _ATTEMPTED:
-        _ATTEMPTED.add(tier_key)
+    with _LOCK:
+        if tier_key in _MODELS or tier_key in _FAILED:
+            return _MODELS.get(tier_key)
+        try:
+            from paddleocr import LayoutDetection
 
-        def _worker():
-            try:
-                from paddleocr import LayoutDetection
+            _MODELS[tier_key] = LayoutDetection(model_name=model_name)
+        except Exception as exc:  # pylint: disable=broad-exception-caught
+            _FAILED[tier_key] = str(exc)
+    return _MODELS.get(tier_key)
 
-                _MODELS[tier_key] = LayoutDetection(model_name=model_name)
-            except Exception:
-                pass  # leave unset; every caller treats this as unavailable
 
-        threading.Thread(target=_worker, daemon=True).start()
-    return None
+def warm():
+    """Load the configured model ahead of the first scan (server start-up).
+    Never raises."""
+    if not _ENABLED or not available()[0]:
+        return
+    try:
+        _build(_TIERS[_MODEL_NAME], _MODEL_NAME)
+    except Exception:  # pylint: disable=broad-exception-caught
+        pass
 
 
 def available():
@@ -120,35 +125,24 @@ def is_enabled():
 
 
 def built_tiers():
-    """Which model tiers ("layout_m"/"layout_s") are actually built and
-    ready right now — used by /health. A build never blocks a request (see
-    _build()), so this can be empty for a while after startup even with
-    the filter enabled."""
+    """Which model tiers ("layout_m"/"layout_s") are loaded right now, for
+    /health."""
     return sorted(_MODELS.keys())
 
 
 def _select_tier():
-    """Which model tier to use right now, from real measured speed on this
-    machine (see module docstring). Returns (tier_key, model_name) or
-    (None, None) if layout filtering should be skipped this round."""
-    m_verdict = ocr_backends.engine_speed_verdict("layout_m")
-    if m_verdict is None or m_verdict[1]:
-        return "layout_m", "PP-DocLayout-M"
-    s_verdict = ocr_backends.engine_speed_verdict("layout_s")
-    if s_verdict is None or s_verdict[1]:
-        return "layout_s", "PP-DocLayout-S"
-    return None, None
+    """The configured (tier_key, model_name). Always the same for a given
+    deployment: measured speed must not change which lines get scored."""
+    return _TIERS[_MODEL_NAME], _MODEL_NAME
 
 
 def excluded_regions(arr: np.ndarray):
     """[[x0,y0,x1,y1], ...] boxes of non-text-ink content on this page
-    (image/figure/chart/seal), or [] if layout filtering is disabled,
-    unavailable, or currently too slow on this machine. Never raises."""
+    (image/figure/chart/seal), or [] if layout filtering is disabled or
+    the model is unavailable. Never raises."""
     if not _ENABLED:
         return []
     tier_key, model_name = _select_tier()
-    if tier_key is None:
-        return []
     ok, _reason = available()
     if not ok:
         return []
@@ -157,10 +151,9 @@ def excluded_regions(arr: np.ndarray):
     except Exception:
         return []
     if model is None:
-        return []  # not built yet (still downloading in the background)
+        return []  # failed to load; the same for every scan on this server
 
     page_area = float(max(1, arr.shape[0]) * max(1, arr.shape[1]))
-    t0 = time.perf_counter()
     try:
         results = model.predict(arr, batch_size=1)
         boxes = []
@@ -184,9 +177,6 @@ def excluded_regions(arr: np.ndarray):
                 boxes.append([x0, y0, x1, y1])
     except Exception:
         return []
-    ocr_backends.record_engine_speed(
-        tier_key, (time.perf_counter() - t0) * 1000.0
-    )
     return boxes
 
 

@@ -1,0 +1,1 @@
+- The same photo gets the same scores on every run. The layout filter that drops pictures and stamps before scoring used to switch models, or switch itself off, after one slow call and while its model was loading; it now always uses the model `VAHINI_LAYOUT_MODEL` names (default PP-DocLayout-M), and a scan waits for it to load (#112).
