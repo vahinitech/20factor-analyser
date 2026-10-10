@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
-   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Dual-IMU sensing: Indian Patent No. 584433.
+   © 2026 Vahini Technologies. Contact: info@vahinitech.com. Indian Patents No. 584433 and 604895.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Vahini report renderer: builds the data-driven report from
@@ -429,7 +429,8 @@ function render(host, data){
     : 'We did not find a spelling mistake from our limited list of common English words. We may miss other mistakes. We do not check grammar or other languages.';
   const title=esc(intake.writerName || 'Your handwriting');
   const head=label=>`<div class="run-head"><span class="rh-mark"><img class="rh-logo" src="assets/vahini-logo.png" alt="" width="22" height="22"><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
-  const foot=n=>`<div class="run-foot"><span>Free handwriting review</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
+  // Patent numbers on every report page: owner instruction, 2026-10-10.
+  const foot=n=>`<div class="run-foot"><span>Free handwriting review · Indian Patents No. 584433 and 604895</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
   const cardStyle='';
   const selectionReasons={
     'height-deviation':'This part has a writing height that differs most from the middle height on your page.',
