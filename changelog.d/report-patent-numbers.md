@@ -1,0 +1,1 @@
+- Every report page's footer names the patents: "Free handwriting review · Indian Patents No. 584433 and 604895" (owner instruction, 2026-10-10).
