@@ -252,11 +252,36 @@ function heicToJpeg(file){
    (2026-10-09). A bigger file is refused here, before it is decoded. */
 const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
+/* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
+   an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
+   server_down, too_large, invalid_file, key_problem, account_unavailable,
+   too_big, heic, unreadable, pdf_unreadable, photo_warning, pdf_pages) to an
+   image path on this site. vahinitech.com fills it from its own drawings;
+   without it every notice keeps its icon or plain text. Only same-site
+   paths are used. */
+function noticeArt(code){
+  const map = window.VAHINI_NOTICE_ART;
+  const url = map && typeof map[code] === 'string' ? map[code] : '';
+  return /^\/(?!\/)[\w\-./%]+$/.test(url) ? url : '';
+}
+function artImg(url, cls){
+  const img = document.createElement('img');
+  img.className = cls; img.src = url; img.alt = ''; img.decoding = 'async';
+  return img;
+}
+
 /* The upload box's notice for a photo that could not be used: a bold line,
    then what to do. Built from text nodes only. */
 function showDzNotice(file, tooBig){
-  const box = $('#dz-notice'); if (!box) return;
-  box.textContent = '';
+  const outer = $('#dz-notice'); if (!outer) return;
+  outer.textContent = ''; outer.classList.remove('has-art');
+  const art = noticeArt(tooBig ? 'too_big' : isHeic(file) ? 'heic' : 'unreadable');
+  let box = outer;
+  if (art){
+    outer.classList.add('has-art');
+    outer.appendChild(artImg(art, 'notice-art'));
+    box = document.createElement('div'); outer.appendChild(box);
+  }
   const add = (tag, text, parent)=>{ const el = document.createElement(tag); el.textContent = text; (parent || box).appendChild(el); return el; };
   if (tooBig){
     add('strong', 'This file is ' + (file.size / 1048576).toFixed(1) + ' MB, over the 10 MB limit.');
@@ -271,7 +296,7 @@ function showDzNotice(file, tooBig){
     add('strong', 'This file could not be opened as a photo.');
     add('p', 'Please choose a JPEG or PNG picture of the page.');
   }
-  box.hidden = false;
+  outer.hidden = false;
 }
 function clearDzNotice(){ const box = $('#dz-notice'); if (box){ box.hidden = true; box.textContent = ''; } }
 
@@ -315,8 +340,15 @@ async function loadBundledSample(){
   }catch(_e){ setDzStatus('The sample page could not be loaded. Try your own photo.'); }
 }
 
-function setDzStatus(text){
-  const s = $('#dz-status'); if (s) s.textContent = text || '';
+function setDzStatus(text, artCode){
+  const s = $('#dz-status'); if (!s) return;
+  s.textContent = ''; s.classList.remove('has-art');
+  const art = text && artCode ? noticeArt(artCode) : '';
+  if (art){
+    s.classList.add('has-art');
+    s.appendChild(artImg(art, 'status-art'));
+    const span = document.createElement('span'); span.textContent = text; s.appendChild(span);
+  } else s.textContent = text || '';
 }
 /* Load the PDF reader only for PDF uploads; retry after a failed load. */
 let pdfJsPromise = null;
@@ -356,7 +388,7 @@ function showSample(img, url){
   $('#dz-preview').src = url; $('#dz-preview').style.display='block';
   $('#dz-clear').style.display='block';
   $('#dz-prompt').style.display='none';
-  if (!window.VAHINI_SAMPLE_RUN) setDzStatus(photoWarning(img));
+  if (!window.VAHINI_SAMPLE_RUN) setDzStatus(photoWarning(img), 'photo_warning');
   applyServiceGate();
 }
 
@@ -375,9 +407,9 @@ function handleSample(file){
     setDzStatus('Reading PDF…');
     pdfFirstPageToImage(file).then(({ img, url, pages })=>{
       showSample(img, url);
-      if (pages > 1) setDzStatus('PDF has ' + pages + ' pages: only page 1 is analysed.');
+      if (pages > 1) setDzStatus('PDF has ' + pages + ' pages: only page 1 is analysed.', 'pdf_pages');
     }).catch(err=>{
-      setDzStatus((err && err.message) ? err.message : 'Could not read this PDF.');
+      setDzStatus((err && err.message) ? err.message : 'Could not read this PDF.', 'pdf_unreadable');
     });
     return;
   }
@@ -548,9 +580,10 @@ function showReject(rej){
   if (processPanelHTML === null) processPanelHTML = panel.innerHTML;
   const head = $('#screen-process .screen-head'); if(head) head.style.display='none';
   const tips = (rej.tips||[]).map(t=>`<li>${t}</li>`).join('');
+  const art = noticeArt(rej.outcome);
   panel.innerHTML = `
     <div class="reject-card">
-      <div class="reject-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10"/><path d="m3 17 5-5 3 3"/><circle cx="9" cy="9" r="1.6"/><path d="M16 16l5 5M21 16l-5 5"/></svg></div>
+      ${art ? `<img class="reject-art" src="${art}" alt="" decoding="async">` : `<div class="reject-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10"/><path d="m3 17 5-5 3 3"/><circle cx="9" cy="9" r="1.6"/><path d="M16 16l5 5M21 16l-5 5"/></svg></div>`}
       <h2>${rej.reason||"Couldn't analyse this image"}</h2>
       <p class="reject-detail">${rej.detail||''}</p>
       <ul class="reject-tips">${tips}</ul>
@@ -705,6 +738,55 @@ async function runPipeline(){
       tips: [
         'Wait a minute, then upload the photo again',
         'If it keeps happening, tell us with the Feedback button',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'too_large'){
+    showReject({
+      outcome: 'too_large',
+      reason: 'This photo is too large to check',
+      detail: 'The analyser takes a picture of one page, up to 5 MB and 24 megapixels. This did not use up one of your free checks.',
+      tips: [
+        'Take a new photo of the page with your phone camera and upload that',
+        'For a PDF, save only the page with the writing',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'invalid_file'){
+    showReject({
+      outcome: 'invalid_file',
+      reason: 'This file could not be opened',
+      detail: 'The analyser could not open it as a photo or a PDF. This did not use up one of your free checks.',
+      tips: [
+        'Choose a JPEG, PNG or WebP photo of the page, or a PDF',
+        'If the file opens on your phone, take a new photo of the page and upload that',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'key_problem'){
+    showReject({
+      outcome: 'key_problem',
+      reason: 'Your access key could not be checked',
+      detail: 'The key may be mistyped, or it may have expired or been switched off. Your photo is fine.',
+      tips: [
+        'Open “Have a Vahini access key?” and connect the key again',
+        'Or press Disconnect there to run the free check now',
+        'Still stuck? <a href="/reach.html?topic=handwriting">Ask our team</a>',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'account_unavailable'){
+    showReject({
+      outcome: 'account_unavailable',
+      reason: 'Access keys cannot be checked right now',
+      detail: 'The service that checks access keys did not respond. Your key and your photo are fine.',
+      tips: [
+        'Try again in a few minutes',
+        'Or press Disconnect under “Have a Vahini access key?” to run the free check now',
       ],
     });
     return;

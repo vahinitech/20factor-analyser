@@ -226,9 +226,20 @@ async function serverPythonReport(blob, expectedText){
           lastServerError = detail.error || 'ocr unavailable';
           return { ok:false, error_code:'ocr_unavailable', retry_after:retry };
         }
+        // The scan cap always sends Retry-After; without it, with a Pro key
+        // connected, the 503 is the service that checks keys.
+        if (!res.headers.get('Retry-After') && global.VahiniAccount.hasKey()){
+          lastServerError = 'account service unavailable';
+          return { ok:false, error_code:'account_unavailable' };
+        }
         lastServerError = 'busy';
         return { ok:false, error_code:'busy', retry_after:retry };
       }
+      // Answers about the file or the key, from a server that is up: each
+      // has its own screen instead of "server not reachable".
+      if (res.status === 413){ lastServerError = 'too large'; return { ok:false, error_code:'too_large' }; }
+      if (res.status === 422){ lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' }; }
+      if (res.status === 401 || res.status === 403){ lastServerError = 'key'; return { ok:false, error_code:'key_problem' }; }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
@@ -248,7 +259,12 @@ async function serverPythonReport(blob, expectedText){
         return j;
       }
       if (j && j.ok === false && j.error) lastServerError = j.error;
-    }catch(_e){ lastServerError='Report access or processing failed. Please reconnect your account and try again.'; if(global.VahiniAccount.hasKey())return {ok:false,error_code:'account_report_failed',error:lastServerError}; }
+    }catch(e){
+      lastServerError='Report access or processing failed. Please reconnect your account and try again.';
+      // VahiniAccount's key check failed: a wrong key (401) or its service down (503).
+      if(e && e.status)return {ok:false,error_code:e.status===503?'account_unavailable':'key_problem',error:lastServerError};
+      if(global.VahiniAccount.hasKey())return {ok:false,error_code:'account_report_failed',error:lastServerError};
+    }
   }
   return null;
 }

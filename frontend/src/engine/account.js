@@ -11,7 +11,8 @@
   async function identity(secret){
     if(!trusted('/api/v2/me'))throw new Error('Account access requires HTTPS.');
     const response=await global.fetch('/api/v2/me',{headers:secret?{Authorization:'Bearer '+secret}:{},credentials:'same-origin',redirect:'error',cache:'no-store'});
-    if(!response.ok)throw new Error('Account access could not be verified. Check your key or reconnect.');
+    // The status tells a wrong key (401) from the key service being down (503).
+    if(!response.ok)throw Object.assign(new Error('Account access could not be verified. Check your key or reconnect.'),{status:response.status});
     const result=await response.json();
     if(!result.access || !['free','pro'].includes(result.access.tier))throw new Error('Invalid account response.');
     return result.access;
