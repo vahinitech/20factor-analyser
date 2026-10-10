@@ -14,6 +14,8 @@ Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriti
 
 **Upload and image security limits are deliberate and tested.** Sizes (5 MiB, 24 MP), formats (JPEG, PNG, WebP, PDF), the pinned Pillow, nothing written to disk, the free daily limit and the non-root, read-only container: read [SECURITY.md](SECURITY.md#upload-and-image-security-rules-for-every-change) before touching uploads, decoding, the Dockerfile or rate limits, and never loosen one without the owner.
 
+**Same photo, same scores.** Nothing that runs before scoring (OCR, the printed/handwritten check, the layout filter) may change its result based on timing, load, a model still loading or a retry timer: choose by configuration, wait for models, keep a failed load failed. The response cache (180 s) and CI's stubbed models hide this class of bug, so check repeatability with the cache off and real models. Rule and history: CLAUDE.md, #112.
+
 **Generated files are not committed.** `engine.bundle.js` and the `?v=` asset stamps are produced by `python frontend/build_bundle.py --stamp` in the image build and by CI; never commit them (they made every pair of frontend PRs conflict). `sample-report-data.js` is committed but regenerated with `docs/examples/generate_photo_sample.py`, never edited by hand.
 
 ## Changelog entries are files

@@ -59,6 +59,22 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 - **Deterministic, auditable CV over black-box AI** is a deliberate product
   choice here — keep scoring explainable; don't introduce opaque models
   into the 20-factor path without an explicit decision.
+- **Same photo, same scores: no runtime state may change which lines get
+  scored.** The CV maths repeats exactly, but it only measures the lines
+  that OCR, `classify.py` and `layout_filter.py` hand it. Those steps must
+  depend on the photo and the configuration, never on timing, load, a
+  model still loading, a retry timer or a cache. #112 was exactly this:
+  the layout filter switched models after one slow call and skipped itself
+  while loading, so the same photo scored differently on a busy server.
+  Rules: choose models and engines by env setting, not measured speed; a
+  scan waits for a model rather than skipping a step; a failed load stays
+  failed for the process. Two traps hide this kind of bug: the 180 s response cache
+  (`VAHINI_OCR_CACHE_TTL_SEC`) answers a repeated photo, and CI stubs the
+  real models. To check repeatability, set the TTL to 0 in a test
+  container with the model volume mounted, or wait over 3 minutes between
+  runs on stage, and include one run straight after a restart. A test for
+  a step before scoring should run the same input twice with the server
+  state changed in between (`backend/tests/test_layout_filter.py` shows how).
 - **No AI-isms** in user-facing report text, commits, or docs (no "delve",
   "seamless", "leverage", filler praise). Coach tips speak plainly to
   parents/teachers. Full list and self-check: the `natural-writing` skill
