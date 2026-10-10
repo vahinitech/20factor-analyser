@@ -14,9 +14,8 @@
 #   VAHINI_TROCR_MODEL         TrOCR model id (default microsoft/trocr-base-handwritten)
 #
 # "layout" warms BOTH PP-DocLayout-S and PP-DocLayout-M (a few MB each) —
-# layout_filter.py picks between them at runtime from measured speed on this
-# machine, so both need to be warm; which one actually gets used isn't known
-# ahead of time.
+# layout_filter.py uses the one VAHINI_LAYOUT_MODEL names (default M), and
+# both stay warm so changing that setting needs no download.
 #
 # Usage:
 #   python warmup_models.py

@@ -3,10 +3,11 @@
 # Pure-Python tests for the document-layout negative pre-filter. These do
 # NOT download or build a real PP-DocLayout model (network is not assumed
 # available in CI); model construction and .predict() are mocked, so these
-# tests exercise the real filtering/tier-selection logic against synthetic
+# tests exercise the real filtering and model-loading logic against synthetic
 # layout results.
 import os
 import sys
+import types
 import unittest
 from unittest import mock
 
@@ -80,30 +81,73 @@ class TestLayoutTierSelection(unittest.TestCase):
         ocr_backends._SPEED_MEMO.clear()
         ocr_backends._SPEED_MEMO.update(self._orig_memo)
 
-    def test_first_call_prefers_m(self):
+    def test_default_model_is_m(self):
         tier_key, model_name = layout_filter._select_tier()
         self.assertEqual(
             (tier_key, model_name), ("layout_m", "PP-DocLayout-M")
         )
 
-    def test_slow_m_falls_back_to_s(self):
-        ocr_backends.record_engine_speed("layout_m", 5000.0)  # measured slow
-        tier_key, model_name = layout_filter._select_tier()
-        self.assertEqual(
-            (tier_key, model_name), ("layout_s", "PP-DocLayout-S")
-        )
-
-    def test_slow_m_and_s_disables_filtering(self):
+    def test_slow_measurements_do_not_change_the_model(self):
+        # #112: one slow call used to move the next 10 minutes of scans to
+        # PP-DocLayout-S or to no filter, so the same photo scored
+        # differently depending on server load.
+        before = layout_filter._select_tier()
         ocr_backends.record_engine_speed("layout_m", 5000.0)
         ocr_backends.record_engine_speed("layout_s", 5000.0)
-        tier_key, model_name = layout_filter._select_tier()
-        self.assertIsNone(tier_key)
-        self.assertIsNone(model_name)
+        self.assertEqual(layout_filter._select_tier(), before)
 
-    def test_fast_m_keeps_using_m(self):
-        ocr_backends.record_engine_speed("layout_m", 40.0)
-        tier_key, _model_name = layout_filter._select_tier()
-        self.assertEqual(tier_key, "layout_m")
+
+class TestModelLoading(unittest.TestCase):
+    def setUp(self):
+        self._orig = (dict(layout_filter._MODELS), dict(layout_filter._FAILED))
+        layout_filter._MODELS.clear()
+        layout_filter._FAILED.clear()
+
+    def tearDown(self):
+        layout_filter._MODELS.clear()
+        layout_filter._FAILED.clear()
+        layout_filter._MODELS.update(self._orig[0])
+        layout_filter._FAILED.update(self._orig[1])
+
+    def _fake_paddleocr(self, factory):
+        fake = types.ModuleType("paddleocr")
+        fake.LayoutDetection = factory
+        return mock.patch.dict(sys.modules, {"paddleocr": fake})
+
+    def test_first_call_waits_for_the_model(self):
+        # The first scans after a start used to skip the filter while the
+        # model loaded in the background, then later scans used it.
+        built = []
+
+        def factory(model_name):
+            built.append(model_name)
+            return object()
+
+        with self._fake_paddleocr(factory):
+            model = layout_filter._build("layout_m", "PP-DocLayout-M")
+            again = layout_filter._build("layout_m", "PP-DocLayout-M")
+        self.assertIsNotNone(model)
+        self.assertIs(model, again)
+        self.assertEqual(built, ["PP-DocLayout-M"])
+
+    def test_failed_load_stays_failed(self):
+        # A retry that succeeded later would change which lines get scored
+        # mid-life; a failure is the same for every scan on this server.
+        calls = []
+
+        def factory(model_name):
+            calls.append(model_name)
+            raise RuntimeError("offline")
+
+        with self._fake_paddleocr(factory):
+            self.assertIsNone(
+                layout_filter._build("layout_m", "PP-DocLayout-M")
+            )
+            self.assertIsNone(
+                layout_filter._build("layout_m", "PP-DocLayout-M")
+            )
+        self.assertEqual(len(calls), 1)
+        self.assertIn("offline", layout_filter._FAILED["layout_m"])
 
 
 class TestExcludedRegionsIntegration(unittest.TestCase):
@@ -245,6 +289,40 @@ class TestExcludedRegionsIntegration(unittest.TestCase):
                 (40.0, 40.0, 50.0, 50.0),
             ],
         )
+
+    def test_same_page_same_regions_after_a_slow_call(self):
+        import numpy as np
+
+        built = []
+
+        class _Model:
+            def predict(self, _arr, **_kwargs):
+                return [
+                    {
+                        "boxes": [
+                            {"label": "image", "coordinate": [0, 0, 10, 10]}
+                        ]
+                    }
+                ]
+
+        def fake_build(_tier_key, model_name):
+            built.append(model_name)
+            return _Model()
+
+        page = np.zeros((100, 100, 3), dtype=np.uint8)
+        with mock.patch.object(
+            layout_filter, "available", return_value=(True, "")
+        ), mock.patch.object(
+            layout_filter, "_build", side_effect=fake_build
+        ), mock.patch.dict(
+            ocr_backends._SPEED_MEMO
+        ):
+            first = layout_filter.excluded_regions(page)
+            ocr_backends.record_engine_speed("layout_m", 9000.0)
+            ocr_backends.record_engine_speed("layout_s", 9000.0)
+            second = layout_filter.excluded_regions(page)
+        self.assertEqual(first, second)
+        self.assertEqual(built, ["PP-DocLayout-M", "PP-DocLayout-M"])
 
     def test_disabled_returns_empty_without_building_model(self):
         with mock.patch.object(layout_filter, "_ENABLED", False):
