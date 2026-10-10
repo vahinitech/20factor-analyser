@@ -141,6 +141,8 @@ jobs:
         run: npm run test:keep
       - name: The free tier's daily limit is explained, not blamed on the server
         run: npm run test:daily-limit
+      - name: A page the server could not read asks for a retry, never a score
+        run: npm run test:ocr-unavailable
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
 

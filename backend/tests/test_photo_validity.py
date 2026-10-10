@@ -125,9 +125,15 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertEqual(pen["measuredCount"], 1)
 
     def test_blank_page_refused_with_or_without_ocr_error(self):
+        # Without an OCR error a blank page is "no handwriting". With one,
+        # the server cannot tell a blank page from an unread one, so it
+        # asks for a retry (#112) and still never scores.
         server = _load_server()
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
-        for error in ("", "OCR unavailable"):
+        for error, code in (
+            ("", "no_handwriting"),
+            ("OCR unavailable", "ocr_unavailable"),
+        ):
             with self.subTest(error=error), patch.object(
                 server.recognizer,
                 "collect_lines",
@@ -139,9 +145,9 @@ class TestPhotoValidity(unittest.TestCase):
             ) as build:
                 result = server._report_python_process(arr, b"", "en", "")
                 self.assertFalse(result["ok"])
-                self.assertEqual(result["error_code"], "no_handwriting")
-                self.assertIsNone(result["analysis"])
-                self.assertEqual(result["factor_regions"], {})
+                self.assertEqual(result["error_code"], code)
+                self.assertIsNone(result.get("analysis"))
+                self.assertEqual(result.get("factor_regions", {}), {})
                 self.assertNotIn("fully printed", result["error"])
                 build.assert_not_called()
 
