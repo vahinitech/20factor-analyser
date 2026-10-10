@@ -621,12 +621,12 @@ class RegressionFunctionalTests(unittest.TestCase):
                 msg=f"factor {n} has no caption",
             )
 
-    def test_scan_survives_engine_init_failure(self):
+    def test_engine_init_failure_refuses_instead_of_scoring(self):
         # get_engine raising at request time (e.g. first-use model download
-        # on a blocked/offline network) previously killed the whole scan.
-        # The report must still be produced from CV geometry, with a
-        # reference image for every one of the 20 factors, and recognition
-        # honestly reported as unavailable.
+        # on a blocked/offline network) used to be scored from OCR-free CV
+        # regions, so the same photo scored differently while the engine
+        # was down (#112). Now it is a 503 the visitor retries: not cached,
+        # so the same photo gets a real report once the engine is back.
         ob = self.mod.ocr_backends
         orig_engine = ob.get_engine
         orig_safe = ob.get_engine_safe
@@ -634,40 +634,36 @@ class RegressionFunctionalTests(unittest.TestCase):
         def _boom(_lang):
             raise RuntimeError("model download blocked (offline)")
 
+        files = {"image": ("sample.png", self.image_bytes, "image/png")}
+        data = {"lang": "en", "expected_text": "engine-init-failure"}
         ob.get_engine = _boom
         ob.get_engine_safe = _boom
         try:
-            files = {"image": ("sample.png", self.image_bytes, "image/png")}
-            r = self.client.post(
-                "/report-python",
-                files=files,
-                data={"lang": "en", "expected_text": "engine-init-failure"},
-            )
-            self.assertEqual(r.status_code, 200)
-            j = r.json()
-            self.assertTrue(j.get("ok"), msg=j.get("error"))
-            a = j["analysis"]
-            self.assertEqual(len(a.get("results", [])), 20)
-            self.assertEqual(
-                a.get("recognition", {}).get("level"), "unavailable"
-            )
-            self.assertEqual(j.get("selected_backend"), "cv-fallback")
-            fmap = j["factor_regions"]
-            self.assertEqual(len(fmap), 20)
-            for n in range(1, 21):
-                if 13 <= n <= 16:
-                    self.assertEqual(fmap[str(n)]["status"], "unavailable")
-                    self.assertFalse(fmap[str(n)]["url"])
-                    continue
-                self.assertTrue(
-                    str((fmap.get(str(n)) or {}).get("url", "")).startswith(
-                        "data:image/jpeg;base64,"
-                    ),
-                    msg=f"factor {n} lost its reference image in fallback",
+            r = self.client.post("/report-python", files=files, data=data)
+            self.assertEqual(r.status_code, 503)
+            self.assertEqual(r.headers.get("Retry-After"), "60")
+            detail = r.json()["detail"]
+            self.assertEqual(detail["error_code"], "ocr_unavailable")
+            self.assertNotIn("offline", detail["error"])  # no internals
+            # Unique bytes (a tail decoders ignore): an earlier test's
+            # cached /analyze-vl answer for this photo would be correct.
+            vl_files = {
+                "image": (
+                    "sample.png",
+                    self.image_bytes + b"engine-down",
+                    "image/png",
                 )
+            }
+            r = self.client.post("/analyze-vl", files=vl_files, data=data)
+            self.assertEqual(r.status_code, 503)
         finally:
             ob.get_engine = orig_engine
             ob.get_engine_safe = orig_safe
+        r = self.client.post("/report-python", files=files, data=data)
+        j = r.json()
+        self.assertTrue(j.get("ok"), msg=j.get("error"))
+        self.assertNotEqual(j.get("selected_backend"), "cv-fallback")
+        self.assertEqual((j.get("_meta") or {}).get("cache"), "miss")
 
     def test_collect_lines_paddle_engine_failure_returns_error(self):
         # The recognizer must catch engine-construction failures and hand

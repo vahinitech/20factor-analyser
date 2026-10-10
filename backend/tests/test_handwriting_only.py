@@ -359,13 +359,26 @@ class TestHandwritingOnlyRule(unittest.TestCase):
             self.assertIsNone(j.get("analysis"))
 
     # ---- OCR down is NOT the same as printed-only -----------------------
-    def test_ocr_failure_still_scores_geometry_via_cv_fallback(self):
-        # A genuine handwritten letter with no OCR available must still be
-        # scored from geometry (cv-fallback), never refused as "printed".
+    def test_ocr_failure_is_refused_not_scored(self):
+        # OCR down is not "printed only", and since #112 it is not scored
+        # from CV regions either: the visitor is asked to retry.
         arr = _load_sample("handwritten_letter_1.jpg")
 
         def fake_collect(_arr, _lang):
             return [], "engine init failed", "paddle", {}
+
+        self.mod.recognizer.collect_lines = fake_collect
+        r = self._post("/report-python", _png_bytes(arr))
+        self.assertEqual(r.status_code, 503)
+        self.assertEqual(r.json()["detail"]["error_code"], "ocr_unavailable")
+
+    def test_ocr_that_finds_nothing_still_scores_geometry(self):
+        # OCR ran without error and found no lines: the CV regions are the
+        # same for the same photo every time, so the page is scored.
+        arr = _load_sample("handwritten_letter_1.jpg")
+
+        def fake_collect(_arr, _lang):
+            return [], "", "paddle", {}
 
         self.mod.recognizer.collect_lines = fake_collect
         j = self._post("/report-python", _png_bytes(arr)).json()

@@ -199,7 +199,9 @@ async function serverPythonReport(blob, expectedText){
       } finally { clearTimeout(t); }
       const raw = await res.text();
       // 503 is the server's scan cap (backend/scan_slots.py): it is up but
-      // full. A definitive answer, so do not try other endpoints.
+      // full; or, with detail.error_code "ocr_unavailable", it could not
+      // read the page right now. Definitive answers, so do not try other
+      // endpoints.
       // 429: the free tier's daily checks for this connection are used
       // (backend/daily_limit.py), or nginx's per-minute burst limit. Both are
       // definitive answers from a server that is up.
@@ -215,8 +217,17 @@ async function serverPythonReport(blob, expectedText){
         return { ok:false, error_code:'busy', retry_after:Math.min(retry, 60) };
       }
       if (res.status === 503){
+        let detail = null;
+        try { detail = (JSON.parse(raw) || {}).detail; } catch(_e){ /* a proxy's own 503 page */ }
+        const retry = Number(res.headers.get('Retry-After')) || 20;
+        // The server could not read the page (OCR engine down or failed):
+        // a retry, never a score from a different method (analyser #112).
+        if (detail && detail.error_code === 'ocr_unavailable'){
+          lastServerError = detail.error || 'ocr unavailable';
+          return { ok:false, error_code:'ocr_unavailable', retry_after:retry };
+        }
         lastServerError = 'busy';
-        return { ok:false, error_code:'busy', retry_after:Number(res.headers.get('Retry-After'))||20 };
+        return { ok:false, error_code:'busy', retry_after:retry };
       }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;

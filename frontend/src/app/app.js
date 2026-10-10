@@ -697,6 +697,18 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'ocr_unavailable'){
+    showReject({
+      outcome: 'ocr_unavailable',
+      reason: 'We could not read your photo just now',
+      detail: 'The part of the analyser that reads handwriting did not respond, so we did not score this page. Your photo is fine, and this did not use up one of your free checks.',
+      tips: [
+        'Wait a minute, then upload the photo again',
+        'If it keeps happening, tell us with the Feedback button',
+      ],
+    });
+    return;
+  }
   if (pyReport && pyReport.error_code === 'daily_limit'){
     // The free tier allows a few checks a day per connection; a Pro access
     // key is never limited (backend/daily_limit.py).

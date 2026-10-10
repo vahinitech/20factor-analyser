@@ -284,6 +284,40 @@ def health():
     }
 
 
+# When no OCR engine could read the page (an engine that will not load, or
+# a run that failed, e.g. under memory pressure), the scan is refused with a
+# 503 and the visitor tries again. It used to be scored from OCR-free CV line
+# regions, which differ from OCR's, so the same photo got different scores
+# depending on whether the engine was up (owner decision 2026-10-10, #112).
+# A 503 is never cached and never counts against the daily free checks.
+OCR_UNAVAILABLE_RETRY_SEC = 60
+OCR_UNAVAILABLE_DETAIL = (
+    "The analyser could not read this photo just now. "
+    "Please try again in a minute."
+)
+
+
+def _ocr_unavailable_payload(engine):
+    return {
+        "ok": False,
+        "engine": engine,
+        "error_code": "ocr_unavailable",
+        "error": OCR_UNAVAILABLE_DETAIL,
+    }
+
+
+def _raise_if_ocr_unavailable(payload):
+    if payload.get("error_code") == "ocr_unavailable":
+        raise HTTPException(
+            503,
+            {
+                "error_code": "ocr_unavailable",
+                "error": OCR_UNAVAILABLE_DETAIL,
+            },
+            headers={"Retry-After": str(OCR_UNAVAILABLE_RETRY_SEC)},
+        )
+
+
 def _no_handwriting_payload(engine, lang, lines, extra=None):
     """Refusal payload for a page where text was detected but ALL of it is
     printed. The analyser's rule of thumb: printed text is never analysed,
@@ -458,11 +492,14 @@ def _analyze_vl_process(arr, raw, lang):
                     "ambiguous_word_gaps": [],
                 },
             )
+        if not raw_lines and last_err:
+            # No OCR engine could read the page: refuse, never score CV
+            # regions in its place (see OCR_UNAVAILABLE_DETAIL).
+            return _ocr_unavailable_payload("pp-ocrv5+vl")
         if not hand_lines:
-            # No OCR engine could run (models unavailable, engine init
-            # failure). The layout/context/factor-region analysis is pure
-            # CV, so fall back to OCR-free line detection instead of
-            # failing the request.
+            # OCR ran and found no lines. The layout/context/factor-region
+            # analysis is pure CV, so use OCR-free line detection; the same
+            # photo always takes this path.
             hand_lines = computer_vision.fallback_line_regions(arr)
             lines = lines or hand_lines
             if hand_lines:
@@ -562,6 +599,7 @@ async def analyze_vl(
         async with scan_slots.SLOTS.slot():
             arr = await _decode_upload(raw)
             payload = await scan_slots.run(_analyze_vl_process, arr, raw, lang)
+        _raise_if_ocr_unavailable(payload)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -607,12 +645,15 @@ def _report_python_process(
                     "ambiguous_word_gaps": [],
                 },
             )
+        if not raw_lines and last_err:
+            # No OCR engine could read the page: refuse, never score CV
+            # regions in its place (see OCR_UNAVAILABLE_DETAIL).
+            return _ocr_unavailable_payload("pp-ocrv5+python-report")
         if not hand_lines:
-            # No OCR engine could run (models unavailable, engine init
-            # failure). The 20 factors are measured from GEOMETRY, not from
-            # reading the words, so score the scan from OCR-free CV line
-            # detection instead of failing it; recognition is reported as
-            # unavailable below.
+            # OCR ran and found no lines. The 20 factors are measured from
+            # GEOMETRY, so score OCR-free CV line regions; recognition is
+            # reported as unavailable below. The same photo always takes
+            # this path.
             hand_lines = computer_vision.fallback_line_regions(arr)
             lines = lines or hand_lines
             if hand_lines:
@@ -810,6 +851,7 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
             payload = await scan_slots.run(
                 _report_python_process, arr, raw, lang, expected_text, False
             )
+    _raise_if_ocr_unavailable(payload)
     if not payload.get("ok"):
         return payload
 

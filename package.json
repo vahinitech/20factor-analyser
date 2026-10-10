@@ -18,6 +18,7 @@
     "test:unreadable": "node tests/unreadable-image.mjs",
     "test:keep": "node tests/keep-my-pages.mjs",
     "test:daily-limit": "node tests/daily-limit.mjs",
+    "test:ocr-unavailable": "node tests/ocr-unavailable.mjs",
     "sbom:update": "python backend/update_sbom.py",
     "sbom:check": "python backend/update_sbom.py --check"
   },
