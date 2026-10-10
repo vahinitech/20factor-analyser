@@ -62,12 +62,26 @@
   @media (max-width:560px){ .screen-head h1{ font-size:30px; line-height:1.15; } }
   .dz-status{ font-size:var(--v-text-sm); color:var(--v-text-2); text-align:center; margin:8px 0 0; }
   .dz-status:empty{ display:none; }
+  /* The preview photo fills the drop zone (position:absolute; inset:0), so a
+     status line in the normal flow sat behind it: the small and blurry photo
+     warnings were never seen. Pin the line to the bottom, above the photo. */
+  .dropzone .dz-status:not(:empty){ position:absolute; left:12px; right:12px; bottom:12px; z-index:2; margin:0; max-width:none;
+    padding:10px 12px; border-radius:var(--v-radius-md); background:rgba(255,255,255,.96); box-shadow:0 2px 10px rgba(28,34,54,.12); }
   .dz-notice{ text-align:left; max-width:520px; margin:10px auto 0; padding:14px 16px; border-radius:var(--v-radius-md);
     background:color-mix(in srgb, var(--v-warning) 12%, var(--v-surface)); border:1px solid color-mix(in srgb, var(--v-warning) 50%, transparent);
     color:var(--v-text); font-size:var(--v-text-sm); line-height:1.5; }
   .dz-notice[hidden]{ display:none; }
   .dz-notice p{ margin:2px 0 0; }
   .dz-notice ul{ margin:6px 0 0 18px; padding:0; }
+  .dz-notice.has-art{ display:flex; gap:16px; align-items:center; }
+  .dz-notice.has-art[hidden]{ display:none; }
+  .notice-art{ width:96px; height:96px; flex:0 0 96px; object-fit:contain; }
+  .dz-status.has-art{ display:flex; gap:10px; align-items:center; justify-content:center; text-align:left; }
+  .status-art{ width:48px; height:48px; flex:0 0 48px; object-fit:contain; }
+  @media (max-width:520px){
+    .dz-notice.has-art{ flex-direction:column; align-items:flex-start; gap:8px; }
+    .notice-art{ width:72px; height:72px; flex-basis:auto; }
+  }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
   .photo-note{ margin:12px 0 0; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }

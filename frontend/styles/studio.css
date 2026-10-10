@@ -239,6 +239,9 @@ body.studio{ background:#EEEEEE; }
 .reject-card{ max-width:580px; margin:8px auto; text-align:center; padding:30px 26px; }
 .reject-ico{ width:74px; height:74px; border-radius:18px; margin:0 auto 20px; display:grid; place-items:center; background:var(--gold-soft); color:#9A7B25; }
 .reject-ico svg{ width:36px; height:36px; }
+/* A character from the host page's VAHINI_NOTICE_ART in place of the icon. */
+.reject-art{ display:block; width:150px; height:150px; object-fit:contain; margin:0 auto 14px; }
+@media (max-width:520px){ .reject-art{ width:120px; height:120px; } }
 .reject-card h2{ font-family:var(--serif); font-size:27px; font-weight:600; color:var(--ink); margin:0 0 10px; letter-spacing:-.01em; }
 .reject-detail{ font-size:15px; color:var(--ink-2); line-height:1.62; max-width:470px; margin:0 auto 22px; }
 .reject-tips{ text-align:left; max-width:430px; margin:0 auto 26px; padding:0; list-style:none; display:flex; flex-direction:column; gap:11px; }

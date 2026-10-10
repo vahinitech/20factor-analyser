@@ -1,0 +1,2 @@
+- File and key problems get their own screens instead of "Recognition server not reachable": a file the server refuses as too large (413) or cannot open (422), an access key that is refused (401, 403), and the key service not answering (503). A host page can show a picture on any error screen, upload notice or photo warning through `window.VAHINI_NOTICE_ART`; without it nothing changes. See `frontend/README.md`.
+- The small-photo and blurry-photo warnings are visible again. The photo preview covered them, so nobody saw them; they now sit in a band at the bottom of the photo.

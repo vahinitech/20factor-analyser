@@ -38,3 +38,36 @@ python build_bundle.py     # or: python frontend/build_bundle.py from the root
 
 The browser loads only the packed `scripts/core/engine.bundle.js`. CI fails
 if the bundle is out of date with `src/`.
+
+## Pictures on the error screens (optional)
+
+Each refusal, upload notice and photo warning has an outcome code. A host
+page can give any of them a picture by setting `window.VAHINI_NOTICE_ART`,
+an object from code to an image path on the same site:
+
+```js
+window.VAHINI_NOTICE_ART = { busy: '/site/assets/characters/notices/busy.webp' };
+```
+
+The picture replaces the icon on a full-screen refusal and sits beside the
+text in an upload notice or warning, with `alt=""` because the words carry
+the message. A value that is not a same-site path is ignored, and without
+the object every screen keeps its icon. The codes:
+
+| Code | When |
+|---|---|
+| `busy` | the scan cap is full (503 with `Retry-After`) |
+| `ocr_unavailable` | the server could not read the page (503, `error_code: "ocr_unavailable"`; from #116) |
+| `daily_limit` | the free checks for today are used (429) |
+| `no_handwriting` | the page is blank or fully printed |
+| `server_down` | the server did not answer |
+| `too_large` | the server refused the file's size (413) |
+| `invalid_file` | the server could not open the file (422) |
+| `key_problem` | the access key was refused (401, 403) |
+| `account_unavailable` | the service that checks keys did not answer (503) |
+| `too_big`, `heic`, `unreadable` | the upload box refused the file before sending |
+| `pdf_unreadable`, `pdf_pages` | a PDF that could not be read, or has more than one page |
+| `photo_warning` | the photo is small or blurry (the check can still run) |
+
+vahinitech.com fills the map from its own drawings library; the drawings are
+not part of this repository.
