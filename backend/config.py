@@ -13,6 +13,12 @@ from dataclasses import dataclass
 from model_map import parse_model_map
 from gpu_detect import resolve_use_gpu
 
+# Every value recognizer.collect_lines() handles. Anything else used to run
+# as paddle while /health reported the unknown name (vahini-web stage said
+# "chandra", dropped in #7, until 2026-10-10), so load() refuses it instead
+# and the server does not start.
+OCR_BACKENDS = ("paddle", "trocr", "surya", "hybrid", "paddleocr-vl", "auto")
+
 
 @dataclass
 class Settings:
@@ -51,6 +57,16 @@ def load() -> Settings:
     auto_min_lines = max(
         2, int(os.environ.get("VAHINI_OCR_AUTO_MIN_LINES", "3"))
     )
+    ocr_backend = (
+        (os.environ.get("VAHINI_OCR_BACKEND", "paddle") or "paddle")
+        .strip()
+        .lower()
+    )
+    if ocr_backend not in OCR_BACKENDS:
+        raise ValueError(
+            f"VAHINI_OCR_BACKEND={ocr_backend!r} is not one of "
+            + ", ".join(OCR_BACKENDS)
+        )
     rec_model_map_raw = os.environ.get(
         "VAHINI_OCR_REC_MODEL_MAP",
         "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec",
@@ -58,11 +74,7 @@ def load() -> Settings:
     return Settings(
         use_gpu=resolve_use_gpu("VAHINI_OCR_GPU", engine="paddle"),
         ocr_langs=ocr_langs,
-        ocr_backend=(
-            (os.environ.get("VAHINI_OCR_BACKEND", "paddle") or "paddle")
-            .strip()
-            .lower()
-        ),
+        ocr_backend=ocr_backend,
         # A mobile detector is several times faster than the server detector
         # on CPU, with negligible real-world accuracy loss on handwriting
         # pages; VAHINI_OCR_DET_MODEL_NAME overrides it (recommended only
