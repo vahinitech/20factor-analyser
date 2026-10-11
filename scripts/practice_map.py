@@ -25,22 +25,37 @@ STAGE = {"focus": "Learning", "dev": "Improving", "good": "Mastering", "strong":
 
 
 def factor_names():
-    """Names and ids from the committed catalogue version that serves practice."""
+    """Names and ids from the committed catalogue version that serves this
+    practice catalogue as it is now, translations included."""
+    want = json.dumps(pc.browser_catalog()["factors"], sort_keys=True, ensure_ascii=False)
     for path in sorted((ROOT / "backend" / "catalogs").glob("*.json")):
         cat = json.loads(path.read_text())
         if "practice" not in cat:
             continue
-        served = {f["n"]: f for f in cat["factors"]}
-        for n, area in pc.FACTORS.items():
-            ids = [e["id"] for e in served[n].get("exercises", [])]
-            if ids != [e["id"] for e in area["exercises"]]:
-                sys.exit(f"practice_map: {path.name} serves other exercises for factor {n}; regenerate the catalogue first")
-        return {n: (f["name"], f["id"]) for n, f in served.items()}, path.name
-    sys.exit("practice_map: no committed catalogue version carries practice")
+        served = {str(f["n"]): {"exercises": f.get("exercises", []), "tips": f.get("tips", [])} for f in cat["factors"]}
+        if json.dumps(served, sort_keys=True, ensure_ascii=False) != want:
+            continue
+        return {f["n"]: (f["name"], f["id"]) for f in cat["factors"]}, path.name
+    sys.exit("practice_map: no committed catalogue version serves this practice catalogue; run python backend/compact_reports.py first")
 
 
 def cell(text):
     return str(text or "").replace("|", "\\|").replace("\n", " ")
+
+
+# The Telugu under each English line is draft wording, written with the
+# catalogue and waiting for a native speaker's check.
+TE_MARK = "తెలుగు (draft)"
+
+
+def telugu_exercise(e):
+    te = e["i18n"]["te"]
+    return (f"| | {TE_MARK} **{cell(te['title'])}** | | {cell(te['steps'])} | "
+            f"{cell(te.get('example')) or '-'} | {cell(te['check'])} | | |")
+
+
+def telugu_tip(t):
+    return f"| {TE_MARK} | {cell(t['i18n']['te']['text'])} |"
 
 
 def render():
@@ -52,6 +67,10 @@ def render():
         f"(served as catalogue version `{version.removesuffix('.json')}`). Do not edit by hand:",
         "change the catalogue, then run the script. Design and rules:",
         "[PRACTICE-FRAMEWORK.md](PRACTICE-FRAMEWORK.md).",
+        "",
+        "Under each English line, marked \"తెలుగు (draft)\", is its Telugu: draft wording,",
+        "not yet checked by a native speaker, which a native speaker must check before",
+        "Telugu reaches production. Latin practice letters and words stay as written.",
         "",
         "A report gives practice only for the skills it flags. Per skill, Free shows",
         f"{pc.TIERS['free']['exercises_max']} exercise and {pc.TIERS['free']['tips_max']} tip, Pro up to "
@@ -84,17 +103,22 @@ def render():
         for e in area["exercises"]:
             out.append(f"| {e['level']} | **{cell(e['title'])}** `{e['id']}` | 1 {e['unit']} | {cell(e['steps'])} | "
                        f"{cell(e.get('example')) or '-'} | {cell(e.get('check'))} | {e.get('worksheet') or '-'} | {e['script']} |")
+            out.append(telugu_exercise(e))
         out += ["", "| Tip | Text |", "|---|---|"]
         for t in area["tips"]:
             out.append(f"| `{t['id']}` | {cell(t['text'])} |")
+            out.append(telugu_tip(t))
     sp = pc.SPELLING
     out += ["", "## Spelling (a row only when the spelling check found a word)", "",
             "| Exercise | Steps |", "|---|---|"]
     for e in sp["exercises"]:
         out.append(f"| **{cell(e['title'])}** `{e['id']}` | {cell(e['steps'])} |")
+        te = e["i18n"]["te"]
+        out.append(f"| {TE_MARK} **{cell(te['title'])}** | {cell(te['steps'])} ({cell(te['check'])}) |")
     out += ["", "| Tip | Text |", "|---|---|"]
     for t in sp["tips"]:
         out.append(f"| `{t['id']}` | {cell(t['text'])} |")
+        out.append(telugu_tip(t))
     return "\n".join(out) + "\n"
 
 

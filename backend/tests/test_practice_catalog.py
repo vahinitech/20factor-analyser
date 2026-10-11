@@ -109,6 +109,61 @@ class CatalogueRules(unittest.TestCase):
         self.assertIn("factor 8: fewer than 2 tips", found)
         self.assertIn("duplicate id", found)
 
+    def test_every_exercise_and_tip_has_telugu(self):
+        for area in (
+            *practice_catalog.FACTORS.values(),
+            practice_catalog.SPELLING,
+        ):
+            for ex in area["exercises"]:
+                te = ex["i18n"]["te"]
+                for field in ("title", "steps", "check"):
+                    self.assertTrue(te[field].strip(), (ex["id"], field))
+                    self.assertRegex(te[field], "[\u0c00-\u0c7f]")
+                # The child practises English letters: examples stay Latin.
+                self.assertNotIn("example", te, ex["id"])
+            for tip in area["tips"]:
+                self.assertRegex(tip["i18n"]["te"]["text"], "[\u0c00-\u0c7f]")
+
+    def test_telugu_rules_catch_a_bad_translation(self):
+        first = practice_catalog.FACTORS[1]["exercises"][0]
+        cases = [
+            ({"title": "తప్పు రాత"}, "avoid word in te title"),
+            ({"steps": "రాయండి — మళ్ళీ"}, "em dash in te steps"),
+            ({"check": "అ" * 200}, "te check too long"),
+            ({"check": ""}, "te check missing"),
+            ({"note": "అ"}, "unknown te field"),
+        ]
+        for change, message in cases:
+            factors = copy.deepcopy(practice_catalog.FACTORS)
+            entry = factors[1]["exercises"][0]
+            entry["i18n"]["te"] = {**first["i18n"]["te"], **change}
+            with patch.object(practice_catalog, "FACTORS", factors):
+                found = practice_catalog.problems()
+            self.assertTrue(any(message in f for f in found), (change, found))
+        factors = copy.deepcopy(practice_catalog.FACTORS)
+        del factors[2]["tips"][0]["i18n"]["te"]
+        with patch.object(practice_catalog, "FACTORS", factors):
+            found = " ".join(practice_catalog.problems())
+        self.assertIn("order.top-down: no te translation", found)
+        extra = dict(practice_catalog.TELUGU_TIPS, **{"x.gone": {"text": "అ"}})
+        with patch.object(
+            practice_catalog,
+            "TRANSLATIONS",
+            {"te": (practice_catalog.TELUGU_EXERCISES, extra)},
+        ):
+            found = " ".join(practice_catalog.problems())
+        self.assertIn("translation for unknown id x.gone", found)
+
+    def test_the_telugu_avoid_list_covers_every_english_word(self):
+        # One Telugu word or more for each English one (draft, for review).
+        self.assertGreaterEqual(
+            len(practice_catalog.AVOID_WORDS_TE),
+            len(practice_catalog.AVOID_WORDS),
+        )
+        for text in strings_of(practice_catalog.browser_catalog()):
+            for word in practice_catalog.AVOID_WORDS_TE:
+                self.assertNotIn(word, text)
+
     def test_tier_numbers_come_from_one_table(self):
         self.assertEqual(
             practice_catalog.limits("free"),
@@ -155,6 +210,15 @@ class ServedCatalogue(unittest.TestCase):
                 [t["id"] for t in area["tips"]],
             )
         self.assertEqual(body["practice"], practice_catalog.practice_block())
+        tips = body["practice"]["spelling"]["tips"]
+        self.assertTrue(all("te" in tip["i18n"] for tip in tips))
+        self.assertTrue(
+            all(
+                "te" in entry["i18n"]
+                for factor in body["factors"]
+                for entry in (*factor["exercises"], *factor["tips"])
+            )
+        )
         committed = ROOT / "backend" / "catalogs" / (body["version"] + ".json")
         self.assertTrue(committed.exists(), "run compact_reports.py")
 
@@ -164,6 +228,12 @@ class ServedCatalogue(unittest.TestCase):
         self.assertTrue(contract_schemas.errors("catalog", body))
         body = copy.deepcopy(compact_reports.dictionary())
         body["practice"]["tiers"]["free"]["extra"] = 1
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        body["factors"][0]["exercises"][0]["i18n"]["te"]["note"] = "x"
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        del body["factors"][0]["tips"][0]["i18n"]["te"]["text"]
         self.assertTrue(contract_schemas.errors("catalog", body))
 
 

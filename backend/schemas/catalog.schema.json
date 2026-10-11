@@ -206,6 +206,39 @@
                 "check": {
                   "type": "string",
                   "minLength": 1
+                },
+                "i18n": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^[a-z]{2}$": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "title",
+                        "steps",
+                        "check"
+                      ],
+                      "properties": {
+                        "title": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "steps": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "check": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "example": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
                 }
               }
             }
@@ -227,6 +260,26 @@
                 "text": {
                   "type": "string",
                   "minLength": 1
+                },
+                "i18n": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^[a-z]{2}$": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "text"
+                      ],
+                      "properties": {
+                        "text": {
+                          "type": "string",
+                          "minLength": 1
+                        }
+                      }
+                    }
+                  },
+                  "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
                 }
               }
             }
@@ -1133,6 +1186,39 @@
                   "check": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "i18n": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^[a-z]{2}$": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "title",
+                          "steps",
+                          "check"
+                        ],
+                        "properties": {
+                          "title": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "steps": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "check": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "example": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    },
+                    "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
                   }
                 }
               }
@@ -1154,6 +1240,26 @@
                   "text": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "i18n": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^[a-z]{2}$": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "text"
+                        ],
+                        "properties": {
+                          "text": {
+                            "type": "string",
+                            "minLength": 1
+                          }
+                        }
+                      }
+                    },
+                    "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
                   }
                 }
               }

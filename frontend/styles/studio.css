@@ -227,6 +227,12 @@ body.studio{ background:#EEEEEE; }
   background:var(--accent); color:#fff; border:1.5px solid transparent;
 }
 .report-toolbar .btn-dark:hover{ background:var(--accent-lite); filter:none; }
+/* "Print in" and "Share on WhatsApp" beside Print / Save as PDF: on screen
+   only, the toolbar never prints (docs/PRACTICE-FRAMEWORK.md, 9 and 10). */
+.report-toolbar .report-lang{ display:inline-flex; align-items:center; gap:8px; color:var(--v-on-dark); font-size:13px; font-weight:600; }
+.report-toolbar .report-lang select{ font:inherit; font-family:"Noto Sans Telugu", "Hanken Grotesk", sans-serif; padding:7px 10px; border-radius:var(--v-radius-md); border:1.5px solid var(--v-border-on-dark); background:var(--v-surface); color:var(--v-text); }
+.report-toolbar .btn-share{ background:var(--v-success); color:var(--v-on-accent); border:1.5px solid transparent; }
+.report-toolbar .btn-share:hover{ filter:brightness(1.08); }
 .report-host{ padding:24px 0 60px; }
 .report-host .page:first-of-type{ margin-top:0; }
 

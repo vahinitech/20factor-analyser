@@ -86,7 +86,7 @@ Opt in with `POST /api/v2/reports?format=compact`. The existing default remains 
 {
   "schema_version": "2.1",
   "format": "compact",
-  "catalog_version": "a2126ecdadf2fe1f65b7",
+  "catalog_version": "85108292a841082ce34e",
   "ok": true,
   "access": {"tier": "pro", "plan_tier": "pro", "subscription_status": "active", "expires_at": 1800000000},
   "summary": {"score": 62, "factor_count": 1},
@@ -100,6 +100,8 @@ This abbreviated illustration shows one factor. A successful Pro report normally
 Fetch `GET /api/v2/catalog/{catalog_version}` once to obtain factor names, generic explanation templates, score bands, practice definitions and limitations. Cache by version. The endpoint supplies an ETag and a one-year immutable cache policy. Old catalogues stay in `backend/catalogs` so saved reports remain readable. Run `python backend/compact_reports.py` when definitions change and commit the new catalogue; CI checks it. The JavaScript adapter is `frontend/src/engine/compact-client.js`. Native clients can implement the same mapping and bundle or cache the catalogue. Unknown versions must be fetched before rendering, never silently decoded with stale definitions.
 
 Since the practice catalogue (docs/PRACTICE-FRAMEWORK.md, approved 2026-10-11 in #122) each factor also carries `exercises` (id, level, title, unit, script, needs, worksheet, steps, example, check) and `tips` (id, text), and the catalogue has a top-level `practice` block: `stages` (Learning, Improving, Mastering, Strong by band), `dosage` (tries a day or a week by band, and how many exercises the band asks for), `tiers` (the defaults above), `units` and the `spelling` exercise. Catalogues archived before it have neither; the schema treats both as optional for that reason. The content is `backend/practice_catalog.py`, checked when it is imported.
+
+From catalogue `85108292a841082ce34e` every exercise and tip also carries `i18n`, its text by language code: `i18n.te` holds `title`, `steps` and `check` for an exercise and `text` for a tip, in Telugu (`example` only when it is not Latin practice text; today none is, since the child practises English letters). A missing language or field falls back to the English one. The Telugu is draft wording until a native speaker has checked it. `i18n` is optional in the schema, because older catalogues have none. The report's own sentences are not in the catalogue: the browser holds them in `frontend/src/report/strings/<lang>.js`.
 
 Generic definitions are public educational content. They contain no customer scores, personalized evidence or private reports. Access to paid scan results is enforced on the server, regardless of what labels the client has cached. Reports use `Cache-Control: no-store`.
 

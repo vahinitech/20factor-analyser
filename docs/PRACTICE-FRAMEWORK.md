@@ -2,7 +2,8 @@
 
 Approved by the owner on 2026-10-11 in #122; the English report, the
 catalogue and "Your progress" are built (see section 14). Sections 9 and 10
-(print in another language, share on WhatsApp) are later work.
+(print in Telugu, share on WhatsApp) are built with draft Telugu wording
+that waits for a native speaker's check (see section 15).
 
 ## 1. The problem
 
@@ -235,7 +236,7 @@ then prints or saves the report **in the family's language**.
   reviewed (Hindi, Tamil, Kannada, Malayalam). Choosing one re-renders both
   pages in that language; scores, crops and the page photo do not change.
 - Every sentence in the report comes from string tables keyed by id
-  (`report-strings/<lang>.json`) and from the catalogue's `i18n`. A
+  (`frontend/src/report/strings/<lang>.js`) and from the catalogue's `i18n`. A
   missing translation falls back to English for that sentence only, and a
   test lists what is missing.
 - Fonts: Noto Sans Telugu (OFL) and the other Noto faces are bundled with the
@@ -275,7 +276,7 @@ Next to Print / Save as PDF (screen only, never printed):
 | Catalogue data | `backend/practice_catalog.py`, validated at import | Draft JSON here becomes this module |
 | Served to clients | the versioned factor catalogue (`/api/v2/catalog/<version>`): `factors[n].exercises`, `practice.dosage` | Schema change in `backend/schemas/catalog.schema.json`; the version hash changes, clients refetch |
 | Report rendering | `frontend/src/report/report-render.js` reads the catalogue; `simpleDrills` is removed | Same cards for Free and Pro |
-| String tables | `frontend/src/report/strings/<lang>.json` | English is the source |
+| String tables | `frontend/src/report/strings/<lang>.js` | English is the source |
 | vahini-web | factor pages show "How to practise" from the same catalogue (`tools/gen-factor-pages.mjs --sync`); Bheema's practice plan can use it later | One source, so a page never promises an exercise the report does not have |
 | Android app | reads the same catalogue | No API change needed |
 
@@ -326,3 +327,68 @@ Next to Print / Save as PDF (screen only, never printed):
   tries), a progress file to download and load, and forget with a confirm
   step. It sends nothing. Exercise and tip ids are saved with each check so
   the next report moves on, wrapping to level 1.
+
+## 15. As built (Telugu and WhatsApp, 2026-10-11)
+
+The owner asked on 2026-10-11 to start Telugu printing and WhatsApp
+sharing. What is built:
+
+- **String tables.** Every sentence the two pages, "Your progress" and the
+  share summary print is in `frontend/src/report/strings/en.js` (the
+  source) and `te.js`, keyed by id, with `{placeholders}` and explicit
+  `one`/`other` forms for counts; `frontend/src/report/i18n.js` looks them
+  up and falls back to English for any id a language lacks.
+  `tests/report-strings.test.mjs` lists missing ids and fails while
+  `te.js` lacks any. English renders exactly as before: the same HTML,
+  checked on the sample report and its variants before and after the move,
+  and by switching to Telugu and back (`tests/report-language.mjs`). Not in
+  the tables: the patent line in the footer (owner instruction, it stays as
+  written), the worksheet titles (names of English PDFs), the Latin practice
+  words drawn in "Copy this", and the renderer helpers no page calls
+  (`classificationPanels` is a refusal screen, not the report).
+- **Catalogue.** Each exercise and tip carries `i18n.te` (exercises:
+  `title`, `steps`, `check`; tips: `text`). Examples stay Latin, because
+  the child practises English letters. The import check fails on a missing
+  translation, an em dash, a judging word (`AVOID_WORDS_TE`, a draft list
+  for the reviewer) or text longer than about 1.5 times the English
+  (`translation_limit`). Catalogue version `85108292a841082ce34e`;
+  [PRACTICE-MAP.md](PRACTICE-MAP.md) shows the Telugu under each English
+  line, marked draft.
+- **Skill names** keep their English name in brackets on first use on each
+  page, for example "అక్షరాల పరిమాణం సమానంగా (Even letter sizes)". Stage
+  names: నేర్చుకుంటోంది, మెరుగవుతోంది, పట్టు సాధిస్తోంది, బలంగా ఉంది.
+- **"Print in"** (`#report-lang`, beside Print / Save as PDF on
+  `analyser.html` and `sample-report.html`, screen only) redraws both
+  pages and "Your progress" with `lang="te"`; scores, crops, the page photo,
+  the exercises chosen and the pictures do not change. The choice is kept in
+  this browser (`localStorage` `vahini_report_lang`, guarded: with storage
+  blocked it lasts for the page).
+- **Font.** Noto Sans Telugu, regular and bold, Telugu subset from the
+  `@fontsource/noto-sans-telugu` 5.3.0 npm package, unchanged, with its OFL
+  (`frontend/assets/fonts/`, `sources.json`, the SBOM and
+  THIRD-PARTY-NOTICES). Its `unicode-range` holds only Telugu, so English
+  words keep their faces and an English page never downloads it. In Telugu
+  the labels drop their letter spacing, which splits Telugu letters.
+- **Print.** Both pages print on two A4 sheets in English and Telugu, Free
+  and Pro, in the longest case, with and without pictures and with
+  stretched sheets. `fitPrintPages()` now tries the floor (0.78) before it
+  lets a page spill: with the host's fonts, Pro's longest practice page
+  needed 0.76 by its first measure and printed on three sheets in English
+  too; at the floor its wider reflow fits.
+- **Share on WhatsApp** (`#share-whatsapp`, screen only): the overall
+  score, the strongest skill, each skill to grow with its score, this
+  week's tries and first exercise, and
+  `https://vahinitech.com/analyser/analyser.html?from=whatsapp`, in the
+  chosen language. A touch-first phone with a share sheet gets
+  `navigator.share({text})`; otherwise `https://wa.me/?text=` opens. Never
+  the name, the photo, a crop, a recognised word or an id; no request goes
+  to our server.
+- **Not built:** the language code on the `report_printed` record and a
+  `report_shared` event. The print record goes to vahini-web's store
+  through its own schema, and the analyser has no anonymous event helper
+  for report actions, so neither was added here.
+- **Before production:** a native speaker reads every Telugu line in
+  `te.js` and in the catalogue (and `AVOID_WORDS_TE`) and corrects it.
+  Until then the Telugu is draft, and the vahini-web pin bump that takes it
+  to production waits for that check.
+

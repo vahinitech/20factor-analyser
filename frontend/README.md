@@ -101,3 +101,29 @@ its report printed so the next report moves on to the next ones.
 only: the writer's saved checks, a comparison with an earlier one, a
 progress file to download or load (JSON, checked strictly, no photo) and a
 way to forget this writer's checks. It makes no network call.
+
+## Print in another language, and Share on WhatsApp
+
+Every sentence the report prints is looked up by id in
+`src/report/strings/en.js` (the source) and `src/report/strings/te.js`
+through `src/report/i18n.js`; a language that lacks an id prints the
+English sentence. Exercises and tips carry their own translations in the
+practice catalogue (`i18n.te`). A new sentence goes into every table,
+never into the renderer as a literal; `tests/report-strings.test.mjs`
+fails while a language misses an id.
+
+A host page that wants the language choice and the share button puts these
+beside `#print-report` (both are screen only):
+
+```html
+<label class="report-lang" for="report-lang">Print in <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
+<button class="btn btn-share" id="share-whatsapp" type="button">Share on WhatsApp</button>
+```
+
+`src/report/report-share.js` wires them: the select redraws the report and
+"Your progress" in that language (kept in `localStorage`
+`vahini_report_lang`), and the button shares `VahiniReport.shareText()`,
+a summary with no name, photo, crop or id, through the phone's share sheet
+or `https://wa.me/?text=`. The Telugu wording is a draft until a native
+speaker has checked it.
+

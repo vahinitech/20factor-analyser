@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 // Words for children (docs/PRACTICE-FRAMEWORK.md, section 7): no string in
-// the report renderer or the progress panel may use a word that judges the
-// child, and none may hold an em dash. The practice catalogue has the same
+// the report renderer, the progress panel, the share bar or the string
+// tables (every language) may use a word that judges the child, in English
+// or in Telugu, and none may hold an em dash. The practice catalogue has the same
 // check in backend/tests/test_practice_catalog.py.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
@@ -15,16 +16,24 @@ const strings = source => {
   return [...code.matchAll(/'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g)].map(m => m[0]);
 };
 let checked = 0;
-for (const file of ['frontend/src/report/report-render.js', 'frontend/src/report/progress.js']) {
+const REPORT_FILES = ['frontend/src/report/report-render.js', 'frontend/src/report/progress.js', 'frontend/src/report/report-share.js',
+  'frontend/src/report/i18n.js', ...fs.readdirSync('frontend/src/report/strings').map(f => 'frontend/src/report/strings/' + f)];
+const teBlock = python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/);
+const AVOID_TE = teBlock ? [...teBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]) : [];
+assert.ok(AVOID_TE.length >= AVOID.length, 'practice_catalog.AVOID_WORDS_TE lists the Telugu words');
+for (const file of REPORT_FILES) {
   for (const text of strings(fs.readFileSync(file, 'utf8'))) {
     checked++;
     assert.ok(!banned.test(text), `${file}: avoid ${text.match(banned)?.[0]} in ${text.slice(0, 120)}`);
     assert.ok(!text.includes('—'), `${file}: em dash in ${text.slice(0, 120)}`);
+    assert.ok(!AVOID_TE.some(w => text.includes(w)), `${file}: avoid ${AVOID_TE.find(w => text.includes(w))} in ${text.slice(0, 120)}`);
   }
 }
-// The stage names on both pages are the catalogue's.
+// The stage names on both pages are the catalogue's (the string table's
+// stage.<band>, English being the source).
 const render = fs.readFileSync('frontend/src/report/report-render.js', 'utf8');
-assert.match(render, /BAND_LABEL = \{ strong:'Strong', good:'Mastering', dev:'Improving', focus:'Learning' \}/);
+const en = fs.readFileSync('frontend/src/report/strings/en.js', 'utf8');
+for (const [band, label] of [['focus', 'Learning'], ['dev', 'Improving'], ['good', 'Mastering'], ['strong', 'Strong']]) assert.ok(en.includes(`'stage.${band}': '${label}'`), band);
 for (const label of ['Learning', 'Improving', 'Mastering', 'Strong']) assert.ok(python.includes(`"label": "${label}"`), label);
 assert.ok(!/simpleDrills/.test(render), 'drills live in the catalogue, not the renderer');
 console.log(`report words: ${checked} strings checked`);

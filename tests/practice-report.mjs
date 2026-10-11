@@ -159,31 +159,44 @@ try {
 
   // Mapping, skill by skill: make one skill the only one to grow and check
   // that its row carries only its own exercises, tips, crop, worksheet and
-  // words, in Free (its five skills) and in Pro (every photo-scored skill).
+  // words, in Free (its five skills) and in Pro (every photo-scored skill),
+  // in English and in Telugu ("Print in"; the words change, the mapping
+  // must not).
   const regions = await page.evaluate(() => window.VAHINI_SAMPLE_REPORT.factor_regions || {});
   const sheets = await page.evaluate(() => window.VahiniWorksheetCatalog || []);
   const photoSkills = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 19];
-  for (const [tier, skills] of [['free', [1, 5, 7, 8]], ['pro', photoSkills]]) {
-    for (const n of skills) {
-      const all = {}; for (let k = 1; k <= 20; k++) all[k] = 9.5;
-      all[n] = 5.0;
-      const r = await page.evaluate(o => window.__render(o), { free: tier === 'free', scores: all });
-      const row = r.rows.find(x => x.factor === String(n));
-      const rows = r.rows.filter(x => x.factor !== 'spelling').map(x => x.factor);
-      add(row && JSON.stringify(rows) === JSON.stringify([String(n)]), `${tier}: skill ${n} alone to grow gives exactly its row`, rows);
-      if (!row) continue;
-      const foreign = row.exercises.concat(row.tips).filter(id => String(owner[id]) !== String(n));
-      add(row.exercises.length > 0 && row.tips.length > 0 && foreign.length === 0, `${tier}: skill ${n} shows only its own exercises and tips`, { foreign, row });
-      add(!row.cropSrc && !row.saw, `${tier}: skill ${n} does not repeat page 1's crop and words on page 2`, row);
-      add(row.model, `${tier}: skill ${n} has a drawn model to copy`, row);
-      const sheet = sheets.find(w => w.factors.includes(n));
-      add(sheet ? (row.sheet || '').includes('/worksheets/' + sheet.id + '.pdf') : !row.sheet, `${tier}: skill ${n} links its own worksheet`, { want: sheet && sheet.id, got: row.sheet });
-      if (tier === 'free') {
-        const card = r.cards.indexOf(String(n)) + 1;
-        add(card > 0 && row.page1 === card, `free: skill ${n} points to its own card on page 1`, { card, page1: row.page1 });
+  const teText = {};
+  catalogue.factors.forEach(f => (f.exercises || []).concat(f.tips || []).forEach(e => { teText[e.id] = e.i18n.te.title || e.i18n.te.text; }));
+  for (const lang of ['en', 'te']) {
+    await page.evaluate(l => VahiniI18n.setLanguage(l), lang);
+    const L = lang === 'en' ? '' : ' (Telugu)';
+    for (const [tier, skills] of [['free', [1, 5, 7, 8]], ['pro', photoSkills]]) {
+      for (const n of skills) {
+        const all = {}; for (let k = 1; k <= 20; k++) all[k] = 9.5;
+        all[n] = 5.0;
+        const r = await page.evaluate(o => window.__render(o), { free: tier === 'free', scores: all });
+        const row = r.rows.find(x => x.factor === String(n));
+        const rows = r.rows.filter(x => x.factor !== 'spelling').map(x => x.factor);
+        add(row && JSON.stringify(rows) === JSON.stringify([String(n)]), `${tier}${L}: skill ${n} alone to grow gives exactly its row`, rows);
+        if (!row) continue;
+        const foreign = row.exercises.concat(row.tips).filter(id => String(owner[id]) !== String(n));
+        add(row.exercises.length > 0 && row.tips.length > 0 && foreign.length === 0, `${tier}${L}: skill ${n} shows only its own exercises and tips`, { foreign, row });
+        if (lang === 'te') {
+          const words = row.exercises.concat(row.tips).filter(id => !r.text.includes(teText[id]));
+          add(words.length === 0 && /[\u0C00-\u0C7F]/.test(row.badge), `te: skill ${n} prints its own exercise and tip in Telugu`, words);
+        }
+        add(!row.cropSrc && !row.saw, `${tier}${L}: skill ${n} does not repeat page 1's crop and words on page 2`, row);
+        add(row.model, `${tier}${L}: skill ${n} has a drawn model to copy`, row);
+        const sheet = sheets.find(w => w.factors.includes(n));
+        add(sheet ? (row.sheet || '').includes('/worksheets/' + sheet.id + '.pdf') : !row.sheet, `${tier}${L}: skill ${n} links its own worksheet`, { want: sheet && sheet.id, got: row.sheet });
+        if (tier === 'free') {
+          const card = r.cards.indexOf(String(n)) + 1;
+          add(card > 0 && row.page1 === card, `free${L}: skill ${n} points to its own card on page 1`, { card, page1: row.page1 });
+        }
       }
     }
   }
+  await page.evaluate(() => VahiniI18n.setLanguage('en'));
 
   // Rotation never crosses skills: four re-checks in a row stay with each row's skill.
   let hist = null, crossed = [];

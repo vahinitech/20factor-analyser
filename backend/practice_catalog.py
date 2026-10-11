@@ -11,6 +11,11 @@ and tips one report shows (TIERS). The versioned factor catalogue
 (``compact_reports.dictionary``) serves this module's content, and
 ``/api/v2/me`` returns the visitor's tier numbers from ``limits``.
 
+Every exercise and tip also carries its translations in ``i18n``
+(Telugu today, draft wording until a native speaker has checked it; see
+TELUGU_EXERCISES and TELUGU_TIPS), served with the catalogue so a report
+printed in Telugu ("Print in") uses the same exercises in that language.
+
 Everything here is checked when the module is imported, so a bad entry
 stops the server and CI instead of reaching a child's report.
 
@@ -90,6 +95,32 @@ AVOID_WORDS = (
 )
 
 STEPS_MAX = 140
+
+# The same words in Telugu (and close forms), for the Telugu text in this
+# catalogue and the report's Telugu string table. Telugu joins endings on
+# to a word, so these match anywhere inside one: wrong and mistake
+# (tappu, porapatu), weak (balaheena), poor (pelava), bad (chedu,
+# chedda), problem (samasya), inadequate (sariponi), fail (vifala,
+# feyil) and lowest (ati takkuva, atyalpa). Draft list, for the native
+# speaker's review with the rest of the Telugu.
+AVOID_WORDS_TE = (
+    "తప్పు",
+    "పొరపాటు",
+    "బలహీన",
+    "పేలవ",
+    "చెడు",
+    "చెడ్డ",
+    "సమస్య",
+    "సరిపోని",
+    "విఫల",
+    "ఫెయిల్",
+    "అతి తక్కువ",
+    "అత్యల్ప",
+)
+
+# Languages the catalogue is translated into. Every exercise and tip
+# carries each of them in ``i18n``; a missing one stops the import.
+LANGUAGES = ("te",)
 
 
 def avoid_pattern():
@@ -1129,6 +1160,554 @@ FACTORS = {
 }
 
 
+# Telugu (DRAFT WORDING, 2026-10-11: written for this change and not yet
+# checked by a native speaker; it must be checked before Telugu reaches
+# production). Keyed by exercise or tip id; ``_attach_translations``
+# puts each into its entry as ``i18n["te"]``. Latin practice letters and
+# words stay as written: the child practises English letters, so no
+# example is translated.
+TELUGU_EXERCISES = {
+    "shapes.slow-copy": {
+        "title": "నెమ్మదిగా చూసి రాయడం",
+        "steps": (
+            "నమూనా చూసి ఐదు అక్షరాలు నెమ్మదిగా రాయండి. తర్వాతి అక్షరం "
+            "రాసే ముందు ప్రతి ఆకారాన్ని చూసుకోండి."
+        ),
+        "check": "ప్రతి అక్షరం నమూనాలాగే ఉందా?",
+    },
+    "shapes.letter-families": {
+        "title": "అక్షరాల కుటుంబాలు",
+        "steps": (
+            "గుండ్రని కుటుంబం c a d g q o ని ఒకే వరుసలో రాయండి. ప్రతి "
+            "అక్షరాన్ని ఒకే చోట మొదలుపెట్టండి."
+        ),
+        "check": "గుండ్రని అక్షరాలన్నీ ఒకే చోట మొదలయ్యాయా?",
+    },
+    "shapes.trace-then-write": {
+        "title": "దిద్ది, తర్వాత రాయండి",
+        "steps": (
+            "ఒక పదాన్ని ఒకసారి దిద్దండి. తర్వాత చూడకుండా మీరే "
+            "రెండుసార్లు రాయండి."
+        ),
+        "check": "మీరు రాసింది దిద్దినంత స్పష్టంగా ఉందా?",
+    },
+    "order.say-the-strokes": {
+        "title": "గీతలు చెప్తూ రాయండి",
+        "steps": "ప్రతి గీత రాస్తూ పైకి చెప్పండి: కిందికి, పైకి, గుండ్రంగా.",
+        "check": "ప్రతి అక్షరాన్ని పైనుంచి మొదలుపెట్టారా?",
+    },
+    "order.start-dots": {
+        "title": "మొదలు చుక్కలు",
+        "steps": (
+            "ప్రతి అక్షరం మొదలయ్యే చోట చిన్న చుక్క పెట్టండి. తర్వాత "
+            "చుక్కల నుంచి మొదలుపెట్టి వరుస రాయండి."
+        ),
+        "check": "ప్రతి అక్షరం తన చుక్క దగ్గరే మొదలైందా?",
+    },
+    "loops.close-the-circle": {
+        "title": "గుండ్రం మూయండి",
+        "steps": (
+            "o, a ల వరుస రాయండి. ప్రతి గుండ్రని ఆకారం చివరను దాని "
+            "మొదలుకు కలపండి."
+        ),
+        "check": "ప్రతి గుండ్రని అక్షరం ఖాళీ లేకుండా మూసుకుందా?",
+    },
+    "loops.gap-hunt": {
+        "title": "ఖాళీ వెతకండి",
+        "steps": (
+            "ఒక వాక్యం రాయండి. తెరిచి ఉన్న a, d, g, o కోసం చూడండి. ఖాళీ "
+            "ఉన్న పదాన్ని మళ్ళీ రాయండి."
+        ),
+        "check": "ఏదైనా a ని u లా చదవొచ్చా?",
+    },
+    "loops.tall-loops": {
+        "title": "పొడవైన చుట్లు",
+        "steps": "కలిపి రాసే రాతలో l, b, k లను సన్నని, మూసిన చుట్లతో రాయండి.",
+        "check": "చుట్లు మూసుకుని, ఒకే వెడల్పులో ఉన్నాయా?",
+    },
+    "strokes.long-lines": {
+        "title": "పొడవైన నునుపైన గీతలు",
+        "steps": (
+            "పెన్సిల్ ఎత్తకుండా పేజీ అంతటా నెమ్మదిగా నిటారు గీతలు, "
+            "మెల్లని అలలు గీయండి."
+        ),
+        "check": "గీతలు వణుకు లేకుండా నునుపుగా ఉన్నాయా?",
+    },
+    "strokes.light-grip": {
+        "title": "తేలికైన పట్టు",
+        "steps": (
+            "పెన్సిల్\u200cను తేలికగా పట్టుకుని l, c లను నెమ్మదిగా "
+            "రాయండి. అక్షరాల మధ్య చేతిని వదులు చేయండి."
+        ),
+        "check": "ప్రతి గీత ఒకే శుభ్రమైన గీతగా ఉందా?",
+    },
+    "size.two-line-ladder": {
+        "title": "రెండు గీతల నిచ్చెన",
+        "steps": (
+            "రెండు లేత గీతల మధ్య a o e c n m రాయండి. ప్రతి అక్షరం రెండు "
+            "గీతలనూ తాకాలి."
+        ),
+        "check": "చిన్న అక్షరాలన్నీ రెండు గీతలనూ తాకుతున్నాయా?",
+    },
+    "size.size-twins": {
+        "title": "ఒకే ఎత్తు జంటలు",
+        "steps": (
+            "moon, came అని రాయండి. వాటిలోని చిన్న అక్షరాలన్నీ ఒకే "
+            "ఎత్తులో ఉండాలి."
+        ),
+        "check": "చిన్న అక్షరాలన్నీ ఒకే ఎత్తులో ఉన్నాయా?",
+    },
+    "size.fade-the-guide": {
+        "title": "గీతలు లేకుండా",
+        "steps": (
+            "ఒక వాక్యాన్ని గైడ్ గీతలతో రాయండి, తర్వాత అదే వాక్యాన్ని "
+            "తెల్ల కాగితంపై రాయండి."
+        ),
+        "check": "గీతలు లేకపోయినా పరిమాణం సమానంగా ఉందా?",
+    },
+    "zones.tall-and-tails": {
+        "title": "పొడవైనవి, తోకలు",
+        "steps": (
+            "h, l, g, y రాయండి. h, l పొడవుగా ఉండాలి; g, y గీత కిందికి "
+            "వెళ్ళాలి."
+        ),
+        "check": "పొడవైన అక్షరాలు పైకి, తోకలు కిందికి వెళ్తున్నాయా?",
+    },
+    "zones.three-zones": {
+        "title": "మూడు భాగాలు",
+        "steps": (
+            "నాలుగు గీతల కాగితంపై పొడవైన అక్షరాలు, తోకలు ఉన్న పదాలు "
+            "రాయండి. మూడు భాగాలనూ వాడండి."
+        ),
+        "check": "అక్షరంలోని ప్రతి భాగం దాని చోటులో ఉందా?",
+    },
+    "line.sit-on-the-line": {
+        "title": "గీతపై కూర్చోబెట్టండి",
+        "steps": (
+            "ఒక వాక్యం రాయండి. గీత పైకి లేచిన లేదా కిందికి దిగిన అక్షరం "
+            "చుట్టూ వృత్తం గీసి, ఆ పదం మళ్ళీ రాయండి."
+        ),
+        "check": "ప్రతి అక్షరం గీతపై కూర్చుందా?",
+    },
+    "line.underline-check": {
+        "title": "అడుగు గీత పరీక్ష",
+        "steps": (
+            "ఒక వాక్యం రాసి, దాని కింద స్కేలుతో గీత గీయండి. ఆ గీత పైన "
+            "ఖాళీలు ఉన్నాయేమో చూడండి."
+        ),
+        "check": "స్కేలు గీత పైన ఖాళీ అంతటా సమానంగా ఉందా?",
+    },
+    "line.highlight-the-line": {
+        "title": "ముదురు రాత గీత",
+        "steps": (
+            "రాసే గీతను రంగుతో దిద్దండి, అది బాగా కనిపిస్తుంది. తర్వాత "
+            "దానిపై రెండు వరుసలు రాయండి."
+        ),
+        "check": "మీ పదాలు రంగు గీతపైనే ఉన్నాయా?",
+    },
+    "space.finger-spaces": {
+        "title": "వేలు ఖాళీలు",
+        "steps": (
+            "ఒక చిన్న వాక్యం రాయండి. తర్వాతి పదం మొదలుపెట్టే ముందు "
+            "ప్రతి పదం తర్వాత ఒక వేలు ఉంచండి."
+        ),
+        "check": "ఖాళీలు దాదాపు ఒక వేలు వెడల్పు ఉన్నాయా?",
+    },
+    "space.dot-the-gaps": {
+        "title": "ఖాళీలకు చుక్కలు",
+        "steps": (
+            "the cat sat on a mat అని రాయండి. ప్రతి ఖాళీలో చిన్న చుక్క "
+            "పెట్టండి: చుక్కల మధ్య దూరం సమానంగా ఉందా?"
+        ),
+        "check": "ఖాళీలన్నీ ఒకే పరిమాణంలో ఉన్నాయా?",
+    },
+    "space.spaced-copy": {
+        "title": "ఖాళీలతో కాపీ",
+        "steps": (
+            "పుస్తకంలోని రెండు వరుసలను, వేలు వాడకుండా, అందులోని పదాల "
+            "ఖాళీలతో అలాగే రాయండి."
+        ),
+        "check": "ఎవరైనా ఒక్క చూపులో చదవగలరా?",
+    },
+    "letters.room-to-breathe": {
+        "title": "పదం లోపల చోటు",
+        "steps": (
+            "letter అనే పదం రాయండి. ప్రతి రెండు అక్షరాల మధ్య ఒకే చిన్న "
+            "ఖాళీ ఉంచండి."
+        ),
+        "check": "ఏవైనా అక్షరాలు తాకుతున్నాయా, ఇరుకుగా ఉన్నాయా?",
+    },
+    "letters.even-rows": {
+        "title": "సమానమైన అక్షరాల వరుస",
+        "steps": (
+            "m i n i m ని ఒక వరుసలో రాయండి. పదంలోని ఖాళీలన్నీ ఒకేలా "
+            "కనిపించాలి."
+        ),
+        "check": "అక్షరాలు సమానంగా పరుచుకున్నాయా?",
+    },
+    "margin.start-at-the-margin": {
+        "title": "మార్జిన్ దగ్గర మొదలు",
+        "steps": (
+            "ఎడమ వైపు లేత మార్జిన్ గీత గీయండి. దాని పక్కనే మూడు చిన్న "
+            "వరుసలు మొదలుపెట్టండి."
+        ),
+        "check": "అన్ని వరుసలూ మార్జిన్ దగ్గరే మొదలయ్యాయా?",
+    },
+    "margin.plan-the-line": {
+        "title": "వరుస చివర ఆలోచించండి",
+        "steps": (
+            "కుడి అంచు దగ్గర పొడవైన పదం రాసే ముందు అది పడుతుందో చూడండి; "
+            "పట్టకపోతే తర్వాతి వరుసలో రాయండి."
+        ),
+        "check": "కుడి అంచు దగ్గర ఏదైనా పదం ఇరుక్కుందా?",
+    },
+    "straight.level-sentence": {
+        "title": "తిన్నని వాక్యం",
+        "steps": (
+            "గీతలు ఉన్న కాగితంపై ఒక వాక్యం రాయండి. చివరి వరకు తిన్నగా "
+            "ఉంచండి."
+        ),
+        "check": "వరుస చివర పైకి గానీ కిందికి గానీ జారిందా?",
+    },
+    "straight.paper-position": {
+        "title": "కదలని కాగితం",
+        "steps": (
+            "కాగితాన్ని కొంచెం వంచి, మరో చేత్తో పట్టుకోండి. కదల్చకుండా "
+            "రెండు వరుసలు రాయండి."
+        ),
+        "check": "వరుసలు ముందుకంటే తిన్నగా ఉన్నాయా?",
+    },
+    "upright.tall-strokes": {
+        "title": "ఒకేలా పొడవైన గీతలు",
+        "steps": (
+            "l, h లను ఒక వరుసలో రాయండి. వాటి పొడవైన గీతలను ఒకే కోణంలో "
+            "ఉంచండి."
+        ),
+        "check": "పొడవైన గీతలన్నీ సమాంతరంగా ఉన్నాయా?",
+    },
+    "upright.line-up": {
+        "title": "మొదళ్ళు ఒక వరుసలో",
+        "steps": (
+            "మూడు చిన్న వరుసలు రాయండి. ప్రతి వరుస సరిగ్గా పై వరుస కిందే "
+            "మొదలవ్వాలి."
+        ),
+        "check": "వరుసల మొదళ్ళు ఒక నిటారు అంచులా ఉన్నాయా?",
+    },
+    "pace.steady-count": {
+        "title": "స్థిరమైన లెక్క",
+        "steps": (
+            "నెమ్మదిగా, సమానంగా లెక్కపెడుతూ, ప్రతి లెక్కకు ఒక అక్షరం "
+            "రాయండి."
+        ),
+        "check": "లెక్క కొనసాగిస్తూ రాసినప్పుడు అక్షరాలు ఒకేలా ఉన్నాయా?",
+    },
+    "pressure.light-dark-light": {
+        "title": "తేలికైన స్పర్శ",
+        "steps": (
+            "ఒక వరుస తేలికగా నొక్కుతూ, తర్వాత ఒక వరుస మామూలుగా నొక్కుతూ "
+            "రాయండి. తేలికైనదాన్నే కొనసాగించండి."
+        ),
+        "check": "గీత మొదటి నుంచి చివరి వరకు ఒకే ముదురుగా ఉందా?",
+    },
+    "flow.joined-pairs": {
+        "title": "కలిపిన జంటలు",
+        "steps": "కలిపి రాసే రాతలో in, an, un లను పెన్సిల్ ఎత్తకుండా రాయండి.",
+        "check": "ప్రతి జంటలో పెన్సిల్ కాగితంపైనే ఉందా?",
+    },
+    "lifts.one-lift-words": {
+        "title": "ఒక్కసారి ఎత్తే పదాలు",
+        "steps": (
+            "చిన్న పదాలు రాయండి. ప్రతి పదం చివర మాత్రమే పెన్సిల్ " "ఎత్తండి."
+        ),
+        "check": "పదం చివర మాత్రమే ఎత్తారా?",
+    },
+    "slant.same-lean": {
+        "title": "ఒకే వాలు",
+        "steps": "m, i, n లను నెమ్మదిగా రాయండి. వాటి వాలు ఒకేలా ఉంచండి.",
+        "check": "అక్షరాలన్నీ ఒకే వైపు వాలుతున్నాయా?",
+    },
+    "slant.slant-lines": {
+        "title": "వాలు గీతలు",
+        "steps": (
+            "వరుస అంతటా లేత వాలు గీతలు గీసి, వాటి వెంట రెండు వరుసలు " "రాయండి."
+        ),
+        "check": "మీరు కిందికి గీసే గీతలు గైడ్ గీతల వెంటే ఉన్నాయా?",
+    },
+    "read.read-it-back": {
+        "title": "చదివించండి",
+        "steps": (
+            "రెండు వాక్యాలు రాసి, ఎవరినైనా పైకి చదవమనండి. వాళ్ళు ఆగిన "
+            "పదాన్ని మళ్ళీ రాయండి."
+        ),
+        "check": "వాళ్ళు ప్రతి పదాన్నీ మొదటిసారే చదవగలిగారా?",
+    },
+    "read.slow-best": {
+        "title": "మీ అత్యుత్తమ రాత",
+        "steps": (
+            "రెండు వరుసలను మీ అతి నెమ్మదైన, అతి స్పష్టమైన రాతలో రాయండి. "
+            "మీ మామూలు రాతతో పోల్చండి."
+        ),
+        "check": "ఏ పదాలు చదవడానికి సులువయ్యాయి?",
+    },
+    "distinct.look-alike-pairs": {
+        "title": "ఒకేలా కనిపించే జంటలు",
+        "steps": (
+            "o పక్కన a, తర్వాత e పక్కన c రాయండి. ప్రతి జంటలో తేడా "
+            "సులువుగా తెలిసేలా రాయండి."
+        ),
+        "check": "ఏ జంటనైనా ఎవరైనా ఒకటిగా అనుకోవచ్చా?",
+    },
+    "distinct.n-and-h": {
+        "title": "n, h, r, u అక్షరాలు",
+        "steps": (
+            "n h r u ని ఒక వరుసలో రాయండి. h పొడవుగా, n పైభాగం మూసి, u "
+            "పైభాగం తెరిచి రాయండి."
+        ),
+        "check": "ప్రతి అక్షరం స్పష్టంగా తనలాగే ఉందా?",
+    },
+    "neat.clean-page": {
+        "title": "శుభ్రమైన పేజీ",
+        "steps": (
+            "మార్జిన్\u200cతో, సమానమైన ఖాళీలతో, కొట్టివేతలు లేకుండా ఒక "
+            "చిన్న పేరా రాయండి; కొట్టేయాలంటే ఒకే గీతతో."
+        ),
+        "check": "చేయి చాచినంత దూరం నుంచి పేజీ చక్కగా కనిపిస్తోందా?",
+    },
+    "neat.copy-best": {
+        "title": "మంచి ప్రతి",
+        "steps": "మీ రాతలోని మూడు వరుసలను చక్కని చివరి ప్రతిగా రాయండి.",
+        "check": "చివరి ప్రతి మొదటిదానికంటే చక్కగా ఉందా?",
+    },
+    "spell.look-cover-write": {
+        "title": "చూడండి, మూయండి, రాయండి",
+        "steps": (
+            "పదాన్ని చూడండి, మూసేయండి, గుర్తు నుంచి రాయండి, తర్వాత "
+            "సరిచూసుకోండి. దాన్ని ఒక వాక్యంలో వాడండి."
+        ),
+        "check": "మీరు రాసిన పదం, చూసిన పదంలాగే ఉందా?",
+    },
+}
+
+TELUGU_TIPS = {
+    "shapes.start-at-top": {
+        "text": (
+            "చాలా అక్షరాలను పైనుంచి మొదలుపెట్టండి. అప్పుడు ఒకే అక్షరం "
+            "ప్రతిసారీ ఒకేలా వస్తుంది."
+        )
+    },
+    "shapes.slow-is-clear": {
+        "text": "ఒక వరుస నెమ్మదిగా రాయండి: ముందు చక్కని ఆకారాలు, వేగం తర్వాత."
+    },
+    "order.top-down": {
+        "text": (
+            "గీతలను పైకి నెట్టడం కంటే కిందికి లాగండి; అలా చేయి సులువుగా "
+            "అదుపులో ఉంటుంది."
+        )
+    },
+    "order.same-every-time": {
+        "text": "తొందరలో ఉన్నా, ఒక అక్షరాన్ని ప్రతిసారీ ఒకే చోట మొదలుపెట్టండి."
+    },
+    "loops.close-the-door": {
+        "text": (
+            "ప్రతి గుండ్రని అక్షరాన్ని ఒక తలుపులా అనుకోండి: ముందుకు "
+            "వెళ్ళే ముందు దాన్ని మూసేయండి."
+        )
+    },
+    "loops.go-back-over": {
+        "text": (
+            "a, d లకు తోక రాసే ముందు పైభాగం మీదుగా మళ్ళీ వెళ్ళండి; "
+            "అప్పుడు ఖాళీ మూసుకుంటుంది."
+        )
+    },
+    "strokes.relax-grip": {
+        "text": (
+            "వేళ్ళు తెల్లబడితే పట్టు గట్టిగా ఉందని అర్థం. పట్టు వదులు "
+            "చేసి చేతిని విదిలించండి."
+        )
+    },
+    "strokes.sharp-pencil": {
+        "text": (
+            "మొద్దుబారిన పెన్సిల్ కంటే చెక్కిన పెన్సిల్ లేదా నునుపైన "
+            "పెన్ శుభ్రమైన గీతలు ఇస్తుంది."
+        )
+    },
+    "size.match-the-x": {
+        "text": (
+            "వరుసలోని ప్రతి చిన్న అక్షరాన్ని మొదటి x లేదా o ఎత్తుతో "
+            "సరిపోల్చండి."
+        )
+    },
+    "size.paper-close": {
+        "text": (
+            "కాగితాన్ని మీ ముందు నిటారుగా ఉంచండి; చేయి దూరంగా సాగితే "
+            "అక్షరాలు పెద్దవవుతాయి."
+        )
+    },
+    "zones.three-floors": {
+        "text": (
+            "మూడు అంతస్తులు అనుకోండి: పొడవైన అక్షరాలు పై అంతస్తుకు, "
+            "తోకలు కింది అంతస్తుకు వెళ్తాయి."
+        )
+    },
+    "zones.tall-twice": {
+        "text": (
+            "పొడవైన అక్షరాలను చిన్న అక్షరాల కంటే దాదాపు రెండింతలు "
+            "ఎత్తుగా రాయండి."
+        )
+    },
+    "line.feel-the-line": {
+        "text": "ప్రతి చిన్న అక్షరం అడుగున పెన్సిల్ గీతను తాకేలా రాయండి."
+    },
+    "line.dark-line": {
+        "text": (
+            "తెల్ల కాగితం కింద ముదురు గీతల కాగితం పెట్టండి; గీతలు పైకి "
+            "కనిపిస్తాయి."
+        )
+    },
+    "space.finger-or-pencil": {
+        "text": "పిల్లలకు ఒక వేలు లేదా పెన్సిల్ వెడల్పు మంచి ఖాళీ."
+    },
+    "space.read-aloud": {
+        "text": "ఖాళీలు సరిగ్గా ఉంటే, ఆ వరుసను ఆగకుండా పైకి చదవగలరు."
+    },
+    "letters.no-touching": {
+        "text": "పదంలోని అక్షరాలు దగ్గరగా ఉంటాయి, కానీ ఒకదాన్నొకటి తాకవు."
+    },
+    "letters.same-gap": {
+        "text": (
+            "తర్వాతి అక్షరం రాసేటప్పుడు, ముందు అక్షరం తర్వాతి ఖాళీని "
+            "చూడండి."
+        )
+    },
+    "margin.fold": {
+        "text": (
+            "కాగితాన్ని పొడవుగా ఒకసారి మడిచి తెరవండి; ఆ మడతే తేలికైన "
+            "మార్జిన్."
+        )
+    },
+    "margin.finger-start": {
+        "text": (
+            "మార్జిన్ దగ్గర ఒక వేలు పెట్టి, ప్రతి వరుసను దాని పక్కనే "
+            "మొదలుపెట్టండి."
+        )
+    },
+    "straight.paper-anchor": {
+        "text": (
+            "మరో చేత్తో కాగితాన్ని పట్టుకోండి; పేజీలో కిందికి వెళ్తున్న "
+            "కొద్దీ దాన్ని పైకి జరపండి."
+        )
+    },
+    "straight.look-ahead": {
+        "text": "పెన్సిల్\u200cనే కాదు, వరుస చివరను కూడా చూడండి."
+    },
+    "upright.same-angle": {
+        "text": "రాసే ప్రతిసారీ కాగితాన్ని ఒకే వైపు వంచండి."
+    },
+    "upright.check-stems": {
+        "text": "l, d, h ల పొడవైన కాడలను చూడండి: అవి కంచెలా కనిపించాలి."
+    },
+    "pace.not-too-fast": {
+        "text": "అక్షరాలు ఒకేలా కనిపించేంత వేగంతోనే రాయండి."
+    },
+    "pace.short-bursts": {
+        "text": (
+            "ఒకేసారి హడావిడిగా ఎక్కువసేపు రాయడం కంటే, చిన్న విడతలుగా "
+            "క్రమంగా రాయడం మేలు."
+        )
+    },
+    "pressure.see-the-back": {
+        "text": (
+            "పేజీ తిప్పి చూడండి: వెనక రాత చేతికి తగిలితే, ఇంకా తేలికగా "
+            "నొక్కండి."
+        )
+    },
+    "pressure.soft-pencil": {
+        "text": "మెత్తని పెన్సిల్\u200cకు తక్కువ ఒత్తిడి చాలు."
+    },
+    "flow.plan-the-join": {
+        "text": (
+            "ఈ అక్షరం పూర్తయ్యే ముందే తర్వాతి అక్షరం ఎక్కడ మొదలవుతుందో "
+            "తెలుసుకోండి."
+        )
+    },
+    "flow.relaxed-wrist": {
+        "text": "చేతి పక్కభాగాన్ని బల్లపై ఆనించి, మణికట్టును కదలనివ్వండి."
+    },
+    "lifts.word-at-a-time": {
+        "text": "పదం మొత్తం ముందు మనసులో అనుకుని, ఒకేసారి రాయండి."
+    },
+    "lifts.pause-not-lift": {
+        "text": "గీతల మధ్య ఆగండి, కానీ పెన్సిల్\u200cను కాగితంపైనే ఉంచండి."
+    },
+    "slant.paper-tilt": {
+        "text": (
+            "కుడిచేతి వాళ్ళు సాధారణంగా కాగితాన్ని కొంచెం ఎడమకు, ఎడమచేతి "
+            "వాళ్ళు కొంచెం కుడికి వంచుతారు."
+        )
+    },
+    "slant.pick-one": {
+        "text": "నిటారుగా గానీ, వాలుగా గానీ, ఒకటి ఎంచుకుని అదే కొనసాగించండి."
+    },
+    "read.stranger-test": {
+        "text": (
+            "తోటి విద్యార్థి అడగకుండానే చదవగలిగితే, రాత స్పష్టంగా " "ఉన్నట్టే."
+        )
+    },
+    "read.fix-one": {
+        "text": (
+            "అన్నీ ఒకేసారి కాదు; చదివేవారిని ఆపిన ఒక్క నైపుణ్యాన్నే "
+            "సరిచేయండి."
+        )
+    },
+    "distinct.close-tops": {
+        "text": (
+            "a, d, g, q ల పైభాగం మూయండి; అప్పుడు అవి u లేదా c లా " "కనిపించవు."
+        )
+    },
+    "distinct.tall-h": {
+        "text": "h, k లను పొడవుగా రాయండి; అప్పుడు వాటిని n లేదా x గా చదవరు."
+    },
+    "neat.one-line-cross": {
+        "text": "గీకి పడేయకుండా, ఒకే నిటారు గీతతో కొట్టేయండి."
+    },
+    "neat.space-around": {
+        "text": "పేరాల మధ్య, పేజీ అంచుల చుట్టూ స్పష్టమైన ఖాళీ వదలండి."
+    },
+    "spell.say-it": {
+        "text": (
+            "పదాన్ని నెమ్మదిగా పలుకుతూ, రాసేటప్పుడు ప్రతి శబ్దాన్ని " "వినండి."
+        )
+    },
+    "spell.small-parts": {
+        "text": (
+            "పొడవైన పదాన్ని చిన్న భాగాలుగా విడదీసి, ఒక్కో భాగం " "నేర్చుకోండి."
+        )
+    },
+}
+
+TRANSLATIONS = {"te": (TELUGU_EXERCISES, TELUGU_TIPS)}
+
+
+def _all_entries():
+    for area in (*FACTORS.values(), SPELLING):
+        yield from area["exercises"]
+        yield from area["tips"]
+
+
+def _attach_translations():
+    """Give every exercise and tip its ``i18n`` block from TRANSLATIONS."""
+    for entry in _all_entries():
+        kind = 0 if "steps" in entry else 1
+        entry["i18n"] = {
+            lang: dict(tables[kind][entry["id"]])
+            for lang, tables in TRANSLATIONS.items()
+            if entry["id"] in tables[kind]
+        }
+
+
+_attach_translations()
+
+
 def _texts(entry):
     keys = ("title", "steps", "example", "check", "text")
     return [entry[k] for k in keys if isinstance(entry.get(k), str)]
@@ -1191,9 +1770,51 @@ def _area_problems(name, area, number):
     return found
 
 
+def translation_limit(english):
+    """How long a translation may be: about 1.5 times the English, with
+    room for short titles (Telugu takes more letters than English)."""
+    return max(round(1.5 * len(english)), len(english) + 12)
+
+
+def _translation_problems(entry):
+    fields = ("title", "steps", "check") if "steps" in entry else ("text",)
+    banned = avoid_pattern()
+    found = []
+    for lang in LANGUAGES:
+        text = entry.get("i18n", {}).get(lang)
+        if not text:
+            found.append(f"{entry['id']}: no {lang} translation")
+            continue
+        for field in fields:
+            value = text.get(field)
+            if not isinstance(value, str) or not value.strip():
+                found.append(f"{entry['id']}: {lang} {field} missing")
+                continue
+            if len(value) > translation_limit(entry[field]):
+                found.append(f"{entry['id']}: {lang} {field} too long")
+            if EM_DASH in value:
+                found.append(f"{entry['id']}: em dash in {lang} {field}")
+            if banned.search(value) or any(w in value for w in AVOID_WORDS_TE):
+                found.append(f"{entry['id']}: avoid word in {lang} {field}")
+        for field in set(text) - set(fields) - {"example"}:
+            found.append(f"{entry['id']}: unknown {lang} field {field}")
+    return found
+
+
+def _orphan_translations():
+    ids = {entry["id"] for entry in _all_entries()}
+    return [
+        f"{lang}: translation for unknown id {key}"
+        for lang, tables in TRANSLATIONS.items()
+        for table in tables
+        for key in table
+        if key not in ids
+    ]
+
+
 def problems():
     """Every rule the catalogue breaks, as readable lines (none is good)."""
-    found = []
+    found = _orphan_translations()
     sheets = _worksheet_ids()
     seen = set()
     areas = [(n, f"factor {n}", FACTORS.get(n)) for n in range(1, 21)]
@@ -1208,6 +1829,7 @@ def problems():
                 found.append(f"{name}: duplicate id {entry['id']}")
             seen.add(entry["id"])
             found += _word_problems(entry)
+            found += _translation_problems(entry)
         for ex in area["exercises"]:
             found += _exercise_problems(ex, number not in PEN_FACTORS, sheets)
     if set(DOSAGE) != {s["band"] for s in STAGES}:

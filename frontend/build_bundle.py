@@ -43,8 +43,12 @@ SOURCES = [
     "src/engine/narrate.js",
     "src/report/worksheet-catalog.js",
     "src/report/worksheets.js",
+    "src/report/strings/en.js",
+    "src/report/strings/te.js",
+    "src/report/i18n.js",
     "src/report/progress.js",
     "src/report/report-render.js",
+    "src/report/report-share.js",
     "src/app/app.js",
     "src/app/share.js",
 ]
@@ -104,9 +108,39 @@ def file_hash(rel):
         return hashlib.sha256(f.read()).hexdigest()[:10]
 
 
-def stamp_pages():
-    """Point every local css/js reference in frontend/*.html at ?v=<hash>."""
+# An @import inside a stylesheet is cached for 30 days like the sheet
+# itself, but the page's stamp only covers the importing file: on stage,
+# report.css arrived new while Cloudflare kept serving the old
+# report-fonts.css it imports, without the Telugu font (2026-10-11).
+CSS_IMPORT = re.compile(
+    r"(@import\s+url\(['\"]?\./)([\w.-]+\.css)(?:\?v=[0-9a-f]*)?(['\"]?\))"
+)
+
+
+def _rewrite_imports(stamp):
     changed = []
+    for sheet in sorted(glob.glob(os.path.join(HERE, "styles", "*.css"))):
+        with open(sheet, "r", encoding="utf-8") as f:
+            text = f.read()
+        out = CSS_IMPORT.sub(
+            lambda m: m.group(1)
+            + m.group(2)
+            + (f"?v={file_hash('styles/' + m.group(2))}" if stamp else "")
+            + m.group(3),
+            text,
+        )
+        if out != text:
+            with open(sheet, "w", encoding="utf-8", newline="\n") as f:
+                f.write(out)
+            changed.append("styles/" + os.path.basename(sheet))
+    return changed
+
+
+def stamp_pages():
+    """Point every local css/js reference in frontend/*.html at ?v=<hash>,
+    after stamping the @import URLs inside the stylesheets, so a sheet's
+    own stamp also changes when a file it imports changes."""
+    changed = _rewrite_imports(True)
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
@@ -123,8 +157,9 @@ def stamp_pages():
 
 
 def strip_pages():
-    """Remove every ?v= stamp from frontend/*.html (the committed form)."""
-    changed = []
+    """Remove every ?v= stamp from frontend/*.html and the stylesheets'
+    @import URLs (the committed form)."""
+    changed = _rewrite_imports(False)
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
