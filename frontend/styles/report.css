@@ -854,7 +854,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .compact-report .rp-art-tip{ width:18px; height:18px; margin-top:1px; }
 .compact-report .pr-cols{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; margin:8px 0 4px; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--v-text-2); }
 .compact-report .practice-table{ display:flex; flex-direction:column; gap:6px; }
-.free-report.compact-report .practice-row.coaching-card{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:0; margin:0; border:0; background:none; border-radius:0; }
+.free-report.compact-report .practice-row.coaching-card{ display:grid; grid-template-columns:minmax(0,2fr) minmax(0,3fr); gap:8px; padding:0; margin:0; border:0; background:none; border-radius:0; }
 .compact-report .pr-skill, .compact-report .pr-practice{ min-width:0; border:1px solid var(--v-border); border-radius:10px; padding:7px 10px; background:var(--card); }
 .compact-report .pr-skill{ display:flex; flex-direction:column; border-left:4px solid var(--v-accent); }
 .free-report.compact-report .pr-skill .practice-sheet{ margin-top:auto; }
@@ -892,7 +892,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .compact-report .other-skills li{ break-inside:avoid; display:list-item; margin:0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; font-size:10.5px; line-height:1.35; }
 /* Pro shows up to two exercises and two tips per skill: its exercise
    column is wider so the page still prints on one sheet. */
-.practice-pro .pr-cols, .free-report.compact-report.practice-pro .practice-row.coaching-card{ grid-template-columns:minmax(0,2fr) minmax(0,3fr); }
+.practice-pro .pr-cols, .free-report.compact-report.practice-pro .practice-row.coaching-card{ grid-template-columns:minmax(0,1fr) minmax(0,2fr); }
 .practice-pro .pr-ex{ display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; align-items:baseline; }
 .practice-pro .pr-ex .pr-steps{ grid-column:1 / -1; grid-row:2; }
 .free-report.compact-report.practice-pro .pr-example{ grid-column:2; grid-row:1; margin:0; line-height:1; }
@@ -925,3 +925,17 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .progress-panel .pp-keep a{ color:var(--v-accent-text); font-weight:600; }
 @media screen and (max-width:600px){ .progress-panel .pp-compare{ columns:1; } }
 @media print{ .progress-panel{ display:none !important; } }
+
+/* Page 2 is the practice sheet (2026-10-11): a label pointing back to page 1
+   on the left, and on the right a drawn model to copy and lines to try it. */
+.compact-report .pr-ref{ font-size:11px; color:var(--v-text-muted); margin:4px 0 0; }
+.compact-report .pr-model{ display:flex; align-items:center; gap:8px; margin:2px 0; padding:1px 8px; border:1px dashed var(--v-border); border-radius:8px; background:var(--card); }
+.compact-report .pr-model-label{ flex:none; font-size:10.5px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--v-accent-text); }
+.compact-report .pr-model-art{ flex:1; height:32px; min-width:0; }
+.compact-report .pr-turn-row{ display:flex; align-items:flex-end; gap:8px; margin-top:2px; }
+.compact-report .pr-turn-row .pr-line{ flex:1; margin:0; }
+.compact-report .pr-turn{ flex:none; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--v-text-muted); }
+/* Free has room for a bigger model to copy; Pro keeps it slim to stay on
+   two sheets with two exercises and two tips per skill. */
+.free-report.compact-report:not(.practice-pro) .pr-model-art{ height:52px; }
+.free-report.compact-report:not(.practice-pro) .pr-model{ padding:3px 10px; }

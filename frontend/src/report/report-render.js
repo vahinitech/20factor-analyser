@@ -447,27 +447,6 @@ function render(host, data){
     19:['Distinct letter shapes','Check that a looks different from o, and c looks different from e.'],
     20:['Neat page','Even sizes, clear spaces and straight lines help make your page neat.']
   };
-  // What page 2 says it saw, in words for children: the first while the
-  // skill is growing (Learning, Improving), the second once it is nearly
-  // there (Mastering, Strong). It describes the writing, never the child.
-  const saw={
-    1:['Some letters are still finding their shape.','Most letters already have a clear shape.'],
-    2:['A photo cannot show stroke order, so this score is a rough guide.','A photo cannot show stroke order, so this score is a rough guide.'],
-    3:['Some round letters still have a small gap at the top.','Most round letters already close at the top.'],
-    4:['A few strokes look a little shaky.','Most strokes are already smooth.'],
-    5:['A few small letters grew taller than the rest.','Most small letters are already one height.'],
-    6:['Some tall letters and tails could reach a little further.','Most tall letters and tails already reach their place.'],
-    7:['Some words float above the line or dip below it.','Most words already sit on the line. Help the last few land too.'],
-    8:['Some gaps are wide and some are small.','Most gaps between words are already even.'],
-    9:['Some letters inside words sit very close or far apart.','Most letters inside words already have even room.'],
-    10:['Lines start at different places on the left.','Most lines already start at the same place on the left.'],
-    11:['Some lines climb or slope as they go across.','Most lines already run level.'],
-    12:['Tall strokes lean in different ways.','Most tall strokes already lean the same way.'],
-    17:['The lean changes from word to word.','The lean is already mostly the same.'],
-    18:['This grows as the skills above grow.','Most of your page is already easy to read.'],
-    19:['Some look-alike letters, such as a and o, are hard to tell apart.','Look-alike letters are already mostly clear.'],
-    20:['Even sizes, clear gaps and straight lines will make the page neater.','Your page already looks neat.']
-  };
   const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
   const toGrow=sorted.filter(f=>f.score<8.5);
   const maintenance=!toGrow.length && sorted.length>0;
@@ -656,14 +635,20 @@ function render(host, data){
   };
   const skillRow=(f,i)=>{
     const band=bandOf(f.score), c=crops[f.n];
-    const crop=c&&c.url&&!wholePageCrop(c)?`<img class="pr-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}">`:'';
+    // Page 1 already shows this skill's crop and what was found (owner,
+    // 2026-10-11: no repeats). Page 2 is the practice sheet: a short label
+    // pointing back to page 1, and on the right how to do it, with a drawn
+    // model to copy and lines to try it.
     const {exs,tips}=exercisesFor(f);
-    const words=(saw[f.n]||[])[band==='focus'||band==='dev'?0:1]||explanations[f.n]?.[1]||'';
+    const page1=skillList.indexOf(f)+1;
+    const model=focusSVG({...f,band:'strong'}).svg;
     return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
       <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(skillName(f))}</h3><span class="pr-badge band-${band}">${esc(f.score.toFixed(1))}/10 · ${esc(BAND_LABEL[band])}</span></div>
-        ${stagePath(band)}<p class="pr-saw">${esc(words)}</p>${crop}${practiceSheet(f)}</div>
+        ${stagePath(band)}${page1>0?`<p class="pr-ref" data-page1="${page1}">Skill ${page1} on page 1</p>`:''}${practiceSheet(f)}</div>
       <div class="pr-practice">${exs.map(exerciseBlock).join('')||'<p class="pr-steps">Practise this skill for a few minutes a day.</p>'}
-        ${planLine(band,exs.length)}${tips.map(tipBlock).join('')}<div class="writing-lines pr-line" aria-label="Space to try it once"></div></div>
+        <div class="pr-model"><span class="pr-model-label">Copy this</span><div class="pr-model-art" aria-hidden="true">${model}</div></div>
+        ${planLine(band,exs.length)}${tips.map(tipBlock).join('')}
+        <div class="pr-turn-row"><span class="pr-turn">Your turn</span><div class="writing-lines pr-line" aria-label="Space to try it"></div></div></div>
     </article>`;
   };
   const spellingRow=n=>{
@@ -704,7 +689,7 @@ function render(host, data){
       <p class="report-note">Scores are practice guides, not school grades. Turn over for examples and space to try them.</p>${foot(1)}</section>`,
     `<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
       <h2>Your next small step</h2>
-      ${rows?`${opening}<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>Skill to grow, from your page</span><span>Your exercise for it</span></div><div class="practice-table">${rows}</div></div>${otherBox}${closing}`:empty}
+      ${rows?`${opening}<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>Skill to practise (from page 1)</span><span>How to practise it</span></div><div class="practice-table">${rows}</div></div>${otherBox}${closing}`:empty}
       ${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');
