@@ -93,6 +93,12 @@
   .keep-opt small{ display:block; color:var(--v-text-2); font-size:13px; }
   .keep-email{ margin:8px 0 0 27px; }
   .keep-email[hidden]{ display:none; }
+  .keep-err{ margin:6px 0 0; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-warning); }
+  .keep-err[hidden]{ display:none; }
+  .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
+  .run-consent{ margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--v-text-2); text-align:right; }
+  @media (max-width:560px){ .run-consent{ text-align:left; } }
+  .ns-sponsor{ margin:18px 0 0; font-size:15px; color:var(--v-text-2); }
   .keep-email label{ display:block; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-text); margin:0 0 4px; }
   .keep-email input{ width:100%; max-width:340px; font:inherit; font-size:15px; padding:9px 11px; border:1.5px solid var(--v-border); border-radius:10px; background:var(--v-surface); color:var(--v-text); }
   .keep-more{ margin:8px 0 0 !important; font-size:13px; }
@@ -230,7 +236,8 @@
       <label class="keep-opt"><input type="checkbox" id="keep-pages"><span>Keep my pages so I can see progress over time<small>Only you can see them. We email you a link, and nothing is kept until you open it. Deleted 12 months after your last check.</small></span></label>
       <div class="keep-email" id="keep-email-row" hidden>
         <label for="keep-email">Your email (a parent's, for a child)</label>
-        <input type="email" id="keep-email" autocomplete="email" placeholder="you@example.com">
+        <input type="email" id="keep-email" autocomplete="email" placeholder="you@example.com" aria-describedby="keep-email-error">
+        <p class="keep-err" id="keep-email-error" role="alert" hidden></p>
       </div>
       <p class="keep-more"><a href="/progress.html">See pages you kept</a></p>
     </div>
@@ -292,6 +299,7 @@
         <p class="pen-option">Have the Vahini pen? <a href="#" id="use-pen">Capture live with the pen</a> · <a href="/product.html?from=free-check">What the pen adds</a></p>
       </div>
     </details>
+    <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
@@ -336,7 +344,7 @@
         <details><summary>Is the handwriting check free?</summary>
           <p>Yes. The free check gives you up to three priorities with coaching and drills. A Pro report includes scores for all twenty factors.</p></details>
         <details><summary>What happens to my photo?</summary>
-          <p>It is sent to Vahini's server to make your report, and it is not kept: it is never written to disk. We keep only a record that a photo was checked (its type and size) and, if you print or save your report, the report's text and scores, without any picture of your handwriting. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
+          <p>It is sent to Vahini's server to make your report, and it is not kept: it is never written to disk. We keep only a record that a photo was checked (its type and size). Your report is not kept, printed or not. Details are in the <a href="/privacy.html">privacy statement</a>.</p></details>
         <details><summary>Which handwriting can it read?</summary>
           <p>English and Telugu today. More scripts follow as the dataset grows; the <a href="/practice.html">practice worksheets</a> already cover Hindi, Tamil, Kannada and Malayalam.</p></details>
         <details><summary>How accurate is it?</summary>
@@ -451,6 +459,7 @@
       <div class="v-card"><h3 id="ns-again-title">2. Check again in a week</h3><p>Same pen, same paper, the same kind of page. Then compare the two reports.</p><p class="ns-link"><a id="ns-calendar" href="#" download="handwriting-check-again.ics">Add a reminder to your calendar</a></p></div>
       <div class="v-card"><h3>3. What a photo cannot see</h3><p>Stroke order, speed and pressure were estimated from the ink. The Vahini pen, in development, records how the page was written.</p><p class="ns-link"><a href="/product.html?from=free-check">What the pen adds</a> · <a href="/reach.html?from=free-check">Pre-order</a></p></div>
     </div>
+    <p class="ns-sponsor">Vahini's free check stays free. If it helped, you can <a href="https://github.com/sponsors/vahinitech" target="_blank" rel="noopener noreferrer">support us on GitHub Sponsors</a>.</p>
   </section>
 </section>
 
