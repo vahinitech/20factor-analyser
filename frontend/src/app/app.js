@@ -334,6 +334,7 @@ async function loadBundledSample(){
     const blob = await res.blob();
     readImageFile(new File([blob], 'handwriting-sample.jpg', { type:'image/jpeg' }), (img, url)=>{
       window.VAHINI_SAMPLE_RUN = true;
+      keepForSample(true);
       showSample(img, url);
       setDzStatus('Sample page loaded. Press Run analysis to see its report.');
     });
@@ -395,6 +396,7 @@ function showSample(img, url){
 function handleSample(file){
   if (!file || serviceUp === false) return;
   window.VAHINI_SAMPLE_RUN = false;
+  keepForSample(false);
   setDzStatus(''); clearDzNotice();
   if (file.size > MAX_PICK_BYTES){
     clearSample();
@@ -430,7 +432,7 @@ function handleSample(file){
 function clearSample(){
   state.imageEl=null; $('#dz-preview').style.display='none'; $('#dz-clear').style.display='none';
   $('#dz-prompt').style.display='block'; $('#file-input').value='';
-  window.VAHINI_SAMPLE_RUN = false; setDzStatus(''); clearDzNotice();
+  window.VAHINI_SAMPLE_RUN = false; keepForSample(false); setDzStatus(''); clearDzNotice();
   applyServiceGate();
 }
 
@@ -920,6 +922,16 @@ function setupKeepPages(){
   const input = $('#keep-email');
   if (input) input.addEventListener('input', ()=>keepEmailError(''));
 }
+/* The sample page is never kept, so while it is loaded the box is unticked
+   and off, with a note saying why. A ticked box and no email question
+   looked like the email bug (owner, stage, 2026-10-11). */
+function keepForSample(isSample){
+  const box = $('#keep-pages'), row = $('#keep-email-row'), note = $('#keep-sample-note');
+  if (!box) return;
+  if (isSample){ box.checked = false; if (row) row.hidden = true; keepEmailError(''); }
+  box.disabled = !!isSample;
+  if (note) note.hidden = !isSample;
+}
 function keepEmailError(text){
   const e = $('#keep-email-error'), i = $('#keep-email');
   if (e){ e.textContent = text || ''; e.hidden = !text; }
@@ -930,7 +942,7 @@ function keepEmailError(text){
    error line they missed, and no kept page (seen on stage, 2026-10-11). */
 function keepEmailMissing(){
   const box = $('#keep-pages');
-  if (!box || !box.checked || window.VAHINI_SAMPLE_RUN) return false;
+  if (!box || !box.checked) return false;
   const i = $('#keep-email');
   const email = String((i || {}).value || '').trim();
   if (KEEP_EMAIL_RE.test(email)) return false;

@@ -1,0 +1,1 @@
+- With the sample page loaded, "Keep my pages" is unticked and switched off, with a note that the sample is never kept; choosing your own photo turns it back on. A ticked box now always needs an email before Run, sample or not.
