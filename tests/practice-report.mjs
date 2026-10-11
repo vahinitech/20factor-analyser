@@ -104,6 +104,16 @@ try {
   await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
   await page.waitForSelector('#report-host .practice-page');
   await page.evaluate(src => { window.__craft = window.VahiniCraft; (0, eval)(src); }, RENDER);
+  // The heading names the tier the example shows.
+  const freeTitle = await page.textContent('#sample-title');
+  const proPage = await browser.newPage();
+  await useDesign(proPage);
+  await proPage.goto(BASE + '/frontend/sample-report.html?example=pro', { waitUntil: 'load' });
+  await proPage.waitForSelector('#report-host .practice-page');
+  const proTitle = await proPage.textContent('#sample-title');
+  await proPage.close();
+  add(freeTitle === 'What your Free handwriting report looks like' && proTitle === 'What your Pro handwriting report looks like',
+    'The sample heading names Free, or Pro on the Pro example', { freeTitle, proTitle });
 
   // Bundled catalogue matches the committed one.
   const bundled = await page.evaluate(() => window.VahiniPracticeCatalog);
