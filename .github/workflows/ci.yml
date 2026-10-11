@@ -123,7 +123,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -153,6 +153,8 @@ jobs:
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)
         run: npm run test:practice
+      - name: Print in Telugu and Share on WhatsApp
+        run: npm run test:language
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

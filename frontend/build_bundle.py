@@ -48,6 +48,7 @@ SOURCES = [
     "src/report/i18n.js",
     "src/report/progress.js",
     "src/report/report-render.js",
+    "src/report/report-share.js",
     "src/app/app.js",
     "src/app/share.js",
 ]
