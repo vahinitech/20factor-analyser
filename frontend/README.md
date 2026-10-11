@@ -74,23 +74,22 @@ not part of this repository.
 
 ## Pictures on the report (optional)
 
-Page 2 of the report can show Vahini and friends, one job each (approved
-2026-10-11, #122). The host page sets `window.VAHINI_REPORT_ART`, an object
-of same-site image paths:
+The report can show Vahini and friends, one job each (approved
+2026-10-11, #122; places from version C). The host page sets
+`window.VAHINI_REPORT_ART`, an object of same-site image paths:
 
 ```js
 window.VAHINI_REPORT_ART = {
-  cheer: '/site/assets/characters/vahini.webp',      // beside the opening line
-  buddy: '/site/assets/characters/bheema.webp',      // at its right
+  cheer: '/site/assets/characters/vahini.webp',      // page 1, "Keep doing this"
   tip: '/site/assets/characters/pihu.webp',          // small, in every tip
-  encourage: '/site/assets/characters/tara.webp',    // beside the closing line
+  encourage: '/site/assets/characters/tara.webp',    // beside page 2's closing line
 };
 ```
 
 Values are checked like `VAHINI_NOTICE_ART`: anything that is not a
 same-site path is ignored. The pictures are decorative (`alt=""`); without
-the map the report has none and keeps the same layout. The drawings are not
-part of this repository.
+the map the report has none and keeps the same layout. `buddy` is no longer
+used. The drawings are not part of this repository.
 
 ## Saved checks and "Your progress"
 
@@ -102,7 +101,17 @@ only: the writer's saved checks, a comparison with an earlier one, a
 progress file to download or load (JSON, checked strictly, no photo) and a
 way to forget this writer's checks. It makes no network call.
 
-## Print in another language, and Share on WhatsApp
+## The side panel: Print in, Share PDF on WhatsApp, Print
+
+Beside the report on screens 1200 px and wider, and under it below that,
+`analyser.html` and `sample-report.html` hold `<aside id="report-side">`
+(screen only, never printed, never in the shared PDF): the "Print in"
+select (`#report-lang`), "Share PDF on WhatsApp" (`#share-pdf`), "Print /
+Save as PDF" (`#print-report`), a status line (`#share-status`), the next
+steps (`#next-steps`, analyser only), "Your progress" (`#side-progress`,
+where `VahiniProgress.mount` puts the panel when the slot exists) and the
+Sponsors line. Elements with `data-i18n="<id>"` take their words from the
+string tables when the language changes.
 
 Every sentence the report prints is looked up by id in
 `src/report/strings/en.js` (the source) and `src/report/strings/te.js`
@@ -110,20 +119,24 @@ through `src/report/i18n.js`; a language that lacks an id prints the
 English sentence. Exercises and tips carry their own translations in the
 practice catalogue (`i18n.te`). A new sentence goes into every table,
 never into the renderer as a literal; `tests/report-strings.test.mjs`
-fails while a language misses an id.
+fails while a language misses an id, and holds English sentences short.
 
-A host page that wants the language choice and the share button puts these
-beside `#print-report` (both are screen only):
-
-```html
-<label class="report-lang" for="report-lang">Print in <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
-<button class="btn btn-share" id="share-whatsapp" type="button">Share on WhatsApp</button>
-```
-
-`src/report/report-share.js` wires them: the select redraws the report and
-"Your progress" in that language (kept in `localStorage`
-`vahini_report_lang`), and the button shares `VahiniReport.shareText()`,
-a summary with no name, photo, crop or id, through the phone's share sheet
-or `https://wa.me/?text=`. The Telugu wording is a draft until a native
+`src/report/report-share.js` wires the panel: the select redraws the
+report and "Your progress" in that language (kept in `localStorage`
+`vahini_report_lang`); the share button loads html2canvas and jsPDF from
+the page's `<template id="pdf-libs">` (only then), draws the two report
+pages into a two-page A4 PDF in the browser, and shares the file through
+the phone's share sheet when `navigator.canShare({files})` allows it, or
+saves it and opens `https://wa.me/?text=` with a note to attach it.
+Nothing goes to Vahini. The Telugu wording is a draft until a native
 speaker has checked it.
 
+## Third-party browser files
+
+`scripts/vendor/` holds unchanged copies of qrcode-generator (the QR code
+on page 1, loaded with the page), jsPDF and html2canvas (the shared PDF,
+loaded on demand), with their licences and `sources.json` (package,
+version, npm tarball, SHA-256). `backend/update_sbom.py` writes their SBOM
+entries from that file and fails if a file no longer matches its hash.
+Their URLs carry `?v=` stamps from `build_bundle.py --stamp` like the other
+assets.

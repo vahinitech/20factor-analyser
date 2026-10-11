@@ -33,29 +33,40 @@
   <div class="screen-head" style="margin-bottom:6px;">
     <div class="eyebrow">Vahini Analyser · sample report</div>
     <h1>What your report looks like</h1>
-    <p>Preview the five-factor Free report, or open the Pro example with all 20 scores. Both examples use synthetic handwriting. Print or save the selected example as a PDF.</p>
+    <p>Preview the five-factor Free report, or open the Pro example with all 20 scores. Both come from one photo of our own practice page. Print it, or share it as a PDF.</p>
   </div>
 </section>
 
 <section class="screen on" id="screen-report">
   <div class="report-toolbar">
-    <div class="sample-note"><b>How this sample was made:</b> we never publish a student's real handwriting. This page was made by computer, with 10 written lines that slide down a little and letters of uneven size. The real scoring engine scored it, the same engine that scores your page. You can make it again yourself: <code>python docs/examples/generate_examples.py</code>. Pro reports can also include photo evidence from your own page.</div>
+    <div class="sample-note"><b>How this sample was made:</b> it is a real run of our own practice page photo through the same engine that scores your page. We never publish a student's handwriting.</div>
     <div class="toolbar-actions">
       <a class="btn btn-ghost" href="sample-report.html">Free example: five factors</a>
       <a class="btn btn-ghost" href="sample-report.html?example=pro">Pro example: 20 factors</a>
       <a class="btn btn-ghost" href="case-studies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>Before and after stories</a>
       <a class="btn btn-ghost" href="analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Analyse your own page</a>
-      <label class="report-lang" for="report-lang">Print in <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
-      <button class="btn btn-dark" id="print-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button>
-      <button class="btn btn-share" id="share-whatsapp" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>Share on WhatsApp</button>
     </div>
   </div>
-  <div class="report-host" id="report-host"></div>
+  <div class="report-layout">
+    <div class="report-host" id="report-host"></div>
+    <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
+      <div class="side-card">
+        <h2 data-i18n="side.title">Your report</h2>
+        <label class="report-lang" for="report-lang"><span data-i18n="side.lang">Print in</span> <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
+        <button class="btn btn-share" id="share-pdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span data-i18n="side.share">Share PDF on WhatsApp</span></button>
+        <button class="btn btn-dark" id="print-report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg><span data-i18n="side.print">Print / Save as PDF</span></button>
+        <p class="share-status" id="share-status" role="status" aria-live="polite" hidden></p>
+      </div>
+      <p class="side-card ns-sponsor">Vahini's free check stays free. If it helped, you can <a href="https://github.com/sponsors/vahinitech" target="_blank" rel="noopener noreferrer">support us on GitHub Sponsors</a>.</p>
+    </aside>
+  </div>
+  <template id="pdf-libs"><script src="scripts/vendor/html2canvas.min.js"></script><script src="scripts/vendor/jspdf.umd.min.js"></script></template>
 </section>
 
 <div id="site-footer"></div>
 <script src="scripts/core/protect.js"></script>
 <script src="scripts/core/sample-report-data.js"></script>
+<script src="scripts/vendor/qrcode.js"></script>
 <script src="scripts/core/engine.bundle.js"></script>
 <script>
 (function(){
