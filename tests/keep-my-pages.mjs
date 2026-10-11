@@ -31,7 +31,7 @@ try {
   });
   const p = await ctx.newPage();
   await p.goto('https://keep-test.local/');
-  await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${keep}\nsetupKeepPages(); window.k = { keepIfAsked, keepStatus };` });
+  await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${keep}\nsetupKeepPages(); window.k = { keepIfAsked, keepStatus, keepEmailMissing };` });
   const run = (opts) => p.evaluate(async ({ JPEG, FACTS, opts }) => {
     document.querySelector('#keep-pages').checked = !!opts.tick;
     document.querySelector('#keep-email').value = opts.email || '';
@@ -47,6 +47,28 @@ try {
   assert.deepEqual(before, { ticked: false, emailHidden: true }, 'unticked by default, no email field');
   await p.click('#keep-pages');
   assert.equal(await p.evaluate(() => document.querySelector('#keep-email-row').hidden), false, 'ticking shows the email field');
+
+  // Ticked with no usable email: Run does not start, and says why under the field.
+  const guard = (opts) => p.evaluate((opts) => {
+    document.querySelector('#keep-pages').checked = !!opts.tick;
+    document.querySelector('#keep-email').value = opts.email || '';
+    window.VAHINI_SAMPLE_RUN = !!opts.sample;
+    const blocked = window.k.keepEmailMissing();
+    const e = document.querySelector('#keep-email-error');
+    return { blocked, shown: !e.hidden, text: e.textContent, invalid: document.querySelector('#keep-email').getAttribute('aria-invalid') };
+  }, opts);
+  let g = await guard({ tick: true, email: '' });
+  assert.ok(g.blocked && g.shown && /Enter your email/.test(g.text) && g.invalid === 'true', 'ticked, no email: the check does not start and the field says why');
+  assert.equal(await p.evaluate(() => document.activeElement.id), 'keep-email', 'the email field gets the focus');
+  g = await guard({ tick: true, email: 'parent@' });
+  assert.ok(g.blocked && /does not look right/.test(g.text), 'a bad address blocks with its own message');
+  await p.fill('#keep-email', 'parent@example.com');
+  assert.equal(await p.evaluate(() => document.querySelector('#keep-email-error').hidden), true, 'typing clears the message');
+  g = await guard({ tick: true, email: 'parent@example.com' });
+  assert.ok(!g.blocked && !g.shown, 'a good address lets the check start');
+  assert.ok(!(await guard({ tick: false, email: '' })).blocked, 'unticked never blocks');
+  assert.ok(!(await guard({ tick: true, email: '', sample: true })).blocked, 'the sample never blocks');
+  assert.ok(/By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over\./.test(html), 'the consent line sits above Run');
 
   let r = await run({ tick: false, email: 'parent@example.com' });
   assert.equal(calls.length, 0, 'unticked: nothing leaves for the keep store'); assert.equal(r.shown, false);
@@ -64,7 +86,7 @@ try {
   assert.equal(calls[1].type, 'image/jpeg'); assert.equal(calls[1].token, 'T'.repeat(43));
   assert.ok(calls[1].body.equals(Buffer.from(JPEG)), 'the image is the JPEG the analyser received, unchanged');
   assert.ok(!r.error && /Check your email: we sent a link to parent@example\.com\. Open it within 24 hours/.test(r.text), r.text);
-  console.log('keep-my-pages: unticked by default; nothing sent unless ticked; the analysed JPEG and facts sent when it is');
+  console.log('keep-my-pages: unticked by default; ticked needs an email before Run; nothing sent unless ticked; the analysed JPEG and facts sent when it is');
 } finally {
   await browser.close();
 }

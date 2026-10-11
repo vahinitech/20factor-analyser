@@ -1,0 +1,4 @@
+- With "Keep my pages" ticked, Run analysis asks for the email first: the check does not start until it is filled in, and the reason shows under the field. It used to run and only then say the page was not kept.
+- A line above Run analysis: by running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over.
+- Under the report, a line invites people who found the free check useful to support Vahini on GitHub Sponsors. The printed report is unchanged.
+- The photo note no longer says a printed report's text and scores are kept.

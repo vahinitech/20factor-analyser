@@ -916,7 +916,28 @@ const KEEP_EMAIL_RE = /^[^\s@<>()",;:\\]{1,64}@[A-Za-z0-9.-]{1,190}\.[A-Za-z]{2,
 function setupKeepPages(){
   const box = $('#keep-pages'), row = $('#keep-email-row');
   if (!box || !row) return;
-  box.addEventListener('change', ()=>{ row.hidden = !box.checked; if (box.checked){ const i = $('#keep-email'); if (i) i.focus(); } });
+  box.addEventListener('change', ()=>{ row.hidden = !box.checked; keepEmailError(''); if (box.checked){ const i = $('#keep-email'); if (i) i.focus(); } });
+  const input = $('#keep-email');
+  if (input) input.addEventListener('input', ()=>keepEmailError(''));
+}
+function keepEmailError(text){
+  const e = $('#keep-email-error'), i = $('#keep-email');
+  if (e){ e.textContent = text || ''; e.hidden = !text; }
+  if (i){ if (text) i.setAttribute('aria-invalid', 'true'); else i.removeAttribute('aria-invalid'); }
+}
+/* With "Keep my pages" ticked the email is needed before the check starts:
+   asking for it only after the report left families with a report, an
+   error line they missed, and no kept page (seen on stage, 2026-10-11). */
+function keepEmailMissing(){
+  const box = $('#keep-pages');
+  if (!box || !box.checked || window.VAHINI_SAMPLE_RUN) return false;
+  const i = $('#keep-email');
+  const email = String((i || {}).value || '').trim();
+  if (KEEP_EMAIL_RE.test(email)) return false;
+  keepEmailError(email ? 'This email address does not look right. Check it, or untick "Keep my pages".'
+    : 'Enter your email so we can send you the link, or untick "Keep my pages".');
+  if (i){ i.scrollIntoView({ block:'center' }); i.focus(); }
+  return true;
 }
 function keepStatus(text, error){
   const s = $('#keep-status'); if (!s) return;
@@ -1238,7 +1259,7 @@ function init(){
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
   setupUploadDrop(); setupKeepPages(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
-  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', runPipeline);
+  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead
   const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; collectIntake(); startIMU(); });
   const serviceRetry = $('#service-retry'); if(serviceRetry) serviceRetry.addEventListener('click', checkService);
