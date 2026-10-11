@@ -16,14 +16,15 @@
 <!-- The Vahini design system (--v-* tokens, v-* classes), served by vahinitech.com -->
 <link rel="stylesheet" href="/site/design/v1/vahini.css">
 <style>
-  /* toolbar sits at the top of the report and scrolls away (not sticky) */
-  .report-toolbar{ position:static; justify-content:space-between; padding:14px 22px; gap:12px; flex-wrap:wrap; }
-  /* the toolbar is dark (studio.css): keep the note readable on it */
-  .sample-note{ font-size:12px; color:rgba(255,255,255,.72); line-height:1.55; max-width:640px; text-align:left; }
-  .sample-note b{ color:#fff; }
-  .sample-note code{ color:#9FE8EC; }
-  .toolbar-actions{ display:flex; gap:10px; flex-wrap:wrap; }
-  @media print{ #sample-intro, .sample-note{ display:none !important; } }
+  /* "About this sample" sits in the side panel, which never prints. */
+  .sample-about .sample-note{ font-size:13px; line-height:1.5; color:var(--v-text-2); margin:0 0 10px; }
+  .sample-about .sample-note b{ color:var(--v-text); }
+  .sample-about .sample-links{ display:flex; flex-direction:column; gap:6px; }
+  .report-side .sample-about .btn{ margin:0; font-size:13.5px; padding:9px 12px; gap:8px; text-decoration:none; }
+  .report-side .sample-about .btn-ghost{ background:var(--v-surface); color:var(--v-text); border:1.5px solid var(--v-border-strong); }
+  .report-side .sample-about .btn-ghost:hover{ border-color:var(--v-accent); color:var(--v-accent-text); }
+  .report-side .sample-about .btn svg{ width:16px; height:16px; flex:none; }
+  @media print{ #sample-intro{ display:none !important; } }
 </style>
 </head>
 <body class="studio" data-sample-report>
@@ -38,15 +39,6 @@
 </section>
 
 <section class="screen on" id="screen-report">
-  <div class="report-toolbar">
-    <div class="sample-note"><b>How this sample was made:</b> it is a real run of our own practice page photo through the same engine that scores your page. We never publish a student's handwriting.</div>
-    <div class="toolbar-actions">
-      <a class="btn btn-ghost" href="sample-report.html">Free example: five factors</a>
-      <a class="btn btn-ghost" href="sample-report.html?example=pro">Pro example: 20 factors</a>
-      <a class="btn btn-ghost" href="case-studies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>Before and after stories</a>
-      <a class="btn btn-ghost" href="analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Analyse your own page</a>
-    </div>
-  </div>
   <div class="report-layout">
     <div class="report-host" id="report-host"></div>
     <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
@@ -57,6 +49,16 @@
         <button class="btn btn-dark" id="print-report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg><span data-i18n="side.print">Print / Save as PDF</span></button>
         <p class="share-status" id="share-status" role="status" aria-live="polite" hidden></p>
       </div>
+      <section class="side-card sample-about" id="sample-about" aria-labelledby="sample-about-title">
+        <h2 id="sample-about-title">About this sample</h2>
+        <p class="sample-note"><b>How this sample was made:</b> it is a real run of our own practice page photo through the same engine that scores your page. We never publish a student's handwriting.</p>
+        <div class="sample-links">
+          <a class="btn btn-ghost" href="sample-report.html">Free example: five factors</a>
+          <a class="btn btn-ghost" href="sample-report.html?example=pro">Pro example: 20 factors</a>
+          <a class="btn btn-ghost" href="case-studies.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg>Before and after stories</a>
+          <a class="btn btn-ghost" href="analyser.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v13"/></svg>Analyse your own page</a>
+        </div>
+      </section>
       <p class="side-card ns-sponsor">Vahini's free check stays free. If it helped, you can <a href="https://github.com/sponsors/vahinitech" target="_blank" rel="noopener noreferrer">support us on GitHub Sponsors</a>.</p>
     </aside>
   </div>

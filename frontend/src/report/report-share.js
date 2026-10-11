@@ -21,7 +21,17 @@
 (function (global) {
 'use strict';
 const doc = global.document;
-const FILE_NAME = 'vahini-handwriting-report.pdf';
+/* The file carries the brand, never the child (owner, 2026-10-11): the
+   same name and metadata in every language, and no name the family typed
+   in either. */
+const FILE_PREFIX = 'Vahini-handwriting-snapshot-';
+function fileName(date){
+  const d = date || new Date();
+  const two = n=>String(n).padStart(2, '0');
+  return `${FILE_PREFIX}${d.getFullYear()}-${two(d.getMonth() + 1)}-${two(d.getDate())}.pdf`;
+}
+const PDF_META = { title: 'Vahini handwriting snapshot', author: 'Vahini Technologies · vahinitech.com', creator: 'Vahini Technologies · vahinitech.com' };
+const SUBJECT = { free: 'Free handwriting review', pro: 'Handwriting review' };
 const DEFAULT_LIBS = ['scripts/vendor/html2canvas.min.js', 'scripts/vendor/jspdf.umd.min.js'];
 const A4 = { w: 210, h: 297 };
 /* Pixels per CSS pixel in the PDF images: 2 gives about 190 dots per
@@ -93,6 +103,7 @@ async function makePDF(host){
   const pages = [...host.querySelectorAll('section.page')];
   if (!pages.length) throw new Error('no report');
   const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait', compress: true });
+  pdf.setProperties({ ...PDF_META, subject: host.querySelector('.practice-pro') ? SUBJECT.pro : SUBJECT.free });
   doc.documentElement.classList.add('pdf-busy');
   try{
   for (let i = 0; i < pages.length; i++){
@@ -124,7 +135,7 @@ function status(html){
 function esc(s){ return String(s == null ? '' : s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function save(blob){
   const a = doc.createElement('a');
-  a.href = URL.createObjectURL(blob); a.download = FILE_NAME;
+  a.href = URL.createObjectURL(blob); a.download = blob.name || fileName();
   doc.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
 }
@@ -155,7 +166,7 @@ async function sharePDF(){
       let blob;
       try{ blob = await makePDF(host); }
       catch(_e){ status(esc(t('side.nopdf'))); return 'no-pdf'; }
-      file = new File([blob], FILE_NAME, { type: 'application/pdf' });
+      file = new File([blob], fileName(), { type: 'application/pdf' });
     }
     const shared = await shareFile(file);
     if (shared === 'again'){ ready = file; status(esc(t('side.ready'))); return 'again'; }
@@ -182,5 +193,5 @@ function init(){
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
 else init();
 
-global.VahiniReportShare = { applyLanguage, sharePDF, makePDF, loadLibs, waLink, FILE_NAME, invalidate: ()=>{ ready = null; } };
+global.VahiniReportShare = { applyLanguage, sharePDF, makePDF, loadLibs, waLink, fileName, PDF_META, SUBJECT, invalidate: ()=>{ ready = null; } };
 })(window);

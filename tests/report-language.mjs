@@ -17,6 +17,54 @@ import { readFileSync } from 'node:fs';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
 import { renderLongest, REPORT_ART } from './report-layout.mjs';
+
+// The shared PDF's file name: brand and date, never a child's name.
+const SNAPSHOT_NAME = /^Vahini-handwriting-snapshot-\d{4}-\d{2}-\d{2}\.pdf$/;
+// The PDF's Info dictionary (jsPDF writes plain or UTF-16 strings).
+function pdfInfo(buf){
+  const text = buf.toString('latin1');
+  const out = {};
+  for (const key of ['Title', 'Author', 'Creator', 'Subject']) {
+    const m = text.match(new RegExp('/' + key + ' \\((.*?)(?<!\\\\)\\)'));
+    if (!m) continue;
+    let v = m[1].replace(/\\([()\\])/g, '$1');
+    if (v.startsWith('þÿ')) v = Buffer.from(v.slice(2), 'latin1').swap16().toString('utf16le');
+    out[key] = v;
+  }
+  return out;
+}
+// Samples page 1's image in the PDF (the first JPEG jsPDF wrote) where the
+// keep band and the start card sit on the page, as a 5 x 5 grid each.
+async function themedPixels(page, buf){
+  const start = buf.indexOf(Buffer.from([0xff, 0xd8, 0xff]));
+  const end = buf.indexOf(Buffer.from([0xff, 0xd9]), start) + 2;
+  const jpeg = buf.subarray(start, end).toString('base64');
+  return page.evaluate(async b64 => {
+    const img = new Image();
+    img.src = 'data:image/jpeg;base64,' + b64;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+    const sheet = document.querySelector('#report-host section.page').getBoundingClientRect();
+    const k = img.naturalWidth / sheet.width;
+    const at = (x, y) => [...g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data].slice(0, 3);
+    // The paper, in the page's left margin beside the keep band.
+    const keepBox = document.querySelector('.sn-keep').getBoundingClientRect();
+    const paper = at(10, keepBox.top - sheet.top + keepBox.height / 2);
+    const differs = px => Math.max(...px.map((v, i) => Math.abs(v - paper[i]))) > 10;
+    const probe = sel => {
+      const r = document.querySelector(sel).getBoundingClientRect();
+      let coloured = 0, total = 0;
+      for (let i = 1; i <= 5; i++) for (let j = 1; j <= 5; j++) {
+        const px = at(r.left - sheet.left + r.width * i / 6, r.top - sheet.top + r.height * j / 6);
+        total++; if (differs(px) && Math.min(...px) < 250) coloured++;
+      }
+      return { coloured: coloured >= total * 0.6, share: coloured / total };
+    };
+    return { paper, keep: probe('.sn-keep'), start: probe('.sn-start') };
+  }, jpeg);
+}
 import { useDesign } from './design-route.mjs';
 
 const freePort = () => new Promise((resolve, reject) => {
@@ -233,8 +281,17 @@ try {
     await page.waitForFunction(() => window.__opened.length > 0);
     const opened = await page.evaluate(() => window.__opened[0]);
     const after = requests.slice(before);
-    add(download.suggestedFilename() === 'vahini-handwriting-report.pdf' && file.subarray(0, 5).toString() === '%PDF-' && pdfPages(file) === 2,
-      `${lang}: without a file share sheet the two-page PDF is saved`, { name: download.suggestedFilename(), pages: pdfPages(file), bytes: file.length });
+    add(SNAPSHOT_NAME.test(download.suggestedFilename()) && file.subarray(0, 5).toString() === '%PDF-' && pdfPages(file) === 2,
+      `${lang}: without a file share sheet the two-page PDF is saved as Vahini-handwriting-snapshot-<date>.pdf`, { name: download.suggestedFilename(), pages: pdfPages(file), bytes: file.length });
+    // The file is branded and never names the child (owner, 2026-10-11).
+    const meta = pdfInfo(file);
+    add(meta.Title === 'Vahini handwriting snapshot' && meta.Author === 'Vahini Technologies · vahinitech.com' && meta.Creator === 'Vahini Technologies · vahinitech.com'
+      && meta.Subject === 'Free handwriting review' && !/Asha|Rao/.test(JSON.stringify(meta) + download.suggestedFilename()),
+      `${lang}: the PDF's title, author, creator and subject are Vahini's, with no child's name`, meta);
+    // The website theme reaches the PDF: page 1's KEEP DOING THIS band and
+    // START HERE card keep their coloured backgrounds (not white paper).
+    const theme = await themedPixels(page, file);
+    add(theme.keep.coloured && theme.start.coloured, `${lang}: the shared PDF keeps the theme colours of page 1`, theme);
     add(/A4|595\.2\d* 841\.8\d*/.test(file.toString('latin1').match(/MediaBox\s*\[[^\]]*\]/)?.[0] || '') || /MediaBox \[0 0 595\.2/.test(file.toString('latin1')), `${lang}: the PDF pages are A4`, file.toString('latin1').match(/MediaBox\s*\[[^\]]*\]/)?.[0]);
     add(after.some(([, u]) => /scripts\/vendor\/html2canvas\.min\.js/.test(u)) && after.some(([, u]) => /scripts\/vendor\/jspdf\.umd\.min\.js/.test(u)), `${lang}: pressing the button loads the libraries`, after);
     add(after.every(([m, u]) => m === 'GET' && u.startsWith(BASE)) && !after.some(([, u]) => /persist|\/api\/|\/ocr|report-python/.test(u)),
@@ -264,7 +321,7 @@ try {
     await page.waitForFunction(() => window.__shared.length > 0, null, { timeout: 60000 });
     const r = await page.evaluate(() => ({ shared: window.__shared, opened: window.__opened }));
     const f = r.shared[0].files[0] || {};
-    add(r.shared.length === 1 && r.shared[0].files.length === 1 && f.type === 'application/pdf' && f.name === 'vahini-handwriting-report.pdf' && f.size > 50000 && r.opened.length === 0 && posts.length === 0,
+    add(r.shared.length === 1 && r.shared[0].files.length === 1 && f.type === 'application/pdf' && SNAPSHOT_NAME.test(f.name) && f.size > 50000 && r.opened.length === 0 && posts.length === 0,
       'On a phone that can share files, the share sheet gets the PDF file', r);
     await context.close();
   }
@@ -279,8 +336,21 @@ try {
     const box = () => page.evaluate(() => {
       const r = s => document.querySelector(s).getBoundingClientRect();
       return { host: r('#report-host .page'), side: r('#report-side'), shown: getComputedStyle(document.getElementById('report-side')).display !== 'none',
-        parts: ['#report-lang', '#share-pdf', '#print-report', '.ns-sponsor'].every(s => document.querySelector('#report-side ' + s)) };
+        parts: ['#report-lang', '#share-pdf', '#print-report', '#sample-about', '.ns-sponsor'].every(s => document.querySelector('#report-side ' + s)) };
     });
+    // The sample's banner moved into the panel as "About this sample"
+    // (owner, 2026-10-11): no dark toolbar, its note and four links in the
+    // panel, the intro heading kept.
+    const about = await page.evaluate(() => {
+      const card = document.querySelector('#report-side #sample-about');
+      const links = card ? [...card.querySelectorAll('a')].map(a => [a.textContent.trim(), a.getAttribute('href')]) : [];
+      return { toolbar: !!document.querySelector('.report-toolbar'), note: !!(card && /How this sample was made/.test(card.textContent)), links,
+        intro: !!document.querySelector('#sample-intro h1'), outside: [...document.querySelectorAll('a[href="case-studies.html"]')].filter(a => !a.closest('#report-side') && !a.closest('#site-footer') && !a.closest('#site-nav')).length };
+    });
+    add(!about.toolbar && about.note && about.intro && about.outside === 0 && JSON.stringify(about.links) === JSON.stringify([
+      ['Free example: five factors', 'sample-report.html'], ['Pro example: 20 factors', 'sample-report.html?example=pro'],
+      ['Before and after stories', 'case-studies.html'], ['Analyse your own page', 'analyser.html']]),
+      'The sample banner is gone; its note and four links are in the side panel', about);
     const wide = await box();
     add(wide.shown && wide.parts && wide.side.left >= wide.host.right && wide.side.top < wide.host.bottom, 'Wide screen: the panel (Print in, Share PDF, Print, Sponsors) sits beside the report', wide);
     await page.setViewportSize({ width: 900, height: 900 });
