@@ -13,6 +13,7 @@ import sys
 from pathlib import Path
 
 from entitlements import FREE_FACTORS
+from practice_catalog import AVOID_WORDS, STEPS_MAX, UNITS
 from report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 
 OUT = Path(__file__).resolve().parent / "schemas"
@@ -308,10 +309,118 @@ def common():
     }
 
 
+def practice_limits():
+    count = {"type": "integer", "minimum": 0, "maximum": 20}
+    return closed(
+        {"areas_max": count, "exercises_max": count, "tips_max": count},
+        description=(
+            "How many skills get practice in one report, and how many "
+            "exercises and tips each shows, for the caller's tier "
+            "(practice_catalog.TIERS)."
+        ),
+    )
+
+
 def me():
     return closed(
-        {"schema_version": {"const": "2.0"}, "access": ref("access")},
+        {
+            "schema_version": {"const": "2.0"},
+            "access": ref("access"),
+            "practice": practice_limits(),
+        },
         title="GET /api/v2/me response",
+    )
+
+
+def practice_entries():
+    """Exercise and tip lists, as the catalogue serves them."""
+    text = {"type": "string", "minLength": 1}
+    exercise = closed(
+        {
+            "id": {"type": "string", "pattern": "^[a-z]+\\.[a-z0-9-]+$"},
+            "level": {"type": "integer", "minimum": 1},
+            "title": text,
+            "unit": {"type": "string", "enum": list(UNITS)},
+            "script": {"type": "string", "enum": ["any", "latin"]},
+            "needs": {"type": "string", "enum": ["photo", "pen"]},
+            "worksheet": nullable("string", pattern="^[a-z0-9-]+$"),
+            "steps": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": STEPS_MAX,
+            },
+            "example": {"type": "string"},
+            "check": text,
+        }
+    )
+    tip = closed(
+        {
+            "id": {"type": "string", "pattern": "^[a-z]+\\.[a-z0-9-]+$"},
+            "text": text,
+        }
+    )
+    return (
+        {"type": "array", "items": exercise},
+        {"type": "array", "items": tip},
+    )
+
+
+def practice_block():
+    exercises, tips = practice_entries()
+    count = {"type": "integer", "minimum": 0}
+    dose = closed(
+        {
+            "tries": {"type": "integer", "minimum": 1},
+            "per": {"type": "string", "enum": ["day", "week"]},
+            "days": {"type": "integer", "minimum": 1},
+            "recheck_days": {"type": "integer", "minimum": 1},
+            "exercises": count,
+        }
+    )
+    return closed(
+        {
+            "stages": {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": closed(
+                    {
+                        "id": {
+                            "type": "string",
+                            "enum": [
+                                "learning",
+                                "improving",
+                                "mastering",
+                                "strong",
+                            ],
+                        },
+                        "label": {"type": "string", "minLength": 1},
+                        "band": ref("band"),
+                        "minimum": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 10,
+                        },
+                    }
+                ),
+            },
+            "dosage": closed(
+                {band: dose for band in ("focus", "dev", "good", "strong")}
+            ),
+            "tiers": closed(
+                {"free": practice_limits(), "pro": practice_limits()}
+            ),
+            "units": {
+                "type": "array",
+                "items": {"type": "string", "enum": list(UNITS)},
+            },
+            "spelling": closed({"exercises": exercises, "tips": tips}),
+        },
+        description=(
+            "Practice settings (docs/PRACTICE-FRAMEWORK.md): stage names "
+            "by band, tries by band, tier defaults and the spelling "
+            "exercise. Text avoids the words " + ", ".join(AVOID_WORDS) + "."
+        ),
     )
 
 
@@ -788,6 +897,7 @@ def compact():
 
 
 def catalog():
+    exercises, tips = practice_entries()
     entry = closed(
         {
             "n": ref("factorNumber"),
@@ -799,7 +909,22 @@ def catalog():
             "target": {"type": "string"},
             "instruction": {"type": "string"},
             "limitation": nullable("string"),
-        }
+            "exercises": exercises,
+            "tips": tips,
+        },
+        # Catalogues from before the practice catalogue (archived versions)
+        # carry neither list.
+        required=[
+            "n",
+            "id",
+            "name",
+            "section",
+            "reason",
+            "exercise",
+            "target",
+            "instruction",
+            "limitation",
+        ],
     )
     entry["allOf"] = [
         {
@@ -869,8 +994,21 @@ def catalog():
                 ),
             },
             "limitations": ref("limitations"),
+            "practice": practice_block(),
             "version": ref("catalogVersion"),
         },
+        required=[
+            "schema_version",
+            "language",
+            "score_scale",
+            "normalized_scale",
+            "statuses",
+            "bands",
+            "factors",
+            "sections",
+            "limitations",
+            "version",
+        ],
         title="GET /api/v2/catalog/{version} response (schema 2.1)",
         description=(
             "Public, immutable presentation dictionary. Contains no scores "

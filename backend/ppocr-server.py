@@ -55,6 +55,7 @@ import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
 import report_contract
 import compact_reports
+import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
@@ -910,6 +911,9 @@ async def api_identity(authorization: str = Header(default=None)):
             **access,
             "capabilities": entitlements.capabilities(access),
         },
+        # How many skills, exercises and tips this visitor's report shows
+        # (practice_catalog.TIERS, the one place those numbers live).
+        "practice": practice_catalog.limits(access["tier"]),
     }
 
 

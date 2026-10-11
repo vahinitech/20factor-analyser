@@ -5,7 +5,8 @@
   "additionalProperties": false,
   "required": [
     "schema_version",
-    "access"
+    "access",
+    "practice"
   ],
   "properties": {
     "schema_version": {
@@ -13,6 +14,33 @@
     },
     "access": {
       "$ref": "common.schema.json#/definitions/access"
+    },
+    "practice": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "areas_max",
+        "exercises_max",
+        "tips_max"
+      ],
+      "properties": {
+        "areas_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "exercises_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "tips_max": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      },
+      "description": "How many skills get practice in one report, and how many exercises and tips each shows, for the caller's tier (practice_catalog.TIERS)."
     }
   },
   "title": "GET /api/v2/me response"
