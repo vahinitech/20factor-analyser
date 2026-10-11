@@ -53,6 +53,9 @@ const RENDER = `window.__render = (opts) => {
     plan: r.querySelector('.pr-plan') ? r.querySelector('.pr-plan').textContent : '',
     tipLabels: [...r.querySelectorAll('.pr-tip b')].every(b => b.textContent === "Pihu's tip:"),
     crop: !!r.querySelector('.pr-crop'),
+    cropSrc: r.querySelector('.pr-crop') ? r.querySelector('.pr-crop').getAttribute('src') : null,
+    saw: r.querySelector('.pr-saw') ? r.querySelector('.pr-saw').textContent : '',
+    sheet: r.querySelector('.pr-skill a[href*="/worksheets/"]') ? r.querySelector('.pr-skill a[href*="/worksheets/"]').getAttribute('href') : null,
   }));
   return {
     out, rows,
@@ -150,6 +153,44 @@ try {
     'A re-check moves on to the next exercise and tip', { first: first.out.practice, second: second.out.practice });
   const wrapped = await page.evaluate(id => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: { exercises: { 5: [id] }, tips: {} } } }), list5[list5.length - 1]);
   add(wrapped.rows.find(r => r.factor === '5').exercises[0] === list5[0], 'After the last exercise the list starts again at level 1');
+
+  // Mapping, skill by skill: make one skill the only one to grow and check
+  // that its row carries only its own exercises, tips, crop, worksheet and
+  // words, in Free (its five skills) and in Pro (every photo-scored skill).
+  const regions = await page.evaluate(() => window.VAHINI_SAMPLE_REPORT.factor_regions || {});
+  const sheets = await page.evaluate(() => window.VahiniWorksheetCatalog || []);
+  const photoSkills = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 17, 19];
+  const sawBySkill = {};
+  for (const [tier, skills] of [['free', [1, 5, 7, 8]], ['pro', photoSkills]]) {
+    for (const n of skills) {
+      const all = {}; for (let k = 1; k <= 20; k++) all[k] = 9.5;
+      all[n] = 5.0;
+      const r = await page.evaluate(o => window.__render(o), { free: tier === 'free', scores: all });
+      const row = r.rows.find(x => x.factor === String(n));
+      const rows = r.rows.filter(x => x.factor !== 'spelling').map(x => x.factor);
+      add(row && JSON.stringify(rows) === JSON.stringify([String(n)]), `${tier}: skill ${n} alone to grow gives exactly its row`, rows);
+      if (!row) continue;
+      const foreign = row.exercises.concat(row.tips).filter(id => String(owner[id]) !== String(n));
+      add(row.exercises.length > 0 && row.tips.length > 0 && foreign.length === 0, `${tier}: skill ${n} shows only its own exercises and tips`, { foreign, row });
+      const c = regions[n] || regions[String(n)];
+      if (row.cropSrc) add(c && c.url === row.cropSrc, `${tier}: skill ${n} shows its own crop from the photo`, { want: c && c.url, got: row.cropSrc });
+      const sheet = sheets.find(w => w.factors.includes(n));
+      add(sheet ? (row.sheet || '').includes('/worksheets/' + sheet.id + '.pdf') : !row.sheet, `${tier}: skill ${n} links its own worksheet`, { want: sheet && sheet.id, got: row.sheet });
+      add(row.saw.trim().length > 10, `${tier}: skill ${n} says what was seen`, row.saw);
+      if (tier === 'pro') sawBySkill[n] = row.saw.trim();
+    }
+  }
+  const sawTexts = Object.values(sawBySkill);
+  add(new Set(sawTexts).size === sawTexts.length, 'Every skill has its own "what we saw" words, none borrowed from another skill', sawBySkill);
+
+  // Rotation never crosses skills: four re-checks in a row stay with each row's skill.
+  let hist = null, crossed = [];
+  for (let k = 0; k < 4; k++) {
+    const r = await page.evaluate(h => window.__render({ history: h }), hist);
+    r.rows.filter(x => x.factor !== 'spelling').forEach(x => x.exercises.concat(x.tips).forEach(id => { if (String(owner[id]) !== x.factor) crossed.push([k, x.factor, id]); }));
+    hist = { date: '2026-10-0' + (k + 1), overall: 70, factors: [], practice: r.out.practice };
+  }
+  add(crossed.length === 0, 'Four re-checks in a row never show another skill\'s exercise or tip', crossed);
 
   // Characters: only from a same-site map.
   await page.evaluate(() => { window.VAHINI_REPORT_ART = { cheer: 'https://evil.example/a.png', buddy: '//evil.example/b.png', tip: 'javascript:alert(1)', encourage: '/frontend/assets/vahini-logo.png' }; });
