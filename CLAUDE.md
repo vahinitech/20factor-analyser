@@ -91,8 +91,9 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   `analyser.html` loads from `../site/site.js`. Never add a footer, legal
   links, patent numbers or a status link to this repository's pages: the
   site changes them once for every service. Error-screen pictures come
-  only from the host's `window.VAHINI_NOTICE_ART` (same-site paths;
-  `frontend/README.md`); the drawings are proprietary and stay out of this
+  only from the host's `window.VAHINI_NOTICE_ART`, and the report's
+  characters (Vahini, Bheema, Pihu, Tara) only from `window.VAHINI_REPORT_ART`
+  once built: same-site paths, `frontend/README.md`; the drawings are proprietary and stay out of this
   AGPL repository. Colours are `var(--v-*)` tokens, never hex codes.
 - **Practice is data: every exercise and tip belongs to a factor.** The
   practice catalogue ([docs/PRACTICE-FRAMEWORK.md](docs/PRACTICE-FRAMEWORK.md))
