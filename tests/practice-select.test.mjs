@@ -2,7 +2,7 @@
 // Many-to-many practice selection (docs/PRACTICE-FRAMEWORK.md, "Many-to-many
 // selection"): need per skill, composites passing their need on, the same
 // report always picking the same practice, rotation through last time's
-// ids, tier limits, tries from the weakest skill an exercise helps, and every
+// ids, tier limits, tries from the row's own skill, and every
 // printed entry's highest-weight factor being a skill the report flags.
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -75,9 +75,14 @@ const r6 = S.select({ rows: [f(5, 5.0)], measured: withTall, cat, limits: FREE_L
 assert.equal(r6.rows[0].exercises[0].entry.id, 'size.two-line-ladder');
 assert.ok(S.value(cat.factors['5'].exercises[0], S.needs(withTall), 5) > S.value(cat.factors['5'].exercises[0], S.needs(FREE), 5), 'help to another weak skill adds value');
 
-// Tries come from the weakest measured skill the exercise helps.
-assert.equal(S.triesBand(cat.factors['7'].exercises[0], 7, { 7: 7.1, 5: 3.0 }), 'focus');
-assert.equal(S.triesBand(cat.factors['7'].exercises[0], 7, { 7: 7.1 }), 'good');
+// Tries follow the row's own skill (owner, 2026-10-11): a Mastering row
+// asks 5 a day even when its exercise also helps a Learning skill.
+const ownBand = S.select({ rows: [f(7, 7.1)], measured: [f(7, 7.1), f(5, 3.0)], cat, limits: FREE_LIMITS, latin: true });
+const helpsWeaker = ownBand.rows[0].exercises[0].entry;
+assert.ok(Object.keys(helpsWeaker.helps).includes('5'), 'the chosen exercise also helps letter size');
+assert.equal(ownBand.rows[0].exercises[0].band, 'good');
+assert.equal(ownBand.rows[0].planBand, 'good');
+assert.equal(S.triesBand, undefined, 'no tries from the weakest helped skill');
 
 // Latin-only exercises are skipped on a page in another script.
 const nonLatin = S.select({ rows: [f(19, 4.0)], measured: [f(19, 4.0)], cat, limits: PRO_LIMITS, latin: false });

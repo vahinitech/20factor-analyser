@@ -20,7 +20,9 @@
    (1 - weight / 2) of its need, so the next pick goes after what is left.
    Ties go to the lower level, then catalogue order: the same report
    always picks the same practice.
-   Tries a day come from the weakest measured skill the exercise helps.
+   Tries a day follow the row's own skill: its stage sets the tries
+   (Learning 15, Improving 10, Mastering 5 a day, Strong 10 once a week),
+   whatever else the exercise helps (owner, 2026-10-11).
    ========================================================================= */
 (function (global) {
 'use strict';
@@ -83,11 +85,6 @@ function pick(list, count, need, own, printedBefore){
   }
   return out;
 }
-/* The weakest measured skill an exercise helps sets its band (tries). */
-function triesBand(entry, own, scoreOf){
-  const scores = Object.keys(helpsOf(entry, own)).map(n=>scoreOf[n]).filter(Number.isFinite);
-  return scores.length ? bandOf(Math.min(...scores)) : null;
-}
 /* opts: {rows: flagged factors in display order (first focus first),
           measured: every measured factor, cat, limits, latin,
           last: {exercises:{n:[ids]}, tips:{n:[ids]}}}
@@ -98,7 +95,6 @@ function select(opts){
   const last = opts.last || {};
   const flat = m=>new Set(Object.values(m || {}).flat());
   const before = { exercises: flat(last.exercises), tips: flat(last.tips) };
-  const scoreOf = Object.fromEntries(measured.map(f=>[f.n, f.score]));
   const area = f=>(cat && cat.factors && cat.factors[String(f.n)]) || { exercises: [], tips: [] };
   const dose = band=>(cat && cat.dosage && cat.dosage[band]) || null;
   const out = rows.map(f=>({ f, exercises: [], tips: [], band: bandOf(f.score) }));
@@ -115,19 +111,16 @@ function select(opts){
       const [row] = left.splice(k, 1);
       const list = (area(row.f)[kind] || []).filter(e=>kind === 'tips' || (e.needs !== 'pen' && (latin || e.script !== 'latin')));
       const chosen = pick(list, wanted(row), need, row.f.n, before[kind]);
-      row[kind] = kind === 'exercises' ? chosen.map(e=>({ entry: e, band: triesBand(e, row.f.n, scoreOf) || row.band })) : chosen;
+      row[kind] = kind === 'exercises' ? chosen.map(e=>({ entry: e, band: row.band })) : chosen;
       printed[kind][row.f.n] = chosen.map(e=>e.id);
     }
   };
   run('exercises', row=>Math.min((dose(row.band) || {}).exercises ?? 1, limits.exercises_max));
   run('tips', ()=>limits.tips_max);
-  // A row's plan follows its weakest exercise.
-  out.forEach(r=>{
-    const order = ['focus', 'dev', 'good', 'strong'];
-    r.planBand = r.exercises.reduce((b, x)=>order.indexOf(x.band) < order.indexOf(b) ? x.band : b, r.band);
-  });
+  // A row's plan is its own skill's stage.
+  out.forEach(r=>{ r.planBand = r.band; });
   return { rows: out, printed };
 }
 
-global.VahiniPracticeSelect = { select, needs, value, pick, triesBand, reliability, bandOf, COMPOSITES, TARGET, REPEAT_PENALTY, LEVEL_COST };
+global.VahiniPracticeSelect = { select, needs, value, pick, reliability, bandOf, COMPOSITES, TARGET, REPEAT_PENALTY, LEVEL_COST };
 })(typeof window !== 'undefined' ? window : globalThis);
