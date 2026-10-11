@@ -15,6 +15,71 @@ SBOM = ROOT / "sbom.spdx.json"
 APP = "SPDXRef-Package-Vahini"
 
 
+VENDOR = ROOT / "frontend" / "scripts" / "vendor"
+
+
+def _vendor_packages(document):
+    """One entry per vendored browser library in frontend/scripts/vendor,
+    from its sources.json (package, version, licence, npm tarball and the
+    SHA-256 of the file shipped)."""
+    prefix = "SPDXRef-Vendor-"
+    document["packages"] = [
+        p for p in document["packages"] if not p["SPDXID"].startswith(prefix)
+    ]
+    document["relationships"] = [
+        r
+        for r in document["relationships"]
+        if not r["spdxElementId"].startswith(prefix)
+    ]
+    sources = json.loads((VENDOR / "sources.json").read_text())
+    for entry in sources:
+        if entry["file"].endswith(".txt"):
+            continue
+        digest = hashlib.sha256(
+            (VENDOR / entry["file"]).read_bytes()
+        ).hexdigest()
+        if digest != entry["sha256"]:
+            raise SystemExit(f"vendor file changed: {entry['file']}")
+        identifier = prefix + re.sub(r"[^A-Za-z0-9.-]", "-", entry["package"])
+        document["packages"].append(
+            {
+                "SPDXID": identifier,
+                "name": entry["package"],
+                "versionInfo": entry["version"],
+                "downloadLocation": entry["source"],
+                "filesAnalyzed": False,
+                "licenseConcluded": entry["license"],
+                "licenseDeclared": entry["license"],
+                "copyrightText": "NOASSERTION",
+                "primaryPackagePurpose": "LIBRARY",
+                "checksums": [
+                    {"algorithm": "SHA256", "checksumValue": digest}
+                ],
+                "externalRefs": [
+                    {
+                        "referenceCategory": "PACKAGE-MANAGER",
+                        "referenceType": "purl",
+                        "referenceLocator": (
+                            f"pkg:npm/{entry['package']}@{entry['version']}"
+                        ),
+                    }
+                ],
+                "comment": (
+                    f"Vendored unchanged as frontend/scripts/vendor/"
+                    f"{entry['file']} ({entry['path_in_package']}). "
+                    f"{entry['use']}"
+                ),
+            }
+        )
+        document["relationships"].append(
+            {
+                "spdxElementId": identifier,
+                "relationshipType": "RUNTIME_DEPENDENCY_OF",
+                "relatedSpdxElement": APP,
+            }
+        )
+
+
 def synchronize(document):
     """Preserve manual service/font metadata; refresh manifest packages."""
     for package in document["packages"]:
@@ -188,6 +253,7 @@ def synchronize(document):
     heif["externalRefs"][0][
         "referenceLocator"
     ] = f"pkg:npm/libheif-js@{heif_version}"
+    _vendor_packages(document)
     app = next(p for p in document["packages"] if p["SPDXID"] == APP)
     app["comment"] = (
         "First-party browser client and report renderer; scoring runs on the Python server. Some scores use OCR/layout proxies."

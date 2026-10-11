@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-6937bd426e1d8e5ad1d8",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-3104022ce83387c3703c",
   "creationInfo": {
-    "created": "2026-10-11T11:37:56Z",
+    "created": "2026-10-11T16:41:35Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -519,6 +519,81 @@
       "copyrightText": "NOASSERTION",
       "versionInfo": "4.0.6",
       "comment": "Declared in backend/requirements-core.txt: pylint==4.0.6. Resolved container versions require a build SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-html2canvas",
+      "name": "html2canvas",
+      "versionInfo": "1.4.1",
+      "downloadLocation": "https://registry.npmjs.org/html2canvas/-/html2canvas-1.4.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/html2canvas@1.4.1"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/html2canvas.min.js (package/dist/html2canvas.min.js). Draws each report page to an image for the shared PDF. Loaded only when Share PDF on WhatsApp is pressed."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-jspdf",
+      "name": "jspdf",
+      "versionInfo": "4.2.1",
+      "downloadLocation": "https://registry.npmjs.org/jspdf/-/jspdf-4.2.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "e6551fcdc32f09d6853b2c5126d18d01d9447e0da618a41a11ebeee0f6c20d54"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/jspdf@4.2.1"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/jspdf.umd.min.js (package/dist/jspdf.umd.min.js). Makes the shared report PDF in the browser. Loaded only when Share PDF on WhatsApp is pressed."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-qrcode-generator",
+      "name": "qrcode-generator",
+      "versionInfo": "2.0.4",
+      "downloadLocation": "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-2.0.4.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/qrcode-generator@2.0.4"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/qrcode.js (package/dist/qrcode.js). Draws the QR code on report page 1. The MIT licence notice is in the file's header (the package ships no separate licence file)."
     },
     {
       "SPDXID": "SPDXRef-npm-node-modules-ansi-styles",
@@ -1865,6 +1940,21 @@
     {
       "spdxElementId": "SPDXRef-Package-pylint",
       "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Vendor-html2canvas",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Vendor-jspdf",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Vendor-qrcode-generator",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {

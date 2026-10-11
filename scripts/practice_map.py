@@ -32,7 +32,8 @@ def factor_names():
         cat = json.loads(path.read_text())
         if "practice" not in cat:
             continue
-        served = {str(f["n"]): {"exercises": f.get("exercises", []), "tips": f.get("tips", [])} for f in cat["factors"]}
+        keys = ("why", "win", "page", "i18n", "exercises", "tips")
+        served = {str(f["n"]): {k: f[k] for k in keys if k in f} for f in cat["factors"]}
         if json.dumps(served, sort_keys=True, ensure_ascii=False) != want:
             continue
         return {f["n"]: (f["name"], f["id"]) for f in cat["factors"]}, path.name
@@ -51,11 +52,17 @@ TE_MARK = "తెలుగు (draft)"
 def telugu_exercise(e):
     te = e["i18n"]["te"]
     return (f"| | {TE_MARK} **{cell(te['title'])}** | | {cell(te['steps'])} | "
-            f"{cell(te.get('example')) or '-'} | {cell(te['check'])} | | |")
+            f"{cell(te.get('example')) or '-'} | {cell(te['check'])} | | | | |")
 
 
 def telugu_tip(t):
-    return f"| {TE_MARK} | {cell(t['i18n']['te']['text'])} |"
+    return f"| {TE_MARK} | {cell(t['i18n']['te']['text'])} | |"
+
+
+def helps(entry, names):
+    """Which skills an entry helps, by name and weight (its own first)."""
+    items = sorted((entry.get("helps") or {}).items(), key=lambda kv: (-kv[1], int(kv[0])))
+    return ", ".join(f"{names[int(k)][0]} {w:g}" for k, w in items) or "-"
 
 
 def render():
@@ -72,10 +79,15 @@ def render():
         "not yet checked by a native speaker, which a native speaker must check before",
         "Telugu reaches production. Latin practice letters and words stay as written.",
         "",
+        "Each exercise and tip says which skills it helps (\"Helps\": its own skill at 1,",
+        "others 0.3 to 0.8). A report scores every candidate by how much it helps the",
+        "skills this page needs, and prints the best ones for each flagged skill:",
+        "PRACTICE-FRAMEWORK.md, \"Many-to-many selection\".",
+        "",
         "A report gives practice only for the skills it flags. Per skill, Free shows",
         f"{pc.TIERS['free']['exercises_max']} exercise and {pc.TIERS['free']['tips_max']} tip, Pro up to "
-        f"{pc.TIERS['pro']['exercises_max']} and {pc.TIERS['pro']['tips_max']}, taken in level order and",
-        "moving on at each re-check. How many tries a day follows the stage:",
+        f"{pc.TIERS['pro']['exercises_max']} and {pc.TIERS['pro']['tips_max']}, moving on at each re-check.",
+        "How many tries a day follows the stage of the row's own skill:",
         "",
         "| Stage | Score | Tries |",
         "|---|---|---|",
@@ -98,15 +110,20 @@ def render():
             note = " Scored by the pen only: never offered on a photo report."
         out += ["", f'<a id="{n}-{fid.replace("_", "-")}"></a>', f"## {n}. {name}", "",
                 f"Factor id `{fid}`.{note}", "",
-                "| Level | Exercise | 1 try = | Steps | Example | Self-check | Worksheet | Script |",
-                "|---|---|---|---|---|---|---|---|"]
+                "Under the skill on page 2:", "",
+                "| | English | తెలుగు (draft) |", "|---|---|---|",
+                f"| Why it helps | {cell(area['why'])} | {cell(area['i18n']['te']['why'])} |",
+                f"| You'll know it's working when | {cell(area['win'])} | {cell(area['i18n']['te']['win'])} |",
+                f"| More | vahinitech.com/{area['page']}.html | |", "",
+                "| Level | Exercise | 1 try = | Steps | Example | Self-check | Worksheet | Script | Drawing | Helps |",
+                "|---|---|---|---|---|---|---|---|---|---|"]
         for e in area["exercises"]:
             out.append(f"| {e['level']} | **{cell(e['title'])}** `{e['id']}` | 1 {e['unit']} | {cell(e['steps'])} | "
-                       f"{cell(e.get('example')) or '-'} | {cell(e.get('check'))} | {e.get('worksheet') or '-'} | {e['script']} |")
+                       f"{cell(e.get('example')) or '-'} | {cell(e.get('check'))} | {e.get('worksheet') or '-'} | {e['script']} | {e.get('model') or '-'} | {helps(e, names)} |")
             out.append(telugu_exercise(e))
-        out += ["", "| Tip | Text |", "|---|---|"]
+        out += ["", "| Tip | Text | Helps |", "|---|---|---|"]
         for t in area["tips"]:
-            out.append(f"| `{t['id']}` | {cell(t['text'])} |")
+            out.append(f"| `{t['id']}` | {cell(t['text'])} | {helps(t, names)} |")
             out.append(telugu_tip(t))
     sp = pc.SPELLING
     out += ["", "## Spelling (a row only when the spelling check found a word)", "",
@@ -115,9 +132,9 @@ def render():
         out.append(f"| **{cell(e['title'])}** `{e['id']}` | {cell(e['steps'])} |")
         te = e["i18n"]["te"]
         out.append(f"| {TE_MARK} **{cell(te['title'])}** | {cell(te['steps'])} ({cell(te['check'])}) |")
-    out += ["", "| Tip | Text |", "|---|---|"]
+    out += ["", "| Tip | Text | Helps |", "|---|---|---|"]
     for t in sp["tips"]:
-        out.append(f"| `{t['id']}` | {cell(t['text'])} |")
+        out.append(f"| `{t['id']}` | {cell(t['text'])} | - |")
         out.append(telugu_tip(t))
     return "\n".join(out) + "\n"
 

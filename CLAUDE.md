@@ -8,10 +8,11 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
 - **The Free report has five factors, each with evidence from the visitor's photo.**
-  Page 1 shows the uploaded photo with numbered boxes and a card per Free
-  factor (1, 5, 7, 8, 18) holding the crop cut from that photo; the server
-  sends Free the evidence regions of those five factors only. Details in the
-  report format baseline.
+  Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
+  zoomed to the parts it looks at, with numbered boxes, two rows with crops
+  cut from that photo and a chip per Free factor (1, 5, 7, 8, 18); the
+  server sends Free the evidence regions of those five factors only.
+  Details in the report format baseline.
 
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through
   `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
@@ -93,7 +94,7 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   site changes them once for every service. Error-screen pictures come
   only from the host's `window.VAHINI_NOTICE_ART`, and the report's
   characters (Vahini, Bheema, Pihu, Tara) only from `window.VAHINI_REPORT_ART`: same-site paths, `frontend/README.md`; the drawings are proprietary and stay out of this
-  AGPL repository. Colours are `var(--v-*)` tokens, never hex codes.
+  AGPL repository. Colours are `var(--v-*)` tokens, never hex codes: the redesigned report (page 1, the practice sheet, the side panel and the shared PDF, version C, 2026-10-11) follows the website theme, and only the four score colours, paper and rules are the report's own (`tests/report-colours.test.mjs`). The brand row (logo, vahinitech.com) and the patent line inside the report pages are the owner's instruction for version C and are part of the report, not site chrome.
 - **Practice is data: every exercise and tip belongs to a factor.** The
   practice catalogue ([docs/PRACTICE-FRAMEWORK.md](docs/PRACTICE-FRAMEWORK.md))
   holds one development area per factor (meaning, exercises with levels and

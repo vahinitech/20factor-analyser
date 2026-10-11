@@ -94,3 +94,17 @@ system packages and model weights. Refresh the source inventory with
 Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the SIL Open Font License 1.1. Original license files, upstream URLs and SHA-256 hashes are preserved in `frontend/assets/fonts/`. These files are served locally so reports do not require Google Fonts at export time.
 
 **Noto Sans Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-sans-telugu` npm package version 5.3.0 (`NotoSansTelugu-Regular.woff2`, `NotoSansTelugu-Bold.woff2`, licence `notosanstelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). A report printed or saved in Telugu uses it, so the PDF shows Telugu on any device.
+
+## Browser libraries served with the report
+
+These files are vendored unchanged in `frontend/scripts/vendor/` (npm
+package, version, tarball URL and SHA-256 in `sources.json` there; the SBOM
+entries come from that file through `backend/update_sbom.py`).
+
+**QR Code Generator for JavaScript** (`qrcode-generator` 2.0.4), Copyright (c) 2009 Kazuhiko Arase, MIT License: `qrcode.js`, which draws the QR code on report page 1. The licence notice is in the file's own header; the package ships no separate licence file. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
+
+**jsPDF** 4.2.1, (c) 2010-2025 James Hall and (c) 2015-2025 yWorks GmbH, MIT License: `jspdf.umd.min.js`, licence `jspdf-LICENSE.txt`. It makes the report PDF that "Share PDF on WhatsApp" shares, in the visitor's browser.
+
+**html2canvas** 1.4.1, Copyright (c) 2012 Niklas von Hertzen, MIT License: `html2canvas.min.js`, licence `html2canvas-LICENSE.txt`. It draws each report page to an image for that PDF.
+
+jsPDF and html2canvas are loaded only when the share button is pressed; nothing they make is sent to Vahini.

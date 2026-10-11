@@ -1,0 +1,54 @@
+[
+  {
+    "file": "jspdf.umd.min.js",
+    "package": "jspdf",
+    "version": "4.2.1",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/jspdf/-/jspdf-4.2.1.tgz",
+    "path_in_package": "package/dist/jspdf.umd.min.js",
+    "sha256": "e6551fcdc32f09d6853b2c5126d18d01d9447e0da618a41a11ebeee0f6c20d54",
+    "use": "Makes the shared report PDF in the browser. Loaded only when Share PDF on WhatsApp is pressed.",
+    "license_file": "jspdf-LICENSE.txt"
+  },
+  {
+    "file": "jspdf-LICENSE.txt",
+    "package": "jspdf",
+    "version": "4.2.1",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/jspdf/-/jspdf-4.2.1.tgz",
+    "path_in_package": "package/LICENSE",
+    "sha256": "dc388ec35ff463288cdde3588a36fd4ed12a45deff053243b37309acc9ef583b",
+    "use": "Licence of jspdf.umd.min.js."
+  },
+  {
+    "file": "html2canvas.min.js",
+    "package": "html2canvas",
+    "version": "1.4.1",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/html2canvas/-/html2canvas-1.4.1.tgz",
+    "path_in_package": "package/dist/html2canvas.min.js",
+    "sha256": "e87e550794322e574a1fda0c1549a3c70dae5a93d9113417a429016838eab8cb",
+    "use": "Draws each report page to an image for the shared PDF. Loaded only when Share PDF on WhatsApp is pressed.",
+    "license_file": "html2canvas-LICENSE.txt"
+  },
+  {
+    "file": "html2canvas-LICENSE.txt",
+    "package": "html2canvas",
+    "version": "1.4.1",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/html2canvas/-/html2canvas-1.4.1.tgz",
+    "path_in_package": "package/LICENSE",
+    "sha256": "86200ce4e92d9a22c41c8647a55f7a5fddff304ff89b4d36ecc699ed8c123d2c",
+    "use": "Licence of html2canvas.min.js."
+  },
+  {
+    "file": "qrcode.js",
+    "package": "qrcode-generator",
+    "version": "2.0.4",
+    "license": "MIT",
+    "source": "https://registry.npmjs.org/qrcode-generator/-/qrcode-generator-2.0.4.tgz",
+    "path_in_package": "package/dist/qrcode.js",
+    "sha256": "79ec86f82856005b1c887905cfccfcfbec3821ca61c7fd5a952faa5f778f791c",
+    "use": "Draws the QR code on report page 1. The MIT licence notice is in the file's header (the package ships no separate licence file)."
+  }
+]

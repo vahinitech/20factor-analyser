@@ -47,6 +47,7 @@ SOURCES = [
     "src/report/strings/te.js",
     "src/report/i18n.js",
     "src/report/progress.js",
+    "src/report/practice-select.js",
     "src/report/report-render.js",
     "src/report/report-share.js",
     "src/app/app.js",
@@ -59,9 +60,12 @@ OUT = os.path.join(HERE, "scripts", "core", "engine.bundle.js")
 # them for 30 days (vahini-web nginx), so an unversioned URL serves the old
 # file after a release while the HTML is already new. Each reference carries
 # ?v=<content hash>; a changed file gets a new URL.
+# scripts/vendor holds third-party files (sources.json there); the PDF
+# libraries in it are named in a <template id="pdf-libs"> and loaded only
+# when "Share PDF on WhatsApp" is pressed, so their stamps live there.
 ASSET_REF = re.compile(
-    r'((?:src|href)=")((?:scripts/core|styles)/[\w.-]+\.(?:js|css))'
-    r'(?:\?v=[0-9a-f]*)?(")'
+    r'((?:src|href)=")((?:scripts/core|scripts/vendor|styles)/[\w.-]+\.'
+    r'(?:js|css))(?:\?v=[0-9a-f]*)?(")'
 )
 
 

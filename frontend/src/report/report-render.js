@@ -355,7 +355,9 @@ function applyPenDynamics(analysis, imu){
    Exercises, tips and how many tries come from the practice catalogue
    (backend/practice_catalog.py), never from this file: the catalogue served
    with the report's dictionary version when there is one, otherwise the copy
-   build_bundle.py packs into the bundle (window.VahiniPracticeCatalog). */
+   build_bundle.py packs into the bundle (window.VahiniPracticeCatalog).
+   Which ones a report prints is chosen by VahiniPracticeSelect
+   (practice-select.js, "Many-to-many selection"). */
 const STAGE_ORDER = ['focus','dev','good','strong'];
 const DEFAULT_LIMITS = { free:{areas_max:3,exercises_max:1,tips_max:1}, pro:{areas_max:3,exercises_max:2,tips_max:2} };
 function practiceCatalog(analysis){
@@ -377,6 +379,19 @@ function practiceLimits(analysis, cat, tier){
   });
   return out;
 }
+/* Why a skill helps, the win to look for and its page on vahinitech.com
+   (practice catalogue, 2026-10-11): from the served catalogue, or the
+   bundled copy when a saved report's older catalogue has none. Each text
+   falls back to English on its own. */
+function factorAbout(cat, n, lang){
+  const own = cat && cat.factors && cat.factors[String(n)];
+  const bundled = window.VahiniPracticeCatalog && window.VahiniPracticeCatalog.factors && window.VahiniPracticeCatalog.factors[String(n)];
+  const area = own && typeof own.why === 'string' ? own : bundled && typeof bundled.why === 'string' ? bundled : null;
+  if (!area) return null;
+  const local = (lang !== 'en' && area.i18n && area.i18n[lang]) || {};
+  const pick = k=>typeof local[k] === 'string' && local[k] ? local[k] : area[k];
+  return { why: pick('why'), win: pick('win'), page: /^[a-z0-9-]+$/.test(area.page || '') ? area.page : '' };
+}
 /* Latin-only exercises (a-o pairs, joined writing) are skipped when most
    letters read from the page are another script. No text reads as Latin. */
 function latinPage(text){
@@ -384,8 +399,8 @@ function latinPage(text){
   if (!letters.length) return true;
   return letters.filter(c=>/[A-Za-zÀ-ɏ]/.test(c)).length * 2 >= letters.length;
 }
-/* A re-check moves on: start after the last entry printed for this skill
-   last time and wrap back to level 1 when the list runs out. */
+/* The spelling row's tips move on at a re-check: start after the last one
+   printed and wrap back to the first. */
 function rotate(list, lastIds, count){
   if (!list.length || count <= 0) return [];
   const ids = Array.isArray(lastIds) ? lastIds : [];
@@ -394,9 +409,9 @@ function rotate(list, lastIds, count){
   return Array.from({ length: Math.min(count, list.length) }, (_, k)=>list[(start + k) % list.length]);
 }
 /* Pictures of Vahini and friends come only from the host page, as
-   same-site paths in window.VAHINI_REPORT_ART ({cheer, buddy, tip,
-   encourage}), validated like VAHINI_NOTICE_ART. The drawings are not part
-   of this repository; without the map the report has no pictures. */
+   same-site paths in window.VAHINI_REPORT_ART ({cheer, tip, encourage}),
+   validated like VAHINI_NOTICE_ART. The drawings are not part of this
+   repository; without the map the report has no pictures. */
 function reportArt(key){
   const map = window.VAHINI_REPORT_ART;
   const url = map && typeof map[key] === 'string' ? map[key] : '';
@@ -436,10 +451,88 @@ function localEntry(entry, lang){
   ['title','steps','check','example','text'].forEach(k=>{ if (typeof own[k] === 'string' && own[k]) out[k] = own[k]; });
   return out;
 }
+/* A step is up to three short sentences, one action each: numbered 1, 2, 3. */
+function stepList(steps){
+  return String(steps || '').trim().split(/(?<=[.!?])\s+/).filter(Boolean);
+}
+
+/* ---- drawings (our own, inline SVG; colours from the theme tokens in
+   report.css through currentColor and classes) ---------------------------*/
+const ICON = {
+  shape:'<path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/>',
+  order:'<circle cx="7" cy="5" r="1.6"/><path d="M7 8v12M7 13c2.5-3 9-3 9 1.5S9.5 21 7 18"/>',
+  size:'<path d="M3 20h18M3 9h18" stroke-dasharray="2 3"/><path d="M7 20v-8.5M12 20v-8.5M17 20v-8.5"/>',
+  tall:'<path d="M3 15h18" stroke-dasharray="2 3"/><path d="M6 3v12M12 9v6M18 9v12"/>',
+  line:'<path d="M4 7h16M4 12h16M4 17h11"/>',
+  space:'<path d="M3 12h18M6 8l-3 4 3 4M18 8l3 4-3 4"/>',
+  margin:'<path d="M7 3v18M10 7h9M10 12h7M10 17h8"/>',
+  slant:'<path d="M5 20L9 4M11 20l4-16M17 20l4-16"/>',
+  smooth:'<path d="M3 12c3-6 6 6 9 0s6 6 9 0"/>',
+  pen:'<path d="M14 3l7 7-9 9H5v-7z"/><path d="M5 19l4-4"/>',
+  read:'<path d="M12 6c-2-1.5-5-2-8-1.5V19c3-.5 6 0 8 1.5 2-1.5 5-2 8-1.5V4.5C17 4 14 4.5 12 6z"/><path d="M12 6v14.5"/>',
+  page:'<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/>',
+};
+const FACTOR_ICON = {1:'shape',2:'order',3:'shape',4:'smooth',5:'size',6:'tall',7:'line',8:'space',9:'space',10:'margin',
+  11:'line',12:'slant',13:'pen',14:'pen',15:'smooth',16:'pen',17:'slant',18:'read',19:'shape',20:'page'};
+const iconSVG = n=>`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[FACTOR_ICON[n]||'page']}</svg>`;
+const LEAF = '<svg class="sn-leaf" viewBox="0 0 40 48" aria-hidden="true"><path class="lf-stem" d="M20 46 C20 30 20 20 21 8"/><path class="lf-a" d="M21 22 C10 22 5 14 6 6 C14 6 21 12 21 22Z"/><path class="lf-b" d="M21 30 C32 30 37 22 36 14 C28 14 21 20 21 30Z"/></svg>';
+const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
+const PENCIL = '<svg class="sn-pencil" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>';
+const SPARK = '<svg class="sn-spark" viewBox="0 0 26 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 4l10 10M16 20h9M4 34l10-4"/></svg>';
+
+/* What to write in a drawing when the exercise has no example of its own:
+   Latin practice text for the picture only, not a drill. */
+const MODEL_WORDS = { ladder:'a o e c n m', zones:'h l g y', baseline:'on the line', gaps:'a big red bus',
+  'letter-gaps':'minim', slant:'l h l h', loops:'o a o a', trace:'a d g o', 'start-dots':'a b c d', pairs:'a o c e' };
+/* "Copy this": one drawing per exercise kind (the catalogue's model). */
+function modelHTML(kind, example){
+  const text = String(example || MODEL_WORDS[kind] || '').trim();
+  const words = text.split(/\s+/).filter(Boolean);
+  const hand = s=>`<span class="md-hand">${esc(s)}</span>`;
+  switch(kind){
+    case 'ladder': return `<div class="md md-ladder">${hand(text)}</div>`;
+    case 'zones': return `<div class="md md-zones">${hand(text)}</div>`;
+    case 'baseline': return `<div class="md md-baseline">${hand(text)}</div>`;
+    case 'gaps': return `<div class="md md-gaps">${words.map(hand).join('<i class="md-gap" aria-hidden="true"></i>')}</div>`;
+    case 'letter-gaps': return `<div class="md md-letter-gaps">${Array.from(text.replace(/\s+/g,'')).map(hand).join('<i class="md-lgap" aria-hidden="true"></i>')}</div>`;
+    case 'slant': return `<div class="md md-slant">${hand(text)}</div>`;
+    case 'loops': return `<div class="md md-loops">${words.map(w=>`<span class="md-ring">${hand(w)}</span>`).join('')}</div>`;
+    case 'trace': return `<div class="md md-trace">${hand(text)}<span class="md-arrow" aria-hidden="true">→</span>${hand(text)}</div>`;
+    case 'start-dots': return `<div class="md md-dots">${words.map(w=>`<span class="md-dot">${hand(w)}</span>`).join('')}</div>`;
+    case 'pairs': {
+      const pairs = []; for (let i=0; i<words.length; i+=2) pairs.push(words.slice(i, i+2).join(' '));
+      return `<div class="md md-pairs">${pairs.map(p=>`<span class="md-pair">${hand(p)}</span>`).join('')}</div>`;
+    }
+    case 'margin': return '<div class="md md-margin"><i></i><i></i><i></i></div>';
+    case 'waves': return '<div class="md md-waves"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M4 12 H140"/><path d="M160 22 c12 -16 24 16 36 0 s24 16 36 0 s24 16 36 0"/><path d="M4 30 H140"/></svg></div>';
+    case 'page': return '<div class="md md-page"><span class="md-sheet"><i></i><i></i><i></i><i></i></span></div>';
+    default: return '';
+  }
+}
+/* "Your turn" lines that match the drawing. */
+function turnHTML(kind){
+  const k = ['ladder','zones','baseline','slant','margin'].includes(kind) ? kind : 'line';
+  return `<div class="yt yt-${k}" aria-hidden="true"></div>`;
+}
+
+/* ---- the QR code on page 1: drawn with qrcode-generator (MIT, vendored
+   in scripts/vendor/qrcode.js, see sources.json there). Without the
+   library the page has no QR and keeps its layout. -------------------------*/
+function qrSVG(text){
+  const make = window.qrcode;
+  if (typeof make !== 'function' || !text) return '';
+  try{
+    const qr = make(0, 'M'); qr.addData(text); qr.make();
+    const n = qr.getModuleCount(), q = 2;
+    let d = '';
+    for (let r=0; r<n; r++) for (let c=0; c<n; c++) if (qr.isDark(r, c)) d += `M${c+q} ${r+q}h1v1h-1z`;
+    return `<svg class="sn-qr-code" viewBox="0 0 ${n+2*q} ${n+2*q}" shape-rendering="crispEdges" role="img" data-qr="${esc(text)}"><rect class="qr-bg" width="${n+2*q}" height="${n+2*q}"/><path class="qr-fg" d="${d}"/></svg>`;
+  }catch(_e){ return ''; }
+}
+
 /* The last render, so "Print in" can redraw the same report in another
    language: same scores, crops, photo, history and pictures. */
 let lastRender = null;
-let lastShare = '';
 function rerender(){
   if (!lastRender || !lastRender.host.isConnected) return null;
   return render(lastRender.host, lastRender.data);
@@ -454,7 +547,8 @@ function render(host, data){
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const stage=band=>t('stage.'+band);
-  const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
+  const measured=analysis.results.filter(isLive);
+  const sorted=measured.filter(f=>![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
   const toGrow=sorted.filter(f=>f.score<8.5);
   const maintenance=!toGrow.length && sorted.length>0;
   const readable=['high','passage-verified'].includes(rec.level);
@@ -474,7 +568,7 @@ function render(host, data){
   const lim=practiceLimits(analysis, cat, tier);
   // Skill names: in another language the English name follows in brackets
   // on its first use on each page, so a teacher and a parent mean the same
-  // skill. skillName() is the plain name (alt text, the share summary).
+  // skill.
   const skillName=f=>t.has('name.'+f.n)?t('name.'+f.n):f.name;
   const named={1:new Set(),2:new Set()};
   const nameOn=(page,f)=>{
@@ -484,126 +578,141 @@ function render(host, data){
     const en=t.en('name.'+f.n);
     return local===en?local:`${local} (${en})`;
   };
-  // Page 2's skill rows: the lowest measured skills below 8.5, composites
-  // left out, up to the tier's number. Spelling is a row of its own.
+  // The skills to grow: the lowest measured skills below 8.5, composites
+  // left out, up to the tier's number. The first one is "Start here".
   const rowFactors=(maintenance?sorted:toGrow).slice(0,lim.areas_max);
-  // Page 1 (Pro) keeps its three priority cards, a spelling finding first.
-  const priorities=[];
-  if(firstSpelling){
-    const f=firstSpelling;
-    priorities.push({id:'spelling',title:t('prio.spelling.title'),
-      reason:t('prio.spelling.reason',{word:f.word,suggestion:f.suggestion}),
-      spelling:f});
-  }
-  (maintenance?sorted:toGrow).slice(0,3-priorities.length).forEach(f=>{
-    const score=f.score.toFixed(1);
-    priorities.push({id:String(f.n),factor:f,title:skillName(f),
-      explanation:t.has('explain.'+f.n)?t('explain.'+f.n):f.evidence,
-      reason:maintenance?t('prio.reason.keep',{score}):t('prio.reason.grow',{score,stage:stage(bandOf(f.score))})});
-  });
+  const first=rowFactors[0]||null;
   const spellingStatus=!readable ? t('spelling.deferred')
     : !hasText ? t('spelling.notext')
     : spelling.length ? t('spelling.found')
     : t('spelling.clear');
-  const title=esc(intake.writerName || t('p1.title'));
-  const head=label=>`<div class="run-head"><span class="rh-mark"><img class="rh-logo" src="assets/vahini-logo.png" alt="" width="22" height="22"><span class="rh-name">Vahini</span></span><span>${esc(label)}</span></div>`;
-  // Patent numbers on every report page: owner instruction, 2026-10-10.
-  // They stay as written in every language.
-  const foot=n=>`<div class="run-foot"><span>${esc(t('foot.review'))} · Indian Patents No. 584433 and 604895</span><span>${esc(t('foot.again'))}</span><span class="pg-num">0${n}</span></div>`;
-  // Why an example was chosen: the factor's own reason when two factors
-  // share a selection method, else the method's.
-  const reasonFor=(n,method)=>t.has(`why.${n}.${method}`)?t(`why.${n}.${method}`):t.has('why.'+method)?t('why.'+method):undefined;
-  const evidence=p=>{
-    if(p.spelling){
-      const f=p.spelling;
-      return `<div class="spelling-evidence"><p>${esc(t('ev.spelling.read'))} <q>${esc(f.context)}</q></p><small>${f.region?esc(t('ev.spelling.region',{region:f.region})):esc(t('ev.spelling.noregion'))} · ${esc(t('ev.spelling.suggest'))} <b>${esc(f.suggestion)}</b></small></div>`;
-    }
-    const c=crops[p.factor.n];
-    const ids=Array.isArray(c?.region_ids)?c.region_ids:[];
-    const shared=ids.length && priorities.some(other=>other!==p && other.factor &&
-      (crops[other.factor.n]?.region_ids||[]).some(id=>ids.includes(id)));
-    const location=ids.length?t('ev.part',{ids:ids.map(id=>String(id).replace(/^(region_|line_)/, '')).join(', ')}):'';
-    const why=reasonFor(p.factor.n, c?.selection_method) || t('ev.why.none');
-    return c ? `<div class="priority-evidence">
-      ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="${esc(t('ev.crop.alt',{title:p.title}))}" >`:''}
-      ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="${esc(t('ev.location.alt'))}" >`:''}</div>
-      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${esc(c.status==='context'?t('ev.context'):t('ev.area'))}${shared?`<span class=shared-evidence> ${esc(t('ev.shared'))}</span>`:''}</p>`
-      : `<p style="font-size:10px;">${esc(t('ev.nocrop'))}</p>`;
-  };
-  const empty=`<p>${esc(t('report.empty'))}</p>`;
-  // Built only for the Pro page 1, so the Free cards name each skill first.
-  const reportCards=()=>priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.factor?nameOn(1,p.factor):p.title)} <span class="priority-score">${p.factor?esc(p.factor.score.toFixed(1))+'/10':''}</span></h3><p class="reason-text">${esc(p.explanation||p.reason)}</p><div class="concept-actual">${evidence(p)}</div></article>`).join('');
+  const writer=String(intake.writerName||'').trim();
+  // Brand row with the Vahini logo and the website; the patent numbers on
+  // every page (owner instruction, 2026-10-10). Both stay as written in
+  // every language.
+  const SITE='vahinitech.com';
+  const brand=`<span class="sn-brand"><img class="sn-logo" src="assets/vahini-logo.png" alt="" width="40" height="40"><span><b class="sn-brandname">Vahini</b><span class="sn-site">${SITE}</span></span></span>`;
+  const head=label=>`<div class="run-head sn-head">${brand}<span class="sn-headlabel">${esc(label)}</span></div>`;
+  const foot=(n, note)=>`<div class="run-foot sn-foot"><span>${note?`${esc(note)}<br>`:''}${esc(t(free?'foot.review':'foot.review.pro'))} · Indian Patents No. 584433 and 604895 · ${SITE}</span><span class="pg-num">0${n}</span></div>`;
+  const empty=`<p class="sn-empty">${esc(t('sn.empty'))}</p>`;
+  const worksheetFor=f=>f&&(window.VahiniWorksheetCatalog||[]).find(w=>w.factors.includes(f.n));
+  const sheetBase=()=>window.VahiniWorksheets?VahiniWorksheets.base():'https://'+SITE;
+  const sheetURL=sheet=>`${sheetBase()}/assets/worksheets/${sheet.id}.pdf`;
   // #84: the practice sheet for each skill, from the worksheet catalogue the
   // website generates (same PDFs as the practice library).
   const practiceSheet=f=>{
-    const sheet=f&&(window.VahiniWorksheetCatalog||[]).find(w=>w.factors.includes(f.n));
-    if(!sheet) return '';
-    const base=window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com';
-    return `<p class="practice-sheet">${esc(t('row.sheet'))} <a href="${esc(base)}/assets/worksheets/${esc(sheet.id)}.pdf">${esc(sheet.title)} (PDF)</a></p>`;
+    const sheet=worksheetFor(f);
+    return sheet?`<p class="practice-sheet">${esc(t('row.sheet'))} <a href="${esc(sheetURL(sheet))}">${esc(sheet.title)} (PDF)</a></p>`:'';
   };
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
   const overall=Number.isFinite(rawOverall)?rawOverall:null;
-  const measured=analysis.results.filter(isLive);
-  const regionCount=Array.isArray(classification?.handwritten)?classification.handwritten.length:
-    Number.isInteger(rec.hand_lines)&&rec.hand_lines>=0?rec.hand_lines:null;
-  // Coverage counts distinct evidence regions (line_N). A spelling source
-  // joins the count only when it carries that same evidence id.
-  const shownIds=new Set(priorities.flatMap(p=>p.factor?(crops[p.factor.n]?.region_ids||[])
-    :(p.spelling?.region && /^line_/.test(String(p.spelling.region)))?[p.spelling.region]:[]));
-  const regionSummary=regionCount==null?t('p1.regions.unknown'):t.n('p1.regions',regionCount);
-  const coverage=shownIds.size?t.n('p1.coverage',shownIds.size):t('p1.coverage.none');
-  // Free access returns five factors, each with an example cropped from the
-  // visitor's photo. Page 1 shows the photo and all five; Pro keeps its
-  // three priority cards. Page 2 (practice) is the same for both.
-  const meaningOf=f=>t.has('meaning.'+f.n)?t('meaning.'+f.n):t.has('explain.'+f.n)?t('explain.'+f.n):'';
-  const firstFactors=rowFactors;
-  const skillList=[...firstFactors,...measured.filter(f=>!firstFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n)];
-  // The last check saved in this browser, for "was" scores and the change line.
+  // The last check saved in this browser, for the change line and the chips.
   const prev=history&&history.date?history:null;
   const prevScore=Object.fromEntries((prev&&Array.isArray(prev.factors)?prev.factors:[]).map(f=>[f.n,f.score]));
   const fmtDay=d=>{const day=new Date(d+'T00:00:00');return Number.isNaN(day.getTime())?d:day.toLocaleDateString(t.locale,{day:'numeric',month:'long'});};
-  const overallNow=Number.isFinite(analysis.overallMeasured??analysis.overall)?(analysis.overallMeasured??analysis.overall):null;
   // #82: a skill counts as better from +0.3. The same page sent as PNG and
   // as JPEG moved factor scores by up to 0.2, so a smaller rise can be noise.
   const BETTER_BY=0.3;
   const gain=f=>Number.isFinite(prevScore[f.n])?f.score-prevScore[f.n]:null;
   const improved=measured.filter(f=>gain(f)!==null&&gain(f)>=BETTER_BY-1e-9);
-  const sinceLine=prev&&Number.isFinite(prev.overall)&&overallNow!=null
-    ?`<p class="since-last">${esc(t('p1.since',{date:fmtDay(prev.date),was:prev.overall,now:overallNow,change:(overallNow-prev.overall>0?'+':'')+(overallNow-prev.overall)}))}${improved.length?` ${esc(t.n('p1.since.better',improved.length))}`:''} ${esc(t('p1.since.saved'))}</p>`:'';
+  const sinceLine=prev&&Number.isFinite(prev.overall)&&overall!=null
+    ?`<p class="since-last">${esc(t('sn.since',{date:fmtDay(prev.date),was:prev.overall,now:overall}))}${improved.length?` ${esc(t.n('sn.since.better',improved.length))}`:''}</p>`:'';
   const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
     return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
-  const skillCard=(f,i)=>{
-    const c=crops[f.n], band=bandOf(f.score), first=firstFactors.includes(f);
-    const wholePage=wholePageCrop(c);
-    const why=c&&c.url?(reasonFor(f.n,c.selection_method)||t('card.chosen')):'';
-    return `<article class="skill-card band-${band}" data-factor="${f.n}">
-      <div class="sk-head"><span class="sk-num">${i+1}</span><h3>${esc(nameOn(1,f))}</h3><b class="sk-score">${esc(f.score.toFixed(1))}<small>/10</small>${Number.isFinite(prevScore[f.n])?`<small class="sk-was"> ${esc(t('card.was',{score:prevScore[f.n].toFixed(1)}))}</small>`:''}</b></div>
-      <p class="sk-meta"><span class="sk-band">${esc(stage(band))}</span>${first?`<span class="sk-tag">${esc(t('card.first'))}</span>`:''}</p>
-      ${improved.includes(f)?`<p class="sk-better"><span>${esc(t('card.better',{gain:gain(f).toFixed(1)}))}</span></p>`:''}
-      <p class="sk-meaning">${esc(meaningOf(f))}</p>
-      ${wholePage?`<p class="sk-why">${esc(t('card.wholepage'))}</p>`
-        :c&&c.url?`<img class="sk-crop" src="${esc(c.url)}" alt="${esc(t('card.crop.alt',{skill:skillName(f)}))}"><p class="sk-why">${esc(why)}</p>`
-        :`<p class="sk-none">${esc(t('card.nocrop'))}</p>`}
-    </article>`;
-  };
-  const det=data.detURL||'';
-  const marks=skillList.map((f,i)=>{
-    const c=crops[f.n], b=c&&c.bbox, s=c&&c.source_size;
-    if(!Array.isArray(b)||b.length!==4||!Array.isArray(s)||s.length!==2) return '';
-    if(wholePageCrop(c)) return '';   // whole-page skills: a box would hide the page
-    const fs=Math.round(s[0]*0.07);
-    return `<g><rect x="${b[0]}" y="${b[1]}" width="${b[2]}" height="${b[3]}"/><text x="${Math.max(b[0]-fs*0.7,0)}" y="${b[1]+fs*0.8}" font-size="${fs}" stroke-width="${Math.round(fs/6)}">${i+1}</text></g>`;
-  }).join('');
-  const size=skillList.map(f=>crops[f.n]?.source_size).find(s=>Array.isArray(s)&&s.length===2);
-  const pagePhoto=free&&det?`<figure class="page-photo"><div class="pp-frame"><img src="${esc(det)}" alt="${esc(t('p1.photo.alt'))}">${marks&&size?`<svg viewBox="0 0 ${size[0]} ${size[1]}" preserveAspectRatio="none" aria-hidden="true">${marks}</svg>`:''}</div>
-      <figcaption>${esc(t('p1.photo.caption'))} ${esc(marks?t('p1.photo.marks'):t('p1.photo.cut'))}</figcaption></figure>`:'';
-  const skillsHead=skillList.length===5?t('p1.skills.5'):t.n('p1.skills',skillList.length);
-  const skillsBlock=free&&skillList.length?`<h3>${esc(skillsHead)}</h3><div class="skill-grid">${skillList.map(skillCard).join('')}</div>`:'';
 
-  /* ---- page 2: each skill to grow beside its exercise ------------------ */
+  /* ---- practice chosen for this report (many-to-many) ------------------ */
   const latin=latinPage(sources.map(r=>r.text).join(' ')||recognizedText);
   const lastPractice=(prev&&prev.practice)||{};
-  const printed={exercises:{},tips:{}};
+  const chosen=window.VahiniPracticeSelect
+    ? VahiniPracticeSelect.select({rows:rowFactors,measured,cat,limits:lim,latin,last:lastPractice})
+    : {rows:rowFactors.map(f=>({f,exercises:[],tips:[],band:bandOf(f.score),planBand:bandOf(f.score)})),printed:{exercises:{},tips:{}}};
+  const printed=chosen.printed;
+  const firstRow=chosen.rows[0]||null;
+  const firstEx=firstRow&&firstRow.exercises[0]?localEntry(firstRow.exercises[0].entry,t.lang):null;
+  const firstExModel=firstRow&&firstRow.exercises[0]?firstRow.exercises[0].entry:null;
+
+  /* ---- page 1: "Your writing snapshot" (version C, owner approval
+     2026-10-11) -------------------------------------------------------- */
+  const overallBandId=overall==null?null:bandOf(overall/10);
+  const scorePill=overall==null?'':`<span class="sn-score band-${overallBandId}" data-band="${overallBandId}"><b>${overall}</b><small>${esc(t('sn.outof'))} · ${esc(stage(overallBandId))}</small></span>`;
+  const best=sorted.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0]||measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
+  const cheer=artImg('cheer','rp-art-cheer');
+  const keepBand=best?`<div class="sn-keep" data-factor="${best.n}"><span class="sn-tick">${TICK}</span><span class="sn-keep-label">${esc(t('sn.keep'))}</span><div class="sn-keep-text"><h3>${esc(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best))}</h3><p>${esc(t.has('keep.text.'+best.n)?t('keep.text.'+best.n):'')}</p></div>${cheer}${LEAF}</div>`:'';
+  // "Look closer": the first two skills to grow; a spelling finding may
+  // take the second row.
+  const lookItems=rowFactors.slice(0,2).map(f=>({f}));
+  if(firstSpelling){ if(lookItems.length>=2) lookItems[1]={spelling:firstSpelling}; else lookItems.push({spelling:firstSpelling}); }
+  // The photo, zoomed to the parts the rows point at: an SVG viewBox over
+  // the photo (meet), every numbered box kept whole.
+  const det=data.detURL||'';
+  const marks=lookItems.map((it,i)=>{
+    const c=it.f&&crops[it.f.n], b=c&&c.bbox;
+    return it.f&&Array.isArray(b)&&b.length===4&&!wholePageCrop(c)?{b,num:i+1}:null;
+  }).filter(Boolean);
+  const size=[...lookItems.map(it=>it.f&&crops[it.f.n]?.source_size),...Object.values(crops).map(c=>c&&c.source_size)].find(s=>Array.isArray(s)&&s.length===2&&s[0]>0&&s[1]>0);
+  const zoom=()=>{
+    if(!det) return '';
+    if(!size) return `<figure class="sn-zoom"><div class="sn-zoom-frame"><img src="${esc(det)}" alt="${esc(t('sn.zoom.alt'))}"></div><figcaption><span>${esc(t('sn.zoom.whole'))}</span></figcaption></figure>`;
+    const [W,H]=size;
+    let x0=0,y0=0,x1=W,y1=H;
+    if(marks.length){
+      x0=Math.min(...marks.map(m=>m.b[0])); y0=Math.min(...marks.map(m=>m.b[1]));
+      x1=Math.max(...marks.map(m=>m.b[0]+m.b[2])); y1=Math.max(...marks.map(m=>m.b[1]+m.b[3]));
+      const pad=0.06*W;
+      x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad*1.6); x1=Math.min(W,x1+pad); y1=Math.min(H,y1+pad);
+      // Widen to the frame's shape where the photo allows; never cut a box.
+      const want=1.75; let w=x1-x0, h=y1-y0;
+      if(w/h<want){ const nw=Math.min(W,h*want), cx=(x0+x1)/2; x0=Math.max(0,Math.min(W-nw,cx-nw/2)); x1=x0+nw; }
+      else { const nh=Math.min(H,w/want), cy=(y0+y1)/2; y0=Math.max(0,Math.min(H-nh,cy-nh/2)); y1=y0+nh; }
+    }
+    const vw=x1-x0, r=Math.max(vw*0.035,6);
+    const boxes=marks.map(m=>{const [bx,by,bw,bh]=m.b;
+      return `<g class="sn-mark" data-mark="${m.num}"><rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${(r*0.4).toFixed(1)}" stroke-width="${(vw*0.006).toFixed(2)}"/><circle cx="${bx+bw/2}" cy="${by}" r="${r.toFixed(1)}" stroke-width="${(vw*0.004).toFixed(2)}"/><text x="${bx+bw/2}" y="${(by+r*0.42).toFixed(1)}" font-size="${(r*1.2).toFixed(1)}" text-anchor="middle">${m.num}</text></g>`;}).join('');
+    return `<figure class="sn-zoom"><div class="sn-zoom-frame"><svg viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${vw.toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('sn.zoom.alt'))}" data-view="${[x0,y0,x1,y1].map(v=>v.toFixed(1)).join(' ')}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>${boxes}</svg></div>
+      <figcaption><span>${esc(t('sn.zoom.caption'))}</span><span>${marks.length?esc(t.n('sn.zoom.marks',marks.length)):''}</span></figcaption></figure>`;
+  };
+  const startCard=first?`<div class="sn-start" data-factor="${first.n}"><div class="sn-start-top">${LEAF}<span class="sn-pill">${esc(t('sn.start'))}</span></div>${SPARK}
+      <h3>${esc(t.has('goal.'+first.n)?t('goal.'+first.n):nameOn(1,first))}</h3>${stepList(t.has('look.'+first.n)?t('look.'+first.n):'').map(s=>`<p>${esc(s)}</p>`).join('')}
+      <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(first.score.toFixed(1))}/10</span> · ${esc(stage(bandOf(first.score)))}</p>
+      <span class="sn-try">${PENCIL}${esc(t('sn.start.try.'+(firstExModel&&t.has('sn.start.try.'+firstExModel.unit)?firstExModel.unit:'row')))}</span></div>`:'';
+  const lookRow=(it,i)=>{
+    if(it.spelling){
+      const s=it.spelling;
+      return `<div class="sn-look" data-factor="spelling"><div class="sn-look-crop sn-look-word">${esc(s.word)}</div><div><h4><em>${i+1} ·</em> ${esc(t('spell.title'))}</h4><p>${t.html('sn.spell.saw',{word:`<b>${esc(s.word)}</b>`,suggestion:`<b>${esc(s.suggestion)}</b>`})}</p></div>
+        <div class="sn-act">${PENCIL}<div><b>${esc(t('sn.next'))}</b>${esc(t('sn.spell.action'))}</div></div></div>`;
+    }
+    const f=it.f, c=crops[f.n], sheet=worksheetFor(f);
+    const crop=wholePageCrop(c)?`<p class="sn-look-none">${esc(t('sn.wholepage'))}</p>`
+      :c&&c.url?`<img class="sn-look-crop" src="${esc(c.url)}" alt="${esc(t('sn.crop.alt',{skill:skillName(f)}))}">`
+      :`<p class="sn-look-none">${esc(t('sn.nocrop'))}</p>`;
+    return `<div class="sn-look" data-factor="${f.n}">${crop}<div><h4><em>${i+1} ·</em> ${esc(nameOn(1,f))}</h4><p>${esc(t.has('saw.'+f.n)?t('saw.'+f.n):'')}</p></div>
+      <div class="sn-act">${PENCIL}<div><b>${esc(t('sn.next'))}</b>${esc(t.has('action.'+f.n)?t('action.'+f.n):'')}${sheet?` <a class="sn-sheet" href="${esc(sheetURL(sheet))}">${esc(t('sn.sheet',{title:sheet.title}))}</a>`:''}</div></div></div>`;
+  };
+  const chipList=measured.slice().sort((a,b)=>a.n-b.n);
+  const chips=chipList.map(f=>{const band=bandOf(f.score), g=improved.includes(f);
+    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;}).join('');
+  // The first practice: its steps, its example to trace between two guide
+  // lines, its self-check and a QR code for the full practice sheet.
+  const firstSheet=worksheetFor(first)||rowFactors.map(worksheetFor).find(Boolean)||null;
+  const qr=firstSheet?qrSVG(sheetURL(firstSheet)):'';
+  const practice=firstEx?`<div class="sn-prac" data-exercise="${esc(firstEx.id)}"><div class="sn-prac-head">${LEAF}<h3>${esc(t('sn.prac'))}</h3></div>
+      <div class="sn-pgrid${qr?'':' no-qr'}"><ol class="sn-steps">${stepList(firstEx.steps).slice(0,3).map((s,k)=>`<li><i>${k+1}</i><span>${esc(s)}</span></li>`).join('')}</ol>
+      <div class="sn-turn" aria-label="${esc(t('sn.turn.aria'))}"><b>${esc(t('sn.turn'))}</b><div class="sn-guide"><span class="md-hand">${esc(firstEx.example||MODEL_WORDS[firstEx.model]||'')}</span></div><div class="sn-guide"></div><p class="sn-chk"><i aria-hidden="true"></i>${esc(firstEx.check)}</p></div>
+      ${qr?`<div class="sn-qr" aria-label="${esc(t('sn.qr.alt'))}">${qr}<span>${esc(t('sn.qr'))}</span></div>`:''}</div></div>`:'';
+  const cta=`<div class="sn-cta screen-only" data-html2canvas-ignore="true">${firstSheet?`<a class="sn-b1" href="${esc(sheetURL(firstSheet))}" target="_blank" rel="noopener">⇩&nbsp; ${esc(t('sn.download'))}</a>`:''}<a class="sn-b2" href="analyser.html" data-action="new-report">↻&nbsp; ${esc(t('sn.again'))}</a></div>`;
+  const page1Note=[t('sn.note'),spellingStatus,rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
+  const page1=`<section class="page free-report compact-report snapshot-page snapshot-${tier}" data-screen-label="Your review">
+      <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}${scorePill}</div></div>
+      <h2 class="sn-title">${esc(t('sn.title'))}</h2><p class="sn-sub">${esc(t('sn.sub'))}</p>${sinceLine}
+      ${measured.length?`${keepBand}
+      <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
+      ${lookItems.length?`<h3 class="sn-h3">${esc(t('sn.look'))}</h3>${lookItems.map(lookRow).join('')}`:''}
+      <div class="sn-h3row"><h3 class="sn-h3">${esc(t('sn.chips'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
+      <div class="sn-chips">${chips}</div>
+      ${practice}${cta}`:empty}
+      ${foot(1,page1Note)}</section>`;
+
+  /* ---- page 2: the practice sheet, each skill beside its exercise ------ */
   const unitText=u=>esc(t.has('try.'+u)?t('try.'+u):t('try.other',{unit:u||'row'}));
   const dose=band=>(cat&&cat.dosage&&cat.dosage[band])||null;
   const planText=(band,count)=>{
@@ -612,50 +721,40 @@ function render(host, data){
     if(d.per==='week') return t('plan.week',{tries:d.tries,weeks:Math.round(d.recheck_days/7)});
     return t(count>1?'plan.day.all':'plan.day',{tries:d.tries,days:d.days});
   };
-  const planLine=(band,count)=>`<p class="pr-plan">${esc(planText(band,count))}</p>`;
-  const exerciseBlock=ex=>`<div class="pr-ex" data-exercise="${esc(ex.id)}"><p class="pr-ex-title"><b>${esc(ex.title)}</b> <span class="pr-unit">${unitText(ex.unit)}</span></p>
-      <p class="pr-steps">${esc(ex.steps)}</p>${ex.example?`<p class="pr-example">${esc(ex.example)}</p>`:''}</div>`;
-  const tipBlock=tip=>`<p class="pr-tip" data-tip="${esc(tip.id)}">${artImg('tip','rp-art-tip')}<span><b>${esc(t('tip.label'))}</b> ${esc(tip.text)}</span></p>`;
-  const exercisesFor=f=>{
-    const area=cat&&cat.factors&&cat.factors[String(f.n)];
-    if(!area) return {exs:[],tips:[]};
-    const band=bandOf(f.score);
-    const list=(area.exercises||[]).filter(e=>e.needs!=='pen'&&(latin||e.script!=='latin'));
-    const want=Math.min((dose(band)||{}).exercises??1, lim.exercises_max);
-    const exs=rotate(list, (lastPractice.exercises||{})[f.n], want);
-    const tips=rotate(area.tips||[], (lastPractice.tips||{})[f.n], lim.tips_max);
-    printed.exercises[f.n]=exs.map(e=>e.id);
-    printed.tips[f.n]=tips.map(e=>e.id);
-    return {exs:exs.map(e=>localEntry(e,t.lang)),tips:tips.map(e=>localEntry(e,t.lang))};
+  const exerciseBlock=(x,f)=>{
+    const ex=localEntry(x.entry,t.lang), kind=x.entry.model;
+    const model=modelHTML(kind, x.entry.example)||`<div class="md md-focus">${focusSVG({...f,band:'strong'}).svg}</div>`;
+    return `<div class="pr-ex" data-exercise="${esc(ex.id)}" data-model="${esc(kind||'focus')}"><p class="pr-ex-title"><b>${esc(ex.title)}</b> <span class="pr-unit">${unitText(ex.unit)}</span></p>
+      <ol class="pr-steps">${stepList(ex.steps).map(s=>`<li>${esc(s)}</li>`).join('')}</ol>
+      <div class="pr-model"><span class="pr-model-label">${esc(t('row.copy'))}</span><div class="pr-model-art">${model}</div></div></div>`;
   };
+  const tipBlock=tip=>`<p class="pr-tip" data-tip="${esc(tip.id)}">${artImg('tip','rp-art-tip')}<span><b>${esc(t('tip.label'))}</b> ${esc(tip.text)}</span></p>`;
   const stagePath=band=>{
     const at=STAGE_ORDER.indexOf(band);
     return `<p class="pr-path" aria-label="${esc(t('row.stage.aria',{stage:stage(band)}))}">${STAGE_ORDER.map((b,k)=>
       `<span class="pr-stage${k<at?' done':k===at?' now':''}">${esc(stage(b))}${k<at?' ✓':''}</span>`).join('<span class="pr-arrow">→</span>')}</p>`;
   };
-  // Page 2 in reading order, so a skill's first mention carries its English
-  // name: the opening line, the rows, then the other skills.
-  const best=measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
-  const lower=s=>s.charAt(0).toLowerCase()+s.slice(1);
-  const opening=`<div class="p2-open">${artImg('cheer','rp-art-cheer')}<p>${best?`<b>${esc(t('p2.cheer',{skill:lower(nameOn(2,best))}))}</b> `:''}${esc(t(maintenance?'p2.open.keep':'p2.open.grow'))}</p>${artImg('buddy','rp-art-buddy')}</div>`;
-  const shareRows=[];
-  const skillRow=(f,i)=>{
-    const band=bandOf(f.score);
-    // Page 1 already shows this skill's crop and what was found (owner,
-    // 2026-10-11: no repeats). Page 2 is the practice sheet: a short label
-    // pointing back to page 1, and on the right how to do it, with a drawn
-    // model to copy and lines to try it.
-    const {exs,tips}=exercisesFor(f);
-    const page1=skillList.indexOf(f)+1;
-    const model=focusSVG({...f,band:'strong'}).svg;
-    shareRows.push({f,band,count:exs.length,exercise:exs[0]&&exs[0].title});
+  // Under each skill: why it helps, the win to look for and its page on the
+  // website (linked on screen, the address when printed). trimSkillColumns()
+  // drops these, "More" first, when they would make the row taller.
+  const aboutBlock=f=>{
+    const a=factorAbout(cat,f.n,t.lang);
+    if(!a) return '';
+    const url=a.page?`${sheetBase()}/${a.page}.html`:'';
+    return `<div class="pr-about"><p class="pr-why"><b>${esc(t('row.why'))}</b>${esc(a.why)}</p>
+        <p class="pr-win"><b>${esc(t('row.win'))}</b> ${esc(a.win)}</p>${url?`
+        <p class="pr-more">${esc(t('row.more'))} <a href="${esc(url)}" target="_blank" rel="noopener">${SITE}/${esc(a.page)}.html</a></p>`:''}</div>`;
+  };
+  const skillRow=(row,i)=>{
+    const f=row.f, band=bandOf(f.score);
+    const exs=row.exercises, tips=row.tips.map(e=>localEntry(e,t.lang));
+    const lastKind=exs.length?exs[exs.length-1].entry.model:'line';
     return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
       <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(t('row.badge',{score:f.score.toFixed(1),stage:stage(band)}))}</span></div>
-        ${stagePath(band)}${page1>0?`<p class="pr-ref" data-page1="${page1}">${esc(t('row.page1',{n:page1}))}</p>`:''}${practiceSheet(f)}</div>
-      <div class="pr-practice">${exs.map(exerciseBlock).join('')||`<p class="pr-steps">${esc(t('row.fallback'))}</p>`}
-        <div class="pr-model"><span class="pr-model-label">${esc(t('row.copy'))}</span><div class="pr-model-art" aria-hidden="true">${model}</div></div>
-        ${planLine(band,exs.length)}${tips.map(tipBlock).join('')}
-        <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}"></div></div></div>
+        ${stagePath(band)}${aboutBlock(f)}${practiceSheet(f)}</div>
+      <div class="pr-practice">${exs.map(x=>exerciseBlock(x,f)).join('')||`<p class="pr-steps">${esc(t('row.fallback'))}</p>`}
+        <p class="pr-plan">${esc(planText(row.planBand||band,exs.length))}</p>${tips.length?`<div class="pr-tips">${tips.map(tipBlock).join('')}</div>`:''}
+        <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}">${turnHTML(lastKind)}</div></div></div>
     </article>`;
   };
   const spellingRow=n=>{
@@ -668,69 +767,37 @@ function render(host, data){
     return `<article class="practice-row coaching-card spelling-row" data-factor="spelling">
       <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t('spell.badge'))}</span></div>
         <p class="pr-saw">${t.html('spell.saw',{word:`<b>${esc(f.word)}</b>`,suggestion:`<b>${esc(f.suggestion)}</b>`})}</p></div>
-      <div class="pr-practice">${ex?exerciseBlock({...localEntry(ex,t.lang),example:f.suggestion}):''}
-        <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}"></div></div>
+      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:f.suggestion}},{n:1,band:'strong'}):''}
+        <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.length?`<div class="pr-tips">${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}</div>`:''}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
     </article>`;
   };
-  const rows=rowFactors.map(skillRow).join('')+(firstSpelling?spellingRow(rowFactors.length+1):'');
+  const rows=chosen.rows.map(skillRow).join('')+(firstSpelling?spellingRow(chosen.rows.length+1):'');
   const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n);
   const praise=f=>{const b=bandOf(f.score);
-    if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return ' '+t('other.composite');
-    return b==='strong'?' '+t('other.strong'):b==='good'?' '+t('other.good'):'';};
+    if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return t('other.composite');
+    return b==='strong'?t('other.strong'):b==='good'?t('other.good'):'';};
   const locked=Math.max(0,20-analysis.results.length);
-  const otherBox=others.length||free?`<div class="other-skills"><p class="os-title"><b>${esc(t('other.title'))}</b></p>
-      ${others.length?`<ul>${others.map(f=>`<li data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),score:f.score.toFixed(1),stage:stage(bandOf(f.score))}))}${esc(praise(f))}</li>`).join('')}</ul>`:''}
+  const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),score:f.score.toFixed(1),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
       ${free&&locked?`<p class="pro-note"><b>${esc(t('pro.ask'))}</b> ${esc(t('pro.more',{n:locked}))}</p>`:''}</div>`:'';
+  // When writing feels hard: encouragement and where to read more, never a
+  // diagnosis or a promise (owner, 2026-10-11).
+  const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
+  const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help.html</a></p></div>`;
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
-  const pages=[
-    `<section class="page free-report compact-report" data-screen-label="Your review">${head(t('head.page1'))}
-      <div class="compact-overview"><div><div class="eyebrow">${esc(t('p1.eyebrow'))}</div><h2>${title}</h2><p>${esc(t.n('p1.checked',measured.length))}</p>${free?sinceLine:''}</div><div class="compact-score"><b>${overall??'–'}</b><span>${esc(t('p1.outof'))}</span></div></div>
-      ${free&&skillsBlock?`${pagePhoto}${skillsBlock}`:`<p class="region-summary">${esc(regionSummary)} ${esc(coverage)} ${esc(t('p1.byskill'))}</p>
-      <h3>${esc(maintenance?t('p1.things.keep'):t.has('p1.things.'+priorities.length)?t('p1.things.'+priorities.length):t('p1.things',{n:priorities.length}))}</h3>
-      ${reportCards()||empty}`}
-      <p class="spelling-status">${esc(spellingStatus)}</p>
-      ${rec.printed_lines>0?`<p class="report-note">${esc(t.n('note.printed',rec.printed_lines))}</p>`:''}
-      <p class="report-note">${esc(t('note.grades'))}</p>${foot(1)}</section>`,
-    `<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
-      <h2>${esc(t('p2.title'))}</h2>
-      ${rows?`${opening}<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${closing}`:empty}
-      ${foot(2)}</section>`
-  ];
-  host.innerHTML=pages.join('');
+  const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
+      <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
+      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${hardNote}${closing}`:empty}
+      ${foot(2)}</section>`;
+  host.innerHTML=page1+page2;
+  // A PDF made for sharing showed the report as it was: make it again.
+  if(window.VahiniReportShare) VahiniReportShare.invalidate();
   wirePrintFit(host);
-  lastShare=shareSummary(t, {overall, best, rows:shareRows, skillName, dose});
+  trimSkillColumns(host);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>trimSkillColumns(host));
   // What this report printed, so the next check can move on (app.js keeps
   // it with the check in this browser's history; nothing leaves it).
   return {practice:printed};
 }
-
-/* The "Share on WhatsApp" summary (docs/PRACTICE-FRAMEWORK.md section 10):
-   the overall score, one strength, the skills to grow with this week's
-   plan and first exercise, and the link to the free check, in the report's
-   language. Never the writer's name, the photo, a crop, a recognised word
-   or any id. */
-const SHARE_LINK = 'https://vahinitech.com/analyser/analyser.html?from=whatsapp';
-function shareSummary(t, s){
-  if (s.overall == null && !s.rows.length) return '';
-  const shareName = f=>{ const local=s.skillName(f), en=t.en('name.'+f.n); return t.lang==='en'||local===en?local:`${local} (${en})`; };
-  const lines = [];
-  if (s.overall != null) lines.push(t('share.score', {score:s.overall}));
-  if (s.best) lines.push(t('share.strength', {skill:shareName(s.best)}));
-  if (s.rows.length){
-    lines.push('', t('share.next'));
-    s.rows.forEach((r, i)=>{
-      const dose = s.dose(r.band);
-      const plan = !dose ? t('plan.none')
-        : dose.per === 'week' ? t('share.plan.week', {tries:dose.tries})
-        : t('share.plan.day', {tries:dose.tries, days:dose.days});
-      const vars = {i:i+1, skill:shareName(r.f), score:r.f.score.toFixed(1), plan, exercise:r.exercise};
-      lines.push(t(r.exercise ? 'share.item' : 'share.item.noex', vars));
-    });
-  }
-  lines.push('', t('share.link', {link:SHARE_LINK}));
-  return lines.join('\n');
-}
-function shareText(){ return lastShare; }
 
 /* ---- print fit: keep "one report page = one printed sheet" honest --------
    .page boxes are designed as exactly one A4 sheet, but content height varies
@@ -754,8 +821,34 @@ const FIT_MIN_FREE = 0.78;
    pixel (sheet 1 measured 1119px against 1118.7px) still tips onto a blank
    extra page in a real print dialog, through rounding. */
 const FIT_SLACK_PX = 6;
+/* Page 2's left column (why it helps, the win, "More") must never make a
+   row taller than the practice beside it. When it would, drop "More" first,
+   then the "why" sentence, then the win box, and mark the row with how far
+   it went (data-trim). Only where the two columns sit side by side. */
+const TRIM_STEPS = ['more', 'why', 'win'];
+function trimSkillColumns(host){
+  (host || document).querySelectorAll('.practice-row').forEach(row=>{
+    TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
+    row.removeAttribute('data-trim');
+    const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
+    if (!left || !right || !left.querySelector('.pr-about')) return;
+    if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
+    const tall = ()=>{
+      left.style.alignSelf = right.style.alignSelf = 'start';
+      const over = left.getBoundingClientRect().height > right.getBoundingClientRect().height + 1;
+      left.style.alignSelf = right.style.alignSelf = '';
+      return over;
+    };
+    for (const step of TRIM_STEPS){
+      if (!tall()) break;
+      row.classList.add('trim-' + step);
+      row.setAttribute('data-trim', step);
+    }
+  });
+}
 function fitPrintPages(host){
   fillReportArt(host);
+  trimSkillColumns(host);
   const pxPerMM = 96/25.4;
   const sheetH = A4_MM.h * pxPerMM - FIT_SLACK_PX;
   host.querySelectorAll('section.page').forEach(pageEl=>{
@@ -794,14 +887,17 @@ function unfitPrintPages(host){
   host.querySelectorAll('section.page').forEach(p=>{
     p.style.zoom=''; p.style.width=''; p.style.minHeight='';
   });
+  trimSkillColumns(host);
 }
 let printFitWired = false;
 function wirePrintFit(host){
   if (printFitWired) return; printFitWired = true;
   window.addEventListener('beforeprint', ()=>fitPrintPages(host));
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
+  let resized = 0;
+  window.addEventListener('resize', ()=>{ clearTimeout(resized); resized = setTimeout(()=>trimSkillColumns(host), 150); });
 }
 
 if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
-global.VahiniReport = { render, rerender, shareText, SHARE_LINK, fitPrintPages, classificationPanels, applyPenDynamics, fillReportArt };
+global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','page']) };
 })(window);

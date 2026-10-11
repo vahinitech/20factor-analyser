@@ -133,6 +133,46 @@
               "null"
             ]
           },
+          "why": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why the skill helps, one short sentence."
+          },
+          "win": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A small win the child can see, finishing \"You'll know it's working when ...\"."
+          },
+          "page": {
+            "type": "string",
+            "pattern": "^handwriting-[a-z-]+$",
+            "description": "The skill's page on vahinitech.com, without '.html'."
+          },
+          "i18n": {
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+              "^[a-z]{2}$": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "why",
+                  "win"
+                ],
+                "properties": {
+                  "why": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "win": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
+          },
           "exercises": {
             "type": "array",
             "items": {
@@ -207,6 +247,37 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "model": {
+                  "type": "string",
+                  "enum": [
+                    "ladder",
+                    "zones",
+                    "baseline",
+                    "gaps",
+                    "letter-gaps",
+                    "margin",
+                    "slant",
+                    "loops",
+                    "trace",
+                    "start-dots",
+                    "pairs",
+                    "waves",
+                    "page"
+                  ],
+                  "description": "The drawing the report shows under 'Copy this'."
+                },
+                "helps": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^([1-9]|1[0-9]|20)$": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
+                },
                 "i18n": {
                   "type": "object",
                   "additionalProperties": false,
@@ -260,6 +331,18 @@
                 "text": {
                   "type": "string",
                   "minLength": 1
+                },
+                "helps": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^([1-9]|1[0-9]|20)$": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
                 },
                 "i18n": {
                   "type": "object",
@@ -1187,6 +1270,37 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "model": {
+                    "type": "string",
+                    "enum": [
+                      "ladder",
+                      "zones",
+                      "baseline",
+                      "gaps",
+                      "letter-gaps",
+                      "margin",
+                      "slant",
+                      "loops",
+                      "trace",
+                      "start-dots",
+                      "pairs",
+                      "waves",
+                      "page"
+                    ],
+                    "description": "The drawing the report shows under 'Copy this'."
+                  },
+                  "helps": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^([1-9]|1[0-9]|20)$": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
+                  },
                   "i18n": {
                     "type": "object",
                     "additionalProperties": false,
@@ -1240,6 +1354,18 @@
                   "text": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "helps": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^([1-9]|1[0-9]|20)$": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
                   },
                   "i18n": {
                     "type": "object",

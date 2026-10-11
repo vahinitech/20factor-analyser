@@ -88,6 +88,23 @@ class CatalogueRules(unittest.TestCase):
             ("worksheet", "no-such-sheet", "unknown worksheet"),
             ("unit", "minute", "unknown unit"),
             ("needs", "pen", "needs does not match"),
+            ("model", "circus", "unknown model"),
+            ("steps", "One. Two. Three. Four.", "over 3 sentences"),
+            ("check", "Look. Then look again.", "one sentence"),
+            (
+                "steps",
+                "Write one long row of very small letters and then write"
+                " another one below it slowly.",
+                "long sentence",
+            ),
+            ("helps", {"1": 0.9}, "own factor 1 at 1.0"),
+            ("helps", {"1": 1.0, "5": 0.95}, "helps 5 at 0.95"),
+            ("helps", {"1": 1.0, "21": 0.5}, "unknown factor 21"),
+            (
+                "helps",
+                {"1": 1.0, "3": 0.5, "5": 0.5, "7": 0.5, "8": 0.5},
+                "over 3 other factors",
+            ),
         ]
         for field, value, message in cases:
             factors = copy.deepcopy(practice_catalog.FACTORS)
@@ -108,6 +125,134 @@ class CatalogueRules(unittest.TestCase):
         self.assertIn("factor 5: fewer than 2 exercises", found)
         self.assertIn("factor 8: fewer than 2 tips", found)
         self.assertIn("duplicate id", found)
+
+    def test_every_factor_says_why_it_helps_and_the_win(self):
+        """Page 2 prints ``why``, ``win`` and the website page under each
+        skill (owner, 2026-10-11), with their Telugu."""
+        pages = set()
+        for number in range(1, 21):
+            area = practice_catalog.FACTORS[number]
+            for field in ("why", "win"):
+                text = area[field]
+                self.assertTrue(text.endswith("."), (number, field))
+                self.assertEqual(len(practice_catalog.sentences(text)), 1)
+                self.assertTrue(area["i18n"]["te"][field].strip())
+            self.assertLessEqual(len(area["why"]), practice_catalog.WHY_MAX)
+            self.assertLessEqual(len(area["win"]), practice_catalog.WIN_MAX)
+            self.assertTrue(area["page"].startswith("handwriting-"))
+            pages.add(area["page"])
+        self.assertEqual(len(pages), 20, "one website page per factor")
+        self.assertEqual(
+            practice_catalog.FACTORS[5]["why"],
+            "Same-size letters make your words easy to read.",
+        )
+        self.assertEqual(
+            practice_catalog.FACTORS[8]["win"],
+            "you can read your line aloud without stopping.",
+        )
+
+    def test_no_claim_to_diagnose_or_cure(self):
+        claims = practice_catalog.claim_pattern()
+        for word in ("cure", "overcomes", "a disorder", "diagnosis"):
+            self.assertTrue(claims.search(word), word)
+        self.assertIsNone(claims.search("keep it secure"))
+        for text in strings_of(practice_catalog.browser_catalog()):
+            self.assertIsNone(claims.search(text), text)
+
+    def test_the_why_and_win_rules_catch_a_bad_entry(self):
+        cases = [
+            ("why", "Practice will cure messy writing.", "avoid word in why"),
+            ("why", "x" * 61 + ".", "why over 60"),
+            ("win", "you write. Then you smile.", "win must be one"),
+            ("win", "", "no win"),
+            ("page", "handwriting-magic", "unknown page"),
+        ]
+        for field, value, message in cases:
+            factors = copy.deepcopy(practice_catalog.FACTORS)
+            factors[5][field] = value
+            with patch.object(practice_catalog, "FACTORS", factors):
+                found = practice_catalog.problems()
+            self.assertTrue(any(message in f for f in found), (field, found))
+        factors = copy.deepcopy(practice_catalog.FACTORS)
+        factors[7]["i18n"]["te"]["win"] = ""
+        with patch.object(practice_catalog, "FACTORS", factors):
+            found = practice_catalog.problems()
+        self.assertIn("factor 7: te win missing", found)
+
+    def test_every_entry_says_which_skills_it_helps(self):
+        """Many-to-many: every exercise and tip helps its own factor at
+        1.0, so its highest-weight factor is always its own, and others
+        only between HELP_MIN and HELP_MAX."""
+        for number, area in practice_catalog.FACTORS.items():
+            for entry in (*area["exercises"], *area["tips"]):
+                helps = entry["helps"]
+                self.assertEqual(helps[str(number)], 1.0, entry["id"])
+                top = max(helps.items(), key=lambda kv: kv[1])[0]
+                self.assertEqual(top, str(number), entry["id"])
+                for key, weight in helps.items():
+                    if key != str(number):
+                        self.assertGreaterEqual(weight, 0.3, entry["id"])
+                        self.assertLessEqual(weight, 0.8, entry["id"])
+        ladder = practice_catalog.FACTORS[5]["exercises"][0]
+        self.assertEqual(ladder["helps"], {"5": 1.0, "6": 0.6})
+
+    def test_selection_passes_composite_need_by_scoring_weights(self):
+        """practice-select.js hands a composite's need to the factors it
+        is made of, with the weights backend/scoring.py blends them by."""
+        scoring = (ROOT / "backend" / "scoring.py").read_text("utf-8")
+        select = (
+            ROOT / "frontend" / "src" / "report" / "practice-select.js"
+        ).read_text("utf-8")
+        for number in (18, 20):
+            start = scoring.index(f"s[{number}] = _clamp10(")
+            ends = [
+                scoring.find(mark, start + 1)
+                for mark in ("\n    s[", "\n    return")
+            ]
+            statement = scoring[start : min(e for e in ends if e > 0)]
+            parts = {
+                int(n): float(w)
+                for n, w in re.findall(r"\((\d+), ([0-9.]+)\)", statement)
+            }
+            self.assertTrue(parts, number)
+            js = re.search(rf"{number}: \{{([^}}]*)\}}", select)
+            self.assertIsNotNone(js, number)
+            mine = {
+                int(n): float(w)
+                for n, w in re.findall(r"(\d+):([0-9.]+)", js[1])
+            }
+            self.assertEqual(mine, parts, number)
+
+    def test_every_exercise_names_its_drawing(self):
+        for area in practice_catalog.FACTORS.values():
+            for ex in area["exercises"]:
+                self.assertIn(ex["model"], practice_catalog.MODELS)
+        self.assertEqual(
+            practice_catalog.FACTORS[8]["exercises"][0]["model"], "gaps"
+        )
+
+    def test_steps_are_short_simple_sentences(self):
+        """A parent with basic English and a child of 8 can follow them:
+        at most three sentences, each of at most 14 words."""
+        for area in (
+            *practice_catalog.FACTORS.values(),
+            practice_catalog.SPELLING,
+        ):
+            for ex in area["exercises"]:
+                steps = practice_catalog.sentences(ex["steps"])
+                self.assertLessEqual(len(steps), 3, ex["id"])
+                for sentence in steps + [ex["check"]]:
+                    self.assertLessEqual(len(sentence.split()), 14, sentence)
+        self.assertEqual(
+            practice_catalog.sentences(
+                practice_catalog.FACTORS[5]["exercises"][0]["steps"]
+            ),
+            [
+                "Draw two light lines, a little apart.",
+                "Write a o e c n m between them.",
+                "Each letter touches both lines.",
+            ],
+        )
 
     def test_every_exercise_and_tip_has_telugu(self):
         for area in (
@@ -219,6 +364,11 @@ class ServedCatalogue(unittest.TestCase):
                 for entry in (*factor["exercises"], *factor["tips"])
             )
         )
+        for factor in body["factors"]:
+            area = practice_catalog.FACTORS[factor["n"]]
+            for key in ("why", "win", "page"):
+                self.assertEqual(factor[key], area[key])
+            self.assertEqual(factor["i18n"]["te"], area["i18n"]["te"])
         committed = ROOT / "backend" / "catalogs" / (body["version"] + ".json")
         self.assertTrue(committed.exists(), "run compact_reports.py")
 
@@ -234,6 +384,12 @@ class ServedCatalogue(unittest.TestCase):
         self.assertTrue(contract_schemas.errors("catalog", body))
         body = copy.deepcopy(compact_reports.dictionary())
         del body["factors"][0]["tips"][0]["i18n"]["te"]["text"]
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        body["factors"][0]["page"] = "https://example.com"
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        body["factors"][0]["i18n"]["te"]["note"] = "x"
         self.assertTrue(contract_schemas.errors("catalog", body))
 
 

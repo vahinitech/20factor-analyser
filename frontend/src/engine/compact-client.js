@@ -25,11 +25,14 @@
   }
   // The practice catalogue served with this dictionary version (#122):
   // stages, tries by band, tier defaults and each factor's exercises and
-  // tips. Older dictionaries have none; the report then uses its own copy.
+  // tips, and (from 2026-10-11) why each skill helps, the win to look for
+  // and its website page. Older dictionaries have none; the report then
+  // uses its own copy.
   function practiceOf(catalog){
     if(!catalog.practice)return null;
     const factors={};
-    catalog.factors.forEach(f=>{if(Array.isArray(f.exercises))factors[String(f.n)]={exercises:f.exercises,tips:Array.isArray(f.tips)?f.tips:[]};});
+    const about=f=>typeof f.why==='string'?{why:f.why,win:f.win,page:f.page,i18n:f.i18n||{}}:{};
+    catalog.factors.forEach(f=>{if(Array.isArray(f.exercises))factors[String(f.n)]={...about(f),exercises:f.exercises,tips:Array.isArray(f.tips)?f.tips:[]};});
     return {...catalog.practice,factors};
   }
   async function expand(report,endpoint){

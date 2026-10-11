@@ -3,7 +3,10 @@
 Approved by the owner on 2026-10-11 in #122; the English report, the
 catalogue and "Your progress" are built (see section 14). Sections 9 and 10
 (print in Telugu, share on WhatsApp) are built with draft Telugu wording
-that waits for a native speaker's check (see section 15).
+that waits for a native speaker's check (see section 15). Report version C
+(page 1 "Your writing snapshot", the practice sheet with drawings, plain
+English, many-to-many selection, the shared PDF and the side panel) was
+approved by the owner on 2026-10-11 and is section 16.
 
 ## 1. The problem
 
@@ -130,6 +133,9 @@ report never promises a score. A 20-minute daily cap still applies when a
 child has several cards; past it, later cards ask for fewer tries.
 
 ## 5. Choosing exercises and tips (only for the skills the report flags)
+
+Since version C this is many-to-many: see section 16, "Many-to-many
+selection". The steps below still hold for which skills get a row.
 
 1. Priorities are chosen as today (up to three; a spelling finding may take
    one slot; lowest measured non-composite factors below 8.5).
@@ -392,3 +398,184 @@ sharing. What is built:
   Until then the Telugu is draft, and the vahini-web pin bump that takes it
   to production waits for that check.
 
+
+## 16. Version C (owner approval, 2026-10-11)
+
+The owner approved "version C" of the report on 2026-10-11: "go with C,
+build and deploy to stage and use vahini branding logo website, patent
+details those things will be present in the report". The mock-ups are in
+the PR (#126). The report follows the vahinitech.com theme: colours are
+`var(--v-*)` tokens from `/site/design/v1/vahini.css`, and the only colour
+codes of its own are the four score colours.
+
+As built, printed through `fitPrintPages()` from the sample report (two A4
+pages in every case):
+
+| Free page 1 | Free page 2 | Pro page 1 | Pro page 2 |
+|---|---|---|---|
+| ![Free page 1](practice-framework/c-free-page1.png) | ![Free page 2](practice-framework/c-free-page2.png) | ![Pro page 1](practice-framework/c-pro-page1.png) | ![Pro page 2](practice-framework/c-pro-page2.png) |
+
+Free page 1 in Telugu (draft wording): [c-free-page1-telugu.png](practice-framework/c-free-page1-telugu.png).
+On screen with the side panel: [c-screen-side-panel.png](practice-framework/c-screen-side-panel.png).
+
+### Page 1, "Your writing snapshot" (Free and Pro)
+
+The Vahini logo, "Vahini" and vahinitech.com; "Your writing snapshot" with
+the overall score in a pill coloured by band (85 and up green, 70 to 84
+yellow, 45 to 69 orange, below 45 red; Strong, Mastering, Improving,
+Learning); "Small changes. Clearer writing." and "One page, one strength,
+one useful next step."; a green "Keep doing this" band for the strongest
+measured skill (composites left out), with the host's `cheer` picture and a
+drawn leaf; the photo zoomed (an SVG viewBox over the photo) to the parts
+the next rows point at, with numbered boxes from the factor regions, never
+cutting a box; "Start here" for the first skill to grow (its goal, what to
+look at, its score in its band colour and stage, "Try one slow row");
+"Look closer at your page", up to two rows (the first two skills to grow;
+a spelling finding takes the second): the crop, what we saw, one next
+action and that skill's practice sheet; "What this review looks at", a
+chip per scored skill with a drawn icon and its score in its band colour;
+"Your next 2-minute practice", the first exercise's numbered steps, its
+example in light grey between two guide lines to trace, an empty pair, a
+tick box with its self-check, and a QR code that opens the first skill's
+worksheet PDF; screen-only "Download my practice sheet (PDF)" and "Check
+another page"; and the footer with the patents, vahinitech.com, the
+spelling note and "A practice guide from one photo, not a school mark."
+
+Not built: height bars and gap markers on the crops. The analyser does not
+measure letter heights or word gaps per letter yet, so the report draws
+nothing that would look like such a measure.
+
+### Page 2, the practice sheet
+
+The same rows as before (the skill on the left with its stage path and
+practice sheet, how to practise on the right), in plain English, with a
+drawing for each exercise that shows what its steps say. Each exercise
+names its drawing in the catalogue (`model`): `ladder` (two lines, the
+letters exactly between them), `zones` (four lines), `baseline` (words on a
+bold line), `gaps` (words with finger-wide gap blocks), `letter-gaps`,
+`margin`, `slant` (slant guides), `loops`, `trace`, `start-dots`, `pairs`,
+`waves` and `page`. "Your turn" lines match the drawing. The page head has
+the logo and vahinitech.com, the footer the patent line.
+
+Second round (owner, 2026-10-11, mock-up in #126): under each skill's
+stage path, the left column now says **why it helps** (one short sentence
+about everyday life), a green box **"You'll know it's working when ..."**
+naming a small win the child can see, and **"More:"** with the skill's page
+on vahinitech.com (`handwriting-<skill>.html`, a link on screen and the
+address when printed), above the practice sheet link. The texts are data:
+`why`, `win` and `page` per factor in `backend/practice_catalog.py`
+(`ABOUT`, Telugu in `TELUGU_ABOUT`, draft), checked on import (one
+sentence each, at most 60 and 56 characters, plain words, no claim word,
+a known page) and served in the catalogue from version
+`82ca133f7363f8489dd8`. The left column never makes a row taller than its
+practice: `trimSkillColumns()` measures each row on screen and before
+printing and drops "More" first, then the "why" line, then the win box
+(`data-trim` on the row; `tests/report-layout.mjs`). Telugu text runs
+longer, so a Telugu row usually keeps the win box and the practice sheet
+only.
+
+Before the closing line, a note in the theme's soft blue, **"Every child
+learns to write at their own pace."**: short, happy practice helps most
+children; if writing is still very tiring, slow or painful after a few
+weeks, a teacher or an occupational therapist can help, with
+vahinitech.com/signs-child-needs-handwriting-help.html. The report never
+diagnoses, never promises a cure or to "overcome" anything, and never reads
+personality from handwriting: the import check and
+`tests/report-words.test.mjs` refuse "cure", "overcome", "disorder" and
+"diagnos..." in catalogue and report text. The "Other skills" box text is
+larger (12.5 px Free, 11.5 px Pro).
+
+### Plain English
+
+A parent with basic English and a child of 8 read the report. Every step is
+at most three short sentences, one action each ("Draw two light lines, a
+little apart. Write a o e c n m between them. Each letter touches both
+lines."); no sentence in a step, check or tip runs over 14 words, and
+checks are statements to tick ("All my small letters touch both lines.").
+`practice_catalog.py` refuses anything longer on import. The report's own
+sentences are held to 16 words, and an average under 10, by
+`tests/report-strings.test.mjs`. The Telugu was redrafted to match and is
+still draft until a native speaker checks it.
+
+### Many-to-many selection
+
+Every exercise and tip says which skills it helps: `helps`, factor number
+to weight, its own factor at 1.0 and others at 0.3 to 0.8 where the
+practice truly helps them (the two-line ladder helps even letter sizes at
+1.0 and tall letters and tails at 0.6). A report chooses, in
+`frontend/src/report/practice-select.js`, deterministically:
+
+1. **Need** for each measured skill: `max(0, 8.5 - score) x reliability`
+   (measured 1.0, estimated 0.6). A composite (18 legibility, 20 neatness)
+   passes its need to the skills it is made of, by the weights
+   `backend/scoring.py` blends them with (a test keeps the two in step).
+2. **Rows** are the flagged skills, as before (the lowest measured
+   non-composite skills below 8.5, up to the tier's `areas_max`).
+3. **Value** of a candidate: the sum of `helps[f] x need[f]`, minus 100
+   when it was printed last time (rotation through the history kept in
+   this browser), minus 0.75 for each level above 1 (a child starts with
+   the first exercises).
+4. **Greedy picks**: the first skill to grow picks first, then the row with
+   the most need left. A row takes candidates only from its own skill's
+   list, so every printed entry's highest-weight factor is a flagged skill
+   (tested). After a pick, each skill it helps keeps `1 - weight / 2` of
+   its need, so the next pick goes after what is left. Ties go to the lower
+   level, then catalogue order. Exercises per row follow the band and the
+   tier (`exercises_max`), tips the tier (`tips_max`); tips are chosen the
+   same way.
+5. **Tries a day** follow the row's own skill (owner, 2026-10-11): its
+   stage sets them (Learning 15, Improving 10, Mastering 5 a day, Strong 10
+   once a week), even when the exercise also helps a weaker skill. The
+   selection still picks exercises by the combined need above; only the
+   tries come from the row.
+
+`tests/practice-select.test.mjs` checks the need, the composites, the same
+picks for the same report, rotation, the tier limits and that every printed
+entry belongs to a flagged skill. `scripts/practice_map.py` shows each
+entry's `helps` in [PRACTICE-MAP.md](PRACTICE-MAP.md).
+
+### Share the PDF on WhatsApp
+
+This replaces the text summary of section 10. "Share PDF on WhatsApp" makes
+the two report pages into a two-page A4 PDF in the browser, in the language
+chosen in "Print in": html2canvas draws each page at twice its CSS size
+(about 190 dots per inch on A4) and jsPDF puts the pictures on A4 pages
+(both MIT, vendored unchanged in `frontend/scripts/vendor/` with
+`sources.json`, in the SBOM and THIRD-PARTY-NOTICES, about 620 KB together,
+loaded only when the button is pressed and stamped like every other asset
+through `<template id="pdf-libs">`). A phone that can share files
+(`navigator.canShare({files})`) opens its share sheet with the PDF, where
+the family picks WhatsApp; anything else saves the PDF and opens
+`https://wa.me/?text=` with a note to attach it. The PDF holds what the
+report shows, including the name the family typed, if any. Nothing goes to
+Vahini's server: making it fetches only the two library files.
+
+The file is branded and never names the child (owner, 2026-10-11): it is
+saved or shared as `Vahini-handwriting-snapshot-<YYYY-MM-DD>.pdf` in every
+language, with the PDF title "Vahini handwriting snapshot", author and
+creator "Vahini Technologies · vahinitech.com" and subject "Free handwriting
+review" ("Handwriting review" for Pro). Its pages keep the website theme
+(`print-color-adjust: exact`); `tests/report-language.mjs` samples page 1's
+"Keep doing this" band and "Start here" card in the PDF image and fails if
+they come out as plain paper.
+
+### The side panel
+
+On screens 1200 px and wider a sticky panel beside the report holds "Print
+in", "Share PDF on WhatsApp", "Print / Save as PDF", the next steps
+`analyser.html` showed under the report (practise the worksheet, check
+again on a date, what a photo cannot see), "Your progress" and the Sponsors
+line; narrower screens show the same panel under the report. It is never
+printed and never in the shared PDF.
+
+On the sample report the panel also holds **"About this sample"**: how the
+sample was made and links to the Free and Pro examples, the before and after
+stories and "Analyse your own page". They used to sit in a dark banner over
+the report; the page's heading and intro stay. `analyser.html` has no such
+banner (its toolbar holds only "Run another").
+
+### Characters
+
+The host's `cheer` picture moved to page 1's "Keep doing this" band; `tip`
+(Pihu, in each tip) and `encourage` (Tara, closing page 2) stay. `buddy` is
+no longer used: version C has no opening line on page 2.

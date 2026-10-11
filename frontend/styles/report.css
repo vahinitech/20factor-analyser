@@ -15,7 +15,7 @@
   --accent-deep:   var(--v-accent-strong);
   --accent-soft:   var(--v-accent-soft);
   --grow:          #1F9D74;   /* growth green */
-  --grow-soft:     #DCF1E8;
+  --grow-soft:     var(--v-success-bg);
   --good:          #3A6EA5;   /* "good" band blue, between developing and strong */
   --good-soft:     #DCE7F3;
   --gold:          #C29A45;
@@ -40,6 +40,12 @@
   --band-good:     var(--good);
   --band-dev:      var(--gold);
   --band-focus:    #C0392B;
+  /* Page 1's score colours (owner approval of version C, 2026-10-11):
+     85 and up green, 70 to 84 yellow, 45 to 69 orange, below 45 red. */
+  --sn-strong:     var(--grow);
+  --sn-good:       var(--gold);
+  --sn-dev:        #B8611E;
+  --sn-focus:      var(--band-focus);
 
   /* Type */
   --serif: var(--v-font-serif);
@@ -958,3 +964,273 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
    two sheets with two exercises and two tips per skill. */
 .free-report.compact-report:not(.practice-pro) .pr-model-art{ height:52px; }
 .free-report.compact-report:not(.practice-pro) .pr-model{ padding:3px 10px; }
+
+
+/* =========================================================================
+   Version C (owner approval 2026-10-11: "go with C ... use vahini branding
+   logo website, patent details"). Page 1 is "Your writing snapshot", page 2
+   the practice sheet with drawn models, and a side panel on screen. Colours
+   are the website's theme tokens (/site/design/v1/vahini.css); only the
+   four score colours above are the report's own.
+   ========================================================================= */
+.free-report.compact-report.snapshot-page{ background:var(--v-paper); padding:9mm 11mm 8mm; }
+.free-report.compact-report.practice-page{ background:var(--v-paper); }
+.free-report.compact-report .sn-foot{ align-items:flex-end; font-family:var(--serif); font-size:9.5px; line-height:1.4; letter-spacing:0; color:var(--v-text-muted); }
+.sn-brand{ display:flex; align-items:center; gap:10px; text-transform:none; letter-spacing:0; }
+.sn-logo{ width:40px; height:40px; border-radius:50%; display:block; flex:none; }
+.sn-brand > span{ display:flex; flex-direction:column; line-height:1.05; }
+.sn-brandname{ font:700 30px/1 var(--serif); color:var(--v-text); letter-spacing:-.01em; }
+.sn-site{ font:600 11.5px/1.3 var(--sans); color:var(--v-accent-text); letter-spacing:.02em; }
+.run-head.sn-head{ align-items:center; border-bottom:2px solid var(--v-success-bg); }
+.run-head.sn-head .sn-logo{ width:30px; height:30px; }
+.run-head.sn-head .sn-brandname{ font-size:20px; }
+.run-head.sn-head .sn-site{ font-size:10px; }
+.sn-headlabel{ font:600 11px var(--sans); letter-spacing:.22em; text-transform:uppercase; color:var(--v-text-2); }
+.sn-top{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
+.sn-right{ display:flex; flex-direction:column; align-items:flex-end; gap:6px; text-align:right; }
+.sn-eyebrow{ font:600 11px var(--sans); letter-spacing:.24em; text-transform:uppercase; color:var(--v-text-2); padding-bottom:5px; border-bottom:2px solid var(--v-success-bg); }
+.sn-writer{ font:600 14px var(--serif); color:var(--v-text); }
+.sn-score{ display:inline-flex; align-items:baseline; gap:6px; border-radius:999px; padding:4px 13px; color:var(--v-on-accent); font:800 20px var(--sans); }
+.sn-score small{ font:600 11px var(--sans); }
+.band-strong.sn-score, .sn-chip b.band-strong{ background:var(--sn-strong); }
+.band-good.sn-score, .sn-chip b.band-good{ background:var(--sn-good); color:var(--v-text); }
+.band-dev.sn-score, .sn-chip b.band-dev{ background:var(--sn-dev); }
+.band-focus.sn-score, .sn-chip b.band-focus{ background:var(--sn-focus); }
+.sn-band-text.band-strong{ color:var(--sn-strong); } .sn-band-text.band-good{ color:var(--sn-good); }
+.sn-band-text.band-dev{ color:var(--sn-dev); } .sn-band-text.band-focus{ color:var(--sn-focus); }
+.free-report.compact-report h2.sn-title{ font:700 33px/1.04 var(--serif); letter-spacing:-.02em; margin:4px 0 2px; }
+.free-report.compact-report p.sn-sub{ font:400 15.5px/1.3 var(--serif); margin:0 0 8px; color:var(--v-text); }
+.free-report.compact-report .since-last{ font-size:12px; margin:0 0 6px; color:var(--v-accent-text); font-weight:600; }
+.sn-keep{ display:flex; align-items:center; gap:14px; background:var(--v-success-bg); border-radius:16px; padding:7px 16px; }
+.sn-tick{ width:42px; height:42px; border-radius:50%; background:var(--v-success); color:var(--v-on-accent); display:grid; place-items:center; flex:none; }
+.sn-tick svg{ width:24px; height:24px; }
+.sn-keep-label{ font:700 11px var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--v-success); padding-right:14px; border-right:1.5px solid var(--v-success); align-self:stretch; display:flex; align-items:center; }
+.sn-keep-text{ flex:1; min-width:0; }
+.free-report.compact-report .sn-keep h3{ font:700 20px/1.2 var(--serif); margin:0; }
+.free-report.compact-report .sn-keep p{ margin:2px 0 0; font:400 14px/1.3 var(--serif); }
+.sn-leaf{ width:30px; height:38px; flex:none; }
+.sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
+.sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }
+.compact-report .sn-keep .rp-art-cheer{ width:40px; height:46px; }
+.sn-mid{ display:grid; grid-template-columns:53% minmax(0,1fr); gap:14px; margin:10px 0 2px; }
+.sn-mid.no-photo{ grid-template-columns:1fr; }
+.sn-zoom{ margin:0; min-width:0; }
+.sn-zoom-frame{ border-radius:14px; overflow:hidden; background:var(--v-bg-alt); border:1px solid var(--v-paper-edge); height:212px; }
+.sn-zoom-frame svg, .sn-zoom-frame img{ width:100%; height:100%; display:block; object-fit:contain; }
+.sn-mark rect{ fill:none; stroke:var(--v-highlight); }
+.sn-mark circle{ fill:var(--v-highlight); stroke:var(--v-surface); }
+.sn-mark text{ fill:var(--v-on-accent); font-family:var(--sans); font-weight:700; }
+.sn-zoom figcaption{ display:flex; justify-content:space-between; gap:8px; font:400 11.5px/1.3 var(--serif); margin-top:3px; color:var(--v-text); }
+.sn-zoom figcaption span + span{ color:var(--v-text-muted); }
+.sn-start{ background:var(--v-highlight-soft); border-radius:16px; padding:12px 18px; position:relative; min-width:0; }
+.sn-start-top{ display:flex; align-items:center; gap:8px; }
+.sn-start .sn-leaf{ width:22px; height:28px; }
+.sn-pill{ display:inline-block; background:var(--v-surface); color:var(--v-highlight); font:700 11px var(--sans); letter-spacing:.2em; text-transform:uppercase; padding:5px 15px; border-radius:999px; }
+.sn-spark{ position:absolute; right:14px; top:12px; width:20px; height:30px; color:var(--v-highlight); opacity:.6; }
+.free-report.compact-report .sn-start h3{ font:700 21px/1.12 var(--serif); margin:8px 0 4px; }
+.free-report.compact-report .sn-start p{ margin:0 0 2px; font:400 14px/1.35 var(--serif); }
+.free-report.compact-report .sn-start p.sn-meta{ font:600 12px var(--sans); color:var(--v-text-2); margin-top:6px; }
+.sn-try{ display:inline-flex; align-items:center; gap:9px; border:1.8px solid var(--v-highlight); color:var(--v-highlight); border-radius:12px; padding:5px 15px; font:700 15px var(--serif); margin-top:6px; background:var(--v-surface); }
+.sn-pencil{ width:18px; height:18px; flex:none; }
+.free-report.compact-report h3.sn-h3{ font:700 18.5px var(--serif); margin:7px 0 5px; }
+.sn-look{ display:grid; grid-template-columns:38% minmax(0,1fr) 30%; gap:12px; align-items:center; border:1px solid var(--v-paper-edge); border-radius:14px; padding:5px 7px; background:var(--v-surface); margin-bottom:5px; break-inside:avoid; }
+.sn-look-crop{ width:100%; height:50px; object-fit:contain; background:var(--v-bg-alt); border-radius:9px; display:block; }
+.sn-look-word{ display:flex; align-items:center; justify-content:center; background:var(--v-bg-alt); font:600 30px/1 var(--handB); color:var(--v-paper-ink); }
+.free-report.compact-report .sn-look-none{ font-size:11px; color:var(--v-text-muted); margin:0; }
+.sn-look h4{ margin:0; font:700 16.5px var(--serif); }
+.sn-look h4 em{ font-style:normal; color:var(--v-highlight); }
+.free-report.compact-report .sn-look p{ margin:2px 0 0; font:400 13px/1.35 var(--serif); color:var(--v-text-2); }
+.sn-act{ background:var(--v-highlight-soft); border-radius:10px; padding:6px 10px; display:flex; gap:8px; align-items:flex-start; color:var(--v-highlight); }
+.sn-act > div{ color:var(--v-text); font:400 12.5px/1.35 var(--serif); }
+.sn-act b{ display:block; font:700 10px var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--v-highlight); margin-bottom:2px; }
+.sn-act a.sn-sheet{ color:var(--v-text); font-weight:700; text-decoration:underline; }
+.sn-h3row{ display:flex; justify-content:space-between; align-items:baseline; gap:10px; }
+.sn-h3row small{ font:400 11px var(--serif); color:var(--v-text-muted); text-align:right; }
+.sn-chips{ display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:5px; }
+.sn-chip{ display:flex; align-items:center; gap:5px; background:var(--v-bg-alt); border:1px solid var(--v-border); border-radius:14px; padding:5px 7px; min-width:0; }
+.sn-ic{ width:28px; height:28px; border-radius:50%; background:var(--v-surface); color:var(--v-text); display:grid; place-items:center; flex:none; }
+.sn-ic svg{ width:17px; height:17px; }
+.sn-cn{ font:400 11px/1.15 var(--serif); color:var(--v-text); min-width:0; overflow-wrap:normal; }
+.sn-chip b{ margin-left:auto; color:var(--v-on-accent); border-radius:999px; padding:1px 6px; font:700 10.5px var(--sans); white-space:nowrap; }
+.sn-up{ margin-left:2px; }
+/* Pro shows every scored skill: smaller chips, wrapping onto more rows. */
+.snapshot-pro .sn-chips{ grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; }
+.snapshot-pro .sn-chip{ padding:3px 5px; gap:4px; border-radius:11px; }
+.snapshot-pro .sn-ic{ width:20px; height:20px; } .snapshot-pro .sn-ic svg{ width:13px; height:13px; }
+.snapshot-pro .sn-cn{ font-size:10px; }
+.snapshot-pro .sn-chip b{ font-size:9.5px; padding:1px 5px; }
+.sn-prac{ background:var(--v-success-bg); border-radius:16px; padding:7px 14px 10px; margin-top:8px; break-inside:avoid; }
+.sn-prac-head{ display:flex; align-items:center; gap:8px; }
+.free-report.compact-report .sn-prac h3{ font:700 18.5px var(--serif); margin:0 0 5px; }
+.sn-pgrid{ display:grid; grid-template-columns:36% minmax(0,1fr) 92px; gap:14px; background:var(--v-paper); border-radius:12px; padding:9px 14px; }
+.sn-pgrid.no-qr{ grid-template-columns:40% minmax(0,1fr); }
+.sn-steps{ margin:0; padding:0; list-style:none; }
+.sn-steps li{ display:flex; gap:10px; align-items:center; margin:4px 0; font:400 13.5px/1.3 var(--serif); }
+.sn-steps i{ font-style:normal; width:23px; height:23px; border-radius:50%; background:var(--v-success); color:var(--v-on-accent); display:grid; place-items:center; font:700 12px var(--sans); flex:none; }
+.sn-turn{ border-left:1.5px solid var(--v-border); padding-left:14px; min-width:0; }
+.sn-turn > b{ font:700 10.5px var(--sans); letter-spacing:.16em; text-transform:uppercase; color:var(--v-text-muted); }
+/* Two guide lines 15px apart; the trace letters' small letters sit
+   exactly between them (Caveat's x-height is about 0.38em). */
+.sn-guide{ position:relative; height:30px; overflow:hidden; }
+.sn-guide::before, .sn-guide::after{ content:""; position:absolute; left:0; right:0; border-top:1.4px solid var(--v-paper-ink); opacity:.55; }
+.sn-guide::before{ top:9px; } .sn-guide::after{ top:24px; }
+.sn-guide .md-hand{ position:absolute; left:4px; top:24px; transform:translateY(-78%); font:600 39px/1 var(--handB); letter-spacing:.3em; color:var(--v-paper-faint); white-space:nowrap; }
+.free-report.compact-report .sn-chk{ font:400 12px var(--serif); color:var(--v-text-2); margin:4px 0 0; text-align:right; }
+.sn-chk i{ display:inline-block; width:12px; height:12px; border:1.4px solid var(--v-text-muted); border-radius:3px; vertical-align:-2px; margin-right:6px; }
+.sn-qr{ text-align:center; font:600 9.5px/1.2 var(--sans); color:var(--v-text-muted); }
+.sn-qr-code{ width:78px; height:78px; display:block; margin:2px auto 3px; border-radius:6px; }
+.sn-qr-code .qr-bg{ fill:var(--v-surface); } .sn-qr-code .qr-fg{ fill:var(--v-text); }
+.sn-cta{ display:flex; justify-content:center; flex-wrap:wrap; gap:14px; margin-top:8px; }
+.sn-cta a{ display:inline-flex; align-items:center; gap:8px; border-radius:12px; padding:8px 24px; font:700 15.5px var(--serif); text-decoration:none; }
+.sn-cta .sn-b1{ background:var(--v-dark); color:var(--v-on-dark); }
+.sn-cta .sn-b2{ border:1.8px solid var(--v-dark); color:var(--v-text); }
+.free-report.compact-report .sn-empty{ font-size:14px; margin:20px 0; }
+@media print{ .screen-only, .report-side{ display:none !important; } .free-report.compact-report.snapshot-page{ padding:9mm 11mm 8mm !important; } }
+@media screen and (max-width:700px){
+  .sn-mid, .sn-look{ grid-template-columns:1fr; }
+  .sn-chips, .snapshot-pro .sn-chips{ grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .sn-pgrid, .sn-pgrid.no-qr{ grid-template-columns:1fr; }
+  .sn-turn{ border-left:0; padding-left:0; }
+  .free-report.compact-report h2.sn-title{ font-size:27px; }
+  .sn-keep{ flex-wrap:wrap; } .sn-keep-label{ border-right:0; }
+}
+
+/* Page 2 in plain steps, with a drawing per exercise kind (the catalogue's
+   "model"). The trace letters use the theme's paper ink. */
+.free-report.compact-report p.p2-sub{ margin:0 0 6px; font-size:13px; color:var(--v-text-2); }
+.free-report.compact-report ol.pr-steps{ margin:2px 0 3px; padding-left:18px; font-size:12.5px; line-height:1.35; }
+.free-report.compact-report ol.pr-steps li{ margin:0; padding:0; border:0; background:none; }
+.compact-report .pr-model{ padding:2px 8px; }
+.free-report.compact-report:not(.practice-pro) .pr-model-art{ height:46px; }
+.free-report.compact-report.practice-pro .pr-model-art{ height:34px; }
+.md{ position:relative; height:100%; display:flex; align-items:center; gap:4px; color:var(--v-paper-ink); overflow:hidden; }
+.md-hand{ font:600 28px/1 var(--handB); color:var(--v-paper-ink); white-space:nowrap; }
+.practice-pro .md-hand{ font-size:22px; }
+.md-ladder::before, .md-ladder::after, .md-zones::before, .md-zones::after{ content:""; position:absolute; left:0; right:0; border-top:1.4px solid var(--v-paper-ink); opacity:.5; }
+.md-ladder::before{ top:30%; } .md-ladder::after{ top:62%; }
+.md-ladder .md-hand{ position:absolute; left:6px; top:62%; transform:translateY(-78%); font-size:39px; letter-spacing:.22em; }
+.practice-pro .md-ladder .md-hand{ font-size:29px; }
+.md-zones{ background:linear-gradient(var(--v-paper-ink),var(--v-paper-ink)) 0 46%/100% 1px no-repeat; }
+.md-zones::before{ top:14%; } .md-zones::after{ top:70%; }
+.md-zones .md-hand{ position:absolute; left:6px; top:70%; transform:translateY(-72%); font-size:34px; letter-spacing:.25em; }
+.practice-pro .md-zones .md-hand{ font-size:26px; }
+.md-baseline .md-hand{ border-bottom:2.5px solid var(--v-success); padding:0 6px; line-height:.95; }
+.md-gap{ display:inline-block; width:16px; height:60%; background:var(--v-accent-soft); border-radius:3px; position:relative; }
+.md-gap::after{ content:""; position:absolute; left:50%; top:-5px; margin-left:-5px; border:5px solid transparent; border-top-color:var(--v-success); }
+.md-lgap{ display:inline-block; width:2px; height:40%; background:var(--v-accent-light); margin:0 3px; }
+.md-slant{ background:repeating-linear-gradient(70deg, transparent 0 18px, var(--v-accent-soft) 18px 20px); }
+.md-slant .md-hand{ padding-left:8px; letter-spacing:.3em; }
+.md-ring{ border:1.5px dashed var(--v-success); border-radius:999px; padding:0 6px; margin-right:4px; }
+.md-trace .md-hand:first-child{ color:var(--v-paper-faint); }
+.md-arrow{ color:var(--v-text-muted); font-size:16px; padding:0 4px; }
+.md-dot{ position:relative; padding-left:6px; margin-right:10px; }
+.md-dot::before{ content:""; position:absolute; left:0; top:20%; width:6px; height:6px; border-radius:50%; background:var(--v-highlight); }
+.md-pair{ border:1.5px solid var(--v-accent-light); border-radius:8px; padding:0 8px; margin-right:8px; }
+.md-margin{ flex-direction:column; align-items:flex-start; justify-content:center; gap:5px; padding-left:20px; border-left:0; background:linear-gradient(var(--v-highlight),var(--v-highlight)) 16px 0/1.5px 100% no-repeat; }
+.md-margin i{ display:block; height:2px; width:55%; background:var(--v-paper-ink); opacity:.6; margin-left:2px; }
+.md-margin i:nth-child(2){ width:70%; } .md-margin i:nth-child(3){ width:40%; }
+.md-waves svg{ width:100%; height:80%; } .md-waves path{ fill:none; stroke:var(--v-paper-ink); stroke-width:2.2; stroke-linecap:round; }
+.md-page{ justify-content:flex-start; }
+.md-sheet{ display:flex; flex-direction:column; gap:4px; justify-content:center; width:90px; height:90%; border:1px solid var(--v-border-strong); border-radius:3px; padding:3px 8px 3px 16px; background:linear-gradient(var(--v-highlight),var(--v-highlight)) 11px 0/1px 100% no-repeat, var(--v-surface); }
+.md-sheet i{ display:block; height:2px; background:var(--v-paper-ink); opacity:.55; }
+.md-sheet i:nth-child(odd){ width:85%; } .md-sheet i:nth-child(even){ width:65%; }
+.md-focus svg{ width:100%; height:100%; }
+/* "Your turn" lines that match the drawing. */
+.compact-report .pr-line{ border-bottom:0; height:auto; }
+.yt{ height:26px; position:relative; }
+.yt-line{ border-bottom:1.5px solid var(--v-paper-ink); opacity:.55; height:18px; }
+.yt-ladder::before, .yt-ladder::after, .yt-zones::before, .yt-zones::after{ content:""; position:absolute; left:0; right:0; border-top:1.4px solid var(--v-paper-ink); opacity:.5; }
+.yt-ladder::before{ top:6px; } .yt-ladder::after{ top:22px; }
+.yt-zones{ height:30px; } .yt-zones::before{ top:2px; } .yt-zones::after{ top:20px; }
+.yt-zones{ background:linear-gradient(var(--v-paper-ink),var(--v-paper-ink)) 0 12px/100% 1px no-repeat, linear-gradient(var(--v-paper-ink),var(--v-paper-ink)) 0 29px/100% 1px no-repeat; }
+.yt-baseline{ border-bottom:2.5px solid var(--v-success); height:20px; }
+.yt-slant{ border-bottom:1.5px solid var(--v-paper-ink); background:repeating-linear-gradient(70deg, transparent 0 18px, var(--v-accent-soft) 18px 20px); }
+.yt-margin{ border-bottom:1.5px solid var(--v-paper-ink); background:linear-gradient(var(--v-highlight),var(--v-highlight)) 16px 0/1.5px 100% no-repeat; }
+.compact-report .other-skills .os-list{ font-size:11px; }
+.compact-report .other-skills .os-list span{ white-space:normal; }
+
+/* The side panel (screen only): beside the report from 1200px, under it
+   below that. Never printed, never in the shared PDF. */
+.report-layout{ display:block; }
+.report-side{ display:flex; flex-direction:column; gap:12px; max-width:210mm; margin:0 auto 40px; padding:0 12px; font-family:var(--sans); color:var(--v-text); }
+.side-card{ background:var(--v-surface); border:1px solid var(--v-border); border-radius:14px; padding:14px 16px; margin:0; }
+.side-card[hidden]{ display:none; }
+.side-card h2{ font:600 18px/1.25 var(--serif); margin:0 0 10px; color:var(--v-text); }
+.report-side .report-lang{ display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:var(--v-text-2); margin-bottom:10px; }
+.report-side .report-lang select{ font:inherit; font-size:15px; font-family:"Noto Sans Telugu", "Hanken Grotesk", sans-serif; padding:8px 10px; border-radius:10px; border:1.5px solid var(--v-border-strong); background:var(--v-surface); color:var(--v-text); }
+.report-side .btn{ width:100%; justify-content:center; margin:0 0 8px; padding:11px 14px; }
+.report-side .btn-share{ background:var(--v-success); color:var(--v-on-accent); }
+.report-side .btn-dark{ background:var(--v-dark); color:var(--v-on-dark); }
+.report-side .share-status{ font-size:13px; line-height:1.45; color:var(--v-text-2); margin:4px 0 0; }
+.report-side .share-status a{ color:var(--v-accent-text); font-weight:600; }
+.report-side .share-status[hidden]{ display:none; }
+.report-side .progress-panel{ max-width:none; margin:0; padding:0; border:0; background:none; font-size:13.5px; }
+.report-side .progress-panel h2{ font-size:18px; }
+.report-side .progress-panel .pp-compare{ columns:1; }
+.report-side .progress-panel .btn{ font-size:13px; }
+@media screen and (min-width:1200px){
+  .report-layout{ display:grid; grid-template-columns:minmax(0,210mm) 300px; gap:24px; justify-content:center; align-items:start; }
+  .report-side{ position:sticky; top:140px; max-height:calc(100vh - 160px); overflow:auto; margin:24px 0 40px; padding:0; }
+}
+@media print{ .report-side, .report-layout > aside{ display:none !important; } }
+/* The shared PDF: html2canvas draws the page as on a wide screen. */
+.pdf-capture .page{ margin:0 !important; box-shadow:none !important; width:210mm !important; min-height:297mm !important; }
+.pdf-capture body{ background:var(--v-paper); }
+.pdf-capture .page::after{ border:none; }
+/* Pro: two exercises per skill, so each sets its steps beside its drawing. */
+.practice-pro .pr-ex{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,44%); column-gap:10px; align-items:center; }
+.practice-pro .pr-ex .pr-ex-title{ grid-column:1 / -1; grid-row:1; }
+.free-report.compact-report.practice-pro .pr-ex ol.pr-steps{ grid-column:1; grid-row:2; font-size:11.5px; }
+.practice-pro .pr-ex .pr-model{ grid-column:2; grid-row:2; flex-direction:column; align-items:stretch; gap:0; padding:1px 6px; }
+.practice-pro .pr-ex .pr-model-label{ font-size:9px; }
+.practice-pro .pr-ex .pr-model-art{ flex:none; height:34px; }
+@media screen and (max-width:700px){
+  .sn-keep-text{ flex:1 1 100%; order:3; }
+  .sn-keep .sn-leaf, .sn-keep .rp-art{ display:none; }
+  .sn-top{ flex-wrap:wrap; } .sn-right{ align-items:flex-start; text-align:left; }
+}
+/* While the PDF is drawn: html2canvas copies a pseudo-element's computed
+   size from the page as it is on screen, so on a phone the paper edge
+   would cross the A4 page. */
+.pdf-busy .page::after{ content:none; }
+.pdf-capture .sn-cn{ overflow-wrap:normal; }
+.pdf-capture .sn-try{ display:flex; width:fit-content; }
+/* The Latin practice letters keep their spacing in a Telugu report. */
+.report-host[lang="te"] .page .sn-guide .md-hand{ letter-spacing:.3em; }
+.report-host[lang="te"] .page .md-ladder .md-hand, .report-host[lang="te"] .page .md-zones .md-hand{ letter-spacing:.22em; }
+.report-host[lang="te"] .page .md-slant .md-hand{ letter-spacing:.3em; }
+/* Pro's two tips sit side by side, and its lines to try are slimmer, so
+   three skills with two exercises each and a spelling row stay on one
+   sheet in Telugu too. */
+.practice-pro .pr-tips{ display:grid; grid-template-columns:1fr 1fr; gap:4px; }
+.free-report.compact-report.practice-pro .pr-tips .pr-tip{ margin:0; }
+.practice-pro .yt{ height:18px; }
+.practice-pro .yt-ladder::before{ top:3px; } .practice-pro .yt-ladder::after{ top:15px; }
+.practice-pro .yt-line, .practice-pro .yt-baseline{ height:14px; }
+.free-report.compact-report.practice-pro .pr-plan{ margin:2px 0; }
+.practice-pro .other-skills .os-list{ font-size:10px; line-height:1.3; }
+.practice-pro .pr-ex + .pr-ex{ margin-top:2px; padding-top:2px; }
+.free-report.compact-report.practice-pro ol.pr-steps{ line-height:1.25; }
+/* Page 2, under each skill (owner, 2026-10-11): why it helps, the win to
+   look for, and its page on the website. trimSkillColumns() hides them,
+   "More" first, when they would make the row taller than its practice. */
+.free-report.compact-report .pr-about{ display:flex; flex-direction:column; gap:4px; margin:4px 0 0; }
+.free-report.compact-report .pr-about p{ margin:0; }
+.free-report.compact-report .pr-why{ font:600 12.5px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .pr-why b{ display:block; font:700 9.5px/1.2 var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--v-success); margin-bottom:2px; }
+.free-report.compact-report .pr-win{ background:var(--v-success-bg); border-radius:8px; padding:3px 7px; font:500 11.5px/1.3 var(--sans); color:var(--v-text); }
+.free-report.compact-report .pr-win b{ font-weight:700; color:var(--v-success); }
+.free-report.compact-report .pr-more{ font:600 10px/1.3 var(--sans); color:var(--v-text-2); overflow-wrap:anywhere; }
+.free-report.compact-report .pr-more a{ color:var(--v-accent-text); text-decoration:none; }
+.free-report.compact-report .pr-skill .practice-sheet{ margin-top:auto; }
+.practice-pro .pr-about .pr-why{ font-size:11.5px; }
+.practice-pro .pr-about .pr-win{ font-size:10.5px; }
+.practice-row.trim-more .pr-more, .practice-row.trim-why .pr-why, .practice-row.trim-win .pr-win{ display:none; }
+/* When writing feels hard: a calm note before the closing line. */
+.free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
+.free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }
+.free-report.compact-report .p2-hard b{ font:700 13px/1.3 var(--serif); }
+.free-report.compact-report .p2-hard a{ color:var(--v-accent-text); font-weight:600; overflow-wrap:anywhere; }
+/* "Other skills": larger text (owner, 2026-10-11). */
+.free-report.compact-report .other-skills p, .compact-report .other-skills .os-list{ font-size:12.5px; line-height:1.4; }
+.practice-pro .other-skills .os-list{ font-size:11.5px; line-height:1.35; }

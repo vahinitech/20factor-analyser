@@ -58,7 +58,8 @@ assert.equal(t('p2.title'), en['p2.title'], 'a missing Telugu id falls back to E
 assert.equal(JSON.stringify(i18n.missing('te')), '["p2.title"]', 'and the missing id is reported');
 assert.equal(t('row.badge', { score: '5.0', stage: t('stage.dev') }), '5.0/10 · మెరుగవుతోంది');
 assert.equal(t.n('pp.file.loaded', 1), 'సేవ్ అయిన 1 చెక్‌ను లోడ్ చేశాం.');
-assert.equal(i18n.translator('en').n('p1.checked', 1), '1 skills checked. Unchecked skills do not lower your score.', 'English keeps its wording exactly');
+assert.equal(i18n.translator('en').n('sn.since.better', 1), '1 skill got better.', 'a count of one uses the one form');
+assert.equal(i18n.translator('en').n('sn.since.better', 3), '3 skills got better.');
 assert.equal(i18n.translator('xx')('p2.title'), en['p2.title'], 'an unknown language is English');
 assert.equal(t.html('spell.saw', { word: '<b>recieve</b>', suggestion: '<b>receive</b>' }).includes('<b>recieve</b>'), true);
 assert.ok(i18n.translator('en').html('pp.keep').includes('&quot;Keep my pages&quot;'), 'html() escapes the table text');
@@ -69,7 +70,7 @@ assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => window.VahiniReport
   ['నేర్చుకుంటోంది', 'మెరుగవుతోంది', 'పట్టు సాధిస్తోంది', 'బలంగా ఉంది']);
 assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => en['stage.' + b]), ['Learning', 'Improving', 'Mastering', 'Strong']);
 // The Telugu says the spelling check covered English words only.
-for (const id of ['spelling.deferred', 'spelling.notext', 'spelling.found', 'spelling.clear', 'spell.saw', 'prio.spelling.reason']) {
+for (const id of ['spelling.deferred', 'spelling.notext', 'spelling.found', 'spelling.clear', 'spell.saw', 'sn.spell.saw']) {
   assert.match(window.VahiniReportStrings.te[id], /ఇంగ్లీష్/, `te ${id} says the check covered English words`);
 }
 
@@ -91,8 +92,21 @@ for (const [lang, table] of Object.entries(window.VahiniReportStrings)) {
 }
 // Telugu is written in Telugu: every sentence but the score formats has Telugu letters.
 const latinOnly = Object.entries(window.VahiniReportStrings.te).filter(([id, v]) => typeof v === 'string' && !/[ఀ-౿]/.test(v)
-  && !['meta.locale', 'row.badge', 'other.item', 'share.item.noex', 'pp.option.score'].includes(id));
+  && !['meta.locale', 'row.badge', 'other.item', 'pp.option.score', 'sn.outof', 'sn.start.meta'].includes(id));
 assert.deepEqual(latinOnly.map(([id]) => id), [], 'Telugu table entries without Telugu text');
+
+// Simple English (owner, 2026-10-11): a parent with basic English and a
+// child of 8 read the report. Short sentences: none over 16 words, and an
+// average under 10. The words for children are checked above.
+const sentences = text => String(text).replace(/\{\w+\}/g, 'x').split(/(?<=[.!?:])\s+/).filter(s => /\w/.test(s));
+const english = texts(en).filter(text => typeof text === 'string');
+const long = english.flatMap(sentences).filter(s => s.split(/\s+/).length > 16);
+assert.deepEqual(long, [], 'report sentences over 16 words');
+const all = english.flatMap(sentences);
+const average = all.reduce((n, s) => n + s.split(/\s+/).length, 0) / all.length;
+assert.ok(average < 10, `average sentence length ${average.toFixed(1)} words`);
+const HARD = ['utilise', 'utilize', 'commence', 'subsequently', 'approximately', 'additionally', 'consistency', 'proficiency', 'legibility', 'cursive', 'diagnos'];
+for (const text of english) assert.ok(!HARD.some(w => text.toLowerCase().includes(w)), `a plainer word than ${HARD.find(w => text.toLowerCase().includes(w))} in ${text}`);
 
 // The Telugu font is bundled, unchanged, with its licence and source.
 const sources = JSON.parse(fs.readFileSync('frontend/assets/fonts/sources.json', 'utf8'));

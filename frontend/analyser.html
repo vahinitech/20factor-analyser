@@ -101,7 +101,7 @@
   .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
   .run-consent{ margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--v-text-2); text-align:right; }
   @media (max-width:560px){ .run-consent{ text-align:left; } }
-  .ns-sponsor{ margin:18px 0 0; font-size:15px; color:var(--v-text-2); }
+  .ns-sponsor{ font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
   .keep-email label{ display:block; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-text); margin:0 0 4px; }
   .keep-email input{ width:100%; max-width:340px; font:inherit; font-size:15px; padding:9px 11px; border:1.5px solid var(--v-border); border-radius:10px; background:var(--v-surface); color:var(--v-text); }
   .keep-more{ margin:8px 0 0 !important; font-size:13px; }
@@ -119,13 +119,13 @@
     .dz-desk{ display:none; }
   }
   /* after the report: next step, outside the report pages */
-  .next-steps{ max-width:1080px; margin:28px auto 56px; padding:0 22px; }
-  .next-steps h2{ font:var(--v-weight-semibold) var(--v-text-xl)/1.25 var(--v-font-serif); color:var(--v-text); margin:6px 0 16px; }
-  .ns-cards{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
-  .ns-cards .v-card p{ margin:0; font-size:var(--v-text-sm); line-height:1.6; }
-  .ns-cards .ns-link{ margin-top:10px; }
+  /* after the report: next step, in the side panel (report.css lays it out) */
+  .ns-cards{ display:flex; flex-direction:column; gap:0; }
+  .ns-card{ padding:8px 0; border-top:1px dashed var(--v-border); }
+  .ns-card h3{ font:var(--v-weight-semibold) 15px/1.3 var(--v-font-sans); color:var(--v-text); margin:0 0 2px; }
+  .ns-cards p{ margin:0; font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
+  .ns-cards .ns-link{ margin-top:4px; }
   .ns-cards a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
-  @media (max-width:900px){ .ns-cards{ grid-template-columns:1fr; } }
   @media print{ .next-steps{ display:none !important; } }
   /* about the check: what you get, steps, questions (under the tool) */
   /* upload page: upload beside the video, then what you get | steps | questions */
@@ -449,24 +449,36 @@
 <section class="screen" id="screen-report">
   <div class="report-toolbar">
     <button class="btn btn-ghost" id="new-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 1 3 6.7L3 16"/><path d="M3 21v-5h5"/></svg>Run another</button>
-    <label class="report-lang" for="report-lang">Print in <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
-    <button class="btn btn-dark" id="print-report"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg>Save as PDF</button>
-    <button class="btn btn-share" id="share-whatsapp" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg>Share on WhatsApp</button>
   </div>
   <!-- "Keep my pages": what happened to the page, outside the report and never printed. -->
   <p class="keep-status" id="keep-status" role="status" aria-live="polite" hidden></p>
-  <div class="report-host" id="report-host"></div>
-  <!-- After the report, outside its pages and never printed: filled by app.js. -->
-  <section class="next-steps" id="next-steps" aria-labelledby="ns-title" hidden>
-    <div class="v-eyebrow">After your report</div>
-    <h2 id="ns-title">Your next step</h2>
-    <div class="ns-cards">
-      <div class="v-card"><h3 id="ns-practice-title">1. Practise one thing</h3><p id="ns-practice-text">Start with your first priority, a few minutes a day for a week.</p><p class="ns-link"><a id="ns-practice-link" href="/practice.html">Open the practice worksheets</a></p></div>
-      <div class="v-card"><h3 id="ns-again-title">2. Check again in a week</h3><p>Same pen, same paper, the same kind of page. Then compare the two reports.</p><p class="ns-link"><a id="ns-calendar" href="#" download="handwriting-check-again.ics">Add a reminder to your calendar</a></p></div>
-      <div class="v-card"><h3>3. What a photo cannot see</h3><p>Stroke order, speed and pressure were estimated from the ink. The Vahini pen, in development, records how the page was written.</p><p class="ns-link"><a href="/product.html?from=free-check">What the pen adds</a> · <a href="/reach.html?from=free-check">Pre-order</a></p></div>
-    </div>
-    <p class="ns-sponsor">Vahini's free check stays free. If it helped, you can <a href="https://github.com/sponsors/vahinitech" target="_blank" rel="noopener noreferrer">support us on GitHub Sponsors</a>.</p>
-  </section>
+  <div class="report-layout">
+    <div class="report-host" id="report-host"></div>
+    <!-- Beside the report on a wide screen, under it on a narrow one; never
+         printed and never in the shared PDF. -->
+    <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
+      <div class="side-card">
+        <h2 data-i18n="side.title">Your report</h2>
+        <label class="report-lang" for="report-lang"><span data-i18n="side.lang">Print in</span> <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
+        <button class="btn btn-share" id="share-pdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span data-i18n="side.share">Share PDF on WhatsApp</span></button>
+        <button class="btn btn-dark" id="print-report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg><span data-i18n="side.print">Print / Save as PDF</span></button>
+        <p class="share-status" id="share-status" role="status" aria-live="polite" hidden></p>
+      </div>
+      <!-- Filled by app.js after a photo report. -->
+      <section class="next-steps side-card" id="next-steps" aria-labelledby="ns-title" hidden>
+        <h2 id="ns-title">Your next step</h2>
+        <div class="ns-cards">
+          <div class="ns-card"><h3 id="ns-practice-title">1. Practise one thing</h3><p id="ns-practice-text">Start with your first priority, a few minutes a day for a week.</p><p class="ns-link"><a id="ns-practice-link" href="/practice.html">Open the practice worksheets</a></p></div>
+          <div class="ns-card"><h3 id="ns-again-title">2. Check again in a week</h3><p>Same pen, same paper, the same kind of page. Then compare the two reports.</p><p class="ns-link"><a id="ns-calendar" href="#" download="handwriting-check-again.ics">Add a reminder to your calendar</a></p></div>
+          <div class="ns-card"><h3>3. What a photo cannot see</h3><p>Stroke order, speed and pressure were estimated from the ink. The Vahini pen, in development, records how the page was written.</p><p class="ns-link"><a href="/product.html?from=free-check">What the pen adds</a> · <a href="/reach.html?from=free-check">Pre-order</a></p></div>
+        </div>
+      </section>
+      <div class="side-card side-progress" id="side-progress" hidden></div>
+      <p class="side-card ns-sponsor">Vahini's free check stays free. If it helped, you can <a href="https://github.com/sponsors/vahinitech" target="_blank" rel="noopener noreferrer">support us on GitHub Sponsors</a>.</p>
+    </aside>
+  </div>
+  <!-- The PDF libraries, loaded only when "Share PDF on WhatsApp" is pressed. -->
+  <template id="pdf-libs"><script src="scripts/vendor/html2canvas.min.js"></script><script src="scripts/vendor/jspdf.umd.min.js"></script></template>
 </section>
 
 
@@ -479,6 +491,7 @@
   window.VAHINI_PYTHON_REPORT = true;
   window.VAHINI_PERSIST_ENDPOINT = '/persist';
 </script>
+<script src="scripts/vendor/qrcode.js"></script>
 <script src="scripts/core/engine.bundle.js"></script>
 <script>
 (function(){
