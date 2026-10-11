@@ -1146,6 +1146,9 @@ function renderSampleReport(){
   collectIntake();
   const s = data.sample || {};
   const proExample = new URLSearchParams(location.search).get('example') === 'pro';
+  // The page ships the Free heading; the Pro example names its own tier.
+  const title = $('#sample-title');
+  if (title && proExample) title.textContent = 'What your Pro handwriting report looks like';
   const sampleAnalysis = proExample ? data.analysis : {...data.analysis, access:{tier:'free'}, results:data.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
   VahiniReport.render(host, {
     intake: state.intake,
