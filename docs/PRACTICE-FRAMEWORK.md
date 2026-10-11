@@ -404,7 +404,7 @@ sharing. What is built:
 The owner approved "version C" of the report on 2026-10-11: "go with C,
 build and deploy to stage and use vahini branding logo website, patent
 details those things will be present in the report". The mock-ups are in
-the PR (#125). The report follows the vahinitech.com theme: colours are
+the PR (#126). The report follows the vahinitech.com theme: colours are
 `var(--v-*)` tokens from `/site/design/v1/vahini.css`, and the only colour
 codes of its own are the four score colours.
 
