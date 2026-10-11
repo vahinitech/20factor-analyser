@@ -92,14 +92,14 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   links, patent numbers or a status link to this repository's pages: the
   site changes them once for every service. Error-screen pictures come
   only from the host's `window.VAHINI_NOTICE_ART`, and the report's
-  characters (Vahini, Bheema, Pihu, Tara) only from `window.VAHINI_REPORT_ART`
-  once built: same-site paths, `frontend/README.md`; the drawings are proprietary and stay out of this
+  characters (Vahini, Bheema, Pihu, Tara) only from `window.VAHINI_REPORT_ART`: same-site paths, `frontend/README.md`; the drawings are proprietary and stay out of this
   AGPL repository. Colours are `var(--v-*)` tokens, never hex codes.
 - **Practice is data: every exercise and tip belongs to a factor.** The
   practice catalogue ([docs/PRACTICE-FRAMEWORK.md](docs/PRACTICE-FRAMEWORK.md))
   holds one development area per factor (meaning, exercises with levels and
-  amounts, tips, worksheet, translations). The score band sets the plan
-  (days, minutes, amount); the tier table sets how many exercises and tips a
+  amounts, tips, worksheet, translations), in `backend/practice_catalog.py`,
+  checked on import and served with the factor catalogue. The score band
+  sets the plan (tries a day for a week); the tier table sets how many exercises and tips a
   report shows. Reports, the website's factor pages and the app read the same
   data. Never hard-code a drill in the renderer, and never print an exercise
   that does not say which skill it develops. Report text in other languages
@@ -107,7 +107,8 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 - **Children read the report: every word encourages.** Start with a
   strength, call the rest "skills to grow" and "your next step", describe
   the writing and never the child, and end on encouragement. Never "weak",
-  "poor", "bad", "wrong", "problem", "inadequate", "fail" or "lowest" in
+  "poor", "bad", "wrong", "problem", "inadequate", "fail", "lowest" or
+  "mistake" in
   report text or catalogue text, in any language. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.

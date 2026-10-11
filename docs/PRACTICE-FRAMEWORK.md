@@ -1,8 +1,8 @@
 # Practice framework: exercises by factor, practice by score, report in the parent's language
 
-Design for owner review, 2026-10-11. Nothing here changes a report until the
-owner approves the mock-ups below (report format baseline,
-[AI-REPORT-CONTRACT.md](AI-REPORT-CONTRACT.md)).
+Approved by the owner on 2026-10-11 in #122; the English report, the
+catalogue and "Your progress" are built (see section 14). Sections 9 and 10
+(print in another language, share on WhatsApp) are later work.
 
 ## 1. The problem
 
@@ -298,3 +298,26 @@ Next to Print / Save as PDF (screen only, never printed):
 3. Analyser PR: string tables, Telugu translation reviewed by a native
    speaker, fonts, "Print in" dropdown.
 4. vahini-web: pin bump; factor pages gain "How to practise".
+
+## 14. As built (English, 2026-10-11)
+
+- `backend/practice_catalog.py` holds the catalogue (the draft JSON here is
+  its source), checked on import: unique ids, two exercises and two tips for
+  every photo-scored factor, worksheet ids that exist, steps of at most 140
+  characters, no avoided word, no em dash. It is served in the versioned
+  factor catalogue, and `/api/v2/me` returns the tier's numbers.
+- The browser uses the catalogue served with the report's dictionary
+  version, or the copy `frontend/build_bundle.py` packs into the bundle.
+- Page 2 follows the approved mock-up. Where it differs, on purpose:
+  the spelling row says "the reader can misread words too" (the mock-up's
+  "mistakes" is on the avoided list, which a test enforces); the skill's
+  practice sheet link sits under the crop; Pro's exercise column is wider
+  (2:3) so two exercises and two tips per skill still print on one sheet;
+  with two exercises the plan says "10 tries a day in all".
+- The 20-minute daily cap (section 4) is not built: the catalogue has no
+  minutes per try to add up.
+- "Your progress" (screen only): saved checks for this writer, a comparison
+  with an earlier one (up arrows only; a fall says it needs a few more
+  tries), a progress file to download and load, and forget with a confirm
+  step. It sends nothing. Exercise and tip ids are saved with each check so
+  the next report moves on, wrapping to level 1.
