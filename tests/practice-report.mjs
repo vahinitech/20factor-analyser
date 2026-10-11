@@ -156,6 +156,20 @@ try {
   const art = await page.evaluate(() => window.__render({ free: true }));
   add(JSON.stringify(art.art) === '["/frontend/assets/vahini-logo.png"]', 'Pictures other than same-site paths are ignored', art.art);
   await page.evaluate(() => { delete window.VAHINI_REPORT_ART; });
+  // A host that sets the map after the report rendered (the sample page loads
+  // site.js async): the empty slots fill in, and only from a same-site path.
+  const late = await page.evaluate(() => {
+    window.__render({ free: true });
+    const host = document.querySelector('#report-host') || document.body;
+    const before = host.querySelectorAll('img.rp-art').length, slots = host.querySelectorAll('[data-art-slot]').length;
+    window.VAHINI_REPORT_ART = { cheer: '/frontend/assets/vahini-logo.png', buddy: 'https://evil.example/b.png', tip: '/frontend/assets/vahini-logo.png', encourage: '/frontend/assets/vahini-logo.png' };
+    VahiniReport.fillReportArt(document);
+    const after = [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('data-art'));
+    delete window.VAHINI_REPORT_ART;
+    return { before, slots, after };
+  });
+  add(late.before === 0 && late.slots > 0 && late.after.includes('cheer') && late.after.includes('encourage') && !late.after.includes('buddy'),
+    'A picture map set after the report fills the empty slots, same-site only', late);
 
   // Words for children: nothing rendered uses an avoided word.
   const avoid = /\b(weak|poor|bad|wrong|problem|inadequate|fail|lowest|mistake)/i;

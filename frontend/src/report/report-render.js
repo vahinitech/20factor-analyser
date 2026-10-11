@@ -404,7 +404,20 @@ function reportArt(key){
 }
 function artImg(key, cls){
   const url = reportArt(key);
-  return url ? `<img class="rp-art ${cls}" src="${esc(url)}" alt="" data-art="${key}">` : '';
+  // Without the map yet, leave an empty slot: a host that loads its script
+  // after the report (the sample page loads site.js async) fills it on load.
+  return url ? `<img class="rp-art ${cls}" src="${esc(url)}" alt="" data-art="${key}">`
+    : `<span class="rp-art-slot" data-art-slot="${key}" data-art-cls="${esc(cls)}" hidden></span>`;
+}
+function fillReportArt(root){
+  (root || document).querySelectorAll('[data-art-slot]').forEach(slot=>{
+    const key = slot.getAttribute('data-art-slot'), url = reportArt(key);
+    if (!url) return;
+    const img = document.createElement('img');
+    img.className = 'rp-art ' + (slot.getAttribute('data-art-cls') || '');
+    img.src = url; img.alt = ''; img.setAttribute('data-art', key);
+    slot.replaceWith(img);
+  });
 }
 
 function render(host, data){
@@ -724,6 +737,7 @@ const FIT_MIN_FREE = 0.78;
    extra page in a real print dialog, through rounding. */
 const FIT_SLACK_PX = 6;
 function fitPrintPages(host){
+  fillReportArt(host);
   const pxPerMM = 96/25.4;
   const sheetH = A4_MM.h * pxPerMM - FIT_SLACK_PX;
   host.querySelectorAll('section.page').forEach(pageEl=>{
@@ -765,5 +779,6 @@ function wirePrintFit(host){
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
 }
 
-global.VahiniReport = { render, fitPrintPages, classificationPanels, applyPenDynamics };
+if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
+global.VahiniReport = { render, fitPrintPages, classificationPanels, applyPenDynamics, fillReportArt };
 })(window);
