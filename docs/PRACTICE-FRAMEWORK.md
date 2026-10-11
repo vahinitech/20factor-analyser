@@ -19,7 +19,7 @@ Feedback on the Free report:
 - The report is English only. A parent who reads only Telugu cannot use it,
   even when a volunteer who reads English ran the check for them.
 
-| Today (stage, Free sample) | Proposed, Free (printed PDF) | Proposed, Pro (printed PDF) |
+| Today (stage, Free sample) | Proposed page 2, Free (printed PDF) | Earlier card layout, Pro (printed PDF) |
 |---|---|---|
 | ![before](practice-framework/free-page2-before.png) | ![free](practice-framework/free-page2-after.png) | ![pro](practice-framework/pro-page2-after.png) |
 
@@ -114,16 +114,11 @@ number of times a day for 7 days, then check again.
 | Getting strong (7 to 8.4) | try it 5 times a day, 7 days | check again |
 | Strong (8.5 and up) | 10 tries once a week, to keep it | check again in 4 weeks |
 
-Each skill also shows where the child is on a three-stage path, in tries:
-
-| Stage | Where the score is | About this many tries | Move on when |
-|---|---|---|---|
-| **Learn** | below 7 | 100 | a check shows 7 or more |
-| **Master** | 7 to 8.4 | 50 | a check shows 8.5 or more |
-| **Strong** | 8.5 and up | 10 a week | it stays there |
-
-The card shows it as a strip with the current stage filled in:
-`Learn · 100 tries → Master · 50 tries → Strong · 10 a week`. These are
+Each skill also shows where the child is on the path, by band:
+**Learning** (below 4.5) → **Improving** (4.5 to 6.9) → **Mastering** (7 to
+8.4) → **Strong** (8.5 and up). A check after each week of tries moves the
+child along; about 100 tries usually come before a move, which the card
+does not promise. These are
 practice targets, not predictions: the next check decides the stage, and the
 report never promises a score. A 20-minute daily cap still applies when a
 child has several cards; past it, later cards ask for fewer tries.
@@ -141,24 +136,37 @@ child has several cards; past it, later cards ask for fewer tries.
    the next report starts after them and comes back to level 1 when the list
    runs out. Nothing about it leaves the browser.
 
-## 6. What a practice card says
+## 6. Page 2: each skill beside its exercise
 
-In this order, all from the catalogue:
+Page 2 is a two-column table, one row per skill to grow, so the exercise is
+always next to the skill it develops:
 
-1. Number, skill name, and the score with its band ("5.0/10 · Growing").
-2. "Your next step:" plus what to do and what was seen on this page, in
-   encouraging words (section 7).
-3. The Learn, Master, Strong strip with the current stage filled in, and
-   "This week: try it 10 times a day, for 7 days. Then check again!".
-4. The exercises: title, what one try is ("1 try = 1 row"), steps.
-5. The tips, given by Pihu ("Pihu's tip:").
-6. The example strip and writing lines (as today).
-7. "Look back:" with the self-check question, and the worksheet line, now
-   "use it for exercise 1" instead of "one row a day".
+| Left: the skill, from your page | Right: your exercise for it |
+|---|---|
+| Number, skill name, score and stage ("5.0/10 · Improving") | Exercise title and what one try is ("1 try = 1 row") |
+| The stage path: Learning → Improving → Mastering → Strong, current stage filled in, earlier ones ticked | The steps, and what to write, in the handwriting face |
+| What we saw on this page, in encouraging words | "This week: 10 tries a day, for 7 days. Then check again!" |
+| The example cut from the child's own photo (the same crop as page 1) | Pihu's tip, and a writing line to try it once |
 
-The Pro report uses the same cards. Print fit: page 2 must still print on one
-A4 sheet; `report-layout` gains a check for the longest case (three cards,
-two exercises each, in the longest translation).
+- **Up to three skill rows**, the lowest-scoring flagged skills first.
+- **A spelling row** when the limited spelling check found a word: "We read
+  recieve. Did you mean receive? Check it against your page." with a
+  look-cover-write exercise. It is extra to the three skills, and appears
+  only when there is a finding. (The mock-up shows an example row; the
+  sample photo has no misspelling.)
+- **Other skills we checked**, at the end: the remaining scored skills by
+  name with score and stage, a word of praise for the strong ones, then
+  "Want practice for every skill? Pro checks 15 more skills ... and gives
+  exercises and tips for each one." No prices.
+- Little Vahini and Bheema open the page, Tara closes it (section 8).
+
+Stage names follow the band: Learning (below 4.5), Improving (4.5 to 6.9),
+Mastering (7 to 8.4), Strong (8.5 and up). Page 1 keeps the photo and the
+five skill cards, with the same stage names.
+
+The whole report is two A4 pages: the mock-up above, with three skills, a
+spelling row and the other-skills box, was printed through
+`fitPrintPages()` and is exactly two pages, with room to spare.
 
 ## 7. Words for children
 
@@ -176,9 +184,9 @@ stops practising, so every sentence encourages:
 
   | Band | Today | Proposed | Telugu (draft) |
   |---|---|---|---|
-  | below 4.5 | Needs support | Just starting | ఇప్పుడే మొదలు |
-  | 4.5 to 6.9 | Developing | Growing | ఎదుగుతోంది |
-  | 7 to 8.4 | Good | Getting strong | బలపడుతోంది |
+  | below 4.5 | Needs support | Learning | నేర్చుకుంటోంది |
+  | 4.5 to 6.9 | Developing | Improving | మెరుగవుతోంది |
+  | 7 to 8.4 | Good | Mastering | పట్టు సాధిస్తోంది |
   | 8.5 and up | Strong | Strong | బలంగా ఉంది |
 
 - **Short and doable.** "A few minutes a day is plenty."
