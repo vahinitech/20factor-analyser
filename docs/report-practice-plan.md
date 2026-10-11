@@ -1,5 +1,7 @@
 # Free handwriting review
 
+Practice content is moving to the practice catalogue: exercises, tips and practice amounts per factor, by score band and tier, and report text per language. See [PRACTICE-FRAMEWORK.md](PRACTICE-FRAMEWORK.md).
+
 The free experience serves school students, especially classes 5–10 and class 12, while remaining useful to anyone practising handwriting. Teachers and schools can use the same short review.
 
 The full report is two pages: page one shows the overall score, handwriting-region coverage and up to three priorities with evidence; page two shows illustrated coaching, writing examples and ruled practice space. There is no prediction and no full score table. From a photo, Dynamics factors 13–16 are not scored and cannot be selected as priorities; the hosted anonymous Free report is a separate five-factor summary served from the compact API. Up to three selected priorities are shared across evidence, coaching and drills. Underlying API scores for factors 1–12 and 17–20 are unchanged; factors 13–16 are reported as unmeasured from a photo. Optional guided support follows the practice guidance and requires no purchase to use the review.
