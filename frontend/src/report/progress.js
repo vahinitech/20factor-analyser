@@ -162,7 +162,11 @@ function mount(after, opts){
   panel.id = 'progress-panel'; panel.className = 'progress-panel';
   panel.setAttribute('aria-labelledby', 'pp-title');
   panel.setAttribute('lang', t.lang);
-  after.insertAdjacentElement('afterend', panel);
+  // Beside the report on a wide screen (the side panel's slot), else
+  // under the report.
+  const slot = global.document.getElementById('side-progress');
+  if (slot) { slot.appendChild(panel); slot.hidden = false; }
+  else after.insertAdjacentElement('afterend', panel);
   let compareWith = null;
   const day = d=>fmtDay(d, t.locale);
   const draw = (status)=>{

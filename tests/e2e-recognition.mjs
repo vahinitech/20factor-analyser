@@ -122,12 +122,13 @@ async function main() {
     if(extra===0 && !reportText.includes('What kind of page is this?')) ok('document classification panel is absent from live report');
     else fail('document classification panel is absent from live report','unexpected document-context appendix');
 
-    // Free report page 1 (#95) and the next step after it (#94, #87).
-    const skills = await page.locator('#report-host .skill-card').count();
-    const crops = await page.locator('#report-host .skill-card .sk-crop').count();
-    const photo = await page.locator('#report-host .page-photo img').count();
-    if (skills === 5 && crops > 0 && photo === 1) ok('free report shows the photo and five skills with crops', `${crops} crops`);
-    else fail('free report shows the photo and five skills with crops', `skills ${skills}, crops ${crops}, photo ${photo}`);
+    // Free report page 1 (version C, owner approval 2026-10-11) and the
+    // next step beside it.
+    const chips = await page.locator('#report-host .sn-chip').count();
+    const crops = await page.locator('#report-host .sn-look img.sn-look-crop').count();
+    const photo = await page.locator('#report-host .sn-zoom svg image, #report-host .sn-zoom img').count();
+    if (chips === 5 && crops > 0 && photo === 1) ok('free report shows the photo, five skills and crops from it', `${crops} crops`);
+    else fail('free report shows the photo, five skills and crops from it', `chips ${chips}, crops ${crops}, photo ${photo}`);
     const nextVisible = await page.locator('#next-steps').isVisible();
     const sheet = await page.getAttribute('#ns-practice-link', 'href');
     if (nextVisible && /\.pdf$|practice\.html/.test(sheet || '')) ok('next step links a practice sheet', sheet);

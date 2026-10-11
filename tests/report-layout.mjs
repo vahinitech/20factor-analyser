@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) 2026 Vahini Technologies.
 import {mkdir} from 'node:fs/promises';
+import { useDesign } from './design-route.mjs';
+export { useDesign };
 export async function checkReportLayout(page){
   const results=[];
   const add=(ok,name,detail='')=>results.push({ok,name,detail});
@@ -16,7 +18,8 @@ export async function checkReportLayout(page){
   await page.evaluate(()=>Promise.all(['600 17px Spectral','400 12px "Hanken Grotesk"','500 20px Caveat','400 20px "Edu SA Beginner"'].map(font=>document.fonts.load(font))));
   const loaded=await page.evaluate(()=>[...document.fonts].filter(f=>f.status==='loaded').map(f=>f.family.replace(/"/g,'')));
   add(['Spectral','Hanken Grotesk','Caveat','Edu SA Beginner'].every(name=>loaded.includes(name)), 'All four report font families load from local assets');
-  add(await page.locator('.free-report').first().evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(255, 253, 248)', 'Paper background is preserved');
+  // The paper is the website theme's (--v-paper, #FDFCF6).
+  add(await page.locator('.free-report').first().evaluate(e=>getComputedStyle(e).backgroundColor)==='rgb(253, 252, 246)', 'Paper background is the theme paper');
   await mkdir('test-results/report-layout',{recursive:true});
   for(const mode of ['desktop','mobile','print']){
     await page.setViewportSize({width:mode==='mobile'?390:1200,height:1000});
@@ -26,20 +29,21 @@ export async function checkReportLayout(page){
       const pages=[...document.querySelectorAll('.free-report')];
       return {
         pages:pages.length,
-        fonts:[...document.querySelectorAll('.priority-card > p,.factor-instruction')].map(e=>parseFloat(getComputedStyle(e).fontSize)),
+        fonts:[...document.querySelectorAll('.sn-start p:not(.sn-meta),.sn-steps li')].map(e=>parseFloat(getComputedStyle(e).fontSize)),
         fits:pages.every(p=>p.scrollWidth<=p.clientWidth+1),
         heights:pages.map(p=>p.getBoundingClientRect().height),
         overlap:pages.some(p=>{
-          const children=[...p.children];
+          // Screen-only blocks (page 1's buttons) take no room in print.
+          const children=[...p.children].filter(c=>c.getClientRects().length>0);
           return children.some((c,i)=>i>0 && c.getBoundingClientRect().top < children[i-1].getBoundingClientRect().bottom-1);
         }),
-        priorities:document.querySelectorAll('.priority-card').length,
-        cardsIntact:[...document.querySelectorAll('.priority-card,.coaching-card,.practice-card')].every(c=>c.scrollHeight<=c.clientHeight+1),
-        crops:[...document.querySelectorAll('.f-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=65)
+        priorities:document.querySelectorAll('.sn-look').length+document.querySelectorAll('.sn-start').length,
+        cardsIntact:[...document.querySelectorAll('.sn-look,.sn-start,.sn-keep,.coaching-card')].every(c=>c.scrollHeight<=c.clientHeight+1),
+        crops:[...document.querySelectorAll('.sn-look-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=45)
       };
     });
-    add(metrics.pages===2 && metrics.priorities===3,mode+': all stages and three priorities remain visible');
-    add(metrics.fonts.every(n=>n>=15 && n<=17),mode+': student instructions use larger readable type');
+    add(metrics.pages===2 && metrics.priorities===3,mode+': both pages, the place to start and the two parts to look at remain visible');
+    add(metrics.fonts.length>0 && metrics.fonts.every(n=>n>=13 && n<=15),mode+': instructions keep their readable type, whatever the host page sets',JSON.stringify(metrics.fonts));
     add(metrics.fits && !metrics.overlap && metrics.cardsIntact,mode+': no horizontal overflow, overlapping blocks or clipped cards',JSON.stringify(metrics.heights));
     add(metrics.crops,mode+': readable evidence images preserve complete crops');
     if(mode==='print')add(metrics.heights.every(h=>h<=1120), 'print: each standard report stage fits one A4 sheet',JSON.stringify(metrics.heights));
@@ -73,7 +77,7 @@ export async function checkReportLayout(page){
    spelling row, Pro's two exercises and two tips each, the other-skills box
    and all four pictures), with and without the host's picture map, and
    when the sheets run as long as a real photo makes them. */
-export const REPORT_ART = { cheer:'/frontend/assets/vahini-logo.png', buddy:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
+export const REPORT_ART = { cheer:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
 export async function renderLongest(page, pro){
   await page.evaluate(pro=>{
     const d=window.VAHINI_SAMPLE_REPORT;
@@ -94,6 +98,7 @@ export async function checkPracticePrint(browser, baseUrl){
     for(const art of [true,false]){
       const label=`${pro?'Pro':'Free'}, pictures ${art?'on':'off'}`;
       const page=await browser.newPage({viewport:{width:1200,height:1000}});
+      await useDesign(page);
       if(art)await page.addInitScript(a=>{window.VAHINI_REPORT_ART=a;},REPORT_ART);
       await page.goto(baseUrl+'/frontend/sample-report.html'+(pro?'?example=pro':''),{waitUntil:'load'});
       await page.waitForSelector('#report-host .practice-page');
@@ -108,7 +113,7 @@ export async function checkPracticePrint(browser, baseUrl){
         maxTips:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('.pr-tip').length)),
       }));
       add(shape.rows===4&&shape.spelling&&shape.others&&shape.maxEx===(pro?2:1)&&shape.maxTips===(pro?2:1),label+': longest case has three skills, spelling and the other skills',JSON.stringify(shape));
-      add(art?shape.art==='buddy,cheer,encourage,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
+      add(art?shape.art==='cheer,encourage,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
       await page.emulateMedia({media:'print'});
       add(await pdfPages(page)===2,label+': prints on exactly two A4 pages');
       // As long as a real photo makes the sheets (stage, 2026-10-07).

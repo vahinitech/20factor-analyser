@@ -10,6 +10,7 @@ import { createServer } from 'node:net';
 import { readFile } from 'node:fs/promises';
 import { setTimeout as delay } from 'node:timers/promises';
 import { chromium } from 'playwright';
+import { useDesign } from './design-route.mjs';
 
 const freePort = () => new Promise((resolve, reject) => {
   const s = createServer(); s.once('error', reject);
@@ -54,19 +55,20 @@ const RENDER = `window.__render = (opts) => {
     tipLabels: [...r.querySelectorAll('.pr-tip b')].every(b => b.textContent === "Pihu's tip:"),
     crop: !!r.querySelector('.pr-crop'),
     cropSrc: r.querySelector('.pr-crop') ? r.querySelector('.pr-crop').getAttribute('src') : null,
-    model: !!r.querySelector('.pr-model svg'),
-    page1: r.querySelector('.pr-ref') ? Number(r.querySelector('.pr-ref').dataset.page1) : null,
+    model: [...r.querySelectorAll('[data-exercise]')].every(e => e.querySelector('.pr-model .md')),
+    models: [...r.querySelectorAll('[data-exercise]')].map(e => e.dataset.model),
     saw: r.querySelector('.pr-saw') ? r.querySelector('.pr-saw').textContent : '',
     sheet: r.querySelector('.pr-skill a[href*="/worksheets/"]') ? r.querySelector('.pr-skill a[href*="/worksheets/"]').getAttribute('href') : null,
   }));
   return {
     out, rows,
-    cards: [...host.querySelectorAll('.skill-card')].map(c => c.dataset.factor),
-    tags: [...host.querySelectorAll('.skill-card')].filter(c => c.querySelector('.sk-tag')).map(c => c.dataset.factor),
-    bands: [...host.querySelectorAll('.sk-band')].map(e => e.textContent),
-    others: [...host.querySelectorAll('.other-skills li')].map(e => e.dataset.factor),
+    start: host.querySelector('.sn-start') ? host.querySelector('.sn-start').dataset.factor : null,
+    look: [...host.querySelectorAll('.sn-look')].map(e => e.dataset.factor),
+    chips: [...host.querySelectorAll('.sn-chip')].map(e => e.dataset.factor),
+    bands: [...host.querySelectorAll('.sn-start .sn-meta, .pr-badge')].map(e => e.textContent),
+    keep: host.querySelector('.sn-keep') ? host.querySelector('.sn-keep').textContent : '',
+    others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
-    opening: host.querySelector('.p2-open') ? host.querySelector('.p2-open').textContent : '',
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
     art: [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('src')),
     text: host.textContent,
@@ -79,8 +81,9 @@ try {
     // The same data the bundle carries, read here from the backend module's
     // served form via the committed catalogue file.
     const fs = await import('node:fs');
-    const files = fs.readdirSync('backend/catalogs').map(n => JSON.parse(fs.readFileSync('backend/catalogs/' + n)));
-    return files.find(c => c.practice);
+    // The version docs/PRACTICE-MAP.md names: the one serving it today.
+    const current = fs.readFileSync('docs/PRACTICE-MAP.md', 'utf8').match(/catalogue version `([0-9a-f]+)`/)[1];
+    return JSON.parse(fs.readFileSync(`backend/catalogs/${current}.json`, 'utf8'));
   })();
   add(!!catalogue, 'A committed catalogue version carries the practice block');
   const owner = {};
@@ -88,6 +91,7 @@ try {
 
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
+  await useDesign(page);
   const errors = []; page.on('pageerror', e => errors.push(e.message));
   await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
   await page.waitForSelector('#report-host .practice-page');
@@ -99,30 +103,43 @@ try {
     && catalogue.factors.every(f => JSON.stringify((bundled.factors[String(f.n)] || {}).exercises) === JSON.stringify(f.exercises)),
     'The bundle carries the same practice catalogue the server serves');
 
+  const row5first = r => (r.rows.find(x => x.factor === '5') || { exercises: [] }).exercises[0];
   // Free: rows follow the priorities; one exercise and one tip each.
   const free = await page.evaluate(() => window.__render({ free: true }));
   const freeFactors = free.rows.map(r => r.factor);
-  add(JSON.stringify(freeFactors) === '["5","8","7"]' && JSON.stringify(free.tags.sort()) === JSON.stringify([...freeFactors].sort()),
-    'Free rows are the lowest measured skills below 8.5, the same ones page 1 tags', { freeFactors, tags: free.tags });
+  add(JSON.stringify(freeFactors) === '["5","8","7"]' && free.start === '5' && JSON.stringify(free.look) === '["5","8"]',
+    'Free rows are the lowest measured skills below 8.5; page 1 starts with the first and looks closer at the first two', { freeFactors, start: free.start, look: free.look });
   add(free.rows.every(r => r.exercises.length === 1 && r.tips.length === 1 && r.tipLabels),
     'Free shows one exercise and one tip per skill', free.rows);
   add(free.rows.every(r => r.exercises.concat(r.tips).every(id => String(owner[id]) === r.factor)),
     'Every exercise and tip belongs to its row\'s factor', free.rows);
-  add(free.rows.every(r => r.exercises[0] === catalogue.factors.find(f => String(f.n) === r.factor).exercises[0].id),
-    'A first check starts at level 1');
+  add(row5first(free) === 'size.two-line-ladder' && free.rows.every(r => r.model && r.models.every(m => m !== 'focus')),
+    'A first check picks by need (the two-line ladder for letter size) and draws each exercise\'s own model', free.rows.map(r => [r.exercises, r.models]));
   const row = n => free.rows.find(r => r.factor === n);
   add(/5\.0\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
     && row('7').now === 'Mastering' && row('7').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
-  add(/10 tries a day, for 7 days\. Then check again!/.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('7').plan),
-    'Tries follow the band: Improving 10 a day, Mastering 5 a day', free.rows.map(r => r.plan));
-  add(!free.bands.some(b => /Needs support|Developing|^Good$/.test(b)) && free.bands.includes('Improving') && free.bands.includes('Mastering'),
-    'Page 1 uses the stage names', free.bands);
-  add(/Great work on letter shapes!/.test(free.opening) && /You are getting better with every page!/.test(free.closing),
-    'Page 2 opens with a strength and closes with encouragement');
+  // Tries follow the weakest skill an exercise helps: "sit on the line"
+  // also helps letter size (5.0, Improving), so it asks 10 a day.
+  add(/10 tries a day, for 7 days\./.test(row('5').plan) && /10 tries a day, for 7 days/.test(row('7').plan),
+    'Tries follow the weakest skill the exercise helps', free.rows.map(r => r.plan));
+  const solo7 = await page.evaluate(() => window.__render({ free: true, scores: { 1: 9.5, 5: 9.5, 8: 9.5, 18: 9.5 } }));
+  add(/5 tries a day, for 7 days/.test(solo7.rows[0].plan), 'A Mastering skill on its own asks 5 a day', solo7.rows.map(r => r.plan));
+  add(!free.bands.some(b => /Needs support|Developing|Good\b/.test(b)) && free.bands.some(b => /Improving/.test(b)) && free.bands.some(b => /Mastering/.test(b)),
+    'Both pages use the stage names', free.bands);
+  add(/Your letter shapes are clear\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
+    'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
   add(JSON.stringify(free.others) === '["18","1"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
     'Other skills we checked lists the rest, then what Pro adds, with no price', { others: free.others, note: free.proNote });
   add(!free.rows.some(r => r.factor === 'spelling'), 'No spelling row without a finding');
   add(free.art.length === 0, 'Without a picture map the report has no pictures');
+
+  // Page 2 draws what each exercise's steps say: one drawing per kind, the
+  // one the catalogue names for the exercise.
+  const drawings = await page.evaluate(() => VahiniReport.MODEL_KINDS.map(k => [k, (VahiniReport.modelHTML(k, 'a o') || '').includes('md-' + (k === 'start-dots' ? 'dots' : k))]));
+  add(drawings.length === 13 && drawings.every(([, ok]) => ok), 'Every drawing kind renders its own model', drawings);
+  const modelOf = {}; catalogue.factors.forEach(f => (f.exercises || []).forEach(e => { modelOf[e.id] = e.model; }));
+  add(free.rows.every(r => r.exercises.every((id, i) => r.models[i] === modelOf[id])), 'Each exercise shows the drawing the catalogue names for it', free.rows.map(r => [r.exercises, r.models]));
+  add(await page.evaluate(() => [...document.querySelectorAll('.practice-row')].every(r => r.querySelector('.pr-turn-row .yt'))), 'Each skill has lines to try it, matching its drawing');
 
   // Spelling row only when the limited check found a word; extra to the skills.
   const spelled = await page.evaluate(() => window.__render({ free: true, spelling: true }));
@@ -152,10 +169,10 @@ try {
   const first = await page.evaluate(() => window.__render({ free: true }));
   const second = await page.evaluate(p => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: p } }), first.out.practice);
   const list5 = catalogue.factors.find(f => f.n === 5).exercises.map(e => e.id);
-  add(second.rows.find(r => r.factor === '5').exercises[0] === list5[1] && second.rows.find(r => r.factor === '5').tips[0] !== first.rows.find(r => r.factor === '5').tips[0],
+  add(second.rows.find(r => r.factor === '5').exercises[0] !== first.rows.find(r => r.factor === '5').exercises[0] && list5.includes(second.rows.find(r => r.factor === '5').exercises[0]) && second.rows.find(r => r.factor === '5').tips[0] !== first.rows.find(r => r.factor === '5').tips[0],
     'A re-check moves on to the next exercise and tip', { first: first.out.practice, second: second.out.practice });
   const wrapped = await page.evaluate(id => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: { exercises: { 5: [id] }, tips: {} } } }), list5[list5.length - 1]);
-  add(wrapped.rows.find(r => r.factor === '5').exercises[0] === list5[0], 'After the last exercise the list starts again at level 1');
+  add(wrapped.rows.find(r => r.factor === '5').exercises[0] !== list5[list5.length - 1] && list5.includes(wrapped.rows.find(r => r.factor === '5').exercises[0]), 'Last time\'s exercise gives way to another of the same skill');
 
   // Mapping, skill by skill: make one skill the only one to grow and check
   // that its row carries only its own exercises, tips, crop, worksheet and
@@ -189,10 +206,7 @@ try {
         add(row.model, `${tier}${L}: skill ${n} has a drawn model to copy`, row);
         const sheet = sheets.find(w => w.factors.includes(n));
         add(sheet ? (row.sheet || '').includes('/worksheets/' + sheet.id + '.pdf') : !row.sheet, `${tier}${L}: skill ${n} links its own worksheet`, { want: sheet && sheet.id, got: row.sheet });
-        if (tier === 'free') {
-          const card = r.cards.indexOf(String(n)) + 1;
-          add(card > 0 && row.page1 === card, `free${L}: skill ${n} points to its own card on page 1`, { card, page1: row.page1 });
-        }
+        add(r.start === String(n) && r.look[0] === String(n), `${tier}${L}: page 1 starts with skill ${n} and looks closer at it`, { start: r.start, look: r.look });
       }
     }
   }

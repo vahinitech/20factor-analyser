@@ -123,7 +123,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -131,7 +131,7 @@ jobs:
             echo "::error::engine.bundle.js is committed. It is build output: git rm --cached it."
             exit 1
           fi
-          if grep -nE '(src|href)="(scripts/core|styles)/[^"]*\?v=' frontend/*.html || grep -nE "@import[^;]*\\?v=" frontend/styles/*.css; then
+          if grep -nE '(src|href)="(scripts/core|scripts/vendor|styles)/[^"]*\?v=' frontend/*.html || grep -nE "@import[^;]*\\?v=" frontend/styles/*.css; then
             echo "::error::A page carries a committed ?v= asset stamp. Run 'python frontend/build_bundle.py --strip'."
             exit 1
           fi

@@ -1280,6 +1280,13 @@ function init(){
   const reset = $('#st-reset'); if(reset) reset.addEventListener('click', ()=>{ if(imuSession){imuSession.stop();imuSession=null;} clearSample(); go('upload'); });
   const printBtn = $('#print-report'); if(printBtn) printBtn.addEventListener('click', ()=>window.print());
   const newRep = $('#new-report'); if(newRep) newRep.addEventListener('click', ()=>{ if(imuSession){imuSession.stop();imuSession=null;} clearSample(); go('upload'); });
+  // Page 1's screen-only "Check another page" does the same as Run another.
+  const host = $('#report-host');
+  if (host) host.addEventListener('click', e=>{
+    const again = e.target.closest && e.target.closest('[data-action="new-report"]');
+    if (!again || !newRep) return;
+    e.preventDefault(); newRep.click(); window.scrollTo(0, 0);
+  });
 
   go('upload');
   startServicePolling();
