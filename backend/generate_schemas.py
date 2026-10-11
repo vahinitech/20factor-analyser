@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 from entitlements import FREE_FACTORS
-from practice_catalog import AVOID_WORDS, STEPS_MAX, UNITS
+from practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
 from report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 
 OUT = Path(__file__).resolve().parent / "schemas"
@@ -355,6 +355,29 @@ def translations(fields, optional=()):
     }
 
 
+def helps_map():
+    """``helps``: which skills an exercise or tip develops, by factor
+    number, its own at 1.0 (docs/PRACTICE-FRAMEWORK.md, "Many-to-many
+    selection")."""
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "patternProperties": {
+            "^([1-9]|1[0-9]|20)$": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+            }
+        },
+        "description": (
+            "How much this entry develops each skill, 0 to 1, by factor "
+            "number. Its own factor is 1.0 and every other weight is "
+            "lower. Empty for the spelling row. Catalogues before "
+            "version 2026-10-11 carry no helps."
+        ),
+    }
+
+
 def practice_entries():
     """Exercise and tip lists, as the catalogue serves them."""
     text = {"type": "string", "minLength": 1}
@@ -374,6 +397,14 @@ def practice_entries():
             },
             "example": {"type": "string"},
             "check": text,
+            "model": {
+                "type": "string",
+                "enum": list(MODELS),
+                "description": (
+                    "The drawing the report shows under 'Copy this'."
+                ),
+            },
+            "helps": helps_map(),
             "i18n": translations(("title", "steps", "check"), ("example",)),
         },
         required=(
@@ -393,6 +424,7 @@ def practice_entries():
         {
             "id": {"type": "string", "pattern": "^[a-z]+\\.[a-z0-9-]+$"},
             "text": text,
+            "helps": helps_map(),
             "i18n": translations(("text",)),
         },
         required=("id", "text"),

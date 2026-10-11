@@ -88,6 +88,23 @@ class CatalogueRules(unittest.TestCase):
             ("worksheet", "no-such-sheet", "unknown worksheet"),
             ("unit", "minute", "unknown unit"),
             ("needs", "pen", "needs does not match"),
+            ("model", "circus", "unknown model"),
+            ("steps", "One. Two. Three. Four.", "over 3 sentences"),
+            ("check", "Look. Then look again.", "one sentence"),
+            (
+                "steps",
+                "Write one long row of very small letters and then write"
+                " another one below it slowly.",
+                "long sentence",
+            ),
+            ("helps", {"1": 0.9}, "own factor 1 at 1.0"),
+            ("helps", {"1": 1.0, "5": 0.95}, "helps 5 at 0.95"),
+            ("helps", {"1": 1.0, "21": 0.5}, "unknown factor 21"),
+            (
+                "helps",
+                {"1": 1.0, "3": 0.5, "5": 0.5, "7": 0.5, "8": 0.5},
+                "over 3 other factors",
+            ),
         ]
         for field, value, message in cases:
             factors = copy.deepcopy(practice_catalog.FACTORS)
@@ -108,6 +125,81 @@ class CatalogueRules(unittest.TestCase):
         self.assertIn("factor 5: fewer than 2 exercises", found)
         self.assertIn("factor 8: fewer than 2 tips", found)
         self.assertIn("duplicate id", found)
+
+    def test_every_entry_says_which_skills_it_helps(self):
+        """Many-to-many: every exercise and tip helps its own factor at
+        1.0, so its highest-weight factor is always its own, and others
+        only between HELP_MIN and HELP_MAX."""
+        for number, area in practice_catalog.FACTORS.items():
+            for entry in (*area["exercises"], *area["tips"]):
+                helps = entry["helps"]
+                self.assertEqual(helps[str(number)], 1.0, entry["id"])
+                top = max(helps.items(), key=lambda kv: kv[1])[0]
+                self.assertEqual(top, str(number), entry["id"])
+                for key, weight in helps.items():
+                    if key != str(number):
+                        self.assertGreaterEqual(weight, 0.3, entry["id"])
+                        self.assertLessEqual(weight, 0.8, entry["id"])
+        ladder = practice_catalog.FACTORS[5]["exercises"][0]
+        self.assertEqual(ladder["helps"], {"5": 1.0, "6": 0.6})
+
+    def test_selection_passes_composite_need_by_scoring_weights(self):
+        """practice-select.js hands a composite's need to the factors it
+        is made of, with the weights backend/scoring.py blends them by."""
+        scoring = (ROOT / "backend" / "scoring.py").read_text("utf-8")
+        select = (
+            ROOT / "frontend" / "src" / "report" / "practice-select.js"
+        ).read_text("utf-8")
+        for number in (18, 20):
+            start = scoring.index(f"s[{number}] = _clamp10(")
+            ends = [
+                scoring.find(mark, start + 1)
+                for mark in ("\n    s[", "\n    return")
+            ]
+            statement = scoring[start : min(e for e in ends if e > 0)]
+            parts = {
+                int(n): float(w)
+                for n, w in re.findall(r"\((\d+), ([0-9.]+)\)", statement)
+            }
+            self.assertTrue(parts, number)
+            js = re.search(rf"{number}: \{{([^}}]*)\}}", select)
+            self.assertIsNotNone(js, number)
+            mine = {
+                int(n): float(w)
+                for n, w in re.findall(r"(\d+):([0-9.]+)", js[1])
+            }
+            self.assertEqual(mine, parts, number)
+
+    def test_every_exercise_names_its_drawing(self):
+        for area in practice_catalog.FACTORS.values():
+            for ex in area["exercises"]:
+                self.assertIn(ex["model"], practice_catalog.MODELS)
+        self.assertEqual(
+            practice_catalog.FACTORS[8]["exercises"][0]["model"], "gaps"
+        )
+
+    def test_steps_are_short_simple_sentences(self):
+        """A parent with basic English and a child of 8 can follow them:
+        at most three sentences, each of at most 14 words."""
+        for area in (
+            *practice_catalog.FACTORS.values(),
+            practice_catalog.SPELLING,
+        ):
+            for ex in area["exercises"]:
+                steps = practice_catalog.sentences(ex["steps"])
+                self.assertLessEqual(len(steps), 3, ex["id"])
+                for sentence in steps + [ex["check"]]:
+                    self.assertLessEqual(len(sentence.split()), 14, sentence)
+        self.assertEqual(
+            practice_catalog.sentences(
+                practice_catalog.FACTORS[5]["exercises"][0]["steps"]
+            ),
+            [
+                "Draw two light lines, a little apart.",
+                "Write a o e c n m between them.",
+                "Each letter touches both lines.",
+            ],
+        )
 
     def test_every_exercise_and_tip_has_telugu(self):
         for area in (

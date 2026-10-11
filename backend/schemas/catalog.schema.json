@@ -207,6 +207,37 @@
                   "type": "string",
                   "minLength": 1
                 },
+                "model": {
+                  "type": "string",
+                  "enum": [
+                    "ladder",
+                    "zones",
+                    "baseline",
+                    "gaps",
+                    "letter-gaps",
+                    "margin",
+                    "slant",
+                    "loops",
+                    "trace",
+                    "start-dots",
+                    "pairs",
+                    "waves",
+                    "page"
+                  ],
+                  "description": "The drawing the report shows under 'Copy this'."
+                },
+                "helps": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^([1-9]|1[0-9]|20)$": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
+                },
                 "i18n": {
                   "type": "object",
                   "additionalProperties": false,
@@ -260,6 +291,18 @@
                 "text": {
                   "type": "string",
                   "minLength": 1
+                },
+                "helps": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "patternProperties": {
+                    "^([1-9]|1[0-9]|20)$": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  },
+                  "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
                 },
                 "i18n": {
                   "type": "object",
@@ -1187,6 +1230,37 @@
                     "type": "string",
                     "minLength": 1
                   },
+                  "model": {
+                    "type": "string",
+                    "enum": [
+                      "ladder",
+                      "zones",
+                      "baseline",
+                      "gaps",
+                      "letter-gaps",
+                      "margin",
+                      "slant",
+                      "loops",
+                      "trace",
+                      "start-dots",
+                      "pairs",
+                      "waves",
+                      "page"
+                    ],
+                    "description": "The drawing the report shows under 'Copy this'."
+                  },
+                  "helps": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^([1-9]|1[0-9]|20)$": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
+                  },
                   "i18n": {
                     "type": "object",
                     "additionalProperties": false,
@@ -1240,6 +1314,18 @@
                   "text": {
                     "type": "string",
                     "minLength": 1
+                  },
+                  "helps": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "patternProperties": {
+                      "^([1-9]|1[0-9]|20)$": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      }
+                    },
+                    "description": "How much this entry develops each skill, 0 to 1, by factor number. Its own factor is 1.0 and every other weight is lower. Empty for the spelling row. Catalogues before version 2026-10-11 carry no helps."
                   },
                   "i18n": {
                     "type": "object",
