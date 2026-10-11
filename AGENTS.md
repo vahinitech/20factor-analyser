@@ -16,6 +16,12 @@ Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriti
 
 **Same photo, same scores.** Nothing that runs before scoring (OCR, the printed/handwritten check, the layout filter) may change its result based on timing, load, a model still loading or a retry timer: choose by configuration, wait for models, keep a failed load failed. The response cache (180 s) and CI's stubbed models hide this class of bug, so check repeatability with the cache off and real models. Rule and history: CLAUDE.md, #112.
 
+**The nav, footer, cookie card and feedback button are vahinitech.com's, not ours.** `frontend/analyser.html` loads them from `../site/site.js` (vahini-web); never add footer markup, legal links, patent numbers or a status link here. Pictures on error screens come only through the host's `window.VAHINI_NOTICE_ART` map (same-site paths); the drawings are proprietary and never committed to this AGPL repository. Colours are design tokens (`var(--v-*)`), never hex codes.
+
+**Choices block before the work starts.** If a visitor ticks something the check cannot honour (for example "Keep my pages" with no email, or with the sample page loaded), stop at Run and say why, not after the report (#119, #120).
+
+**Run the whole CI test list locally**, as `.github/workflows/ci.yml` lists it, before calling a change ready: a partial run missed the closed `/health` contract in `test_schemas` (#113). Base every branch on `main`; never stack.
+
 **Generated files are not committed.** `engine.bundle.js` and the `?v=` asset stamps are produced by `python frontend/build_bundle.py --stamp` in the image build and by CI; never commit them (they made every pair of frontend PRs conflict). `sample-report-data.js` is committed but regenerated with `docs/examples/generate_photo_sample.py`, never edited by hand.
 
 ## Changelog entries are files
