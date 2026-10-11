@@ -19,7 +19,10 @@ const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' 
    thresholds, wording and colour never drift apart between pages again.
    Must track backend/scoring.py's _band(). */
 const bandOf = (score)=> score>=8.5?'strong' : score>=7.0?'good' : score>=4.5?'dev' : 'focus';
-const BAND_LABEL = { strong:'Strong', good:'Good', dev:'Developing', focus:'Needs support' };
+/* Stage names on both pages (owner approval 2026-10-11, #122): the child
+   is on a path, Learning, Improving, Mastering, Strong; the band colours
+   stay. They match the practice catalogue's stages. */
+const BAND_LABEL = { strong:'Strong', good:'Mastering', dev:'Improving', focus:'Learning' };
 const BAND_COLOR = { strong:'var(--grow)', good:'var(--band-good)', dev:'var(--gold)', focus:'var(--band-focus)' };
 const BAND_STARS = { strong:'★★★★', good:'★★★☆', dev:'★★☆☆', focus:'★☆☆☆' };
 const SEC_ICON = {
@@ -348,13 +351,69 @@ function applyPenDynamics(analysis, imu){
   return analysis;
 }
 
+/* ---- practice (docs/PRACTICE-FRAMEWORK.md; owner approval 2026-10-11, #122)
+   Exercises, tips and how many tries come from the practice catalogue
+   (backend/practice_catalog.py), never from this file: the catalogue served
+   with the report's dictionary version when there is one, otherwise the copy
+   build_bundle.py packs into the bundle (window.VahiniPracticeCatalog). */
+const STAGE_ORDER = ['focus','dev','good','strong'];
+const DEFAULT_LIMITS = { free:{areas_max:3,exercises_max:1,tips_max:1}, pro:{areas_max:3,exercises_max:2,tips_max:2} };
+function practiceCatalog(analysis){
+  const served = analysis && analysis.practice;
+  if (served && served.factors && served.dosage) return served;
+  const bundled = window.VahiniPracticeCatalog;
+  return bundled && bundled.factors && bundled.dosage ? bundled : null;
+}
+/* How many skills, exercises and tips: the numbers /api/v2/me returned for
+   this visitor (analysis.practiceLimits), else the catalogue's tier
+   defaults. Anything that is not a small whole number is ignored. */
+function practiceLimits(analysis, cat, tier){
+  const base = { ...DEFAULT_LIMITS[tier], ...((cat && cat.tiers && cat.tiers[tier]) || {}) };
+  const given = analysis && analysis.practiceLimits;
+  const out = {};
+  Object.keys(DEFAULT_LIMITS.free).forEach(k=>{
+    const v = given && given[k];
+    out[k] = Number.isInteger(v) && v >= 0 && v <= 20 ? v : base[k];
+  });
+  return out;
+}
+/* Latin-only exercises (a-o pairs, joined writing) are skipped when most
+   letters read from the page are another script. No text reads as Latin. */
+function latinPage(text){
+  const letters = String(text || '').match(/\p{L}/gu) || [];
+  if (!letters.length) return true;
+  return letters.filter(c=>/[A-Za-zÀ-ɏ]/.test(c)).length * 2 >= letters.length;
+}
+/* A re-check moves on: start after the last entry printed for this skill
+   last time and wrap back to level 1 when the list runs out. */
+function rotate(list, lastIds, count){
+  if (!list.length || count <= 0) return [];
+  const ids = Array.isArray(lastIds) ? lastIds : [];
+  const last = Math.max(-1, ...ids.map(id=>list.findIndex(e=>e.id===id)));
+  const start = last < 0 ? 0 : (last + 1) % list.length;
+  return Array.from({ length: Math.min(count, list.length) }, (_, k)=>list[(start + k) % list.length]);
+}
+/* Pictures of Vahini and friends come only from the host page, as
+   same-site paths in window.VAHINI_REPORT_ART ({cheer, buddy, tip,
+   encourage}), validated like VAHINI_NOTICE_ART. The drawings are not part
+   of this repository; without the map the report has no pictures. */
+function reportArt(key){
+  const map = window.VAHINI_REPORT_ART;
+  const url = map && typeof map[key] === 'string' ? map[key] : '';
+  return /^\/(?!\/)[\w\-./%]+$/.test(url) ? url : '';
+}
+function artImg(key, cls){
+  const url = reportArt(key);
+  return url ? `<img class="rp-art ${cls}" src="${esc(url)}" alt="" data-art="${key}">` : '';
+}
+
 function render(host, data){
   const {analysis, intake={}, recognizedText='', crops={}, imu=null, history=null}=data;
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const explanations={
-    1:['Letter shapes','Check that each letter has a clear shape. The photo gives a rough check; it cannot show every wrong letter.'],
+    1:['Letter shapes','Check that each letter has a clear shape. The photo gives a rough check; it cannot point to single letters.'],
     2:['Stroke order','A photo cannot show which stroke you wrote first. This score is only an estimate.'],
     3:['Closing loops','Check that round letters such as o and a close at the top.'],
     4:['Smooth strokes','Look for shaky lines in your letters. A blurry photo can also make lines look shaky.'],
@@ -375,10 +434,30 @@ function render(host, data){
     19:['Distinct letter shapes','Check that a looks different from o, and c looks different from e.'],
     20:['Neat page','Even sizes, clear spaces and straight lines help make your page neat.']
   };
-  const examples={3:'o o o   a a a',4:'l l l   c c c',5:'a a a   o o o',6:'h l b   g y p',7:'keep words on the line',8:'word   word   word',9:'letter   letter',10:'start each line here',11:'write a level line',12:'l l l   h h h',17:'m i n   m i n',19:'a o   c e'};
+  // What page 2 says it saw, in words for children: the first while the
+  // skill is growing (Learning, Improving), the second once it is nearly
+  // there (Mastering, Strong). It describes the writing, never the child.
+  const saw={
+    1:['Some letters are still finding their shape.','Most letters already have a clear shape.'],
+    2:['A photo cannot show stroke order, so this score is a rough guide.','A photo cannot show stroke order, so this score is a rough guide.'],
+    3:['Some round letters still have a small gap at the top.','Most round letters already close at the top.'],
+    4:['A few strokes look a little shaky.','Most strokes are already smooth.'],
+    5:['A few small letters grew taller than the rest.','Most small letters are already one height.'],
+    6:['Some tall letters and tails could reach a little further.','Most tall letters and tails already reach their place.'],
+    7:['Some words float above the line or dip below it.','Most words already sit on the line. Help the last few land too.'],
+    8:['Some gaps are wide and some are small.','Most gaps between words are already even.'],
+    9:['Some letters inside words sit very close or far apart.','Most letters inside words already have even room.'],
+    10:['Lines start at different places on the left.','Most lines already start at the same place on the left.'],
+    11:['Some lines climb or slope as they go across.','Most lines already run level.'],
+    12:['Tall strokes lean in different ways.','Most tall strokes already lean the same way.'],
+    17:['The lean changes from word to word.','The lean is already mostly the same.'],
+    18:['This grows as the skills above grow.','Most of your page is already easy to read.'],
+    19:['Some look-alike letters, such as a and o, are hard to tell apart.','Look-alike letters are already mostly clear.'],
+    20:['Even sizes, clear gaps and straight lines will make the page neater.','Your page already looks neat.']
+  };
   const sorted=analysis.results.filter(f=>isLive(f) && ![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
-  const weak=sorted.filter(f=>f.score<8.5);
-  const maintenance=!weak.length && sorted.length>0;
+  const toGrow=sorted.filter(f=>f.score<8.5);
+  const maintenance=!toGrow.length && sorted.length>0;
   const readable=['high','passage-verified'].includes(rec.level);
   // Classification entries preserve original OCR, unlike passage-corrected
   // text. Never check the printed stream or score-excluded regions.
@@ -390,48 +469,35 @@ function render(host, data){
   const spelling=readable && window.VahiniCraft
     ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text).map(f=>({...f,region:r.id}))) : [];
   const firstSpelling=spelling[0];
+  const free=analysis.access?.tier==='free';
+  const tier=free?'free':'pro';
+  const cat=practiceCatalog(analysis);
+  const lim=practiceLimits(analysis, cat, tier);
+  // Page 2's skill rows: the lowest measured skills below 8.5, composites
+  // left out, up to the tier's number. Spelling is a row of its own.
+  const rowFactors=(maintenance?sorted:toGrow).slice(0,lim.areas_max);
+  // Page 1 (Pro) keeps its three priority cards, a spelling finding first.
   const priorities=[];
   if(firstSpelling){
     const f=firstSpelling;
     priorities.push({id:'spelling',title:'Check this spelling',
       reason:`The text reader found “${f.word}”. Did you mean “${f.suggestion}”?`,
-      instruction:`First check “${f.word}” against your handwriting. If it is a spelling mistake, read “${f.suggestion}” aloud and notice the letters that change. If the text reader got it wrong, ignore this suggestion.`,
-      drill:`Look at “${f.suggestion}”, cover it, write it from memory, then check it. Use it in one sentence.`,
       spelling:f});
   }
-  (maintenance?sorted:weak).slice(0,3-priorities.length).forEach(f=>{
-    const n=window.VahiniNarrate ? VahiniNarrate.narrate(f) : null;
-    const simpleDrills={
-      1:'Copy five letters slowly. Check each shape before writing the next one.',
-      3:'Write a row of o and a. Close each round shape.',
-      4:'Write a row of l and c slowly. Try to make each stroke smooth.',
-      5:'Use two guide lines. Keep a, o and e the same height between them.',
-      6:'Write h, l, g and y. Make h and l tall; let g and y go below the line.',
-      7:'Write one short sentence. Make each word sit on the line.',
-      8:'Write a short sentence. Leave a small, even gap between words.',
-      9:'Write the word letter five times. Leave room to see each letter.',
-      10:'Draw a light left margin. Start three short lines beside it.',
-      11:'Write a sentence along a ruled line. Keep it level to the end.',
-      12:'Write l and h in a row. Keep their tall strokes at the same angle.',
-      17:'Write m, i and n slowly. Keep their lean the same.',
-      19:'Write a next to o, then c next to e. Make each pair easy to tell apart.'
-    };
-    const instruction=simpleDrills[f.n] || plainText(n ? n.drill : f.tip);
+  (maintenance?sorted:toGrow).slice(0,3-priorities.length).forEach(f=>{
     priorities.push({id:String(f.n),factor:f,title:explanations[f.n]?.[0] || f.name,
       explanation:explanations[f.n]?.[1] || f.evidence,
-      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Strong work. Keep practising this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`,
-      instruction,drill:'Write one short guided row, then a fresh row without the guide. Compare the two.'});
+      reason:`${f.score.toFixed(1)}/10. ${maintenance?'Strong work. Keep practising this skill.':BAND_LABEL[bandOf(f.score)]+'. Practise this skill.'}`});
   });
   const spellingStatus=!readable
     ? 'Spelling check deferred: the text reading is not confident enough. Try a clearer photo or check the words with a teacher.'
     : !hasText ? 'Spelling check unavailable: no usable handwritten text was read.'
-    : spelling.length ? 'Possible English spelling mistakes found. One is included in your three priorities. Confirm it against the original page; text reading can make mistakes.'
-    : 'We did not find a spelling mistake from our limited list of common English words. We may miss other mistakes. We do not check grammar or other languages.';
+    : spelling.length ? 'A word may be misspelled. It is on page 2. Check it against the original page: the text reader can misread words too.'
+    : 'We did not find a misspelled word from our limited list of common English words. We may miss others. We do not check grammar or other languages.';
   const title=esc(intake.writerName || 'Your handwriting');
   const head=label=>`<div class="run-head"><span class="rh-mark"><img class="rh-logo" src="assets/vahini-logo.png" alt="" width="22" height="22"><span class="rh-name">Vahini</span></span><span>${label}</span></div>`;
   // Patent numbers on every report page: owner instruction, 2026-10-10.
   const foot=n=>`<div class="run-foot"><span>Free handwriting review · Indian Patents No. 584433 and 604895</span><span>Practise a little, then review again</span><span class="pg-num">0${n}</span></div>`;
-  const cardStyle='';
   const selectionReasons={
     'height-deviation':'This part has a writing height that differs most from the middle height on your page.',
     'zone-context':'This is the tallest part found in your handwriting. Use it to check tall letters and tails.',
@@ -458,7 +524,7 @@ function render(host, data){
   const evidence=p=>{
     if(p.spelling){
       const f=p.spelling;
-      return `<div class="spelling-evidence"><p>Text read from your handwriting: <q>${esc(f.context)}</q></p><small>${f.region?'Source region: '+esc(f.region):'Source: recognized handwriting; exact word location unavailable.'} · Suggested correction: <b>${esc(f.suggestion)}</b></small></div>`;
+      return `<div class="spelling-evidence"><p>Text read from your handwriting: <q>${esc(f.context)}</q></p><small>${f.region?'Source region: '+esc(f.region):'Source: recognized handwriting; exact word location unavailable.'} · Suggested spelling: <b>${esc(f.suggestion)}</b></small></div>`;
     }
     const c=crops[p.factor.n];
     const ids=Array.isArray(c?.region_ids)?c.region_ids:[];
@@ -469,20 +535,19 @@ function render(host, data){
     return c ? `<div class="priority-evidence">
       ${c.url?`<img class="f-crop" src="${esc(c.url)}" alt="Handwriting reference for ${esc(p.title)}" >`:''}
       ${c.location_url?`<img class="f-location" src="${esc(c.location_url)}" alt="Source page location" >`:''}</div>
-      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; no exact wrong letter was found.':'Area check, not a letter-by-letter correction.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it does not mean separate mistakes.</span>':''}</p>`
-      : '<p style="font-size:10px;">We could not find a clear example for this skill. The score does not show an exact wrong letter.</p>';
+      <p style="font-size:10px;"><span class=selection-reason>${esc(location)}${location?': ':''}${esc(why)}</span> ${c.status==='context'?'Example only; it does not point to one letter.':'Area check, not a letter-by-letter correction.'}${shared?'<span class=shared-evidence> This part is used for more than one skill; it is one example, not separate ones.</span>':''}</p>`
+      : '<p style="font-size:10px;">We could not find a clear example for this skill. The score does not point to one letter.</p>';
   };
   const empty='<p>No actionable handwriting measurements are available. Upload a clearer page with several handwritten lines before choosing exercises.</p>';
   const reportCards=priorities.map((p,i)=>`<article class="priority-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)} <span class="priority-score">${p.factor?esc(p.factor.score.toFixed(1))+'/10':''}</span></h3><p class="reason-text">${esc(p.explanation||p.reason)}</p><div class="concept-actual">${evidence(p)}</div></article>`).join('');
-  // #84: the practice sheet for each priority's skill, from the worksheet
-  // catalogue the website generates (same PDFs as the practice library).
-  const practiceSheet=p=>{
-    const sheet=p.factor&&(window.VahiniWorksheetCatalog||[]).find(w=>w.factors.includes(p.factor.n));
+  // #84: the practice sheet for each skill, from the worksheet catalogue the
+  // website generates (same PDFs as the practice library).
+  const practiceSheet=f=>{
+    const sheet=f&&(window.VahiniWorksheetCatalog||[]).find(w=>w.factors.includes(f.n));
     if(!sheet) return '';
     const base=window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com';
-    return `<p class="practice-sheet">Practice sheet for this skill: <a href="${esc(base)}/assets/worksheets/${esc(sheet.id)}.pdf">${esc(sheet.title)} (PDF)</a> · print it and do one row a day</p>`;
+    return `<p class="practice-sheet">Practice sheet: <a href="${esc(base)}/assets/worksheets/${esc(sheet.id)}.pdf">${esc(sheet.title)} (PDF)</a></p>`;
   };
-  const coaching=priorities.map((p,i)=>`<article class="coaching-card practice-card" data-factor="${p.id}"><h3>${i+1}. ${esc(p.title)}</h3><p class="factor-instruction">${esc(p.instruction)}</p><div class="coach-example concept-target">${p.factor?focusSVG({...p.factor,band:'strong'}).svg:''}<span>${esc(p.spelling?.suggestion||examples[p.factor?.n]||'write slowly and clearly')}</span></div><p class="practice-label">Look at the example. Copy it here, then try it on your own.</p><div class="writing-lines" aria-label="Space to practise writing"></div><p class="self-check">Check your next row: ${esc(p.explanation||'Check each letter against the example.')}</p>${practiceSheet(p)}</article>`).join('');
   const rawOverall=analysis.overallMeasured ?? analysis.overall;
   const overall=Number.isFinite(rawOverall)?rawOverall:null;
   const measured=analysis.results.filter(isLive);
@@ -498,10 +563,9 @@ function render(host, data){
   // Free access returns five factors, each with an example cropped from the
   // visitor's photo. Page 1 shows the photo and all five; Pro keeps its
   // three priority cards. Page 2 (practice) is the same for both.
-  const free=analysis.access?.tier==='free';
   const meaning={1:'Each letter has a clear, usual shape.',5:'Small letters stay the same height.',
     7:'Words sit on the writing line.',8:'Even gaps between words.',18:'How easily someone else can read the page.'};
-  const firstFactors=priorities.filter(p=>p.factor).map(p=>p.factor);
+  const firstFactors=rowFactors;
   const skillList=[...firstFactors,...measured.filter(f=>!firstFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n)];
   const skillName=f=>explanations[f.n]?.[0]||f.name;
   // The last check saved in this browser, for "was" scores and the change line.
@@ -544,25 +608,97 @@ function render(host, data){
   const pagePhoto=free&&det?`<figure class="page-photo"><div class="pp-frame"><img src="${esc(det)}" alt="Your uploaded handwriting page">${marks&&size?`<svg viewBox="0 0 ${size[0]} ${size[1]}" preserveAspectRatio="none" aria-hidden="true">${marks}</svg>`:''}</div>
       <figcaption>Your page. ${marks?'Each number marks where the example for that skill comes from.':'The examples below are cut from this photo.'}</figcaption></figure>`:'';
   const skillsBlock=free&&skillList.length?`<h3>Your ${skillList.length===5?'five':skillList.length} skills, with examples from your page</h3><div class="skill-grid">${skillList.map(skillCard).join('')}</div>`:'';
-  const worksheetLibrary=(window.VahiniWorksheets?VahiniWorksheets.base():'https://vahinitech.com')+'/practice.html';
+
+  /* ---- page 2: each skill to grow beside its exercise ------------------ */
+  const latin=latinPage(sources.map(r=>r.text).join(' ')||recognizedText);
+  const lastPractice=(prev&&prev.practice)||{};
+  const printed={exercises:{},tips:{}};
+  const unitText=u=>`1 try = 1 ${esc(u||'row')}`;
+  const dose=band=>(cat&&cat.dosage&&cat.dosage[band])||null;
+  const planLine=(band,count)=>{
+    const d=dose(band);
+    if(!d) return '<p class="pr-plan">This week: a few tries a day. Then check again!</p>';
+    if(d.per==='week') return `<p class="pr-plan">This week: ${esc(d.tries)} tries once a week, to keep it. Then check again in ${esc(Math.round(d.recheck_days/7))} weeks!</p>`;
+    return `<p class="pr-plan">This week: ${esc(d.tries)} tries a day${count>1?' in all':''}, for ${esc(d.days)} days. Then check again!</p>`;
+  };
+  const exerciseBlock=ex=>`<div class="pr-ex" data-exercise="${esc(ex.id)}"><p class="pr-ex-title"><b>${esc(ex.title)}</b> <span class="pr-unit">${unitText(ex.unit)}</span></p>
+      <p class="pr-steps">${esc(ex.steps)}</p>${ex.example?`<p class="pr-example">${esc(ex.example)}</p>`:''}</div>`;
+  const tipBlock=t=>`<p class="pr-tip" data-tip="${esc(t.id)}">${artImg('tip','rp-art-tip')}<span><b>Pihu's tip:</b> ${esc(t.text)}</span></p>`;
+  const exercisesFor=f=>{
+    const area=cat&&cat.factors&&cat.factors[String(f.n)];
+    if(!area) return {exs:[],tips:[]};
+    const band=bandOf(f.score);
+    const list=(area.exercises||[]).filter(e=>e.needs!=='pen'&&(latin||e.script!=='latin'));
+    const want=Math.min((dose(band)||{}).exercises??1, lim.exercises_max);
+    const exs=rotate(list, (lastPractice.exercises||{})[f.n], want);
+    const tips=rotate(area.tips||[], (lastPractice.tips||{})[f.n], lim.tips_max);
+    printed.exercises[f.n]=exs.map(e=>e.id);
+    printed.tips[f.n]=tips.map(t=>t.id);
+    return {exs,tips};
+  };
+  const stagePath=band=>{
+    const at=STAGE_ORDER.indexOf(band);
+    return `<p class="pr-path" aria-label="Stage ${esc(BAND_LABEL[band])}">${STAGE_ORDER.map((b,k)=>
+      `<span class="pr-stage${k<at?' done':k===at?' now':''}">${esc(BAND_LABEL[b])}${k<at?' ✓':''}</span>`).join('<span class="pr-arrow">→</span>')}</p>`;
+  };
+  const skillRow=(f,i)=>{
+    const band=bandOf(f.score), c=crops[f.n];
+    const crop=c&&c.url&&!wholePageCrop(c)?`<img class="pr-crop" src="${esc(c.url)}" alt="Your handwriting used for ${esc(skillName(f))}">`:'';
+    const {exs,tips}=exercisesFor(f);
+    const words=(saw[f.n]||[])[band==='focus'||band==='dev'?0:1]||explanations[f.n]?.[1]||'';
+    return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
+      <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(skillName(f))}</h3><span class="pr-badge band-${band}">${esc(f.score.toFixed(1))}/10 · ${esc(BAND_LABEL[band])}</span></div>
+        ${stagePath(band)}<p class="pr-saw">${esc(words)}</p>${crop}${practiceSheet(f)}</div>
+      <div class="pr-practice">${exs.map(exerciseBlock).join('')||'<p class="pr-steps">Practise this skill for a few minutes a day.</p>'}
+        ${planLine(band,exs.length)}${tips.map(tipBlock).join('')}<div class="writing-lines pr-line" aria-label="Space to try it once"></div></div>
+    </article>`;
+  };
+  const spellingRow=n=>{
+    const f=firstSpelling, area=cat&&cat.spelling;
+    const ex=area&&area.exercises&&area.exercises[0];
+    const tips=area?rotate(area.tips||[],(lastPractice.tips||{}).spelling,lim.tips_max):[];
+    if(ex) printed.exercises.spelling=[ex.id];
+    printed.tips.spelling=tips.map(t=>t.id);
+    const d=dose('good');
+    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. Spelling</h3><span class="pr-badge spelling">1 word to check</span></div>
+        <p class="pr-saw">We read <b>${esc(f.word)}</b>. Did you mean <b>${esc(f.suggestion)}</b>? Check it against your page: the reader can misread words too.</p></div>
+      <div class="pr-practice">${ex?exerciseBlock({...ex,example:f.suggestion}):''}
+        <p class="pr-plan">This week: ${esc(d?d.tries:5)} tries a day, for ${esc(d?d.days:7)} days.</p>${tips.map(tipBlock).join('')}<div class="writing-lines pr-line" aria-label="Space to try it once"></div></div>
+    </article>`;
+  };
+  const rows=rowFactors.map(skillRow).join('')+(firstSpelling?spellingRow(rowFactors.length+1):'');
+  const best=measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
+  const lower=s=>s.charAt(0).toLowerCase()+s.slice(1);
+  const opening=`<div class="p2-open">${artImg('cheer','rp-art-cheer')}<p>${best?`<b>Great work on ${esc(lower(skillName(best)))}!</b> `:''}Here are the skills to ${maintenance?'keep strong':'grow next'}, each with its exercise beside it. Bheema says: a few tries a day is plenty!</p>${artImg('buddy','rp-art-buddy')}</div>`;
+  const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n);
+  const praise=f=>{const b=bandOf(f.score);
+    if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return ' It grows as the skills above grow.';
+    return b==='strong'?' Great work!':b==='good'?' Already good!':'';};
+  const locked=Math.max(0,20-analysis.results.length);
+  const otherBox=others.length||free?`<div class="other-skills"><p class="os-title"><b>Other skills we checked.</b></p>
+      ${others.length?`<ul>${others.map(f=>`<li data-factor="${f.n}">${esc(skillName(f))}: ${esc(f.score.toFixed(1))}/10, ${esc(BAND_LABEL[bandOf(f.score)])}.${esc(praise(f))}</li>`).join('')}</ul>`:''}
+      ${free&&locked?`<p class="pro-note"><b>Want practice for every skill?</b> Pro checks ${locked} more skills, such as slant, letter spacing and margins, and gives exercises and tips for each one.</p>`:''}</div>`:'';
+  const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>You are getting better with every page!</b> After a week of tries, write a fresh page and check again to see how far you have come.</p></div>`;
   const pages=[
     `<section class="page free-report compact-report" data-screen-label="Your review">${head('1 · Your free review')}
-      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p>${free?sinceLine:''}</div><div class="compact-score"><b>${overall??'—'}</b><span>out of 100</span></div></div>
+      <div class="compact-overview"><div><div class="eyebrow">A little practice, clearer writing</div><h2>${title}</h2><p>${measured.length} skills checked. Unchecked skills do not lower your score.</p>${free?sinceLine:''}</div><div class="compact-score"><b>${overall??'–'}</b><span>out of 100</span></div></div>
       ${free&&skillsBlock?`${pagePhoto}${skillsBlock}`:`<p class="region-summary">${esc(regionSummary)} ${esc(coverage)} We choose examples by each skill, not by page order.</p>
       <h3>${maintenance?'Keep these strengths':priorities.length===1?'Your one thing to practise':`Your ${['','one','two','three'][priorities.length]||priorities.length} things to practise`}</h3>
       ${reportCards||empty}`}
       <p class="spelling-status">${esc(spellingStatus)}</p>
       ${rec.printed_lines>0?`<p class="report-note">${rec.printed_lines} printed lines on the page were excluded. Only handwriting is reviewed.</p>`:''}
       <p class="report-note">Scores are practice guides, not school grades. Turn over for examples and space to try them.</p>${foot(1)}</section>`,
-    `<section class="page free-report compact-report" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
-      <h2>Your next small step</h2><p>Choose one skill. Practise for a few comfortable minutes. Stop if your hand feels tired.</p>
-      ${coaching||empty}
-      <div class="guided-support"><h3>Demo handwriting report</h3><p>This PDF shows an example of your review and practice steps. Use Vahini App to explore your results.</p></div>
-      ${free?`<div class="guided-support pro-note"><h3>More detail with Pro</h3><p>This free review scores ${measured.length} skills. Pro adds the other ${Math.max(0,20-analysis.results.length)} skills, the scoring details behind each one and worksheets chosen for you. <a href="${esc(worksheetLibrary)}">Browse the free worksheet library</a></p></div>`:''}
-      <p class="report-note">Try a fresh page, then get another free review. Use similar paper and lighting to compare your progress.</p>${foot(2)}</section>`
+    `<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head('2 · See it, try it, check it')}
+      <h2>Your next small step</h2>
+      ${rows?`${opening}<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>Skill to grow, from your page</span><span>Your exercise for it</span></div><div class="practice-table">${rows}</div></div>${otherBox}${closing}`:empty}
+      ${foot(2)}</section>`
   ];
   host.innerHTML=pages.join('');
   wirePrintFit(host);
+  // What this report printed, so the next check can move on (app.js keeps
+  // it with the check in this browser's history; nothing leaves it).
+  return {practice:printed};
 }
 
 /* ---- print fit: keep "one report page = one printed sheet" honest --------

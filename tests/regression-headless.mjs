@@ -1,5 +1,5 @@
 import { spawn } from 'node:child_process';
-import { checkReportLayout } from './report-layout.mjs';
+import { checkReportLayout, checkPracticePrint } from './report-layout.mjs';
 import { setTimeout as delay } from 'node:timers/promises';
 
 const PORT = 4173;
@@ -117,6 +117,7 @@ async function runHeadlessChecks() {
       return out;
     });
     await free.close();
+    result.results.push(...await checkPracticePrint(browser, BASE_URL));
     result.results.push(
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(255, 253, 248)' && freeReport.inline===0, name:'Free report renders the two styled report pages', detail:JSON.stringify(freeReport)},
       {ok:freeReport.practice>0 && freeReport.firstFactors.length>0 && JSON.stringify(freeReport.firstFactors)===JSON.stringify(freeReport.practiceFactors), name:'Free report pairs each priority with practice space', detail:JSON.stringify({first:freeReport.firstFactors,practice:freeReport.practiceFactors})},
@@ -124,7 +125,7 @@ async function runHeadlessChecks() {
       // the photo and at least one crop cut from it, like a visitor's report.
       {ok:freeReport.skills===5 && freeReport.skillsExplained && freeReport.photo && freeReport.crops>0, name:'Free report shows the photo and all five skills, each with its example or a reason', detail:JSON.stringify({skills:freeReport.skills,explained:freeReport.skillsExplained,photo:freeReport.photo,crops:freeReport.crops})},
       {ok:!/three/.test(freeReport.heading) || freeReport.cards===3, name:'Free priority heading matches the number of cards', detail:freeReport.heading},
-      {ok:/Pro adds the other 15 skills/.test(freeReport.pro), name:'Free report explains what Pro adds'},
+      {ok:/Pro checks 15 more skills/.test(freeReport.pro) && !/₹|price/i.test(freeReport.pro), name:'Free report explains what Pro adds, with no price'},
       {ok:sheets.cards>0 && sheets.linked===sheets.cards, name:'Each practice card links its skill worksheet', detail:JSON.stringify(sheets)},
       {ok:JSON.stringify(better.badges)==='["5","8"]' && /2 skills got better/.test(better.text), name:'Skills that rose by 0.3 or more get a badge', detail:JSON.stringify(better)}
     );

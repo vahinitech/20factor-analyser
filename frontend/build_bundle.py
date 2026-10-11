@@ -22,6 +22,8 @@
 import base64
 import glob
 import hashlib
+import importlib.util
+import json
 import os
 import re
 import sys
@@ -41,6 +43,7 @@ SOURCES = [
     "src/engine/narrate.js",
     "src/report/worksheet-catalog.js",
     "src/report/worksheets.js",
+    "src/report/progress.js",
     "src/report/report-render.js",
     "src/app/app.js",
     "src/app/share.js",
@@ -58,8 +61,23 @@ ASSET_REF = re.compile(
 )
 
 
+def practice_source():
+    """The practice catalogue for reports made without a server catalogue
+    (the sample report). One source: backend/practice_catalog.py, which
+    validates itself on import and uses only the standard library."""
+    path = os.path.join(HERE, os.pardir, "backend", "practice_catalog.py")
+    spec = importlib.util.spec_from_file_location("practice_catalog", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    data = json.dumps(module.browser_catalog(), ensure_ascii=False)
+    return (
+        "/* Generated from backend/practice_catalog.py by build_bundle.py */"
+        f"\nwindow.VahiniPracticeCatalog = {data};\n"
+    )
+
+
 def build():
-    parts = []
+    parts = [practice_source()]
     for rel in SOURCES:
         path = os.path.join(HERE, *rel.split("/"))
         with open(path, "r", encoding="utf-8") as f:
@@ -134,7 +152,7 @@ if __name__ == "__main__":
         sys.exit(0)
     src_len, b64_len = build()
     print(
-        f"[build] packed {len(SOURCES)} sources: {src_len} src chars -> {b64_len} base64 chars"
+        f"[build] packed {len(SOURCES)} sources and the practice catalogue: {src_len} src chars -> {b64_len} base64 chars"
     )
     print(f"[build] wrote {OUT}")
     if "--stamp" in sys.argv:

@@ -155,10 +155,12 @@
     add(pages.length===2, 'Full report restores two readable pages');
     add(host.querySelectorAll('.priority-card').length===3 && !host.querySelector('.fscore'), 'Evidence page keeps three selected priorities');
     add(!host.querySelector('.report-score-table') && /out of 100/.test(host.textContent), 'Overall score stays visible without a long score table');
-    add(host.querySelectorAll('.concept-target svg').length===3 && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs a target concept with uploaded evidence');
+    add([...host.querySelectorAll('.practice-row')].length===3 && [...host.querySelectorAll('.practice-row')].every(r=>r.querySelector('[data-exercise]')) && host.querySelectorAll('.concept-actual').length===3, 'Each handwriting priority pairs an exercise with uploaded evidence');
     add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Your review|Practise and improve', 'All report sections appear in the required order');
     add(!host.querySelector('.projection-chart'), 'Compact free report omits the speculative prediction');
-    add(host.querySelectorAll('.coaching-card .coach-example').length===3 && /Check your next row/.test(host.textContent), 'Coaching includes illustrated examples and a self-check');
+    // Practice report (owner approval 2026-10-11, #122): each skill row has
+    // its exercise, this week's tries and Pihu's tip beside it.
+    add([...host.querySelectorAll('.coaching-card')].every(r=>r.querySelector('.pr-steps') && r.querySelector('.pr-plan') && r.querySelector('.pr-tip')) && host.querySelectorAll('.coaching-card .pr-example').length>=3, 'Practice rows include steps, examples, a weekly plan and a tip');
     add(host.querySelectorAll('.reason-text').length===3 && !/CV|RMS|ratio err/.test(host.textContent), 'Priority reasons and score table use plain language');
     const cropImages=[...host.querySelectorAll('.f-crop')];
     add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
@@ -194,22 +196,23 @@
     aligned.coachTips=[{kind:'fun',title:'UNRELATED ENTERTAINMENT',text:'Generic speed habit'}];
     renderReport(aligned,'classification-host');
     const factors = selector=>[...classifiedHost.querySelectorAll(selector)].map(e=>e.dataset.factor).join(',');
-    add(factors('.coaching-card')==='5,8' && factors('.practice-card')==='5,8', 'Coaching and drills share the lowest measured factors and exclude missing dynamics');
-    const instructions = selector=>[...classifiedHost.querySelectorAll(selector+' .factor-instruction')].map(e=>e.textContent).join('|');
-    add(instructions('.coaching-card')===instructions('.practice-card') && /two guide lines/i.test(instructions('.practice-card')), 'Size coaching uses the same specific guide-line drill as practice');
+    add(factors('.coaching-card')==='5,8' && factors('.practice-row')==='5,8', 'Practice rows take the lowest measured factors and exclude missing dynamics');
+    const instructions = selector=>[...classifiedHost.querySelectorAll(selector+' .pr-steps')].map(e=>e.textContent).join('|');
+    const exerciseIds = n=>[...classifiedHost.querySelectorAll('.practice-row[data-factor="'+n+'"] [data-exercise]')].map(e=>e.dataset.exercise);
+    add(/two light guide lines/i.test(instructions('.practice-row[data-factor="5"]')) && exerciseIds(5).every(id=>/^size\./.test(id)) && exerciseIds(8).every(id=>/^space\./.test(id)), 'Size practice uses the guide-line exercise from its own factor');
     add(!/UNRELATED ENTERTAINMENT|Pressure waves/.test(classifiedHost.textContent), 'Generic entertainment and unrelated grouped drills are absent');
     renderReport(makeAnalysis(Array(20).fill(9)),'classification-host');
     add(/Keep these strengths/.test(classifiedHost.textContent) && !/Below the strong reference range/.test(classifiedHost.textContent), 'Strong results receive maintenance without false deficit claims');
     const good = makeAnalysis(Array(20).fill(9)); good.results[2].score=7.5; good.results[2].band='good';
     renderReport(good,'classification-host');
-    add(factors('.practice-card')==='3' && !/undefined|\[object Object\]/.test(instructions('.practice-card')), 'Good-band result below 8.5 has a valid factor-specific drill');
+    add(factors('.practice-row')==='3' && /row of o and a/i.test(instructions('.practice-row')) && !/undefined|\[object Object\]/.test(instructions('.practice-row')), 'Good-band result below 8.5 has a valid factor-specific exercise');
     renderReport(aligned,'classification-host',{});
     add(classifiedHost.querySelectorAll('.page').length===2 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also preserves two pages');
     add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02', 'Page numbering follows the two-page layout');
     const spellingAnalysis=makeAnalysis(Array(20).fill(4));
     spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
     renderReport(spellingAnalysis,'classification-host');
-    add(factors('.priority-card')==='spelling,1,2' && factors('.coaching-card')===factors('.practice-card'), 'Spelling takes one of three slots and follows through coaching and drills');
+    add(factors('.priority-card')==='spelling,1,2' && factors('.practice-row')==='1,2,3,spelling', 'Spelling takes one page-1 slot and adds its own practice row');
     add(/receive/.test(classifiedHost.textContent) && /line_7/.test(classifiedHost.textContent) && !/becuase/.test(classifiedHost.textContent), 'Spelling correction uses handwritten source text and excludes printed words');
     spellingAnalysis.recognition.level='low';renderReport(spellingAnalysis,'classification-host');
     add(!factors('.priority-card').includes('spelling') && /deferred/.test(classifiedHost.textContent), 'Low-confidence OCR defers spelling instead of accusing the writer');
@@ -233,14 +236,14 @@
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /limited list/.test(txt), 'Limited spelling check never certifies an error-free document');
     add(/3 printed lines on the page were excluded/i.test(txt), 'Printed text exclusion remains visible');
-    add(!host.querySelector('.guided-support a') && /Demo handwriting report/.test(txt), 'Demo PDF does not send students to external sales links');
+    add([...host.querySelectorAll('.practice-page a')].every(a=>/\/assets\/worksheets\/[\w-]+\.pdf$/.test(a.href)), 'Practice page links only to worksheets, never to sales pages');
     add(!/20factor-analyser-pro|private repo|AGPL/i.test(txt), 'Report does not expose repository details');
-    add(/Use Vahini App/.test(txt) && !/Ask about Pro/.test(txt), 'Commercial journey belongs in the app, not the demo PDF');
-    add(host.querySelectorAll('.shared-evidence').length===3 && /does not mean separate mistakes/.test(txt), 'Repeated regions are disclosed without counting them as separate mistakes');
+    add(!/Ask about Pro|price|₹|\bbuy\b/i.test(txt), 'The report names no prices and asks nobody to buy');
+    add(host.querySelectorAll('.shared-evidence').length===3 && /it is one example, not separate ones/.test(txt), 'Repeated regions are disclosed without counting them as separate findings');
     add(host.querySelectorAll('.selection-reason').length===3, 'Every crop explains why it was selected');
     add(new Set([...host.querySelectorAll('.selection-reason')].map(el=>el.textContent)).size===3, 'Shared region keeps the distinct reason for each factor');
     add(/5 handwriting parts/.test(txt) && /1 different part is shown/.test(txt), 'Region coverage counts unique evidence rather than repeated crops');
-    add(host.querySelectorAll('.writing-lines').length===3 && /Demo handwriting report/.test(txt), 'Illustrated practice space and demo label are present');
+    add(host.querySelectorAll('.writing-lines').length===3 && /You are getting better with every page/.test(txt), 'Each practice row has space to try it, and the page ends on encouragement');
     add(!/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFD]/.test(txt), 'Report contains no control or replacement characters');
 
     // #host is display:none (it's a structural scratch area for the checks

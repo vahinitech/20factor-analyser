@@ -67,3 +67,59 @@ export async function checkReportLayout(page){
   await page.evaluate(()=>document.querySelectorAll('.layout-stretch').forEach(e=>e.remove()));
   return results;
 }
+
+/* Practice report (owner approval 2026-10-11, #122): Free and Pro both
+   print on exactly two A4 sheets in the longest case (three skills, a
+   spelling row, Pro's two exercises and two tips each, the other-skills box
+   and all four pictures), with and without the host's picture map, and
+   when the sheets run as long as a real photo makes them. */
+export const REPORT_ART = { cheer:'/frontend/assets/vahini-logo.png', buddy:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
+export async function renderLongest(page, pro){
+  await page.evaluate(pro=>{
+    const d=window.VAHINI_SAMPLE_REPORT;
+    window.VahiniCraft={...window.VahiniCraft,checkSpelling:t=>t?[{word:'recieve',suggestion:'receive',context:'I recieve it'}]:[]};
+    const recognition={...(d.analysis.recognition||{}),level:'high'};
+    const analysis=pro?{...d.analysis,recognition}:{...d.analysis,access:{tier:'free'},recognition,results:d.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
+    const crops={};
+    Object.entries(d.factor_regions||{}).forEach(([k,v])=>{crops[k]=v;});
+    VahiniReport.render(document.getElementById('report-host'),{analysis,intake:{},recognizedText:'I recieve it',crops,detURL:d.photo,history:null});
+  },pro);
+  await page.evaluate(()=>document.fonts.ready);
+}
+export async function checkPracticePrint(browser, baseUrl){
+  const results=[];
+  const add=(ok,name,detail='')=>results.push({ok,name,detail});
+  const pdfPages=async page=>((await page.pdf({format:'A4',printBackground:true})).toString('latin1').match(/\/Type\s*\/Page[^s]/g)||[]).length;
+  for(const pro of [false,true]){
+    for(const art of [true,false]){
+      const label=`${pro?'Pro':'Free'}, pictures ${art?'on':'off'}`;
+      const page=await browser.newPage({viewport:{width:1200,height:1000}});
+      if(art)await page.addInitScript(a=>{window.VAHINI_REPORT_ART=a;},REPORT_ART);
+      await page.goto(baseUrl+'/frontend/sample-report.html'+(pro?'?example=pro':''),{waitUntil:'load'});
+      await page.waitForSelector('#report-host .practice-page');
+      await renderLongest(page,pro);
+      const shape=await page.evaluate(()=>({
+        rows:document.querySelectorAll('.practice-row').length,
+        spelling:!!document.querySelector('.practice-row.spelling-row'),
+        others:!!document.querySelector('.other-skills'),
+        art:[...new Set([...document.querySelectorAll('#report-host img.rp-art')].map(i=>i.dataset.art))].sort().join(','),
+        alt:[...document.querySelectorAll('#report-host img.rp-art')].every(i=>i.getAttribute('alt')===''),
+        maxEx:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('[data-exercise]').length)),
+        maxTips:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('.pr-tip').length)),
+      }));
+      add(shape.rows===4&&shape.spelling&&shape.others&&shape.maxEx===(pro?2:1)&&shape.maxTips===(pro?2:1),label+': longest case has three skills, spelling and the other skills',JSON.stringify(shape));
+      add(art?shape.art==='buddy,cheer,encourage,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
+      await page.emulateMedia({media:'print'});
+      add(await pdfPages(page)===2,label+': prints on exactly two A4 pages');
+      // As long as a real photo makes the sheets (stage, 2026-10-07).
+      const natural=await page.evaluate(()=>{
+        const sheets=[...document.querySelectorAll('#report-host .free-report')];
+        [1119,1335].forEach((target,i)=>{const pad=document.createElement('div');pad.className='layout-stretch';pad.style.height=Math.max(0,target-sheets[i].scrollHeight)+'px';sheets[i].append(pad);});
+        return sheets.map(p=>p.scrollHeight);
+      });
+      add(await pdfPages(page)===2,label+': stretched sheets still print on two pages',JSON.stringify(natural));
+      await page.close();
+    }
+  }
+  return results;
+}

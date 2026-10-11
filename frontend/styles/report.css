@@ -842,3 +842,86 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 /* #82: a skill that rose since the last check in this browser (page 1) */
 .compact-report .sk-better{ margin:2px 0 4px; font-size:10.5px; }
 .compact-report .sk-better span{ background:var(--v-success-bg); color:var(--v-success); border-radius:4px; padding:1px 6px; font-weight:600; }
+
+/* Page 2, "Your next small step" (owner approval 2026-10-11, #122): each
+   skill to grow on the left, its exercise on the right, in one row. */
+.compact-report.practice-page h2{ margin:6px 0 4px; }
+.compact-report .p2-open, .compact-report .p2-close{ display:flex; align-items:center; gap:12px; }
+.free-report.compact-report .p2-open p, .free-report.compact-report .p2-close p{ flex:1; font-size:13px; line-height:1.4; margin:4px 0; }
+.compact-report .rp-art{ display:block; flex:0 0 auto; object-fit:contain; }
+.compact-report .rp-art-cheer, .compact-report .rp-art-buddy{ width:40px; height:46px; }
+.compact-report .rp-art-encourage{ width:40px; height:40px; }
+.compact-report .rp-art-tip{ width:18px; height:18px; margin-top:1px; }
+.compact-report .pr-cols{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; margin:8px 0 4px; font-size:9.5px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--v-text-2); }
+.compact-report .practice-table{ display:flex; flex-direction:column; gap:6px; }
+.free-report.compact-report .practice-row.coaching-card{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:8px; padding:0; margin:0; border:0; background:none; border-radius:0; }
+.compact-report .pr-skill, .compact-report .pr-practice{ min-width:0; border:1px solid var(--v-border); border-radius:10px; padding:7px 10px; background:var(--card); }
+.compact-report .pr-skill{ display:flex; flex-direction:column; border-left:4px solid var(--v-accent); }
+.free-report.compact-report .pr-skill .practice-sheet{ margin-top:auto; }
+.compact-report .practice-row.band-focus .pr-skill{ border-left-color:var(--band-focus); }
+.compact-report .practice-row.band-dev .pr-skill{ border-left-color:var(--gold); }
+.compact-report .practice-row.band-good .pr-skill, .compact-report .practice-row.band-strong .pr-skill{ border-left-color:var(--grow); }
+.compact-report .pr-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.free-report.compact-report .pr-head h3{ font-size:16.5px; margin:0; }
+.compact-report .pr-badge{ flex:0 0 auto; font-size:10px; font-weight:600; border-radius:99px; padding:2px 8px; background:var(--paper-2); color:var(--v-text); white-space:nowrap; }
+.compact-report .pr-badge.band-focus{ background:var(--accent-soft); }
+.compact-report .pr-badge.band-dev{ background:var(--gold-soft); }
+.compact-report .pr-badge.band-good, .compact-report .pr-badge.band-strong{ background:var(--grow-soft); }
+.compact-report .pr-badge.spelling{ background:var(--good-soft); }
+.free-report.compact-report .pr-path{ display:flex; flex-wrap:wrap; align-items:center; gap:2px; margin:5px 0; font-size:9px; line-height:1.2; }
+.compact-report .pr-stage{ border:1px solid var(--v-border); border-radius:99px; padding:1px 6px; color:var(--v-text-2); }
+.compact-report .pr-stage.done{ background:var(--grow-soft); border-color:transparent; color:var(--v-text); }
+.compact-report .pr-stage.now{ background:var(--v-accent-text); border-color:transparent; color:var(--v-on-dark); font-weight:600; }
+.compact-report .pr-arrow{ color:var(--v-text-2); }
+.free-report.compact-report .pr-saw{ font-size:13px; line-height:1.35; margin:4px 0; }
+.compact-report .pr-crop{ display:block; max-width:100%; max-height:44px; margin-top:4px; border:1px solid var(--v-border); border-radius:4px; }
+.free-report.compact-report .pr-ex-title{ display:flex; flex-wrap:wrap; align-items:baseline; column-gap:6px; font-size:12px; margin:0 0 1px; }
+.compact-report .pr-unit{ font-size:10px; font-weight:600; color:var(--v-accent-text); }
+.free-report.compact-report .pr-steps{ font-size:13px; line-height:1.35; margin:2px 0; }
+.free-report.compact-report .pr-example{ font-family:var(--handB); font-size:17px; line-height:1.1; color:var(--v-accent-text); margin:1px 0 3px; }
+.compact-report .pr-ex + .pr-ex{ border-top:1px dashed var(--v-border); margin-top:4px; padding-top:4px; }
+.free-report.compact-report .pr-plan{ font-size:13px; font-weight:700; color:var(--v-accent-text); margin:4px 0; }
+.free-report.compact-report .pr-tip{ display:flex; gap:6px; align-items:flex-start; background:var(--gold-soft); border-radius:6px; padding:3px 8px; margin:2px 0; font-size:11px; line-height:1.3; }
+.compact-report .pr-line{ height:16px; background:none; border-bottom:1.5px solid var(--rule-blue); margin:2px 0 0; }
+.free-report.compact-report .practice-row .practice-sheet{ font-size:10px; margin:6px 0 0; padding-top:3px; }
+.compact-report .spelling-row .pr-skill{ border-left-color:var(--good); }
+.compact-report .other-skills{ border:1px dashed var(--v-border); border-radius:10px; padding:7px 11px; margin:8px 0 6px; }
+.free-report.compact-report .other-skills p{ font-size:11.5px; margin:2px 0; }
+.compact-report .other-skills ul{ columns:2; column-gap:18px; margin:2px 0; padding-left:16px; font-size:10.5px; line-height:1.35; }
+/* The report owns its list styling: host pages must not turn these into cards. */
+.compact-report .other-skills li{ break-inside:avoid; display:list-item; margin:0; padding:0; border:0; border-radius:0; background:none; box-shadow:none; font-size:10.5px; line-height:1.35; }
+/* Pro shows up to two exercises and two tips per skill: its exercise
+   column is wider so the page still prints on one sheet. */
+.practice-pro .pr-cols, .free-report.compact-report.practice-pro .practice-row.coaching-card{ grid-template-columns:minmax(0,2fr) minmax(0,3fr); }
+.practice-pro .pr-ex{ display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:8px; align-items:baseline; }
+.practice-pro .pr-ex .pr-steps{ grid-column:1 / -1; grid-row:2; }
+.free-report.compact-report.practice-pro .pr-example{ grid-column:2; grid-row:1; margin:0; line-height:1; }
+@media screen and (max-width:600px){
+  .compact-report .pr-cols{ display:none; }
+  .free-report.compact-report .practice-row.coaching-card,
+  .free-report.compact-report.practice-pro .practice-row.coaching-card{ grid-template-columns:1fr; }
+  .compact-report .other-skills ul{ columns:1; }
+}
+@media print{
+  .compact-report .practice-row{ break-inside:avoid; }
+}
+
+/* "Your progress", under the report on screen only (#122). */
+.progress-panel{ max-width:210mm; margin:18px auto; padding:18px 22px; background:var(--card); border:1px solid var(--v-border); border-radius:12px; color:var(--v-text); font-size:14px; line-height:1.5; }
+.progress-panel h2{ font-size:22px; margin:0 0 6px; }
+.progress-panel p{ margin:6px 0; }
+.progress-panel .pp-list{ margin:6px 0 10px; padding-left:20px; }
+.progress-panel .pp-pick select{ font:inherit; margin-left:6px; padding:4px 6px; }
+.progress-panel .pp-compare{ list-style:none; padding:0; margin:8px 0; columns:2; column-gap:24px; }
+.progress-panel .pp-compare li{ break-inside:avoid; padding:2px 0; }
+.progress-panel .pp-name{ font-weight:600; }
+.progress-panel .pp-up{ color:var(--grow); font-weight:700; }
+.progress-panel .pp-same, .progress-panel .pp-tries{ color:var(--v-text-2); }
+.progress-panel .pp-actions{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+.progress-panel .pp-load{ position:relative; overflow:hidden; cursor:pointer; }
+.progress-panel .pp-load input{ position:absolute; inset:0; opacity:0; cursor:pointer; }
+.progress-panel .pp-confirm{ background:var(--gold-soft); border-radius:8px; padding:8px 12px; margin:6px 0; }
+.progress-panel .pp-confirm[hidden]{ display:none; }
+.progress-panel .pp-keep a{ color:var(--v-accent-text); font-weight:600; }
+@media screen and (max-width:600px){ .progress-panel .pp-compare{ columns:1; } }
+@media print{ .progress-panel{ display:none !important; } }
