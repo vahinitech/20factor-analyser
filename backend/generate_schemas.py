@@ -332,6 +332,29 @@ def me():
     )
 
 
+def translations(fields, optional=()):
+    """Per-language text of one exercise or tip: ``i18n.<lang>``."""
+    text = {"type": "string", "minLength": 1}
+    entry = closed(
+        {
+            **{field: text for field in fields},
+            **{field: {"type": "string"} for field in optional},
+        },
+        required=fields,
+    )
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "patternProperties": {"^[a-z]{2}$": entry},
+        "description": (
+            "Translations by language code. A missing language or field "
+            "falls back to the English text. Latin practice text stays "
+            "as written, so 'example' is translated only when it is not "
+            "Latin practice."
+        ),
+    }
+
+
 def practice_entries():
     """Exercise and tip lists, as the catalogue serves them."""
     text = {"type": "string", "minLength": 1}
@@ -351,13 +374,28 @@ def practice_entries():
             },
             "example": {"type": "string"},
             "check": text,
-        }
+            "i18n": translations(("title", "steps", "check"), ("example",)),
+        },
+        required=(
+            "id",
+            "level",
+            "title",
+            "unit",
+            "script",
+            "needs",
+            "worksheet",
+            "steps",
+            "example",
+            "check",
+        ),
     )
     tip = closed(
         {
             "id": {"type": "string", "pattern": "^[a-z]+\\.[a-z0-9-]+$"},
             "text": text,
-        }
+            "i18n": translations(("text",)),
+        },
+        required=("id", "text"),
     )
     return (
         {"type": "array", "items": exercise},
