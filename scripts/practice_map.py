@@ -32,7 +32,8 @@ def factor_names():
         cat = json.loads(path.read_text())
         if "practice" not in cat:
             continue
-        served = {str(f["n"]): {"exercises": f.get("exercises", []), "tips": f.get("tips", [])} for f in cat["factors"]}
+        keys = ("why", "win", "page", "i18n", "exercises", "tips")
+        served = {str(f["n"]): {k: f[k] for k in keys if k in f} for f in cat["factors"]}
         if json.dumps(served, sort_keys=True, ensure_ascii=False) != want:
             continue
         return {f["n"]: (f["name"], f["id"]) for f in cat["factors"]}, path.name
@@ -86,7 +87,7 @@ def render():
         "A report gives practice only for the skills it flags. Per skill, Free shows",
         f"{pc.TIERS['free']['exercises_max']} exercise and {pc.TIERS['free']['tips_max']} tip, Pro up to "
         f"{pc.TIERS['pro']['exercises_max']} and {pc.TIERS['pro']['tips_max']}, moving on at each re-check.",
-        "How many tries a day follows the stage of the weakest skill an exercise helps:",
+        "How many tries a day follows the stage of the row's own skill:",
         "",
         "| Stage | Score | Tries |",
         "|---|---|---|",
@@ -109,6 +110,11 @@ def render():
             note = " Scored by the pen only: never offered on a photo report."
         out += ["", f'<a id="{n}-{fid.replace("_", "-")}"></a>', f"## {n}. {name}", "",
                 f"Factor id `{fid}`.{note}", "",
+                "Under the skill on page 2:", "",
+                "| | English | తెలుగు (draft) |", "|---|---|---|",
+                f"| Why it helps | {cell(area['why'])} | {cell(area['i18n']['te']['why'])} |",
+                f"| You'll know it's working when | {cell(area['win'])} | {cell(area['i18n']['te']['win'])} |",
+                f"| More | vahinitech.com/{area['page']}.html | |", "",
                 "| Level | Exercise | 1 try = | Steps | Example | Self-check | Worksheet | Script | Drawing | Helps |",
                 "|---|---|---|---|---|---|---|---|---|---|"]
         for e in area["exercises"]:

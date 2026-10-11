@@ -133,6 +133,46 @@
               "null"
             ]
           },
+          "why": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Why the skill helps, one short sentence."
+          },
+          "win": {
+            "type": "string",
+            "minLength": 1,
+            "description": "A small win the child can see, finishing \"You'll know it's working when ...\"."
+          },
+          "page": {
+            "type": "string",
+            "pattern": "^handwriting-[a-z-]+$",
+            "description": "The skill's page on vahinitech.com, without '.html'."
+          },
+          "i18n": {
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+              "^[a-z]{2}$": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "why",
+                  "win"
+                ],
+                "properties": {
+                  "why": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "win": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            },
+            "description": "Translations by language code. A missing language or field falls back to the English text. Latin practice text stays as written, so 'example' is translated only when it is not Latin practice."
+          },
           "exercises": {
             "type": "array",
             "items": {

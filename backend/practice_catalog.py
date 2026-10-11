@@ -1655,6 +1655,240 @@ def _attach_translations():
 _attach_translations()
 
 
+# Why each skill helps and how a child sees it working (owner, 2026-10-11):
+# page 2 prints them under each skill to grow, with the website's page for
+# that skill. ``why`` is one short sentence about everyday life, ``win``
+# finishes "You'll know it's working when ..." with a small win the child
+# can see, and ``page`` is the skill's page on vahinitech.com (its path
+# without ".html"). Encouraging words only: no claim to diagnose or cure
+# anything (CLAIM_WORDS).
+ABOUT = {
+    1: (
+        "Clear letter shapes make every word easy to read.",
+        "your letters look like the ones in your book.",
+        "handwriting-letter-formation",
+    ),
+    2: (
+        "Starting each letter the same way makes writing smooth.",
+        "each letter starts at the top without thinking.",
+        "handwriting-stroke-order",
+    ),
+    3: (
+        "Closed loops keep a, d and o easy to tell apart.",
+        "your a, d, g and o have no gaps at the top.",
+        "handwriting-loop-closure",
+    ),
+    4: (
+        "Smooth strokes make your page look calm and clear.",
+        "your lines flow without little wobbles.",
+        "handwriting-line-quality",
+    ),
+    5: (
+        "Same-size letters make your words easy to read.",
+        "a, o and e line up like a fence.",
+        "handwriting-size-consistency",
+    ),
+    6: (
+        "Tall letters and tails help each word keep its shape.",
+        "h and l reach up, and g and y hang down.",
+        "handwriting-ascenders-and-descenders",
+    ),
+    7: (
+        "Words on the line look neat and easy to follow.",
+        "every small letter touches the line.",
+        "handwriting-baseline-alignment",
+    ),
+    8: (
+        "Even gaps help the eye find each word.",
+        "you can read your line aloud without stopping.",
+        "handwriting-word-spacing",
+    ),
+    9: (
+        "Even gaps inside a word keep its letters together.",
+        "letters in a word sit close but never touch.",
+        "handwriting-letter-spacing",
+    ),
+    10: (
+        "A straight margin gives your page a tidy frame.",
+        "every line starts at the same edge.",
+        "handwriting-margin-discipline",
+    ),
+    11: (
+        "Level lines are easy to follow from left to right.",
+        "your lines run straight across, even on plain paper.",
+        "handwriting-line-straightness",
+    ),
+    12: (
+        "Upright strokes help your letters stand tall and steady.",
+        "the long strokes of h, l and t stand the same way.",
+        "handwriting-vertical-alignment",
+    ),
+    13: (
+        "A steady speed keeps letters the same from start to end.",
+        "your last line looks as neat as your first.",
+        "handwriting-writing-speed-consistency",
+    ),
+    14: (
+        "Gentle, even pressure keeps your hand relaxed for longer.",
+        "your lines look equally dark, with no deep dents.",
+        "handwriting-pen-pressure",
+    ),
+    15: (
+        "Flowing strokes help each word come out in one go.",
+        "you write a short word without stopping in the middle.",
+        "handwriting-stroke-continuity",
+    ),
+    16: (
+        "Fewer pen lifts let your words flow faster.",
+        "you finish a short word before lifting the pen.",
+        "handwriting-pen-lifts",
+    ),
+    17: (
+        "Letters that lean the same way look neat together.",
+        "your tall letters lean like trees in one wind.",
+        "handwriting-slant-consistency",
+    ),
+    18: (
+        "Easy-to-read writing lets others enjoy what you wrote.",
+        "a friend reads your page without asking about a word.",
+        "handwriting-legibility",
+    ),
+    19: (
+        "When each letter has its own shape, words read easily.",
+        "nobody mixes up your a and u, or your n and h.",
+        "handwriting-character-distinction",
+    ),
+    20: (
+        "A neat page is a joy to read and to share.",
+        "you feel proud to show your page to someone.",
+        "handwriting-neatness",
+    ),
+}
+
+# Telugu for ABOUT, draft wording like the rest (native speaker's check
+# before Telugu reaches production). ``win`` is a whole sentence here: the
+# Telugu label before it ends with a colon.
+TELUGU_ABOUT = {
+    1: {
+        "why": "స్పష్టమైన అక్షరాల ఆకారాలతో ప్రతి పదం సులువుగా చదవచ్చు.",
+        "win": "మీ అక్షరాలు మీ పుస్తకంలోని అక్షరాల్లాగే కనిపిస్తాయి.",
+    },
+    2: {
+        "why": "ప్రతి అక్షరాన్ని ఒకేలా మొదలుపెడితే రాత సాఫీగా సాగుతుంది.",
+        "win": "ఆలోచించకుండానే ప్రతి అక్షరం పై నుంచి మొదలవుతుంది.",
+    },
+    3: {
+        "why": "మూసిన గుండ్రాలతో a, d, o సులువుగా గుర్తుపడతాం.",
+        "win": "మీ a, d, g, o పైన ఖాళీ లేకుండా మూసుకుంటాయి.",
+    },
+    4: {
+        "why": "నునుపైన గీతలతో మీ పేజీ ప్రశాంతంగా, స్పష్టంగా ఉంటుంది.",
+        "win": "మీ గీతలు చిన్న వణుకులు లేకుండా సాగుతాయి.",
+    },
+    5: {
+        "why": "ఒకే పరిమాణం అక్షరాలతో మీ పదాలు సులువుగా చదవచ్చు.",
+        "win": "a, o, e కంచెలాగా ఒకే ఎత్తులో నిలుస్తాయి.",
+    },
+    6: {
+        "why": "పొడవైన అక్షరాలు, తోకలు ప్రతి పదానికి ఆకారం ఇస్తాయి.",
+        "win": "h, l పైకి చేరుతాయి, g, y కిందకు వేలాడతాయి.",
+    },
+    7: {
+        "why": "గీతపై నిలిచిన పదాలు చక్కగా, సులువుగా చదివేలా ఉంటాయి.",
+        "win": "ప్రతి చిన్న అక్షరం గీతను తాకుతుంది.",
+    },
+    8: {
+        "why": "సమానమైన ఖాళీలు కంటికి ప్రతి పదాన్ని చూపిస్తాయి.",
+        "win": "మీ వరుసను ఆగకుండా బిగ్గరగా చదవగలరు.",
+    },
+    9: {
+        "why": "పదం లోపల సమాన ఖాళీలు అక్షరాలను కలిపి ఉంచుతాయి.",
+        "win": "పదంలోని అక్షరాలు దగ్గరగా ఉంటాయి, కానీ తాకవు.",
+    },
+    10: {
+        "why": "నిటారైన మార్జిన్ మీ పేజీకి చక్కని అంచు ఇస్తుంది.",
+        "win": "ప్రతి వరుస ఒకే అంచు నుంచి మొదలవుతుంది.",
+    },
+    11: {
+        "why": "తిన్నని వరుసలను ఎడమ నుంచి కుడికి సులువుగా చదవచ్చు.",
+        "win": "తెల్ల కాగితంపై కూడా మీ వరుసలు తిన్నగా సాగుతాయి.",
+    },
+    12: {
+        "why": "నిటారు గీతలతో మీ అక్షరాలు స్థిరంగా నిలుస్తాయి.",
+        "win": "h, l, t ల పొడవైన గీతలు ఒకేలా నిలుస్తాయి.",
+    },
+    13: {
+        "why": "స్థిరమైన వేగంతో మొదటి నుంచి చివరి దాకా అక్షరాలు ఒకేలా ఉంటాయి.",
+        "win": "మీ చివరి వరుస మొదటి వరుసంత చక్కగా ఉంటుంది.",
+    },
+    14: {
+        "why": "మెల్లని, సమానమైన ఒత్తిడితో చేయి ఎక్కువసేపు హాయిగా ఉంటుంది.",
+        "win": "మీ గీతలన్నీ ఒకే ముదురుగా ఉంటాయి, లోతైన గుంటలు ఉండవు.",
+    },
+    15: {
+        "why": "సాగే గీతలతో ప్రతి పదం ఒకే ఊపులో వస్తుంది.",
+        "win": "చిన్న పదాన్ని మధ్యలో ఆగకుండా రాయగలరు.",
+    },
+    16: {
+        "why": "తక్కువసార్లు పెన్ను ఎత్తితే పదాలు వేగంగా సాగుతాయి.",
+        "win": "పెన్ను ఎత్తే ముందే చిన్న పదం పూర్తవుతుంది.",
+    },
+    17: {
+        "why": "ఒకే వైపు వాలిన అక్షరాలు కలిసి చక్కగా కనిపిస్తాయి.",
+        "win": "మీ పొడవైన అక్షరాలు ఒకే గాలికి వంగిన చెట్లలా వాలుతాయి.",
+    },
+    18: {
+        "why": "సులువుగా చదివే రాతను అందరూ ఆనందంగా చదువుతారు.",
+        "win": "మీ స్నేహితులు ఏ పదం గురించీ అడగకుండా మీ పేజీ చదువుతారు.",
+    },
+    19: {
+        "why": "ప్రతి అక్షరానికి సొంత ఆకారం ఉంటే పదాలు సులువుగా చదవచ్చు.",
+        "win": "మీ a, u లను, n, h లను ఎవరూ కలిపి చదవరు.",
+    },
+    20: {
+        "why": "చక్కని పేజీ చదవడానికీ, చూపించడానికీ ఆనందంగా ఉంటుంది.",
+        "win": "మీ పేజీని ఎవరికైనా గర్వంగా చూపిస్తారు.",
+    },
+}
+
+# The website's factor pages (vahini-web's tools/gen-factor-pages.mjs
+# writes them, one per factor): ``page`` must be one of these.
+FACTOR_PAGES = tuple(ABOUT[n][2] for n in range(1, 21))
+
+# Short, so they fit under the skill's name on page 2 without making its
+# row taller than the practice beside it (tests/report-layout.mjs).
+WHY_MAX = 60
+WIN_MAX = 56
+
+# Claims a report never makes, in any text: Vahini describes writing to
+# help a child practise; it does not diagnose or treat anything, and it
+# never reads personality from handwriting (owner's growth plan).
+CLAIM_WORDS = ("cure", "overcome", "disorder", "diagnos")
+
+
+def claim_pattern():
+    """Matches a claim word with its endings (cured, overcoming,
+    diagnosis), but not a longer word that holds one (secure)."""
+    return re.compile(
+        r"\b(cur(e|es|ed|ing)|overcom\w*|disorder\w*|diagnos\w*)\b", re.I
+    )
+
+
+def _attach_about():
+    """Give every factor's area its ``why``, ``win``, ``page`` and the
+    Telugu of the first two in ``i18n``."""
+    for number, (why, win, page) in ABOUT.items():
+        FACTORS[number].update(
+            why=why,
+            win=win,
+            page=page,
+            i18n={"te": dict(TELUGU_ABOUT.get(number, {}))},
+        )
+
+
+_attach_about()
+
+
 def _texts(entry):
     keys = ("title", "steps", "example", "check", "text")
     return [entry[k] for k in keys if isinstance(entry.get(k), str)]
@@ -1744,10 +1978,13 @@ def _helps_problems(entry, own):
 
 def _word_problems(entry):
     banned = avoid_pattern()
+    claims = claim_pattern()
     found = []
     for text in _texts(entry):
         if banned.search(text):
             found.append(f"{entry['id']}: avoid word in {text!r}")
+        if claims.search(text):
+            found.append(f"{entry['id']}: claim word in {text!r}")
         if EM_DASH in text:
             found.append(f"{entry['id']}: em dash in {text!r}")
     return found
@@ -1792,6 +2029,8 @@ def _translation_problems(entry):
                 found.append(f"{entry['id']}: em dash in {lang} {field}")
             if banned.search(value) or any(w in value for w in AVOID_WORDS_TE):
                 found.append(f"{entry['id']}: avoid word in {lang} {field}")
+            if claim_pattern().search(value):
+                found.append(f"{entry['id']}: claim word in {lang} {field}")
         for field in set(text) - set(fields) - {"example"}:
             found.append(f"{entry['id']}: unknown {lang} field {field}")
     return found
@@ -1808,9 +2047,50 @@ def _orphan_translations():
     ]
 
 
+def _about_problems(number, area):
+    """``why``, ``win`` and ``page`` of one factor: one short sentence
+    each in plain, encouraging words, a known website page, and their
+    Telugu."""
+    name = f"factor {number}"
+    found = []
+    if area.get("page") not in FACTOR_PAGES:
+        found.append(f"{name}: unknown page {area.get('page')}")
+    banned, claims = avoid_pattern(), claim_pattern()
+    for field, most in (("why", WHY_MAX), ("win", WIN_MAX)):
+        text = area.get(field)
+        if not isinstance(text, str) or not text.strip():
+            found.append(f"{name}: no {field}")
+            continue
+        if len(text) > most:
+            found.append(f"{name}: {field} over {most} chars")
+        if len(sentences(text)) != 1 or not text.endswith("."):
+            found.append(f"{name}: {field} must be one sentence")
+        if len(text.split()) > WORDS_PER_SENTENCE_MAX:
+            found.append(f"{name}: long {field}")
+        if banned.search(text) or claims.search(text) or EM_DASH in text:
+            found.append(f"{name}: avoid word in {field}")
+        for lang in LANGUAGES:
+            local = area.get("i18n", {}).get(lang, {}).get(field)
+            if not isinstance(local, str) or not local.strip():
+                found.append(f"{name}: {lang} {field} missing")
+                continue
+            if len(local) > translation_limit(text):
+                found.append(f"{name}: {lang} {field} too long")
+            if (
+                EM_DASH in local
+                or claims.search(local)
+                or any(w in local for w in AVOID_WORDS_TE)
+            ):
+                found.append(f"{name}: avoid word in {lang} {field}")
+    return found
+
+
 def problems():
     """Every rule the catalogue breaks, as readable lines (none is good)."""
     found = _orphan_translations()
+    for number in range(1, 21):
+        if number in FACTORS:
+            found += _about_problems(number, FACTORS[number])
     sheets = _worksheet_ids()
     seen = set()
     areas = [(n, f"factor {n}", FACTORS.get(n)) for n in range(1, 21)]
@@ -1847,9 +2127,14 @@ def _plain(entries):
 
 
 def factor_practice(number):
-    """The exercises and tips the catalogue serves for one factor."""
+    """What the catalogue serves for one factor: why it helps, the win to
+    look for, its website page, and its exercises and tips."""
     area = FACTORS[number]
     return {
+        "why": area["why"],
+        "win": area["win"],
+        "page": area["page"],
+        "i18n": {lang: dict(t) for lang, t in area["i18n"].items()},
         "exercises": _plain(area["exercises"]),
         "tips": _plain(area["tips"]),
     }

@@ -979,11 +979,33 @@ def catalog():
             "target": {"type": "string"},
             "instruction": {"type": "string"},
             "limitation": nullable("string"),
+            "why": {
+                "type": "string",
+                "minLength": 1,
+                "description": "Why the skill helps, one short sentence.",
+            },
+            "win": {
+                "type": "string",
+                "minLength": 1,
+                "description": (
+                    "A small win the child can see, finishing "
+                    "\"You'll know it's working when ...\"."
+                ),
+            },
+            "page": {
+                "type": "string",
+                "pattern": "^handwriting-[a-z-]+$",
+                "description": (
+                    "The skill's page on vahinitech.com, without '.html'."
+                ),
+            },
+            "i18n": translations(("why", "win")),
             "exercises": exercises,
             "tips": tips,
         },
         # Catalogues from before the practice catalogue (archived versions)
-        # carry neither list.
+        # carry neither list, and those before 2026-10-11 no why, win,
+        # page or i18n.
         required=[
             "n",
             "id",

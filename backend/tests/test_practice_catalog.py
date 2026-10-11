@@ -126,6 +126,59 @@ class CatalogueRules(unittest.TestCase):
         self.assertIn("factor 8: fewer than 2 tips", found)
         self.assertIn("duplicate id", found)
 
+    def test_every_factor_says_why_it_helps_and_the_win(self):
+        """Page 2 prints ``why``, ``win`` and the website page under each
+        skill (owner, 2026-10-11), with their Telugu."""
+        pages = set()
+        for number in range(1, 21):
+            area = practice_catalog.FACTORS[number]
+            for field in ("why", "win"):
+                text = area[field]
+                self.assertTrue(text.endswith("."), (number, field))
+                self.assertEqual(len(practice_catalog.sentences(text)), 1)
+                self.assertTrue(area["i18n"]["te"][field].strip())
+            self.assertLessEqual(len(area["why"]), practice_catalog.WHY_MAX)
+            self.assertLessEqual(len(area["win"]), practice_catalog.WIN_MAX)
+            self.assertTrue(area["page"].startswith("handwriting-"))
+            pages.add(area["page"])
+        self.assertEqual(len(pages), 20, "one website page per factor")
+        self.assertEqual(
+            practice_catalog.FACTORS[5]["why"],
+            "Same-size letters make your words easy to read.",
+        )
+        self.assertEqual(
+            practice_catalog.FACTORS[8]["win"],
+            "you can read your line aloud without stopping.",
+        )
+
+    def test_no_claim_to_diagnose_or_cure(self):
+        claims = practice_catalog.claim_pattern()
+        for word in ("cure", "overcomes", "a disorder", "diagnosis"):
+            self.assertTrue(claims.search(word), word)
+        self.assertIsNone(claims.search("keep it secure"))
+        for text in strings_of(practice_catalog.browser_catalog()):
+            self.assertIsNone(claims.search(text), text)
+
+    def test_the_why_and_win_rules_catch_a_bad_entry(self):
+        cases = [
+            ("why", "Practice will cure messy writing.", "avoid word in why"),
+            ("why", "x" * 61 + ".", "why over 60"),
+            ("win", "you write. Then you smile.", "win must be one"),
+            ("win", "", "no win"),
+            ("page", "handwriting-magic", "unknown page"),
+        ]
+        for field, value, message in cases:
+            factors = copy.deepcopy(practice_catalog.FACTORS)
+            factors[5][field] = value
+            with patch.object(practice_catalog, "FACTORS", factors):
+                found = practice_catalog.problems()
+            self.assertTrue(any(message in f for f in found), (field, found))
+        factors = copy.deepcopy(practice_catalog.FACTORS)
+        factors[7]["i18n"]["te"]["win"] = ""
+        with patch.object(practice_catalog, "FACTORS", factors):
+            found = practice_catalog.problems()
+        self.assertIn("factor 7: te win missing", found)
+
     def test_every_entry_says_which_skills_it_helps(self):
         """Many-to-many: every exercise and tip helps its own factor at
         1.0, so its highest-weight factor is always its own, and others
@@ -311,6 +364,11 @@ class ServedCatalogue(unittest.TestCase):
                 for entry in (*factor["exercises"], *factor["tips"])
             )
         )
+        for factor in body["factors"]:
+            area = practice_catalog.FACTORS[factor["n"]]
+            for key in ("why", "win", "page"):
+                self.assertEqual(factor[key], area[key])
+            self.assertEqual(factor["i18n"]["te"], area["i18n"]["te"])
         committed = ROOT / "backend" / "catalogs" / (body["version"] + ".json")
         self.assertTrue(committed.exists(), "run compact_reports.py")
 
@@ -326,6 +384,12 @@ class ServedCatalogue(unittest.TestCase):
         self.assertTrue(contract_schemas.errors("catalog", body))
         body = copy.deepcopy(compact_reports.dictionary())
         del body["factors"][0]["tips"][0]["i18n"]["te"]["text"]
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        body["factors"][0]["page"] = "https://example.com"
+        self.assertTrue(contract_schemas.errors("catalog", body))
+        body = copy.deepcopy(compact_reports.dictionary())
+        body["factors"][0]["i18n"]["te"]["note"] = "x"
         self.assertTrue(contract_schemas.errors("catalog", body))
 
 

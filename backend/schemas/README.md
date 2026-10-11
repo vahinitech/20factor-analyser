@@ -20,7 +20,7 @@ does that) or prove semantic compatibility between schema versions.
 | `report-request.schema.json` | `POST /api/v2/reports` request, modelled as an object (`headers`, `query`, `form`, `image` metadata) |
 | `report-expanded.schema.json` | `POST /api/v2/reports` default response, schema 2.0 |
 | `report-compact.schema.json` | `POST /api/v2/reports?format=compact` response, schema 2.1 |
-| `catalog.schema.json` | `GET /api/v2/catalog/{version}`, with each factor's exercises and tips and the `practice` block (optional only so archived versions still validate) |
+| `catalog.schema.json` | `GET /api/v2/catalog/{version}`, with each factor's exercises and tips, its `why`, `win` and website `page`, and the `practice` block (optional only so archived versions still validate) |
 | `error.schema.json` | HTTP 401, 403, 404, 413, 422 and 503 bodies |
 | `health.schema.json` | `GET /health` |
 
