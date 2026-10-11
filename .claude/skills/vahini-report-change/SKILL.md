@@ -19,4 +19,6 @@ Printable output means the page count, not only each sheet's height. The free re
 
 Uploads and decoding follow [SECURITY.md](../../../SECURITY.md#upload-and-image-security-rules-for-every-change): a new endpoint that takes a file uses `_read_upload` (5 MiB), `computer_vision.decode_image` (24 MP, JPEG/PNG/WebP/PDF only), `scan_slots` and `daily_limit.DAILY`, and writes nothing to disk. The container runs as user 10001 on a read-only filesystem; anything it must write goes to `/tmp` or a volume.
 
+Practice cards follow [PRACTICE-FRAMEWORK.md](../../../docs/PRACTICE-FRAMEWORK.md): a development area per factor links its exercises, tips, worksheet and translations; the band sets how much, the tier sets how many. A card always says which page-1 skill it develops and its score. New exercises and tips go into the catalogue with tests, never into `report-render.js`. Translated report text needs a native speaker's check before its language is offered, and printing in that language must still give two A4 sheets with the script's font embedded.
+
 For PR review, use [review instructions](../../../.github/instructions/code-review.instructions.md). Use synthetic samples and test credentials. Do not claim native app changes or store purchase verification from backend work. The consuming website owns its staging and production deployment workflow.

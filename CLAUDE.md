@@ -94,6 +94,15 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   only from the host's `window.VAHINI_NOTICE_ART` (same-site paths;
   `frontend/README.md`); the drawings are proprietary and stay out of this
   AGPL repository. Colours are `var(--v-*)` tokens, never hex codes.
+- **Practice is data: every exercise and tip belongs to a factor.** The
+  practice catalogue ([docs/PRACTICE-FRAMEWORK.md](docs/PRACTICE-FRAMEWORK.md))
+  holds one development area per factor (meaning, exercises with levels and
+  amounts, tips, worksheet, translations). The score band sets the plan
+  (days, minutes, amount); the tier table sets how many exercises and tips a
+  report shows. Reports, the website's factor pages and the app read the same
+  data. Never hard-code a drill in the renderer, and never print an exercise
+  that does not say which skill it develops. Report text in other languages
+  ships only after a native speaker's check.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
