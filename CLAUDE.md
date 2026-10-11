@@ -86,6 +86,24 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   mixed PR (docs + code) still runs everything — the filter only fires
   when every changed file is docs.
 
+- **Shared chrome comes from vahini-web.** The nav, footer, cookie card
+  and feedback button are injected by vahinitech.com's `site.js`, which
+  `analyser.html` loads from `../site/site.js`. Never add a footer, legal
+  links, patent numbers or a status link to this repository's pages: the
+  site changes them once for every service. Error-screen pictures come
+  only from the host's `window.VAHINI_NOTICE_ART` (same-site paths;
+  `frontend/README.md`); the drawings are proprietary and stay out of this
+  AGPL repository. Colours are `var(--v-*)` tokens, never hex codes.
+- **A choice that cannot be honoured blocks at Run, not after the report.**
+  "Keep my pages" asks for its email before the check starts and is
+  switched off for the sample page (#119, #120). Apply the same to any new
+  option.
+- **Run the whole test list ci.yml runs before calling a change ready.**
+  A partial run missed the closed `/health` schema in `test_schemas`
+  (#113). Browser tests need the Playwright image matching
+  `node_modules/playwright` (1.63 today); ports 4173 and 4190 may be held
+  by other processes on the dev box, so run a copy on a free port.
+
 ## Commands (mirror of `.github/workflows/ci.yml`)
 
 ```bash

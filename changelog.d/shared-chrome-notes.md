@@ -1,0 +1,1 @@
+- Agent instructions: the nav and footer come from vahini-web (never add footer markup, patents or legal links here), error-screen pictures only through `VAHINI_NOTICE_ART`, choices that cannot be honoured block at Run, and the whole CI test list runs locally before a change is called ready.
