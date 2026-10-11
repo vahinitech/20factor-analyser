@@ -76,6 +76,7 @@ const RENDER = `window.__render = (opts) => {
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
     hard: host.querySelector('.p2-hard') ? host.querySelector('.p2-hard').textContent : '',
     hardLink: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').getAttribute('href') : '',
+    hardText: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').textContent : '',
     hardBeforeClose: !!host.querySelector('.p2-hard + .p2-close'),
     art: [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('src')),
     text: host.textContent,
@@ -137,7 +138,7 @@ try {
   // When writing feels hard: before the closing line, encouraging, with
   // the website's page; never a diagnosis or a cure.
   add(/Every child learns to write at their own pace\./.test(free.hard) && /occupational therapist/.test(free.hard)
-    && free.hardLink === 'https://vahinitech.com/signs-child-needs-handwriting-help.html' && free.hardBeforeClose
+    && free.hardLink === 'https://vahinitech.com/signs-child-needs-handwriting-help.html' && free.hardText === 'vahinitech.com/signs-child-needs-handwriting-help' && free.hardBeforeClose
     && !/\b(cur(e|es|ed|ing)|overcom\w*|disorder\w*|diagnos\w*|dyslexi\w*|dysgraphi\w*)\b/i.test(free.text),
     'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
   add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
@@ -216,7 +217,7 @@ try {
         // the catalogue, in the report's language (owner, 2026-10-11).
         const fa = catalogue.factors.find(f => f.n === n);
         const local = k => (lang === 'en' ? fa[k] : fa.i18n[lang][k]);
-        add(row.why === local('why') && row.win === local('win') && row.more === `https://vahinitech.com/${fa.page}.html` && row.moreText === `vahinitech.com/${fa.page}.html`,
+        add(row.why === local('why') && row.win === local('win') && row.more === `https://vahinitech.com/${fa.page}.html` && row.moreText === `vahinitech.com/${fa.page}`,
           `${tier}${L}: skill ${n}'s row says why it helps, the win and its page`, { why: row.why, win: row.win, more: row.more });
         const foreign = row.exercises.concat(row.tips).filter(id => String(owner[id]) !== String(n));
         add(row.exercises.length > 0 && row.tips.length > 0 && foreign.length === 0, `${tier}${L}: skill ${n} shows only its own exercises and tips`, { foreign, row });

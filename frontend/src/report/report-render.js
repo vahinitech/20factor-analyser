@@ -740,10 +740,12 @@ function render(host, data){
   const aboutBlock=f=>{
     const a=factorAbout(cat,f.n,t.lang);
     if(!a) return '';
+    // The printed text is the short address (vahinitech.com redirects it
+    // once to the page, vahini-web#210); the link keeps the canonical URL.
     const url=a.page?`${sheetBase()}/${a.page}.html`:'';
     return `<div class="pr-about"><p class="pr-why"><b>${esc(t('row.why'))}</b>${esc(a.why)}</p>
         <p class="pr-win"><b>${esc(t('row.win'))}</b> ${esc(a.win)}</p>${url?`
-        <p class="pr-more">${esc(t('row.more'))} <a href="${esc(url)}" target="_blank" rel="noopener">${SITE}/${esc(a.page)}.html</a></p>`:''}</div>`;
+        <p class="pr-more">${esc(t('row.more'))} <a href="${esc(url)}" target="_blank" rel="noopener">${SITE}/${esc(a.page)}</a></p>`:''}</div>`;
   };
   const skillRow=(row,i)=>{
     const f=row.f, band=bandOf(f.score);
@@ -782,7 +784,7 @@ function render(host, data){
   // When writing feels hard: encouragement and where to read more, never a
   // diagnosis or a promise (owner, 2026-10-11).
   const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
-  const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help.html</a></p></div>`;
+  const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help</a></p></div>`;
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
   const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
