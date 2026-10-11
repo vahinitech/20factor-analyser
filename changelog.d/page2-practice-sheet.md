@@ -1,0 +1,1 @@
+- The report's page 2 is now the practice sheet: each skill keeps a short label pointing back to its card on page 1 (no repeated crop or sentences), and its exercise gets a drawn model to copy and a line to try it.
