@@ -52,5 +52,23 @@
     "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/edusabeginner/OFL.txt",
     "sha256": "9c50bb9d2dbfd864553688da113bf817a294f3721b7a35ac6569c63bb939a998",
     "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSansTelugu-Regular.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/files/noto-sans-telugu-telugu-400-normal.woff2",
+    "sha256": "98b86e85da4f346bad6585b1e8b695696e38d002ed0e874da26c762f488f3d57",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSansTelugu-Bold.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/files/noto-sans-telugu-telugu-700-normal.woff2",
+    "sha256": "cdffe38832fb6308a2a391087845c1920462bd608c4e65d9798d1df707e7cb41",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "notosanstelugu-OFL.txt",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/LICENSE",
+    "sha256": "eacb6e3b470b5894f81fa7091663983068a391ad1741f868e70b131051ad48ea",
+    "license": "OFL-1.1"
   }
 ]

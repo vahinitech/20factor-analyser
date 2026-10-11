@@ -4,3 +4,8 @@
 @font-face {font-family:'Hanken Grotesk';src:url('../assets/fonts/HankenGrotesk.ttf') format('truetype');font-weight:100 900;font-display:swap;}
 @font-face {font-family:Caveat;src:url('../assets/fonts/Caveat.ttf') format('truetype');font-weight:400 700;font-display:swap;}
 @font-face {font-family:'Edu SA Beginner';src:url('../assets/fonts/EduSABeginner.ttf') format('truetype');font-weight:400 700;font-display:swap;}
+/* Telugu, for a report printed in Telugu (lang="te" on the report). The
+   unicode-range keeps it to Telugu letters, so English text keeps its faces
+   and a page without Telugu never downloads it. Noto Sans Telugu, OFL. */
+@font-face {font-family:'Noto Sans Telugu';src:url('../assets/fonts/NotoSansTelugu-Regular.woff2') format('woff2');font-weight:400;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Noto Sans Telugu';src:url('../assets/fonts/NotoSansTelugu-Bold.woff2') format('woff2');font-weight:600 800;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}

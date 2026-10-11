@@ -92,3 +92,5 @@ system packages and model weights. Refresh the source inventory with
 ## Locally served report fonts
 
 Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the SIL Open Font License 1.1. Original license files, upstream URLs and SHA-256 hashes are preserved in `frontend/assets/fonts/`. These files are served locally so reports do not require Google Fonts at export time.
+
+**Noto Sans Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-sans-telugu` npm package version 5.3.0 (`NotoSansTelugu-Regular.woff2`, `NotoSansTelugu-Bold.woff2`, licence `notosanstelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). A report printed or saved in Telugu uses it, so the PDF shows Telugu on any device.

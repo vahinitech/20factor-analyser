@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-c1905bba19637c9da939",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-6937bd426e1d8e5ad1d8",
   "creationInfo": {
-    "created": "2026-10-09T17:19:30Z",
+    "created": "2026-10-11T11:37:56Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -64,6 +64,42 @@
         }
       ],
       "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-NotoSansTelugu-Bold",
+      "name": "NotoSansTelugu-Bold.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/files/noto-sans-telugu-telugu-700-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cdffe38832fb6308a2a391087845c1920462bd608c4e65d9798d1df707e7cb41"
+        }
+      ],
+      "comment": "Locally served report font for reports printed in Telugu (Telugu subset, from the @fontsource/noto-sans-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-NotoSansTelugu-Regular",
+      "name": "NotoSansTelugu-Regular.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/files/noto-sans-telugu-telugu-400-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "98b86e85da4f346bad6585b1e8b695696e38d002ed0e874da26c762f488f3d57"
+        }
+      ],
+      "comment": "Locally served report font for reports printed in Telugu (Telugu subset, from the @fontsource/noto-sans-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
     },
     {
       "SPDXID": "SPDXRef-LocalFont-Spectral-Regular",
@@ -1765,6 +1801,16 @@
       "spdxElementId": "SPDXRef-Package-Vahini",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-LocalFont-HankenGrotesk"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSansTelugu-Bold"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSansTelugu-Regular"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",
