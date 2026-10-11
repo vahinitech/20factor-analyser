@@ -1011,7 +1011,9 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-leaf{ width:30px; height:38px; flex:none; }
 .sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
 .sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }
-.compact-report .sn-keep .rp-art-cheer{ width:40px; height:46px; }
+/* Vahini is a tall figure on a square picture: contain drew her 40px high.
+   Cover crops only the empty sides, so she fills the strip's height. */
+.compact-report .sn-keep .rp-art-cheer{ width:50px; height:72px; margin:-5px 0; object-fit:cover; }
 .sn-mid{ display:grid; grid-template-columns:53% minmax(0,1fr); gap:14px; margin:10px 0 2px; }
 .sn-mid.no-photo{ grid-template-columns:1fr; }
 .sn-zoom{ margin:0; min-width:0; }
