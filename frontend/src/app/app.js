@@ -532,23 +532,21 @@ function setupPassages(){
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
-/* Earlier checks, kept only in this browser's localStorage. A visitor who
-   gives no name has one anonymous history. "Try a sample" runs are neither
-   compared nor saved: they are not the visitor's handwriting. */
+/* Earlier checks, kept only in this browser's localStorage by
+   VahiniProgress (src/report/progress.js). A visitor who gives no name has
+   one anonymous history. "Try a sample" runs are neither compared nor
+   saved: they are not the visitor's handwriting. */
 function loadHistory(name){
-  if (window.VAHINI_SAMPLE_RUN) return null;
-  try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    const key=(name||'').toLowerCase();
-    const mine=h.filter(e=>(e.name||'').toLowerCase()===key);
-    return mine.length? mine[mine.length-1] : null; }catch(e){ return null; }
+  if (window.VAHINI_SAMPLE_RUN || !window.VahiniProgress) return null;
+  return VahiniProgress.last(name);
 }
-function saveHistory(name, overall, sections, results){
-  if (window.VAHINI_SAMPLE_RUN) return;
-  try{ const h=JSON.parse(localStorage.getItem('vahini_history')||'[]');
-    h.push({ name:name||'', date:new Date().toISOString().slice(0,10), overall,
-      sections:(sections||[]).map(s=>({id:s.id,avg100:s.avg100})),
-      factors:(results||[]).filter(f=>!f.unmeasured && Number.isFinite(f.score)).map(f=>({n:f.n,score:f.score})) });
-    localStorage.setItem('vahini_history', JSON.stringify(h.slice(-60))); }catch(e){}
+/* Saves the check with the exercise and tip ids its report printed (so the
+   next report moves on), then shows "Your progress" under the report. */
+function saveHistory(name, overall, sections, results, rendered){
+  const old = document.getElementById('progress-panel'); if (old) old.remove();
+  if (window.VAHINI_SAMPLE_RUN || !window.VahiniProgress) return;
+  const saved = VahiniProgress.save(VahiniProgress.entryFrom(name, overall, sections, results, rendered && rendered.practice));
+  VahiniProgress.mount($('#report-host'), { name, current: saved });
 }
 
 /* ---------- the pipeline ---------- */
@@ -870,8 +868,8 @@ async function runPipeline(){
   const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
-  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results);
+  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
+  saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
   keepIfAsked(blob, window.VAHINI_CHECK_FACTS);
@@ -984,7 +982,7 @@ function renderNextSteps(analysis){
   const link = $('#ns-practice-link');
   if (sheet && link){
     $('#ns-practice-title').textContent = '1. Practise: ' + sheet.title;
-    $('#ns-practice-text').textContent = 'Matched to your lowest score. Print the sheet and do one page a day for a week.';
+    $('#ns-practice-text').textContent = 'Matched to your first skill to grow. Print the sheet and do one page a day for a week.';
     link.href = ws.base() + '/assets/worksheets/' + sheet.id + '.pdf';
     link.textContent = 'Download the worksheet (PDF)';
   }
@@ -1109,7 +1107,7 @@ async function finishIMU(){
     factor_regions: pyReport.factor_regions || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
-  VahiniReport.render($('#report-host'), {
+  const rendered = VahiniReport.render($('#report-host'), {
     intake: state.intake, analysis, expectedText: state.expected, recognizedText: state.expected,
     detURL,
     crops: serverFactorCrops(vlResult),
@@ -1118,7 +1116,7 @@ async function finishIMU(){
     pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
     imu: summary,
   });
-  saveHistory(state.intake.writerName, analysis.overall, analysis.sections, analysis.results);
+  saveHistory(state.intake.writerName, analysis.overall, analysis.sections, analysis.results, rendered);
   const ns = $('#next-steps'); if (ns) ns.hidden = true;
   go('report');
 }

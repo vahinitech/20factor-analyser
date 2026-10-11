@@ -192,9 +192,9 @@ async function serverPythonReport(blob, expectedText){
       // before falling back to geometry-only so recognition isn't dropped.
       const t = setTimeout(()=>ctrl.abort(), 120000);
       const requestUrl=url.replace(/\/report-python$/, '/api/v2/reports?format=compact&include=text,evidence');
-      let res;
+      let res, account = null;
       try {
-        const account = await global.VahiniAccount.request(requestUrl);
+        account = await global.VahiniAccount.request(requestUrl);
         res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
       } finally { clearTimeout(t); }
       const raw = await res.text();
@@ -244,6 +244,8 @@ async function serverPythonReport(blob, expectedText){
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
       if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
+      // The visitor's practice numbers from /api/v2/me (practice report, #122).
+      if(j && j.analysis && account && account.practice) j.analysis.practiceLimits = account.practice;
       if (j && j.ok !== false && j.analysis && Array.isArray(j.analysis.results)){
         const t1 = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         const netMs = Math.max(0, Math.round(t1 - t0));

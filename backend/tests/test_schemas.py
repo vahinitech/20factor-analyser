@@ -18,6 +18,7 @@ import compact_reports
 import contract_schemas
 import entitlements
 import generate_schemas
+import practice_catalog
 from fastapi import HTTPException
 from report_contract import FACTOR_IDS, public_report
 
@@ -157,6 +158,7 @@ class LiveShapeTests(unittest.TestCase):
                 **access,
                 "capabilities": entitlements.capabilities(access),
             },
+            "practice": practice_catalog.limits(access["tier"]),
         }
 
     def test_identity_responses(self):

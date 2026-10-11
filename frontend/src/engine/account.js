@@ -15,7 +15,21 @@
     if(!response.ok)throw Object.assign(new Error('Account access could not be verified. Check your key or reconnect.'),{status:response.status});
     const result=await response.json();
     if(!result.access || !['free','pro'].includes(result.access.tier))throw new Error('Invalid account response.');
+    lastPractice=practiceNumbers(result.practice);
     return result.access;
+  }
+  // How many skills, exercises and tips the report shows for this visitor
+  // (server-owned, from the plan). Small whole numbers only; anything else
+  // leaves the report on the catalogue's defaults.
+  let lastPractice=null;
+  function practiceNumbers(p){
+    if(!p||typeof p!=='object')return null;
+    const out={};
+    for(const k of ['areas_max','exercises_max','tips_max']){
+      if(!Number.isInteger(p[k])||p[k]<0||p[k]>20)return null;
+      out[k]=p[k];
+    }
+    return out;
   }
   async function connect(secret){
     disconnect();const attempt=generation;
@@ -35,7 +49,7 @@
     const access=await identity(secret);
     if(attempt!==generation)throw new Error('Account changed. Please start the scan again.');
     target.searchParams.set('include',access.tier==='pro'?'text,inputs,coaching,evidence':'text,evidence');
-    return {url:target.href,options:{headers:secret?{Authorization:'Bearer '+secret}:{},credentials:'same-origin',redirect:'error',cache:'no-store'},access};
+    return {url:target.href,options:{headers:secret?{Authorization:'Bearer '+secret}:{},credentials:'same-origin',redirect:'error',cache:'no-store'},access,practice:lastPractice};
   }
   global.VahiniAccount={connect,request,disconnect,hasKey(){return !!key;}};
   function mount(){

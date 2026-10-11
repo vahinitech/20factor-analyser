@@ -15,15 +15,25 @@ The bundle concatenates the browser sources **in this order**, then base64-encod
 wraps it in a tiny self-decoding loader:
 
 ```
+(generated) window.VahiniPracticeCatalog, from backend/practice_catalog.py
+frontend/src/engine/compact-client.js
+frontend/src/engine/account.js
 frontend/src/engine/ocr.js
 frontend/src/engine/imu.js
 frontend/src/engine/forecast.js
 frontend/src/engine/craft.js
 frontend/src/engine/narrate.js
+frontend/src/report/worksheet-catalog.js
+frontend/src/report/worksheets.js
+frontend/src/report/progress.js
 frontend/src/report/report-render.js
 frontend/src/app/app.js
 frontend/src/app/share.js
 ```
+
+The first part is not a file: `build_bundle.py` imports `backend/practice_catalog.py` (standard
+library only, validated on import) and packs its exercises, tips and practice settings, so the
+sample report and any report without a served catalogue use the same practice as the server.
 
 Order matters: `app.js` references the globals (`VahiniOCR`, `VahiniReport`, …) defined by the
 earlier modules, so it must come last. The canonical list lives in `frontend/build_bundle.py`.

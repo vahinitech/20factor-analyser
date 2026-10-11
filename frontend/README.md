@@ -71,3 +71,33 @@ the object every screen keeps its icon. The codes:
 
 vahinitech.com fills the map from its own drawings library; the drawings are
 not part of this repository.
+
+## Pictures on the report (optional)
+
+Page 2 of the report can show Vahini and friends, one job each (approved
+2026-10-11, #122). The host page sets `window.VAHINI_REPORT_ART`, an object
+of same-site image paths:
+
+```js
+window.VAHINI_REPORT_ART = {
+  cheer: '/site/assets/characters/vahini.webp',      // beside the opening line
+  buddy: '/site/assets/characters/bheema.webp',      // at its right
+  tip: '/site/assets/characters/pihu.webp',          // small, in every tip
+  encourage: '/site/assets/characters/tara.webp',    // beside the closing line
+};
+```
+
+Values are checked like `VAHINI_NOTICE_ART`: anything that is not a
+same-site path is ignored. The pictures are decorative (`alt=""`); without
+the map the report has none and keeps the same layout. The drawings are not
+part of this repository.
+
+## Saved checks and "Your progress"
+
+Each check is saved in this browser's `localStorage` (`vahini_history`, the
+last 60, by writer name; sample runs never), with the exercise and tip ids
+its report printed so the next report moves on to the next ones.
+`src/report/progress.js` shows "Your progress" under the report, on screen
+only: the writer's saved checks, a comparison with an earlier one, a
+progress file to download or load (JSON, checked strictly, no photo) and a
+way to forget this writer's checks. It makes no network call.

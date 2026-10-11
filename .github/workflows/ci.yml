@@ -55,7 +55,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -71,6 +71,7 @@ jobs:
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py backend/daily_limit.py \
+            backend/practice_catalog.py backend/tests/test_practice_catalog.py \
             backend/contract_schemas.py backend/generate_schemas.py backend/tests/test_schemas.py \
             backend/tests/test_backends_classify.py \
             backend/tests/test_server_pipeline.py \
@@ -81,6 +82,8 @@ jobs:
             backend/tests/test_daily_limit.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
+      - name: Practice map is current (docs/PRACTICE-MAP.md)
+        run: python scripts/practice_map.py --check
       - name: Verify generated JSON Schemas
         run: python backend/generate_schemas.py --check
       - name: Run server unit + integration tests
@@ -89,6 +92,7 @@ jobs:
             backend.tests.test_review_safety \
             backend.tests.test_report_access \
             backend.tests.test_compact_reports \
+            backend.tests.test_practice_catalog \
             backend.tests.test_schemas \
             backend.tests.test_backends_classify \
             backend.tests.test_server_pipeline \
@@ -119,7 +123,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -147,6 +151,8 @@ jobs:
         run: npm run test:notice-art
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
+      - name: Practice report and saved progress (#122)
+        run: npm run test:practice
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

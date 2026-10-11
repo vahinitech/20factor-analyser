@@ -21,7 +21,16 @@
       return {...s,blurb:'',factors,avg,avg100:avg===null?null:Math.round(avg*10),scoredCount:factors.length};
     }).filter(s=>s.scoredCount);
     const access={...report.access,capabilities:{factor_numbers:results.map(f=>f.n),personalised_worksheets:report.access.tier==='pro'}};
-    return {ok:true,access,full_text:report.text||'',counts:report.counts,engine:'server',analysis:{access,results,sections,recognition:report.recognition||null,overall:report.summary.score,overallMeasured:report.summary.score,measuredCount:available.length,topWeak:[...available].sort((a,b)=>a.score-b.score).slice(0,3),topStrong:[...available].sort((a,b)=>b.score-a.score).slice(0,4),coachTips:report.coaching||[],source:'python'},factor_regions:report.evidence?.factor_regions||{},document_context:null,regions:[],layout:{}};
+    return {ok:true,access,full_text:report.text||'',counts:report.counts,engine:'server',analysis:{access,results,sections,practice:practiceOf(catalog),recognition:report.recognition||null,overall:report.summary.score,overallMeasured:report.summary.score,measuredCount:available.length,topWeak:[...available].sort((a,b)=>a.score-b.score).slice(0,3),topStrong:[...available].sort((a,b)=>b.score-a.score).slice(0,4),coachTips:report.coaching||[],source:'python'},factor_regions:report.evidence?.factor_regions||{},document_context:null,regions:[],layout:{}};
+  }
+  // The practice catalogue served with this dictionary version (#122):
+  // stages, tries by band, tier defaults and each factor's exercises and
+  // tips. Older dictionaries have none; the report then uses its own copy.
+  function practiceOf(catalog){
+    if(!catalog.practice)return null;
+    const factors={};
+    catalog.factors.forEach(f=>{if(Array.isArray(f.exercises))factors[String(f.n)]={exercises:f.exercises,tips:Array.isArray(f.tips)?f.tips:[]};});
+    return {...catalog.practice,factors};
   }
   async function expand(report,endpoint){
     const version=report.catalog_version;

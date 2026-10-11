@@ -539,6 +539,25 @@ not a promise, and invites a re-test to track the real curve.
 
 ---
 
+## 9b. From score to practice: development areas (design, 2026-10-11)
+
+A score only helps if it leads to the right practice. Each factor is a
+**development area**: one node that holds what the skill means, the
+exercises for it (ordered by level, each with an amount), short tips, the
+matching worksheet and the translations. The report takes the lowest
+measured skills as priorities (as before), then for each one:
+
+- the **band** of its score sets the plan: days a week, minutes, how much of
+  each exercise, when to check again;
+- the **tier** sets how many exercises and tips the card shows (Free one of
+  each, Pro up to two);
+- the **language** chosen at print picks the wording.
+
+The data lives in one catalogue served with the versioned factor catalogue,
+so the Free and Pro reports, vahinitech.com's factor pages and the app all
+show the same exercises. Details, mock-ups and tests:
+[PRACTICE-FRAMEWORK.md](PRACTICE-FRAMEWORK.md).
+
 ## 10. Writing-Craft layer & OCR (content-level feedback)
 
 > **Note (June 2026):** the standalone Writing-Craft page was merged into the **Letter-Level

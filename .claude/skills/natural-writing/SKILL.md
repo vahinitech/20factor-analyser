@@ -153,6 +153,19 @@ specific: "Two more schools are booked for March."
 - **Em dashes: default to none.** Use a comma, a colon, or a new sentence.
   One or two in a long piece is the ceiling, never the habit.
 
+## Writing for children (report text, practice cards, tips)
+
+Children read the handwriting report, often with a parent. Words that judge
+make a child stop practising, so:
+
+- Open with something they did well; call the rest "skills to grow".
+- Describe the writing, not the child: "a few letters grew taller", never
+  "your writing is untidy".
+- Never "weak", "poor", "bad", "wrong", "problem", "inadequate", "fail" or
+  "lowest", in English or in a translation.
+- One action per sentence, words a nine-year-old knows.
+- End on encouragement, and name any gain since the last check.
+
 ## Things never to add
 
 - "Challenges and Future Outlook" sections.

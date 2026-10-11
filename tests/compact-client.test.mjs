@@ -17,6 +17,17 @@ const missing=context.VahiniCompact.decode({...response,factors:[{n:1,s:null,st:
 assert.equal(missing.analysis.results[0].score,null);
 assert.equal(missing.analysis.results[0].unmeasured,true);
 console.log('PASS compact client: five Free factors, preserved scores, null handling and version validation');
+// Practice report (#122): the catalogue's exercises, tips and settings reach
+// the renderer; an archived catalogue without them gives none.
+for(const name of fs.readdirSync('backend/catalogs')){
+  const each=JSON.parse(fs.readFileSync('backend/catalogs/'+name));
+  const practice=context.VahiniCompact.decode({...response,catalog_version:each.version},each).analysis.practice;
+  if(each.practice){
+    assert.deepEqual(JSON.parse(JSON.stringify(practice.factors['5'].exercises)),each.factors.find(f=>f.n===5).exercises);
+    assert.deepEqual(JSON.parse(JSON.stringify(practice.tiers)),each.practice.tiers);
+  }else assert.equal(practice,null);
+}
+console.log('PASS compact client: practice catalogue passed to the report when the dictionary has one');
 
 let requests=0;
 context.URL=URL;

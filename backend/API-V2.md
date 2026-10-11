@@ -4,7 +4,7 @@ The server owns access. Apps send a customer credential; they cannot choose thei
 
 ## Endpoints
 
-`GET /api/v2/me` returns the caller's effective tier, stored plan, subscription status, expiry and capabilities. No credential means anonymous Free. A supplied invalid or revoked key returns HTTP 401. An unavailable subscription database returns HTTP 503 for authenticated calls.
+`GET /api/v2/me` returns the caller's effective tier, stored plan, subscription status, expiry and capabilities, plus `practice: {areas_max, exercises_max, tips_max}`: how many skills get practice in one report and how many exercises and tips each shows (Free 3, 1, 1; Pro 3, 2, 2). Those numbers live in one place, `backend/practice_catalog.py` `TIERS`, so a new plan can change them without a frontend release; the browser falls back to the catalogue's `practice.tiers` when it has none. No credential means anonymous Free. A supplied invalid or revoked key returns HTTP 401. An unavailable subscription database returns HTTP 503 for authenticated calls.
 
 `POST /api/v2/reports` accepts multipart fields `image` (required), `lang` (default `auto`) and `expected_text` (optional copied reference passage). Send `Authorization: Bearer <customer-key>` for an identified customer. Do not set multipart Content-Type manually in app clients; the HTTP library must include the boundary.
 
@@ -86,7 +86,7 @@ Opt in with `POST /api/v2/reports?format=compact`. The existing default remains 
 {
   "schema_version": "2.1",
   "format": "compact",
-  "catalog_version": "e2f97703fbde1939b150",
+  "catalog_version": "a2126ecdadf2fe1f65b7",
   "ok": true,
   "access": {"tier": "pro", "plan_tier": "pro", "subscription_status": "active", "expires_at": 1800000000},
   "summary": {"score": 62, "factor_count": 1},
@@ -98,6 +98,8 @@ Opt in with `POST /api/v2/reports?format=compact`. The existing default remains 
 This abbreviated illustration shows one factor. A successful Pro report normally returns 20; Free returns five. `n` is the stable factor number, `s` the original score out of ten (or null), and `st` the status code: `e` estimated, `p` image proxy, `m` sensor measured, `u` unavailable. The overall score is out of 100. Do not interpret these scores as diagnostic probabilities.
 
 Fetch `GET /api/v2/catalog/{catalog_version}` once to obtain factor names, generic explanation templates, score bands, practice definitions and limitations. Cache by version. The endpoint supplies an ETag and a one-year immutable cache policy. Old catalogues stay in `backend/catalogs` so saved reports remain readable. Run `python backend/compact_reports.py` when definitions change and commit the new catalogue; CI checks it. The JavaScript adapter is `frontend/src/engine/compact-client.js`. Native clients can implement the same mapping and bundle or cache the catalogue. Unknown versions must be fetched before rendering, never silently decoded with stale definitions.
+
+Since the practice catalogue (docs/PRACTICE-FRAMEWORK.md, approved 2026-10-11 in #122) each factor also carries `exercises` (id, level, title, unit, script, needs, worksheet, steps, example, check) and `tips` (id, text), and the catalogue has a top-level `practice` block: `stages` (Learning, Improving, Mastering, Strong by band), `dosage` (tries a day or a week by band, and how many exercises the band asks for), `tiers` (the defaults above), `units` and the `spelling` exercise. Catalogues archived before it have neither; the schema treats both as optional for that reason. The content is `backend/practice_catalog.py`, checked when it is imported.
 
 Generic definitions are public educational content. They contain no customer scores, personalized evidence or private reports. Access to paid scan results is enforced on the server, regardless of what labels the client has cached. Reports use `Cache-Control: no-store`.
 

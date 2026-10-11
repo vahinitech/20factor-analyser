@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from functools import lru_cache
 
+import practice_catalog
 import scoring
 from entitlements import capabilities
 from report_contract import FACTOR_IDS, SENSOR_LIMITATIONS, finite_score
@@ -36,6 +37,7 @@ def dictionary():
                 "target": target,
                 "instruction": instruction,
                 "limitation": SENSOR_LIMITATIONS.get(number),
+                **practice_catalog.factor_practice(number),
             }
         )
     body = {
@@ -60,6 +62,7 @@ def dictionary():
             "Normalized scores are not accuracy or confidence percentages.",
             "The overall score can include image proxies.",
         ],
+        "practice": practice_catalog.practice_block(),
     }
     version = hashlib.sha256(
         json.dumps(body, sort_keys=True, ensure_ascii=False).encode()
