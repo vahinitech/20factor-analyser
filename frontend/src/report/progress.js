@@ -19,10 +19,12 @@ const BETTER_BY = 0.3;   /* #82: smaller moves can be photo noise */
 const FILE_FORMAT = 'vahini-progress';
 const FILE_VERSION = 1;
 const SECTION_IDS = ['structure', 'spatial', 'dynamics', 'style'];
-const NAMES = {1:'Letter shapes',2:'Stroke order',3:'Closing loops',4:'Smooth strokes',5:'Even letter sizes',
-  6:'Tall letters and tails',7:'Staying on the line',8:'Spaces between words',9:'Spaces inside words',
-  10:'Straight left margin',11:'Level lines',12:'Upright strokes',13:'Steady writing speed',14:'Even pen pressure',
-  15:'Continuous strokes',16:'Pen lifts',17:'Consistent slant',18:'Easy to read',19:'Distinct letter shapes',20:'Neat page'};
+/* Words come from the report's string tables in the chosen "Print in"
+   language (strings/<lang>.js, through VahiniI18n), English by default. */
+function tr(){
+  const i18n = global.VahiniI18n;
+  return i18n ? i18n.translator(i18n.language()) : null;
+}
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 const keyOf = name => String(name || '').slice(0, 80).toLowerCase();
@@ -110,12 +112,13 @@ function exportFile(name){
 /* Throws a message for the visitor when the file is not a progress file. */
 function readFile(text){
   let data;
-  try{ data = JSON.parse(text); }catch(_e){ throw new Error('This file is not a Vahini progress file.'); }
+  const t = tr();
+  try{ data = JSON.parse(text); }catch(_e){ throw new Error(t('pp.file.not')); }
   if (!data || data.format !== FILE_FORMAT || data.version !== FILE_VERSION || !Array.isArray(data.checks))
-    throw new Error('This file is not a Vahini progress file.');
-  if (data.checks.length > 200) throw new Error('This progress file holds more checks than one file can.');
+    throw new Error(t('pp.file.not'));
+  if (data.checks.length > 200) throw new Error(t('pp.file.many'));
   const checks = data.checks.map(clean);
-  if (checks.some(c=>!c)) throw new Error('This progress file has a check we could not read, so nothing was loaded.');
+  if (checks.some(c=>!c)) throw new Error(t('pp.file.unreadable'));
   return checks;
 }
 /* Merge by date, drop repeats, keep the newest 60. Returns how many were new. */
@@ -136,26 +139,32 @@ function forget(name){
    the same, and a fall is "needs a few more tries", never red or a down
    arrow. */
 function compare(now, earlier){
+  const t = tr();
   const before = Object.fromEntries((earlier && earlier.factors || []).map(f=>[f.n, f.score]));
   return (now && now.factors || []).filter(f=>Number.isFinite(before[f.n])).map(f=>{
     const d = Math.round((f.score - before[f.n]) * 10) / 10;
-    return { n:f.n, name:NAMES[f.n] || 'Skill '+f.n, was:before[f.n], now:f.score,
+    return { n:f.n, name:t('name.'+f.n), was:before[f.n], now:f.score,
       kind: d >= BETTER_BY - 1e-9 ? 'up' : d <= -BETTER_BY + 1e-9 ? 'tries' : 'same', change:d };
   });
 }
 
 /* ---- the panel (screen only) ------------------------------------------- */
-function fmtDay(d){ const t = new Date(d+'T00:00:00'); return Number.isNaN(t.getTime()) ? d : t.toLocaleDateString('en-GB', {day:'numeric', month:'long', year:'numeric'}); }
+function fmtDay(d, locale){ const day = new Date(d+'T00:00:00'); return Number.isNaN(day.getTime()) ? d : day.toLocaleDateString(locale || 'en-GB', {day:'numeric', month:'long', year:'numeric'}); }
+let lastMount = null;
 function mount(after, opts){
+  lastMount = { after, opts };
+  const t = tr();
   const name = (opts && opts.name) || '';
   const current = opts && opts.current;
-  const who = name ? name : 'checks with no name';
+  const who = name ? name : t('pp.noname');
   const old = global.document.getElementById('progress-panel'); if (old) old.remove();
   const panel = global.document.createElement('section');
   panel.id = 'progress-panel'; panel.className = 'progress-panel';
   panel.setAttribute('aria-labelledby', 'pp-title');
+  panel.setAttribute('lang', t.lang);
   after.insertAdjacentElement('afterend', panel);
   let compareWith = null;
+  const day = d=>fmtDay(d, t.locale);
   const draw = (status)=>{
     const mine = forName(name).map(clean).filter(Boolean);
     const now = current && mine.find(e=>sameCheck(e, current)) || mine[mine.length-1] || null;
@@ -164,22 +173,22 @@ function mount(after, opts){
     const shown = mine.slice().reverse().slice(0, SHOWN);
     const rows = compareWith && now ? compare(now, compareWith) : [];
     const word = r=>r.kind==='up' ? `<span class="pp-up">↑ +${esc(r.change.toFixed(1))}</span>`
-      : r.kind==='same' ? '<span class="pp-same">about the same</span>' : '<span class="pp-tries">This one needs a few more tries</span>';
-    panel.innerHTML = `<h2 id="pp-title">Your progress</h2>
-      <p>${now ? 'This check is saved on this device so you can compare next time.' : 'Checks are saved on this device so you can compare them.'} Nothing is sent to Vahini.</p>
-      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(fmtDay(e.date))}: ${e.overall==null?'no overall score':esc(e.overall)+' out of 100'}${e===now?' <b>(this check)</b>':''}</li>`).join('')}</ol>`
-        : '<p class="pp-empty">No checks are saved on this device yet.</p>'}
-      ${earlier.length ? `<label class="pp-pick">Compare with <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(fmtDay(e.date))}, ${e.overall==null?'no score':esc(e.overall)+'/100'}</option>`).join('')}</select></label>
+      : r.kind==='same' ? `<span class="pp-same">${esc(t('pp.same'))}</span>` : `<span class="pp-tries">${esc(t('pp.tries'))}</span>`;
+    panel.innerHTML = `<h2 id="pp-title">${esc(t('pp.title'))}</h2>
+      <p>${esc(now ? t('pp.saved.now') : t('pp.saved.none'))} ${esc(t('pp.private'))}</p>
+      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(e.overall==null?t('pp.list.noscore',{date:day(e.date)}):t('pp.list.score',{date:day(e.date),score:e.overall}))}${e===now?` <b>${esc(t('pp.list.this'))}</b>`:''}</li>`).join('')}</ol>`
+        : `<p class="pp-empty">${esc(t('pp.empty'))}</p>`}
+      ${earlier.length ? `<label class="pp-pick">${esc(t('pp.compare'))} <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(e.overall==null?t('pp.option.noscore',{date:day(e.date)}):t('pp.option.score',{date:day(e.date),score:e.overall}))}</option>`).join('')}</select></label>
         <ul class="pp-compare">${rows.map(r=>`<li data-factor="${r.n}" data-kind="${r.kind}"><span class="pp-name">${esc(r.name)}</span> ${esc(r.was.toFixed(1))} → ${esc(r.now.toFixed(1))} ${word(r)}</li>`).join('')}</ul>`
-        : now ? `<p class="pp-first">This is the first check saved for ${esc(who)}. Next time you can compare.</p>` : ''}
-      <p class="pp-keep">To keep your pages online and see them on any device, tick "Keep my pages" before your next check. <a href="/progress.html">See pages you kept</a></p>
+        : now ? `<p class="pp-first">${esc(t('pp.first',{who}))}</p>` : ''}
+      <p class="pp-keep">${esc(t('pp.keep'))} <a href="/progress.html">${esc(t('pp.keep.link'))}</a></p>
       <div class="pp-actions">
-        <button type="button" class="btn btn-ghost" id="pp-download"${mine.length?'':' disabled'}>Download my progress file</button>
-        <label class="btn btn-ghost pp-load">Load a progress file<input type="file" id="pp-file" accept="application/json,.json"></label>
-        <button type="button" class="btn btn-ghost" id="pp-forget"${mine.length?'':' disabled'}>Forget saved checks for ${esc(who)}</button>
+        <button type="button" class="btn btn-ghost" id="pp-download"${mine.length?'':' disabled'}>${esc(t('pp.download'))}</button>
+        <label class="btn btn-ghost pp-load">${esc(t('pp.load'))}<input type="file" id="pp-file" accept="application/json,.json"></label>
+        <button type="button" class="btn btn-ghost" id="pp-forget"${mine.length?'':' disabled'}>${esc(t('pp.forget',{who}))}</button>
       </div>
-      <div class="pp-confirm" id="pp-confirm" hidden><p>Forget ${mine.length} saved ${mine.length===1?'check':'checks'} for ${esc(who)} on this device? This cannot be undone.</p>
-        <button type="button" class="btn btn-dark" id="pp-forget-yes">Yes, forget them</button> <button type="button" class="btn btn-ghost" id="pp-forget-no">Keep them</button></div>
+      <div class="pp-confirm" id="pp-confirm" hidden><p>${esc(t.n('pp.confirm',mine.length,{who}))}</p>
+        <button type="button" class="btn btn-dark" id="pp-forget-yes">${esc(t('pp.confirm.yes'))}</button> <button type="button" class="btn btn-ghost" id="pp-forget-no">${esc(t('pp.confirm.no'))}</button></div>
       <p class="pp-status" id="pp-status" role="status" aria-live="polite">${esc(status || '')}</p>`;
     const $ = sel=>panel.querySelector(sel);
     const pick = $('#pp-compare');
@@ -196,19 +205,24 @@ function mount(after, opts){
       const file = e.target.files && e.target.files[0]; if (!file) return;
       let message;
       try{
-        if (file.size > 1048576) throw new Error('This file is too big to be a progress file.');
+        if (file.size > 1048576) throw new Error(t('pp.file.big'));
         const added = merge(readFile(await file.text()));
-        message = added < 0 ? 'This browser did not let us save the checks.' : added ? `Loaded ${added} saved ${added===1?'check':'checks'}.` : 'Those checks were already saved here.';
+        message = added < 0 ? t('pp.file.nosave') : added ? t.n('pp.file.loaded', added) : t('pp.file.already');
       }catch(err){ message = err.message; }
       draw(message);
     });
     $('#pp-forget').addEventListener('click', ()=>{ $('#pp-confirm').hidden = false; $('#pp-forget-yes').focus(); });
     $('#pp-forget-no').addEventListener('click', ()=>{ $('#pp-confirm').hidden = true; });
-    $('#pp-forget-yes').addEventListener('click', ()=>{ compareWith = null; draw(forget(name) ? 'Saved checks for ' + who + ' were removed from this device.' : 'This browser did not let us remove them.'); });
+    $('#pp-forget-yes').addEventListener('click', ()=>{ compareWith = null; draw(forget(name) ? t('pp.forgot', {who}) : t('pp.noforget')); });
   };
   draw();
   return panel;
 }
+/* Redraw the panel in the language just chosen in "Print in". */
+function remount(){
+  if (!lastMount || !global.document.getElementById('progress-panel')) return null;
+  return mount(lastMount.after, lastMount.opts);
+}
 
-global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, MAX_ENTRIES };
+global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, remount, MAX_ENTRIES };
 })(window);
