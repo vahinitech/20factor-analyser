@@ -103,6 +103,13 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   data. Never hard-code a drill in the renderer, and never print an exercise
   that does not say which skill it develops. Report text in other languages
   ships only after a native speaker's check.
+- **Children read the report: every word encourages.** Start with a
+  strength, call the rest "skills to grow" and "your next step", describe
+  the writing and never the child, and end on encouragement. Never "weak",
+  "poor", "bad", "wrong", "problem", "inadequate", "fail" or "lowest" in
+  report text or catalogue text, in any language. Band labels: Just
+  starting, Growing, Getting strong, Strong. Both report pages print on two
+  A4 sheets in every tier and language, proved by printing, not by eye.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new

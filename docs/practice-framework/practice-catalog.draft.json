@@ -2,28 +2,34 @@
   "status": "draft for owner review, 2026-10-11; not used by any report yet",
   "dosage": {
     "focus": {
-      "label": "Needs support",
+      "label": "Just starting",
       "days_per_week": 7,
       "minutes": 10,
       "exercises": 2,
       "multiplier": 3,
-      "recheck_days": 14
+      "recheck_days": 14,
+      "stage": "learn",
+      "stage_sessions": 14
     },
     "dev": {
-      "label": "Developing",
+      "label": "Growing",
       "days_per_week": 5,
       "minutes": 8,
       "exercises": 2,
       "multiplier": 2,
-      "recheck_days": 14
+      "recheck_days": 14,
+      "stage": "learn",
+      "stage_sessions": 10
     },
     "good": {
-      "label": "Good",
+      "label": "Getting strong",
       "days_per_week": 3,
       "minutes": 5,
       "exercises": 1,
       "multiplier": 1,
-      "recheck_days": 14
+      "recheck_days": 14,
+      "stage": "master",
+      "stage_sessions": 6
     },
     "strong": {
       "label": "Strong",
@@ -31,7 +37,9 @@
       "minutes": 3,
       "exercises": 1,
       "multiplier": 1,
-      "recheck_days": 28
+      "recheck_days": 28,
+      "stage": "strong",
+      "stage_sessions": null
     }
   },
   "daily_cap_minutes": 20,
@@ -892,15 +900,50 @@
   },
   "tiers": {
     "free": {
+      "areas_max": 3,
       "exercises_max": 1,
-      "tips": 1,
-      "note": "one exercise and one tip per priority skill, five skills scored"
+      "tips_max": 1
     },
     "pro": {
+      "areas_max": 3,
       "exercises_max": 2,
-      "tips": 2,
-      "note": "up to two exercises and two tips per priority skill, all photo-scored skills"
-    }
+      "tips_max": 2
+    },
+    "_note": "defaults; the server resolves the visitor's plan and returns these numbers with /api/v2/me, so a paid plan can change them without a frontend release"
   },
-  "selection": "exercises per card = min(band.exercises, tier.exercises_max); tips per card = tier.tips, in list order, rotating on re-checks like exercises"
+  "selection": "only the report's priority skills get practice; exercises per card = min(band.exercises, tier.exercises_max); tips per card = tier.tips_max; both rotate on re-checks",
+  "stages": [
+    {
+      "id": "learn",
+      "until_score": 7.0
+    },
+    {
+      "id": "master",
+      "until_score": 8.5
+    },
+    {
+      "id": "strong",
+      "until_score": null
+    }
+  ],
+  "words": {
+    "avoid": [
+      "weak",
+      "poor",
+      "bad",
+      "wrong",
+      "problem",
+      "inadequate",
+      "fail",
+      "lowest",
+      "mistake"
+    ],
+    "say": [
+      "skills to grow",
+      "your next step",
+      "growing",
+      "getting strong",
+      "great work on"
+    ]
+  }
 }
