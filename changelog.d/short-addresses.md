@@ -1,0 +1,1 @@
+- The report prints short addresses (vahinitech.com/handwriting-size-consistency) for each skill's page and the help page; the links keep the full URL.
