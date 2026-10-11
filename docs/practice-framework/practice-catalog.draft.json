@@ -2,21 +2,21 @@
   "status": "draft for owner review, 2026-10-11; not used by any report yet",
   "dosage": {
     "focus": {
-      "label": "Just starting",
+      "label": "Learning",
       "tries_per_day": 15,
       "days": 7,
       "recheck_days": 7,
       "exercises": 2
     },
     "dev": {
-      "label": "Growing",
+      "label": "Improving",
       "tries_per_day": 10,
       "days": 7,
       "recheck_days": 7,
       "exercises": 2
     },
     "good": {
-      "label": "Getting strong",
+      "label": "Mastering",
       "tries_per_day": 5,
       "days": 7,
       "recheck_days": 7,
@@ -834,19 +834,20 @@
   "selection": "only the report's priority skills get practice; exercises per card = min(band.exercises, tier.exercises_max); tips per card = tier.tips_max; both rotate on re-checks",
   "stages": [
     {
-      "id": "learn",
-      "until_score": 7.0,
-      "tries": 100
+      "id": "learning",
+      "below": 4.5
     },
     {
-      "id": "master",
-      "until_score": 8.5,
-      "tries": 50
+      "id": "improving",
+      "below": 7.0
+    },
+    {
+      "id": "mastering",
+      "below": 8.5
     },
     {
       "id": "strong",
-      "until_score": null,
-      "tries_per_week": 10
+      "below": null
     }
   ],
   "words": {
@@ -884,5 +885,10 @@
     "tip": "Pihu",
     "encourage": "Tara",
     "_note": "pictures come from the host page (window.VAHINI_REPORT_ART), never from this repository"
+  },
+  "page2": {
+    "skill_rows_max": 3,
+    "spelling_row": "when the limited check found a word, extra to the skill rows",
+    "other_skills": "the remaining scored skills by name, score and stage, then the Pro note"
   }
 }
