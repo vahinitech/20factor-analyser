@@ -408,6 +408,16 @@ the PR (#125). The report follows the vahinitech.com theme: colours are
 `var(--v-*)` tokens from `/site/design/v1/vahini.css`, and the only colour
 codes of its own are the four score colours.
 
+As built, printed through `fitPrintPages()` from the sample report (two A4
+pages in every case):
+
+| Free page 1 | Free page 2 | Pro page 1 | Pro page 2 |
+|---|---|---|---|
+| ![Free page 1](practice-framework/c-free-page1.png) | ![Free page 2](practice-framework/c-free-page2.png) | ![Pro page 1](practice-framework/c-pro-page1.png) | ![Pro page 2](practice-framework/c-pro-page2.png) |
+
+Free page 1 in Telugu (draft wording): [c-free-page1-telugu.png](practice-framework/c-free-page1-telugu.png).
+On screen with the side panel: [c-screen-side-panel.png](practice-framework/c-screen-side-panel.png).
+
 ### Page 1, "Your writing snapshot" (Free and Pro)
 
 The Vahini logo, "Vahini" and vahinitech.com; "Your writing snapshot" with
