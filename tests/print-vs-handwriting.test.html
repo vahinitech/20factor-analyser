@@ -239,7 +239,9 @@
     const txt=host.textContent||'';
     add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /our list of common English words/.test(txt), 'Limited spelling check never certifies an error-free document');
     add(/We left out 3 printed lines/i.test(txt), 'Printed text exclusion remains visible');
-    add([...host.querySelectorAll('.practice-page a')].every(a=>/\/assets\/worksheets\/[\w-]+\.pdf$/.test(a.href)), 'Practice page links only to worksheets, never to sales pages');
+    // Worksheets, each skill's page and the "when writing feels hard" page
+    // (owner, 2026-10-11): free reading on vahinitech.com, never a sales page.
+    add([...host.querySelectorAll('.practice-page a')].every(a=>/\/assets\/worksheets\/[\w-]+\.pdf$|\/handwriting-[a-z-]+\.html$|\/signs-child-needs-handwriting-help\.html$/.test(a.href)), 'Practice page links only to worksheets and free reading pages, never to sales pages');
     add(!/20factor-analyser-pro|private repo|AGPL/i.test(txt), 'Report does not expose repository details');
     add(!/Ask about Pro|price|₹|\bbuy\b/i.test(txt), 'The report names no prices and asks nobody to buy');
     add(/Indian Patents No\. 584433 and 604895/.test(txt) && [...host.querySelectorAll('.page')].every(p=>/vahinitech\.com/.test(p.querySelector('.run-foot').textContent)) && [...host.querySelectorAll('.page')].every(p=>p.querySelector('img.sn-logo')), 'Every page carries the Vahini logo, vahinitech.com and the patent line');

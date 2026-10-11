@@ -116,6 +116,33 @@ export async function checkPracticePrint(browser, baseUrl){
       add(art?shape.art==='cheer,encourage,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
       await page.emulateMedia({media:'print'});
       add(await pdfPages(page)===2,label+': prints on exactly two A4 pages');
+      // Page 2's left column (why, win, More) never makes a row taller than
+      // its practice: printed, every row's skill side fits beside it.
+      const cols=await page.evaluate(()=>{
+        VahiniReport.fitPrintPages(document.getElementById('report-host'));
+        return [...document.querySelectorAll('.practice-row:not(.spelling-row)')].map(r=>{
+          const l=r.querySelector('.pr-skill'), p=r.querySelector('.pr-practice');
+          l.style.alignSelf=p.style.alignSelf='start';
+          const out={n:r.dataset.factor,left:Math.round(l.getBoundingClientRect().height),right:Math.round(p.getBoundingClientRect().height),trim:r.dataset.trim||'',about:!!r.querySelector('.pr-about'),sheet:!!r.querySelector('.practice-sheet')};
+          l.style.alignSelf=p.style.alignSelf='';
+          return out;
+        });
+      });
+      add(cols.length===3&&cols.every(c=>c.about&&c.sheet&&c.left<=c.right+1),label+': printed, each skill\'s why, win and practice sheet fit beside its practice',JSON.stringify(cols));
+      // Too much to fit: "More" goes first, then the "why" line.
+      const order=await page.evaluate(()=>{
+        const r=document.querySelector('.practice-row:not(.spelling-row)');
+        const why=r.querySelector('.pr-why');
+        const keep=why.lastChild.textContent;
+        why.lastChild.textContent=keep.repeat(12);
+        VahiniReport.trimSkillColumns(document.getElementById('report-host'));
+        const shown=sel=>getComputedStyle(r.querySelector(sel)).display!=='none';
+        const out={trim:r.dataset.trim,more:shown('.pr-more'),why:shown('.pr-why'),win:shown('.pr-win')};
+        why.lastChild.textContent=keep;
+        VahiniReport.fitPrintPages(document.getElementById('report-host'));
+        return out;
+      });
+      add(order.trim==='why'&&!order.more&&!order.why&&order.win,label+': a skill side too tall drops "More" first, then the why line',JSON.stringify(order));
       // As long as a real photo makes the sheets (stage, 2026-10-07).
       const natural=await page.evaluate(()=>{
         const sheets=[...document.querySelectorAll('#report-host .free-report')];

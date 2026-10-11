@@ -1211,3 +1211,26 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .practice-pro .other-skills .os-list{ font-size:10px; line-height:1.3; }
 .practice-pro .pr-ex + .pr-ex{ margin-top:2px; padding-top:2px; }
 .free-report.compact-report.practice-pro ol.pr-steps{ line-height:1.25; }
+/* Page 2, under each skill (owner, 2026-10-11): why it helps, the win to
+   look for, and its page on the website. trimSkillColumns() hides them,
+   "More" first, when they would make the row taller than its practice. */
+.free-report.compact-report .pr-about{ display:flex; flex-direction:column; gap:4px; margin:4px 0 0; }
+.free-report.compact-report .pr-about p{ margin:0; }
+.free-report.compact-report .pr-why{ font:600 12.5px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .pr-why b{ display:block; font:700 9.5px/1.2 var(--sans); letter-spacing:.12em; text-transform:uppercase; color:var(--v-success); margin-bottom:2px; }
+.free-report.compact-report .pr-win{ background:var(--v-success-bg); border-radius:8px; padding:3px 7px; font:500 11.5px/1.3 var(--sans); color:var(--v-text); }
+.free-report.compact-report .pr-win b{ font-weight:700; color:var(--v-success); }
+.free-report.compact-report .pr-more{ font:600 10px/1.3 var(--sans); color:var(--v-text-2); overflow-wrap:anywhere; }
+.free-report.compact-report .pr-more a{ color:var(--v-accent-text); text-decoration:none; }
+.free-report.compact-report .pr-skill .practice-sheet{ margin-top:auto; }
+.practice-pro .pr-about .pr-why{ font-size:11.5px; }
+.practice-pro .pr-about .pr-win{ font-size:10.5px; }
+.practice-row.trim-more .pr-more, .practice-row.trim-why .pr-why, .practice-row.trim-win .pr-win{ display:none; }
+/* When writing feels hard: a calm note before the closing line. */
+.free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
+.free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }
+.free-report.compact-report .p2-hard b{ font:700 13px/1.3 var(--serif); }
+.free-report.compact-report .p2-hard a{ color:var(--v-accent-text); font-weight:600; overflow-wrap:anywhere; }
+/* "Other skills": larger text (owner, 2026-10-11). */
+.free-report.compact-report .other-skills p, .compact-report .other-skills .os-list{ font-size:12.5px; line-height:1.4; }
+.practice-pro .other-skills .os-list{ font-size:11.5px; line-height:1.35; }

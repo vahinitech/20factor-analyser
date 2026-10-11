@@ -379,6 +379,19 @@ function practiceLimits(analysis, cat, tier){
   });
   return out;
 }
+/* Why a skill helps, the win to look for and its page on vahinitech.com
+   (practice catalogue, 2026-10-11): from the served catalogue, or the
+   bundled copy when a saved report's older catalogue has none. Each text
+   falls back to English on its own. */
+function factorAbout(cat, n, lang){
+  const own = cat && cat.factors && cat.factors[String(n)];
+  const bundled = window.VahiniPracticeCatalog && window.VahiniPracticeCatalog.factors && window.VahiniPracticeCatalog.factors[String(n)];
+  const area = own && typeof own.why === 'string' ? own : bundled && typeof bundled.why === 'string' ? bundled : null;
+  if (!area) return null;
+  const local = (lang !== 'en' && area.i18n && area.i18n[lang]) || {};
+  const pick = k=>typeof local[k] === 'string' && local[k] ? local[k] : area[k];
+  return { why: pick('why'), win: pick('win'), page: /^[a-z0-9-]+$/.test(area.page || '') ? area.page : '' };
+}
 /* Latin-only exercises (a-o pairs, joined writing) are skipped when most
    letters read from the page are another script. No text reads as Latin. */
 function latinPage(text){
@@ -721,13 +734,24 @@ function render(host, data){
     return `<p class="pr-path" aria-label="${esc(t('row.stage.aria',{stage:stage(band)}))}">${STAGE_ORDER.map((b,k)=>
       `<span class="pr-stage${k<at?' done':k===at?' now':''}">${esc(stage(b))}${k<at?' ✓':''}</span>`).join('<span class="pr-arrow">→</span>')}</p>`;
   };
+  // Under each skill: why it helps, the win to look for and its page on the
+  // website (linked on screen, the address when printed). trimSkillColumns()
+  // drops these, "More" first, when they would make the row taller.
+  const aboutBlock=f=>{
+    const a=factorAbout(cat,f.n,t.lang);
+    if(!a) return '';
+    const url=a.page?`${sheetBase()}/${a.page}.html`:'';
+    return `<div class="pr-about"><p class="pr-why"><b>${esc(t('row.why'))}</b>${esc(a.why)}</p>
+        <p class="pr-win"><b>${esc(t('row.win'))}</b> ${esc(a.win)}</p>${url?`
+        <p class="pr-more">${esc(t('row.more'))} <a href="${esc(url)}" target="_blank" rel="noopener">${SITE}/${esc(a.page)}.html</a></p>`:''}</div>`;
+  };
   const skillRow=(row,i)=>{
     const f=row.f, band=bandOf(f.score);
     const exs=row.exercises, tips=row.tips.map(e=>localEntry(e,t.lang));
     const lastKind=exs.length?exs[exs.length-1].entry.model:'line';
     return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
       <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(t('row.badge',{score:f.score.toFixed(1),stage:stage(band)}))}</span></div>
-        ${stagePath(band)}${practiceSheet(f)}</div>
+        ${stagePath(band)}${aboutBlock(f)}${practiceSheet(f)}</div>
       <div class="pr-practice">${exs.map(x=>exerciseBlock(x,f)).join('')||`<p class="pr-steps">${esc(t('row.fallback'))}</p>`}
         <p class="pr-plan">${esc(planText(row.planBand||band,exs.length))}</p>${tips.length?`<div class="pr-tips">${tips.map(tipBlock).join('')}</div>`:''}
         <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}">${turnHTML(lastKind)}</div></div></div>
@@ -755,15 +779,21 @@ function render(host, data){
   const locked=Math.max(0,20-analysis.results.length);
   const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),score:f.score.toFixed(1),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
       ${free&&locked?`<p class="pro-note"><b>${esc(t('pro.ask'))}</b> ${esc(t('pro.more',{n:locked}))}</p>`:''}</div>`:'';
+  // When writing feels hard: encouragement and where to read more, never a
+  // diagnosis or a promise (owner, 2026-10-11).
+  const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
+  const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help.html</a></p></div>`;
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
   const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
-      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${closing}`:empty}
+      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${hardNote}${closing}`:empty}
       ${foot(2)}</section>`;
   host.innerHTML=page1+page2;
   // A PDF made for sharing showed the report as it was: make it again.
   if(window.VahiniReportShare) VahiniReportShare.invalidate();
   wirePrintFit(host);
+  trimSkillColumns(host);
+  if(document.fonts&&document.fonts.ready) document.fonts.ready.then(()=>trimSkillColumns(host));
   // What this report printed, so the next check can move on (app.js keeps
   // it with the check in this browser's history; nothing leaves it).
   return {practice:printed};
@@ -791,8 +821,34 @@ const FIT_MIN_FREE = 0.78;
    pixel (sheet 1 measured 1119px against 1118.7px) still tips onto a blank
    extra page in a real print dialog, through rounding. */
 const FIT_SLACK_PX = 6;
+/* Page 2's left column (why it helps, the win, "More") must never make a
+   row taller than the practice beside it. When it would, drop "More" first,
+   then the "why" sentence, then the win box, and mark the row with how far
+   it went (data-trim). Only where the two columns sit side by side. */
+const TRIM_STEPS = ['more', 'why', 'win'];
+function trimSkillColumns(host){
+  (host || document).querySelectorAll('.practice-row').forEach(row=>{
+    TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
+    row.removeAttribute('data-trim');
+    const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
+    if (!left || !right || !left.querySelector('.pr-about')) return;
+    if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
+    const tall = ()=>{
+      left.style.alignSelf = right.style.alignSelf = 'start';
+      const over = left.getBoundingClientRect().height > right.getBoundingClientRect().height + 1;
+      left.style.alignSelf = right.style.alignSelf = '';
+      return over;
+    };
+    for (const step of TRIM_STEPS){
+      if (!tall()) break;
+      row.classList.add('trim-' + step);
+      row.setAttribute('data-trim', step);
+    }
+  });
+}
 function fitPrintPages(host){
   fillReportArt(host);
+  trimSkillColumns(host);
   const pxPerMM = 96/25.4;
   const sheetH = A4_MM.h * pxPerMM - FIT_SLACK_PX;
   host.querySelectorAll('section.page').forEach(pageEl=>{
@@ -831,14 +887,17 @@ function unfitPrintPages(host){
   host.querySelectorAll('section.page').forEach(p=>{
     p.style.zoom=''; p.style.width=''; p.style.minHeight='';
   });
+  trimSkillColumns(host);
 }
 let printFitWired = false;
 function wirePrintFit(host){
   if (printFitWired) return; printFitWired = true;
   window.addEventListener('beforeprint', ()=>fitPrintPages(host));
   window.addEventListener('afterprint', ()=>unfitPrintPages(host));
+  let resized = 0;
+  window.addEventListener('resize', ()=>{ clearTimeout(resized); resized = setTimeout(()=>trimSkillColumns(host), 150); });
 }
 
 if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
-global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','page']) };
+global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','page']) };
 })(window);

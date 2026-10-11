@@ -59,6 +59,10 @@ const RENDER = `window.__render = (opts) => {
     models: [...r.querySelectorAll('[data-exercise]')].map(e => e.dataset.model),
     saw: r.querySelector('.pr-saw') ? r.querySelector('.pr-saw').textContent : '',
     sheet: r.querySelector('.pr-skill a[href*="/worksheets/"]') ? r.querySelector('.pr-skill a[href*="/worksheets/"]').getAttribute('href') : null,
+    why: r.querySelector('.pr-skill .pr-why') ? r.querySelector('.pr-skill .pr-why').lastChild.textContent : null,
+    win: r.querySelector('.pr-skill .pr-win') ? r.querySelector('.pr-skill .pr-win').lastChild.textContent.trim() : null,
+    more: r.querySelector('.pr-skill .pr-more a') ? r.querySelector('.pr-skill .pr-more a').getAttribute('href') : null,
+    moreText: r.querySelector('.pr-skill .pr-more a') ? r.querySelector('.pr-skill .pr-more a').textContent : null,
   }));
   return {
     out, rows,
@@ -70,6 +74,9 @@ const RENDER = `window.__render = (opts) => {
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
+    hard: host.querySelector('.p2-hard') ? host.querySelector('.p2-hard').textContent : '',
+    hardLink: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').getAttribute('href') : '',
+    hardBeforeClose: !!host.querySelector('.p2-hard + .p2-close'),
     art: [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('src')),
     text: host.textContent,
   };
@@ -118,14 +125,23 @@ try {
   const row = n => free.rows.find(r => r.factor === n);
   add(/5\.0\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
     && row('7').now === 'Mastering' && row('7').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
-  // Tries follow the weakest skill an exercise helps: "sit on the line"
-  // also helps letter size (5.0, Improving), so it asks 10 a day.
-  add(/10 tries a day, for 7 days\./.test(row('5').plan) && /10 tries a day, for 7 days/.test(row('7').plan),
-    'Tries follow the weakest skill the exercise helps', free.rows.map(r => r.plan));
+  // Tries follow the row's own skill (owner, 2026-10-11): "sit on the line"
+  // also helps letter size (5.0, Improving), but its row is Mastering
+  // (7.1), so it asks 5 a day.
+  add(/10 tries a day, for 7 days\./.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('7').plan),
+    'Tries follow the row\'s own skill, not a weaker skill its exercise also helps', free.rows.map(r => r.plan));
   const solo7 = await page.evaluate(() => window.__render({ free: true, scores: { 1: 9.5, 5: 9.5, 8: 9.5, 18: 9.5 } }));
   add(/5 tries a day, for 7 days/.test(solo7.rows[0].plan), 'A Mastering skill on its own asks 5 a day', solo7.rows.map(r => r.plan));
   add(!free.bands.some(b => /Needs support|Developing|Good\b/.test(b)) && free.bands.some(b => /Improving/.test(b)) && free.bands.some(b => /Mastering/.test(b)),
     'Both pages use the stage names', free.bands);
+  // When writing feels hard: before the closing line, encouraging, with
+  // the website's page; never a diagnosis or a cure.
+  add(/Every child learns to write at their own pace\./.test(free.hard) && /occupational therapist/.test(free.hard)
+    && free.hardLink === 'https://vahinitech.com/signs-child-needs-handwriting-help.html' && free.hardBeforeClose
+    && !/\b(cur(e|es|ed|ing)|overcom\w*|disorder\w*|diagnos\w*|dyslexi\w*|dysgraphi\w*)\b/i.test(free.text),
+    'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
+  add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
+    'The bundle and the served catalogue carry each skill\'s why, win and page');
   add(/Your letter shapes are clear\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
     'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
   add(JSON.stringify(free.others) === '["18","1"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
@@ -196,6 +212,12 @@ try {
         const rows = r.rows.filter(x => x.factor !== 'spelling').map(x => x.factor);
         add(row && JSON.stringify(rows) === JSON.stringify([String(n)]), `${tier}${L}: skill ${n} alone to grow gives exactly its row`, rows);
         if (!row) continue;
+        // Under the skill: why it helps, the win and its website page, from
+        // the catalogue, in the report's language (owner, 2026-10-11).
+        const fa = catalogue.factors.find(f => f.n === n);
+        const local = k => (lang === 'en' ? fa[k] : fa.i18n[lang][k]);
+        add(row.why === local('why') && row.win === local('win') && row.more === `https://vahinitech.com/${fa.page}.html` && row.moreText === `vahinitech.com/${fa.page}.html`,
+          `${tier}${L}: skill ${n}'s row says why it helps, the win and its page`, { why: row.why, win: row.win, more: row.more });
         const foreign = row.exercises.concat(row.tips).filter(id => String(owner[id]) !== String(n));
         add(row.exercises.length > 0 && row.tips.length > 0 && foreign.length === 0, `${tier}${L}: skill ${n} shows only its own exercises and tips`, { foreign, row });
         if (lang === 'te') {
