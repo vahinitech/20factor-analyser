@@ -457,6 +457,34 @@ bold line), `gaps` (words with finger-wide gap blocks), `letter-gaps`,
 `waves` and `page`. "Your turn" lines match the drawing. The page head has
 the logo and vahinitech.com, the footer the patent line.
 
+Second round (owner, 2026-10-11, mock-up in #126): under each skill's
+stage path, the left column now says **why it helps** (one short sentence
+about everyday life), a green box **"You'll know it's working when ..."**
+naming a small win the child can see, and **"More:"** with the skill's page
+on vahinitech.com (`handwriting-<skill>.html`, a link on screen and the
+address when printed), above the practice sheet link. The texts are data:
+`why`, `win` and `page` per factor in `backend/practice_catalog.py`
+(`ABOUT`, Telugu in `TELUGU_ABOUT`, draft), checked on import (one
+sentence each, at most 60 and 56 characters, plain words, no claim word,
+a known page) and served in the catalogue from version
+`82ca133f7363f8489dd8`. The left column never makes a row taller than its
+practice: `trimSkillColumns()` measures each row on screen and before
+printing and drops "More" first, then the "why" line, then the win box
+(`data-trim` on the row; `tests/report-layout.mjs`). Telugu text runs
+longer, so a Telugu row usually keeps the win box and the practice sheet
+only.
+
+Before the closing line, a note in the theme's soft blue, **"Every child
+learns to write at their own pace."**: short, happy practice helps most
+children; if writing is still very tiring, slow or painful after a few
+weeks, a teacher or an occupational therapist can help, with
+vahinitech.com/signs-child-needs-handwriting-help.html. The report never
+diagnoses, never promises a cure or to "overcome" anything, and never reads
+personality from handwriting: the import check and
+`tests/report-words.test.mjs` refuse "cure", "overcome", "disorder" and
+"diagnos..." in catalogue and report text. The "Other skills" box text is
+larger (12.5 px Free, 11.5 px Pro).
+
 ### Plain English
 
 A parent with basic English and a child of 8 read the report. Every step is
@@ -495,9 +523,11 @@ practice truly helps them (the two-line ladder helps even letter sizes at
    level, then catalogue order. Exercises per row follow the band and the
    tier (`exercises_max`), tips the tier (`tips_max`); tips are chosen the
    same way.
-5. **Tries a day** come from the weakest measured skill an exercise helps,
-   so an exercise that also helps a Learning skill asks for that skill's
-   tries; a row's plan follows its weakest exercise.
+5. **Tries a day** follow the row's own skill (owner, 2026-10-11): its
+   stage sets them (Learning 15, Improving 10, Mastering 5 a day, Strong 10
+   once a week), even when the exercise also helps a weaker skill. The
+   selection still picks exercises by the combined need above; only the
+   tries come from the row.
 
 `tests/practice-select.test.mjs` checks the need, the composites, the same
 picks for the same report, rotation, the tier limits and that every printed
@@ -520,6 +550,15 @@ the family picks WhatsApp; anything else saves the PDF and opens
 report shows, including the name the family typed, if any. Nothing goes to
 Vahini's server: making it fetches only the two library files.
 
+The file is branded and never names the child (owner, 2026-10-11): it is
+saved or shared as `Vahini-handwriting-snapshot-<YYYY-MM-DD>.pdf` in every
+language, with the PDF title "Vahini handwriting snapshot", author and
+creator "Vahini Technologies · vahinitech.com" and subject "Free handwriting
+review" ("Handwriting review" for Pro). Its pages keep the website theme
+(`print-color-adjust: exact`); `tests/report-language.mjs` samples page 1's
+"Keep doing this" band and "Start here" card in the PDF image and fails if
+they come out as plain paper.
+
 ### The side panel
 
 On screens 1200 px and wider a sticky panel beside the report holds "Print
@@ -528,6 +567,12 @@ in", "Share PDF on WhatsApp", "Print / Save as PDF", the next steps
 again on a date, what a photo cannot see), "Your progress" and the Sponsors
 line; narrower screens show the same panel under the report. It is never
 printed and never in the shared PDF.
+
+On the sample report the panel also holds **"About this sample"**: how the
+sample was made and links to the Free and Pro examples, the before and after
+stories and "Analyse your own page". They used to sit in a dark banner over
+the report; the page's heading and intro stay. `analyser.html` has no such
+banner (its toolbar holds only "Run another").
 
 ### Characters
 
