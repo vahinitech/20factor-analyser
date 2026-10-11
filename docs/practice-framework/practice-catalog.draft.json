@@ -3,72 +3,33 @@
   "dosage": {
     "focus": {
       "label": "Just starting",
-      "days_per_week": 7,
-      "minutes": 10,
-      "exercises": 2,
-      "multiplier": 3,
-      "recheck_days": 14,
-      "stage": "learn",
-      "stage_sessions": 14
+      "tries_per_day": 15,
+      "days": 7,
+      "recheck_days": 7,
+      "exercises": 2
     },
     "dev": {
       "label": "Growing",
-      "days_per_week": 5,
-      "minutes": 8,
-      "exercises": 2,
-      "multiplier": 2,
-      "recheck_days": 14,
-      "stage": "learn",
-      "stage_sessions": 10
+      "tries_per_day": 10,
+      "days": 7,
+      "recheck_days": 7,
+      "exercises": 2
     },
     "good": {
       "label": "Getting strong",
-      "days_per_week": 3,
-      "minutes": 5,
-      "exercises": 1,
-      "multiplier": 1,
-      "recheck_days": 14,
-      "stage": "master",
-      "stage_sessions": 6
+      "tries_per_day": 5,
+      "days": 7,
+      "recheck_days": 7,
+      "exercises": 1
     },
     "strong": {
       "label": "Strong",
-      "days_per_week": 1,
-      "minutes": 3,
-      "exercises": 1,
-      "multiplier": 1,
+      "tries_per_week": 10,
       "recheck_days": 28,
-      "stage": "strong",
-      "stage_sessions": null
+      "exercises": 1
     }
   },
   "daily_cap_minutes": 20,
-  "units": {
-    "row": [
-      "row",
-      "rows"
-    ],
-    "word": [
-      "word",
-      "words"
-    ],
-    "sentence": [
-      "sentence",
-      "sentences"
-    ],
-    "line": [
-      "line",
-      "lines"
-    ],
-    "letter": [
-      "letter",
-      "letters"
-    ],
-    "page": [
-      "page",
-      "pages"
-    ]
-  },
   "factors": {
     "1": {
       "id": "letter_formation",
@@ -78,7 +39,6 @@
           "level": 1,
           "title": "Slow copy",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-shapes",
@@ -91,7 +51,6 @@
           "level": 2,
           "title": "Letter families",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-shapes",
@@ -104,7 +63,6 @@
           "level": 3,
           "title": "Trace, then write",
           "unit": "word",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-shapes",
@@ -132,7 +90,6 @@
           "level": 1,
           "title": "Say the strokes",
           "unit": "letter",
-          "base": 5,
           "script": "any",
           "needs": "photo",
           "steps": "Say each stroke out loud as you write it: down, up and round.",
@@ -144,7 +101,6 @@
           "level": 2,
           "title": "Start dots",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "steps": "Put a small dot where each letter starts, then write the row starting on the dots.",
@@ -171,7 +127,6 @@
           "level": 1,
           "title": "Close the circle",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-shapes",
@@ -184,7 +139,6 @@
           "level": 2,
           "title": "Gap hunt",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-shapes",
@@ -197,7 +151,6 @@
           "level": 3,
           "title": "Tall loops",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "steps": "In joined writing, write l, b and k with narrow, closed loops.",
@@ -224,7 +177,6 @@
           "level": 1,
           "title": "Long smooth lines",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "smooth-strokes",
@@ -237,7 +189,6 @@
           "level": 2,
           "title": "Light grip",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "smooth-strokes",
@@ -265,7 +216,6 @@
           "level": 1,
           "title": "Two-line ladder",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-size",
@@ -278,7 +228,6 @@
           "level": 2,
           "title": "Size twins",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-size",
@@ -291,7 +240,6 @@
           "level": 3,
           "title": "Fade the guide",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "letter-size",
@@ -319,7 +267,6 @@
           "level": 1,
           "title": "Tall and tails",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-size",
@@ -332,7 +279,6 @@
           "level": 2,
           "title": "Three zones",
           "unit": "word",
-          "base": 3,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-size",
@@ -360,7 +306,6 @@
           "level": 1,
           "title": "Sit on the line",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -373,7 +318,6 @@
           "level": 2,
           "title": "Underline check",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -386,7 +330,6 @@
           "level": 3,
           "title": "Bold writing line",
           "unit": "line",
-          "base": 2,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -414,7 +357,6 @@
           "level": 1,
           "title": "Finger spaces",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "word-spacing",
@@ -427,7 +369,6 @@
           "level": 2,
           "title": "Dot the gaps",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "word-spacing",
@@ -440,7 +381,6 @@
           "level": 3,
           "title": "Spaced copy",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "word-spacing",
@@ -468,7 +408,6 @@
           "level": 1,
           "title": "Room inside words",
           "unit": "word",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "word-spacing",
@@ -481,7 +420,6 @@
           "level": 2,
           "title": "Even letter rows",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "word-spacing",
@@ -509,7 +447,6 @@
           "level": 1,
           "title": "Start at the margin",
           "unit": "line",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "page-layout",
@@ -522,7 +459,6 @@
           "level": 2,
           "title": "Plan the line end",
           "unit": "line",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "page-layout",
@@ -550,7 +486,6 @@
           "level": 1,
           "title": "Level sentence",
           "unit": "sentence",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -563,7 +498,6 @@
           "level": 2,
           "title": "Steady paper",
           "unit": "line",
-          "base": 2,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -591,7 +525,6 @@
           "level": 1,
           "title": "Matching tall strokes",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "baseline",
@@ -604,7 +537,6 @@
           "level": 2,
           "title": "Line up the starts",
           "unit": "line",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "baseline",
@@ -632,7 +564,6 @@
           "level": 1,
           "title": "Steady count",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "pen",
           "steps": "Write one letter on each count of a slow, even beat.",
@@ -659,7 +590,6 @@
           "level": 1,
           "title": "Light touch",
           "unit": "row",
-          "base": 1,
           "script": "any",
           "needs": "pen",
           "steps": "Write a row pressing lightly, then a row pressing normally. Keep the lighter one.",
@@ -686,7 +616,6 @@
           "level": 1,
           "title": "Joined pairs",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "pen",
           "worksheet": "smooth-strokes",
@@ -714,7 +643,6 @@
           "level": 1,
           "title": "One-lift words",
           "unit": "word",
-          "base": 3,
           "script": "latin",
           "needs": "pen",
           "steps": "Write short words lifting the pencil only at the end of each word.",
@@ -741,7 +669,6 @@
           "level": 1,
           "title": "Same lean",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "slant",
@@ -754,7 +681,6 @@
           "level": 2,
           "title": "Slant guides",
           "unit": "line",
-          "base": 2,
           "script": "latin",
           "needs": "photo",
           "worksheet": "slant",
@@ -783,7 +709,6 @@
           "level": 1,
           "title": "Read it back",
           "unit": "sentence",
-          "base": 2,
           "script": "any",
           "needs": "photo",
           "steps": "Write two sentences, then ask someone to read them aloud. Rewrite any word they stopped at.",
@@ -795,7 +720,6 @@
           "level": 2,
           "title": "Best handwriting",
           "unit": "line",
-          "base": 2,
           "script": "any",
           "needs": "photo",
           "steps": "Write two lines in your slowest, clearest handwriting. Compare them with your normal writing.",
@@ -822,7 +746,6 @@
           "level": 1,
           "title": "Look-alike pairs",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-distinction",
@@ -835,7 +758,6 @@
           "level": 2,
           "title": "n, h, r and u",
           "unit": "row",
-          "base": 1,
           "script": "latin",
           "needs": "photo",
           "worksheet": "letter-distinction",
@@ -864,7 +786,6 @@
           "level": 1,
           "title": "Clean page",
           "unit": "page",
-          "base": 1,
           "script": "any",
           "needs": "photo",
           "worksheet": "page-layout",
@@ -877,7 +798,6 @@
           "level": 2,
           "title": "Best copy",
           "unit": "line",
-          "base": 3,
           "script": "any",
           "needs": "photo",
           "worksheet": "page-layout",
@@ -915,15 +835,18 @@
   "stages": [
     {
       "id": "learn",
-      "until_score": 7.0
+      "until_score": 7.0,
+      "tries": 100
     },
     {
       "id": "master",
-      "until_score": 8.5
+      "until_score": 8.5,
+      "tries": 50
     },
     {
       "id": "strong",
-      "until_score": null
+      "until_score": null,
+      "tries_per_week": 10
     }
   ],
   "words": {
@@ -945,5 +868,21 @@
       "getting strong",
       "great work on"
     ]
+  },
+  "try": "one try = doing the exercise once, in its unit (1 try = 1 row, 1 sentence, 1 word...)",
+  "units": [
+    "row",
+    "sentence",
+    "word",
+    "line",
+    "letter",
+    "page"
+  ],
+  "characters": {
+    "cheer": "little Vahini",
+    "buddy": "Bheema",
+    "tip": "Pihu",
+    "encourage": "Tara",
+    "_note": "pictures come from the host page (window.VAHINI_REPORT_ART), never from this repository"
   }
 }

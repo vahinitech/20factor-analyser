@@ -49,7 +49,7 @@ The framework is agnostic in four ways:
 
 - **Renderer:** the Free and Pro reports, the website's factor pages, the
   practice guide and the Android app all read the same nodes.
-- **Language:** text is looked up by id per language (section 8).
+- **Language:** text is looked up by id per language (section 9).
 - **Tier:** a policy table, not the code, decides how much each tier shows.
 - **Measurement:** a node does not care whether its score came from a photo
   or the pen; `needs` filters what a report can offer.
@@ -89,7 +89,7 @@ Each exercise:
 | `steps` | One or two plain sentences, at most about 120 characters, for a child or a parent to follow. |
 | `example` | What to write, shown in the handwriting face (empty when the exercise is about the page). |
 | `check` | One self-check question, asked after the practice. |
-| `unit`, `base` | The amount at the "good" band: `base` rows, words, sentences, lines, letters or pages. |
+| `unit` | What one try is: a row, sentence, word, line, letter or page ("1 try = 1 row"). How many tries comes from the band (section 4). |
 | `script` | `any`, or `latin` when it only makes sense for the Latin alphabet (joined writing, a-o pairs). |
 | `needs` | `photo` (scored from a photo today) or `pen` (factors 13 to 16, scored by the pen; never chosen from a photo report). |
 | `worksheet` | Optional worksheet id from the website catalogue, the printable that goes with it. |
@@ -100,37 +100,33 @@ Each tip: `id` and `text` (one sentence, a hack the child can remember), plus `i
 Composite factors (18 legibility, 20 neatness) carry their own exercises
 but are chosen only when no single factor explains the low score, as today.
 
-## 4. Practice by score: learn, master, keep it strong
+## 4. Practice by score: tries, a week at a time
 
-Each skill has a path of three stages, and the band of its score says where
-the child is on it:
+Children understand "try it 10 times" better than sessions or minutes. A
+**try** is doing the exercise once: one row, one sentence, one word, as the
+exercise says ("1 try = 1 row"). Practice runs a week at a time: try it a set
+number of times a day for 7 days, then check again.
 
-| Stage | Where the score is | Sessions in this stage | Then |
+| Band | This week | Then |
+|---|---|---|
+| Just starting (below 4.5) | try it 15 times a day, 7 days | check again |
+| Growing (4.5 to 6.9) | try it 10 times a day, 7 days | check again |
+| Getting strong (7 to 8.4) | try it 5 times a day, 7 days | check again |
+| Strong (8.5 and up) | 10 tries once a week, to keep it | check again in 4 weeks |
+
+Each skill also shows where the child is on a three-stage path, in tries:
+
+| Stage | Where the score is | About this many tries | Move on when |
 |---|---|---|---|
-| **Learn** | Just starting or Growing (below 7) | 14 sessions if Just starting, 10 if Growing | check again; at 7 or more, move to Master |
-| **Master** | Getting strong (7 to 8.4) | 6 sessions | check again; at 8.5 or more, move to Strong |
-| **Strong** | Strong (8.5 and above) | once a week, to keep it | no end |
+| **Learn** | below 7 | 100 | a check shows 7 or more |
+| **Master** | 7 to 8.4 | 50 | a check shows 8.5 or more |
+| **Strong** | 8.5 and up | 10 a week | it stays there |
 
-A session is one day's practice: the card's exercises at the amounts below.
-The card shows the three stages as a strip with the current one filled in,
-for example `Learn · 10 sessions → Master · 6 sessions → Strong · once a week`.
-These are practice targets, not predictions: the next check decides the
-stage, and the report never promises a score.
-
-
-The band of the factor's score (the catalogue's `bands`: strong from 8.5,
-getting strong from 7, growing from 4.5, just starting below) sets how much:
-
-| Band | Days a week | Minutes | Exercises (before the tier cap) | Amount | Check again |
-|---|---|---|---|---|---|
-| Just starting | every day | about 10 | 2 | base × 3 | in 2 weeks |
-| Growing | 5 | about 8 | 2 | base × 2 | in 2 weeks |
-| Getting strong | 3 | about 5 | 1 | base × 1 | in 2 weeks |
-| Strong | once a week, to keep it | about 3 | 1 | base × 1 | in 4 weeks |
-
-Two limits keep it child-sized: the minutes of all cards together stay under
-`daily_cap_minutes` (20); past it, the later cards drop to one exercise. The
-first card is always done first ("Do the first card first").
+The card shows it as a strip with the current stage filled in:
+`Learn · 100 tries → Master · 50 tries → Strong · 10 a week`. These are
+practice targets, not predictions: the next check decides the stage, and the
+report never promises a score. A 20-minute daily cap still applies when a
+child has several cards; past it, later cards ask for fewer tries.
 
 ## 5. Choosing exercises and tips (only for the skills the report flags)
 
@@ -153,9 +149,9 @@ In this order, all from the catalogue:
 2. "Your next step:" plus what to do and what was seen on this page, in
    encouraging words (section 7).
 3. The Learn, Master, Strong strip with the current stage filled in, and
-   "This week: 5 days · about 8 minutes · check again in 2 weeks".
-4. The exercises: title, amount ("2 rows"), steps.
-5. The tips, marked "Handy tip:".
+   "This week: try it 10 times a day, for 7 days. Then check again!".
+4. The exercises: title, what one try is ("1 try = 1 row"), steps.
+5. The tips, given by Pihu ("Pihu's tip:").
 6. The example strip and writing lines (as today).
 7. "Look back:" with the self-check question, and the worksheet line, now
    "use it for exercise 1" instead of "one row a day".
@@ -195,7 +191,27 @@ stops practising, so every sentence encourages:
 A test scans every report string and catalogue text (all languages) for the
 banned words, and the `natural-writing` skill carries the list.
 
-## 8. Print in the parent's language
+## 8. Vahini and friends on the report
+
+The story characters make the report friendly for children, each with one
+job they can recognise:
+
+| Character | Where | Job |
+|---|---|---|
+| Little Vahini | top of page 2 | cheers the strength: "Great work on letter shapes!" |
+| Bheema | beside that line | the practice buddy: "a few tries a day is plenty!" |
+| Pihu | every tip | "Pihu's tip:" |
+| Tara | end of page 2 | "You are getting better with every page!" |
+
+The drawings are proprietary and never enter this AGPL repository. As with
+the error-screen pictures (`window.VAHINI_NOTICE_ART`), the host page passes
+a map of same-site image paths, `window.VAHINI_REPORT_ART`
+(`cheer`, `buddy`, `tip`, `encourage`); vahinitech.com fills it from the
+drawings library's cut-outs. Without the map (a self-hosted analyser) the
+report has no pictures and the same layout. The pictures are small (26 to
+52 px) and printed; the printed Free mock-up with all four is two pages.
+
+## 9. Print in the parent's language
 
 Many parents who need this most do not read English. The planned drives work
 like this: a volunteer who reads English runs the check with the family,
@@ -223,7 +239,7 @@ then prints or saves the report **in the family's language**.
 - Later, not in this change: the analyser page itself in Telugu, for
   families who run the check on their own.
 
-## 9. Share on WhatsApp
+## 10. Share on WhatsApp
 
 Next to Print / Save as PDF (screen only, never printed):
 
@@ -239,7 +255,7 @@ Next to Print / Save as PDF (screen only, never printed):
   needs a PDF library in the page (about 300 KB). On Android, "Save as PDF"
   and then sharing the file already works.
 
-## 10. Who owns what
+## 11. Who owns what
 
 | Piece | Where | Notes |
 |---|---|---|
@@ -250,7 +266,7 @@ Next to Print / Save as PDF (screen only, never printed):
 | vahini-web | factor pages show "How to practise" from the same catalogue (`tools/gen-factor-pages.mjs --sync`); Bheema's practice plan can use it later | One source, so a page never promises an exercise the report does not have |
 | Android app | reads the same catalogue | No API change needed |
 
-## 11. Tests
+## 12. Tests
 
 - Catalogue: every photo-scored factor has at least two exercises; ids
   unique and stable; every `worksheet` exists in the worksheet catalogue;
@@ -260,13 +276,14 @@ Next to Print / Save as PDF (screen only, never printed):
   count follows the band and the tier, the tips follow the tier, and every
   exercise and tip shown belongs to that card's factor; the daily cap holds; a re-check starts
   after last time's exercises.
+- Characters: with `VAHINI_REPORT_ART` the four pictures appear and the report still prints on two sheets; without it, none appear and nothing breaks.
 - Words: no banned word in any report string or catalogue text, in any language.
 - Share: the WhatsApp text holds no name and no image, and follows the chosen language.
 - Print: one A4 sheet per page in English and in Telugu, longest case;
   Telugu glyphs render (no boxes) in the saved PDF.
 - i18n: every key in English exists in each listed language, or is reported.
 
-## 12. Rollout
+## 13. Rollout
 
 1. Owner approves this design and the mock-ups.
 2. Analyser PR: catalogue module, schema, renderer, tests (English only).
