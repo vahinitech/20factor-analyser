@@ -31,7 +31,7 @@ try {
   });
   const p = await ctx.newPage();
   await p.goto('https://keep-test.local/');
-  await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${keep}\nsetupKeepPages(); window.k = { keepIfAsked, keepStatus, keepEmailMissing };` });
+  await p.addScriptTag({ content: `const $ = (s) => document.querySelector(s);\n${keep}\nsetupKeepPages(); window.k = { keepIfAsked, keepStatus, keepEmailMissing, keepForSample };` });
   const run = (opts) => p.evaluate(async ({ JPEG, FACTS, opts }) => {
     document.querySelector('#keep-pages').checked = !!opts.tick;
     document.querySelector('#keep-email').value = opts.email || '';
@@ -67,7 +67,14 @@ try {
   g = await guard({ tick: true, email: 'parent@example.com' });
   assert.ok(!g.blocked && !g.shown, 'a good address lets the check start');
   assert.ok(!(await guard({ tick: false, email: '' })).blocked, 'unticked never blocks');
-  assert.ok(!(await guard({ tick: true, email: '', sample: true })).blocked, 'the sample never blocks');
+  assert.ok((await guard({ tick: true, email: '', sample: true })).blocked, 'a ticked box needs an email even with the sample loaded');
+  // The sample is never kept: while it is loaded the box is unticked and off, with a note.
+  const sampleState = () => p.evaluate(() => ({ ticked: document.querySelector('#keep-pages').checked, disabled: document.querySelector('#keep-pages').disabled,
+    note: !document.querySelector('#keep-sample-note').hidden, row: !document.querySelector('#keep-email-row').hidden }));
+  await p.evaluate(() => { document.querySelector('#keep-pages').checked = true; document.querySelector('#keep-email-row').hidden = false; window.k.keepForSample(true); });
+  assert.deepEqual(await sampleState(), { ticked: false, disabled: true, note: true, row: false }, 'sample loaded: box unticked and off, the note says why');
+  await p.evaluate(() => window.k.keepForSample(false));
+  assert.deepEqual(await sampleState(), { ticked: false, disabled: false, note: false, row: false }, 'own photo: the box is back on');
   assert.ok(/By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over\./.test(html), 'the consent line sits above Run');
 
   let r = await run({ tick: false, email: 'parent@example.com' });

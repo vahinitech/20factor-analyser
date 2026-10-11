@@ -93,6 +93,9 @@
   .keep-opt small{ display:block; color:var(--v-text-2); font-size:13px; }
   .keep-email{ margin:8px 0 0 27px; }
   .keep-email[hidden]{ display:none; }
+  .keep-opt:has(input:disabled){ cursor:not-allowed; opacity:.55; }
+  .photo-note .keep-sample-note{ margin:6px 0 0 27px; font-size:13px; color:var(--v-text-2); }
+  .keep-sample-note[hidden]{ display:none; }
   .keep-err{ margin:6px 0 0; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-warning); }
   .keep-err[hidden]{ display:none; }
   .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
@@ -234,6 +237,7 @@
     <div class="photo-note" id="photo-note" role="group" aria-labelledby="photo-note-lead">
       <p id="photo-note-lead"><b>Your photo:</b> we analyse it and do not keep it, unless you choose to below. <a href="/privacy.html#what">What we keep</a></p>
       <label class="keep-opt"><input type="checkbox" id="keep-pages"><span>Keep my pages so I can see progress over time<small>Only you can see them. We email you a link, and nothing is kept until you open it. Deleted 12 months after your last check.</small></span></label>
+      <p class="keep-sample-note" id="keep-sample-note" hidden>The sample page is never kept. Choose your own photo to keep your pages.</p>
       <div class="keep-email" id="keep-email-row" hidden>
         <label for="keep-email">Your email (a parent's, for a child)</label>
         <input type="email" id="keep-email" autocomplete="email" placeholder="you@example.com" aria-describedby="keep-email-error">
