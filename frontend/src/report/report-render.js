@@ -766,19 +766,24 @@ function fitPrintPages(host){
        shrinking until it fits. Two fixed passes were not enough: the second
        left a sheet at 1129px for a 1113px target. Content is measured with
        min-height off, or every page would read as a full sheet. */
+    /* A page that would need less than the floor at its first measure is
+       still tried at the floor before it spills: the wider reflow there
+       (width compensation) often saves the lines it needs. A report printed
+       in Telugu, and Pro's practice page with the host's fonts, came out at
+       0.72 to 0.76 by the first measure and fit at the floor (2026-10-11). */
     let z = 1;
-    for (let i=0; i<5; i++){
+    for (let i=0; i<6; i++){
       const minH = pageEl.style.minHeight;
       pageEl.style.minHeight = '0px';
       const h = pageEl.getBoundingClientRect().height;
       pageEl.style.minHeight = minH;
       if (h <= sheetH + 1) break;
-      const next = Math.max(floor, z * sheetH / h);
-      if (next <= floor + 0.001){         /* too tall to shrink readably */
+      if (z <= floor + 0.001){            /* too tall even at the floor */
         pageEl.style.zoom=''; pageEl.style.width=''; pageEl.style.minHeight='';
         break;
       }
-      z = Math.min(next, z - 0.002);      /* always progress */
+      const next = Math.max(floor, z * sheetH / h);
+      z = Math.max(floor, Math.min(next, z - 0.002));   /* always progress */
       pageEl.style.zoom = String(z);
       pageEl.style.width = 'calc('+A4_MM.w+'mm / '+z+')';
       pageEl.style.minHeight = 'calc('+A4_MM.h+'mm / '+z+')';
