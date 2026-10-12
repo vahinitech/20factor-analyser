@@ -1,0 +1,1 @@
+- Practice page (page 2): Pihu beside each tip is drawn at 34px instead of 18px, Tara at the foot of the page at 72px instead of 40px, and the exercise steps and tips are larger (14px and 12.5px, Pro steps 12.5px). Free and Pro still print on two A4 pages.
