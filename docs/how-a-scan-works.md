@@ -332,7 +332,7 @@ fixtures through: the tracing worksheet in `handwritten_printed_1.jpg`
 "Received from Mrs" label. The three structural measures the check has
 (stroke width, letter height, edge sharpness) overlap between neat
 handwriting and a clean font, so this needs a better signal, not a new
-threshold. That change is not made.
+threshold. That change is not made; section 10 adds the better signal.
 
 ## 9. Measuring inside the line: letters, words and the baseline
 
@@ -401,3 +401,83 @@ lower overall (its 0.40 full scale is a first choice), and neither
 candidate moves much for one oversized letter or one sunken word: a single
 mistake among about 30 words is a small share of a page. Switching the
 report's scores to these needs those choices made first.
+
+## 10. Print or handwriting: a trained line reader
+
+`backend/print_hand.py` looks at a line's ink and gives a probability that
+it is print. It does not replace the printed check: it can only stop the
+two rules in section 8 that call a confidently read line print. When it
+sees handwriting (probability under 0.1), those rules do not apply to that
+line; when it cannot judge (too little ink, or no weights file), the check
+behaves exactly as before.
+
+**How it reads a line.** The crop is turned grey, scaled to 32 pixels tall
+and contrast-stretched so ink is 1 and paper 0. Windows 64 pixels wide,
+every 32 pixels, each go through three 3x3 convolutions (16, 32 and 48
+filters, each with ReLU and 2x2 max pooling), an average and one output;
+the line's probability is the logistic of the windows' mean. About 19,000
+weights, stored as 8-bit integers (`backend/models/print_hand.json`, 26 KB),
+run in plain numpy: the same crop always gets the same answer.
+
+**Training data** (`scripts/print_hand_data.py`, never committed):
+
+- Handwriting: the 40 training writers of UJI Pen Characters v2 (CC BY
+  4.0), set into lines of words with the writer's own letters, some slant,
+  size and baseline wobble, and joining strokes between some letters.
+- Print: 21 open-licence fonts from google/fonts at one commit, each
+  checked by SHA-256, including fonts that imitate handwriting, because a
+  script font is print.
+- Both through the same photo effects: pen or type weight, ink colour,
+  ruled and dotted lines, uneven light, paper grain, aged paper, blur,
+  rescaling, JPEG; small letters from 4 to 40 pixels tall.
+- 6,000 lines of each for training (`scripts/train_print_hand.py`, seed 0,
+  12 epochs, the best validation epoch kept). Real photos never train.
+
+**Results, scored with the exported 8-bit weights:**
+
+| Test | Lines | Correct |
+|---|---|---|
+| Synthetic: the 20 UJI test writers and four fonts that never trained | 1,600 | 96.1% |
+| Every labelled line PaddleOCR finds on the nine committed sample pages | 239 | 86.6% |
+| Of those, the three handwritten pages | 120 | 94%, 100%, 100% |
+| The typed letter / the printed letter template | 45 / 34 | 73% / 97% |
+| The two script-font pages (print imitating handwriting) | 8 / 7 | 12.5% / 43% |
+
+On the real lines, the cut-off for "handwriting" (under 0.1) lets the
+confidence rules skip 118 of 126 handwritten lines and wrongly skips 8 of
+113 printed lines, mostly the script fonts. The cut-off was chosen on these
+same lines, so those two figures are optimistic; the end-to-end checks
+below are the independent ones.
+
+**End to end, the full printed check on seven of the nine committed sample
+pages** (all but the signature-font poster and the printed letter
+template): five handwritten lines of `handwriting-sample.jpg` that were
+turned into print are now kept ("The quick brown fox", "Dabe has a big blue
+bag", "red box they play with ball", "Dodo and Piku write letters",
+"Slowly he also writes 11, 22 and 33"). No other line on those pages
+changed: the typed letter, the tracing worksheet, the script-font specimen
+and the receipt's printed labels are as before. "Stay on the line" is still
+called print (the reader gives it 0.51).
+
+**On the 120 planted photo-style pages through the real reader:** refused
+as print **0 of 120** (95 of 120 before). These pages are drawn the way the
+training lines are, with different writers, so this flatters the reader;
+the real sample pages above are the stronger evidence. With the pages now
+read, the marks through the real reader:
+
+| Planted mistake | Line marks | Letter-level marks |
+|---|---|---|
+| Line sloping 4 degrees | 90% | 90% |
+| Word gap 3 times wider | 60% | 15% |
+| Word sunk below the line | 0% | 60% |
+| Small letter 1.7 times taller | 0% | 0% |
+| Word gap a quarter as wide | 5% | 0% |
+
+These are lower than with the ink outlines in section 9 because the
+reader's line boxes are looser and sometimes join or split lines.
+
+What it still gets wrong: script fonts that imitate handwriting, and some
+lines of a heavily scaled-down typed page. `test_print_hand.py` checks both
+directions on real crops: neat handwriting from the sample page stays
+handwriting, a printed heading from the receipt stays print.
+

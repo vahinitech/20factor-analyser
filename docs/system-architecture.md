@@ -231,6 +231,10 @@ Source: `scripts/train_print_hand.py` output, recorded in
 | Real handwriting pages | 120 | 94 to 100% per page |
 | Script fonts made to look like handwriting | 15 | 12.5% and 43% per page |
 
+With it, 0 of the 120 planted pages are refused as print (95 before), and
+on seven of the nine real sample photos five handwritten lines are kept
+that used to be dropped, with no printed line let through.
+
 ### Pen motion models (imu2text)
 
 Published in imu2text `results/comparison_best.md` and `docs/benchmarks.md`;
