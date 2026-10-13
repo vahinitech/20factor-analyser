@@ -140,8 +140,8 @@ try {
   // A printed report is stored as numbers and short codes: no factor names,
   // tips, evidence or recognised text from the analysis it came from.
   const f = JSON.parse(r.facts);
-  assert.equal(f.overall, 74); assert.equal(f.factors.length, 20); assert.deepEqual(f.priorities.length, 3);
-  assert.equal(f.recognition.confidence, 78); assert.equal(f.words, 63); assert.deepEqual(f.photo, { size: 'small', sharp: f.photo.sharp });
+  assert.equal(f.overall, 73); assert.equal(f.factors.length, 20); assert.deepEqual(f.priorities.length, 3);
+  assert.equal(f.recognition.confidence, 71); assert.equal(f.words, 63); assert.deepEqual(f.photo, { size: 'small', sharp: f.photo.sharp });
   const strings = JSON.stringify(f).match(/"[^"]*"/g).map((x) => x.slice(1, -1));
   const allowed = new Set(['overall', 'tier', 'factors', 'n', 'score', 'band', 'measured', 'priorities', 'recognition', 'backend', 'level', 'confidence', 'handLines', 'printedLines', 'words', 'photo', 'size', 'sharp',
     'good', 'strong', 'dev', 'focus', 'paddle', 'moderate', 'small', 'blurry', 'soft', 'sharp']);

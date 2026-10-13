@@ -10,8 +10,13 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
   zoomed to the parts it looks at, with numbered boxes, two rows with crops
-  cut from that photo and a chip per Free factor (1, 5, 7, 8, 18); the
-  server sends Free the evidence regions of those five factors only.
+  cut from that photo, and the factors grouped into four section cards
+  (Letter shapes and size, Spacing and lines, Neatness and readability,
+  How you write), each with its own small map circling that section's
+  places; How you write says it needs the Vahini sensor pen (owner,
+  2026-10-13). The server sends Free the evidence regions of its five
+  factors only. The sample page opens on all 20 factors; `?example=free`
+  shows the Free report.
   Details in the report format baseline.
 
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through

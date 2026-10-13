@@ -1145,10 +1145,13 @@ function renderSampleReport(){
   if (!host || !data || !data.analysis) return;
   collectIntake();
   const s = data.sample || {};
-  const proExample = new URLSearchParams(location.search).get('example') === 'pro';
-  // The page ships the Free heading; the Pro example names its own tier.
+  // The sample opens on all 20 factors (owner, 2026-10-13, #138);
+  // ?example=free shows exactly what a free photo check gives. ?example=pro
+  // is the old address of the 20-factor view and still opens it.
+  const proExample = new URLSearchParams(location.search).get('example') !== 'free';
+  // The page ships the 20-factor heading; the Free example names its own.
   const title = $('#sample-title');
-  if (title && proExample) title.textContent = 'What your Pro handwriting report looks like';
+  if (title && !proExample) title.textContent = 'What your Free handwriting report looks like';
   const sampleAnalysis = proExample ? data.analysis : {...data.analysis, access:{tier:'free'}, results:data.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
   VahiniReport.render(host, {
     intake: state.intake,

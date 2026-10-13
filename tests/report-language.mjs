@@ -121,7 +121,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
     await useDesign(page);
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.goto(BASE + '/frontend/sample-report.html' + (pro ? '?example=pro' : ''), { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html' + (pro ? '' : '?example=free'), { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     const en = await page.evaluate(SNAPSHOT);
     add(en.lang === 'en' && !TELUGU.test(en.text) && await page.inputValue('#report-lang') === 'en', `${tier}: English by default, lang="en"`);
@@ -186,7 +186,7 @@ try {
       Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
     });
     const errors = []; page.on('pageerror', e => errors.push(e.message));
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     await page.selectOption('#report-lang', 'te');
     add(await page.evaluate(() => document.getElementById('report-host').getAttribute('lang')) === 'te' && errors.length === 0,
@@ -197,7 +197,7 @@ try {
   // A missing Telugu sentence prints in English, for that sentence only.
   {
     const page = await browser.newPage();
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     const r = await page.evaluate(() => {
       delete window.VahiniReportStrings.te['p2.title'];
@@ -212,7 +212,7 @@ try {
   // "Your progress" follows the language.
   {
     const page = await browser.newPage();
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     const p = await page.evaluate(() => {
       localStorage.clear();
@@ -238,7 +238,7 @@ try {
     const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
     await page.addInitScript(() => { localStorage.setItem('vahini_report_lang', 'te'); });
     if (art) await page.addInitScript(a => { window.VAHINI_REPORT_ART = a; }, REPORT_ART);
-    await page.goto(BASE + '/frontend/sample-report.html' + (pro ? '?example=pro' : ''), { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html' + (pro ? '' : '?example=free'), { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     await renderLongest(page, pro);
     const pages = async () => ((await page.pdf({ format: 'A4', printBackground: true })).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
@@ -265,7 +265,7 @@ try {
     const requests = []; page.on('request', r => requests.push([r.method(), r.url()]));
     await page.addInitScript(l => { localStorage.setItem('vahini_report_lang', l); window.__opened = []; window.open = (u, ...rest) => { window.__opened.push([u, ...rest]); return null; };
       Object.defineProperty(navigator, 'canShare', { value: undefined, configurable: true }); }, lang);
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     await page.evaluate(() => {
       const d = window.VAHINI_SAMPLE_REPORT;
@@ -315,7 +315,7 @@ try {
       Object.defineProperty(navigator, 'share', { value: d => { window.__shared.push({ keys: Object.keys(d), files: (d.files || []).map(f => ({ name: f.name, type: f.type, size: f.size })) }); return Promise.resolve(); }, configurable: true });
       window.open = u => { window.__opened.push(u); return null; };
     });
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     await page.click('#share-pdf');
     await page.waitForFunction(() => window.__shared.length > 0, null, { timeout: 60000 });
@@ -331,7 +331,7 @@ try {
   {
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     await useDesign(page);
-    await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+    await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
     await page.waitForSelector('#report-host .practice-page');
     const box = () => page.evaluate(() => {
       const r = s => document.querySelector(s).getBoundingClientRect();
@@ -348,7 +348,7 @@ try {
         intro: !!document.querySelector('#sample-intro h1'), outside: [...document.querySelectorAll('a[href="case-studies.html"]')].filter(a => !a.closest('#report-side') && !a.closest('#site-footer') && !a.closest('#site-nav')).length };
     });
     add(!about.toolbar && about.note && about.intro && about.outside === 0 && JSON.stringify(about.links) === JSON.stringify([
-      ['Free example: five factors', 'sample-report.html'], ['Pro example: 20 factors', 'sample-report.html?example=pro'],
+      ['All 20 factors', 'sample-report.html'], ['Free check: five factors', 'sample-report.html?example=free'],
       ['Before and after stories', 'case-studies.html'], ['Analyse your own page', 'analyser.html']]),
       'The sample banner is gone; its note and four links are in the side panel', about);
     const wide = await box();

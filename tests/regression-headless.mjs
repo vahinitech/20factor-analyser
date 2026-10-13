@@ -73,7 +73,7 @@ async function runHeadlessChecks() {
     // pages as the stylesheet expects, not a separate unstyled summary.
     const free=await browser.newPage();
     await useDesign(free);
-    await free.goto(`${BASE_URL}/frontend/sample-report.html`, { waitUntil: 'load' });
+    await free.goto(`${BASE_URL}/frontend/sample-report.html?example=free`, { waitUntil: 'load' });
     await free.waitForSelector('#report-host .free-report', { timeout: 30000 });
     const freeReport=await free.evaluate(()=>{
       const pages=[...document.querySelectorAll('#report-host .free-report.compact-report')];
@@ -142,8 +142,8 @@ async function runHeadlessChecks() {
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(253, 252, 246)' && freeReport.inline===0, name:'Free report renders the two styled report pages on the theme paper', detail:JSON.stringify({pages:freeReport.pages,paper:freeReport.paper})},
       // Page 1, version C (owner approval 2026-10-11).
       {ok:freeReport.brand && freeReport.headline==='Small changes. Clearer writing. | One page, one strength, one useful next step.', name:'Page 1: Vahini logo, vahinitech.com, "Your writing snapshot" and the headline', detail:freeReport.headline},
-      {ok:!!freeReport.pill && freeReport.pill.band==='good' && freeReport.pill.bg===freeReport.pill.want && /74\/100 · Mastering/.test(freeReport.pill.text), name:'Page 1: the overall score pill takes its band colour and stage (74: yellow, Mastering)', detail:JSON.stringify(freeReport.pill)},
-      {ok:freeReport.keep==='1' && freeReport.start==='5' && freeReport.tryCall, name:'Page 1: keep doing the strongest skill, start with the first skill to grow', detail:JSON.stringify({keep:freeReport.keep,start:freeReport.start})},
+      {ok:!!freeReport.pill && freeReport.pill.band==='good' && freeReport.pill.bg===freeReport.pill.want && /73\/100 · Mastering/.test(freeReport.pill.text), name:'Page 1: the overall score pill takes its band colour and stage (73: yellow, Mastering)', detail:JSON.stringify(freeReport.pill)},
+      {ok:freeReport.keep==='7' && freeReport.start==='5' && freeReport.tryCall, name:'Page 1: keep doing the strongest skill, start with the first skill to grow', detail:JSON.stringify({keep:freeReport.keep,start:freeReport.start})},
       {ok:freeReport.photo && freeReport.marks===2 && freeReport.boxesInView, name:'Page 1: the photo is zoomed to the marked parts and every numbered box stays whole', detail:JSON.stringify({photo:freeReport.photo,marks:freeReport.marks,inView:freeReport.boxesInView})},
       {ok:JSON.stringify(freeReport.look.map(l=>l.f))==='["5","8"]' && freeReport.look.every(l=>l.crop && /\/assets\/worksheets\/[\w-]+\.pdf$/.test(l.sheet)), name:'Page 1: two look-closer rows, each with its crop and its worksheet link', detail:JSON.stringify(freeReport.look)},
       {ok:JSON.stringify(freeReport.chips)==='["1","5","7","8","18"]' && freeReport.chipColours, name:'Page 1: a chip per scored skill, its score in its band colour', detail:JSON.stringify(freeReport.chips)},

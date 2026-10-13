@@ -689,8 +689,64 @@ function render(host, data){
       <div class="sn-act">${PENCIL}<div><b>${esc(t('sn.next'))}</b>${esc(t.has('action.'+f.n)?t('action.'+f.n):'')}${sheet?` <a class="sn-sheet" href="${esc(sheetURL(sheet))}">${esc(t('sn.sheet',{title:sheet.title}))}</a>`:''}</div></div></div>`;
   };
   const chipList=measured.slice().sort((a,b)=>a.n-b.n);
-  const chips=chipList.map(f=>{const band=bandOf(f.score), g=improved.includes(f);
-    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;}).join('');
+  /* ---- the four sections, each with its own small map (owner idea and
+     names, 2026-10-13, #137 and #139). A section circles only its own
+     skills' places (analyser places, #131), so circles for one area do not
+     pile up on another's. How you write (13 to 16) needs the Vahini sensor
+     pen and has no map. ------------------------------------------------- */
+  const SECTION_ORDER=['structure','spatial','style','dynamics'];
+  const SEC_MAX_SKILLS=2, SEC_MAX_PLACES=3, SEC_MAX_RINGS=3;
+  const lookPlaces=f=>{const c=crops[f.n];
+    // A blend's places are its parts' places (from_factor): they are circled
+    // in their own sections, never again here.
+    return (c&&Array.isArray(c.places)?c.places:[]).filter(p=>p.role==='look'&&!p.from_factor&&Array.isArray(p.bbox)&&p.bbox.length===4).slice(0,SEC_MAX_PLACES);};
+  const secMap=allMarks=>{
+    if(!det||!size||!allMarks.length) return {html:'',nums:new Set()};
+    const [W,H]=size;
+    // Zoom in on the first place (the lowest skill's clearest example) and
+    // circle only the places that fall in that view: a whole-page map makes
+    // every circle too small to read.
+    const a=allMarks[0].b, aw=Math.max(a[2]*1.3,0.42*W), ah=aw/1.6;
+    const acx=a[0]+a[2]/2, acy=a[1]+a[3]/2;
+    const marksIn=allMarks.filter(m=>{const cx=m.b[0]+m.b[2]/2, cy=m.b[1]+m.b[3]/2;
+      return Math.abs(cx-acx)<=aw/2&&Math.abs(cy-acy)<=ah/2;});
+    let x0=Math.min(...marksIn.map(m=>m.b[0])), y0=Math.min(...marksIn.map(m=>m.b[1]));
+    let x1=Math.max(...marksIn.map(m=>m.b[0]+m.b[2])), y1=Math.max(...marksIn.map(m=>m.b[1]+m.b[3]));
+    const pad=Math.max(0.04*W, 0.5*Math.max(...marksIn.map(m=>m.b[3])));
+    x0=Math.max(0,x0-pad); y0=Math.max(0,y0-pad); x1=Math.min(W,x1+pad); y1=Math.min(H,y1+pad);
+    const want=1.6; let w=x1-x0, h=y1-y0;
+    if(w/h<want){ const nw=Math.min(W,h*want), cx=(x0+x1)/2; x0=Math.max(0,Math.min(W-nw,cx-nw/2)); x1=x0+nw; }
+    else { const nh=Math.min(H,w/want), cy=(y0+y1)/2; y0=Math.max(0,Math.min(H-nh,cy-nh/2)); y1=y0+nh; }
+    const vw=x1-x0, r=Math.max(vw*0.045,6);
+    const rings=marksIn.map(m=>{const [bx,by,bw,bh]=m.b, gap=0.18*Math.min(bw,bh)+vw*0.008;
+      const rx=bw/2+gap, ry=bh/2+gap, cx=bx+bw/2, cy=by+bh/2;
+      return `<g class="sn-ring" data-mark="${m.num}"><ellipse cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" stroke-width="${(vw*0.009).toFixed(2)}"/><circle cx="${(cx+rx*0.71).toFixed(1)}" cy="${(cy-ry*0.71).toFixed(1)}" r="${r.toFixed(1)}"/><text x="${(cx+rx*0.71).toFixed(1)}" y="${(cy-ry*0.71+r*0.42).toFixed(1)}" font-size="${(r*1.2).toFixed(1)}" text-anchor="middle">${m.num}</text></g>`;}).join('');
+    return {html:`<div class="sn-sec-map"><svg viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${vw.toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('sec.map.alt'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>${rings}</svg></div>`,
+      nums:new Set(marksIn.map(m=>m.num))};
+  };
+  const chipHTML=(f,num)=>{const band=bandOf(f.score), g=improved.includes(f);
+    return `<div class="sn-chip" data-factor="${f.n}">${num?`<i class="sn-chip-num">${num}</i>`:`<span class="sn-ic">${iconSVG(f.n)}</span>`}<span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;};
+  const sectionCard=sec=>{
+    if(sec==='dynamics'){
+      const pen=[13,14,15,16].map(n=>`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('');
+      const live=chipList.filter(f=>f.sec==='dynamics');
+      return `<div class="sn-sec sn-sec-pen" data-section="dynamics"><h4>${esc(t('sec.dynamics'))}</h4>${live.length?live.map(f=>chipHTML(f,0)).join(''):`<p class="sn-pen-note">${PENCIL}${esc(t('sec.pen'))}</p><div class="sn-pen-list">${pen}</div>`}</div>`;
+    }
+    const fs=chipList.filter(f=>f.sec===sec);
+    if(!fs.length) return '';
+    const circled=fs.filter(f=>lookPlaces(f).length).sort((a,b)=>a.score-b.score||a.n-b.n).slice(0,SEC_MAX_SKILLS);
+    const num=f=>circled.indexOf(f)+1;
+    // One circle per line or gap: two skills that point at the same line
+    // keep the first (lowest) skill's circle.
+    const seen=new Set();
+    const ms=circled.flatMap(f=>lookPlaces(f).map(p=>({b:p.bbox,num:num(f),key:p.kind==='gap'?'gap:'+p.bbox.join(','):p.region_id||p.bbox.join(',')})))
+      .filter(m=>!seen.has(m.key)&&seen.add(m.key)).slice(0,SEC_MAX_RINGS);
+    const map=secMap(ms);
+    // A chip carries its number only when its circle is on the map.
+    const whole=!map.html?`<p class="sn-sec-whole">${esc(t('sec.whole'))}</p>`:'';
+    return `<div class="sn-sec" data-section="${sec}"><h4>${esc(t('sec.'+sec))}</h4>${map.html}${whole}<div class="sn-sec-chips">${fs.map(f=>chipHTML(f,map.nums.has(num(f))?num(f):0)).join('')}</div></div>`;
+  };
+  const sectionsHTML=SECTION_ORDER.map(sectionCard).join('');
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
   const firstSheet=worksheetFor(first)||rowFactors.map(worksheetFor).find(Boolean)||null;
@@ -708,7 +764,7 @@ function render(host, data){
       <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
       ${lookItems.length?`<h3 class="sn-h3">${esc(t('sn.look'))}</h3>${lookItems.map(lookRow).join('')}`:''}
       <div class="sn-h3row"><h3 class="sn-h3">${esc(t('sn.chips'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
-      <div class="sn-chips">${chips}</div>
+      <div class="sn-secs">${sectionsHTML}</div>
       ${practice}${cta}`:empty}
       ${foot(1,page1Note)}</section>`;
 

@@ -100,7 +100,7 @@ export async function checkPracticePrint(browser, baseUrl){
       const page=await browser.newPage({viewport:{width:1200,height:1000}});
       await useDesign(page);
       if(art)await page.addInitScript(a=>{window.VAHINI_REPORT_ART=a;},REPORT_ART);
-      await page.goto(baseUrl+'/frontend/sample-report.html'+(pro?'?example=pro':''),{waitUntil:'load'});
+      await page.goto(baseUrl+'/frontend/sample-report.html'+(pro?'':'?example=free'),{waitUntil:'load'});
       await page.waitForSelector('#report-host .practice-page');
       await renderLongest(page,pro);
       const shape=await page.evaluate(()=>({
