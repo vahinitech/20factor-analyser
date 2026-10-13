@@ -105,7 +105,7 @@ def fetch(path):
 def parse(path):
     """{writer: {letter: [strokes, ...]}} for the test writers' lower-case
     letters. Strokes are (n, 2) arrays in millimetres, y down."""
-    out, cur = {}, None
+    out, strokes, mm = {}, None, 1.0
     with open(path, encoding="utf-8") as f:
         for raw in f:
             parts = raw.split()
@@ -114,16 +114,16 @@ def parse(path):
             if parts[0] == "WORD":
                 split, site, rest = parts[2].split("_", 2)
                 letter = parts[1]
-                cur = None
+                strokes = None
                 if split == "tst" and letter.islower() and letter.isalpha():
                     writer = f"{site}_{rest.split('-')[0]}"
-                    cur = {"mm": UNITS_PER_MM[site], "strokes": []}
+                    strokes, mm = [], UNITS_PER_MM[site]
                     out.setdefault(writer, {}).setdefault(letter, []).append(
-                        cur["strokes"]
+                        strokes
                     )
-            elif parts[0] == "POINTS" and cur is not None:
+            elif parts[0] == "POINTS" and strokes is not None:
                 xy = np.array(parts[3:], dtype=np.float64).reshape(-1, 2)
-                cur["strokes"].append(xy / cur["mm"])
+                strokes.append(xy / mm)
     return out
 
 
@@ -143,7 +143,7 @@ def writer_scale(letters):
     return X / max(1e-6, float(np.median(heights)))
 
 
-def build_page(letters, rng, kind):
+def build_page(letters, rng, kind, style="photo"):
     """Lines of words in one writer's letters, with one planted mistake.
     Returns (image, lines, truth) where lines carry box, poly and text."""
     scale = writer_scale(letters)
@@ -247,12 +247,11 @@ def build_page(letters, rng, kind):
     far = np.concatenate(ink).max(0)
     width = max(PAGE_W, int(far[0]) + MARGIN)
     height = max(PAGE_H, int(far[1]) + MARGIN)
-    img = np.full((height, width, 3), 250, np.uint8)
-    for s in ink:
-        pts = np.round(s).astype(np.int32).reshape(-1, 1, 2)
-        cv2.polylines(img, [pts], False, (40, 40, 60), PEN, cv2.LINE_AA)
-    noise = rng.normal(0, 3, img.shape)
-    img = np.clip(img.astype(np.float64) + noise, 0, 255).astype(np.uint8)
+    img = (
+        _photo(ink, width, height, rng)
+        if style == "photo"
+        else _plain(ink, width, height, rng)
+    )
 
     hand_lines = []
     for pl in page_lines:
@@ -271,6 +270,70 @@ def build_page(letters, rng, kind):
     if truth is not None:
         truth = [int(round(v)) for v in truth]
     return img, hand_lines, truth
+
+
+def _plain(ink, width, height, rng):
+    """An even 2-pixel pen on clean paper."""
+    img = np.full((height, width, 3), 250, np.uint8)
+    for s in ink:
+        pts = np.round(s).astype(np.int32).reshape(-1, 1, 2)
+        cv2.polylines(img, [pts], False, (40, 40, 60), PEN, cv2.LINE_AA)
+    noise = rng.normal(0, 3, img.shape)
+    return np.clip(img.astype(np.float64) + noise, 0, 255).astype(np.uint8)
+
+
+def _photo(ink, width, height, rng):
+    """A phone photo of a pen page: the stroke thickens and thins as
+    pressure changes, the ink is not one colour, the light falls off
+    across the page, the paper has grain, and the picture is slightly
+    soft and saved as JPEG."""
+    scale = 4  # draw large, then shrink, for smooth varying strokes
+    big = np.zeros((height * scale, width * scale), np.uint8)
+    for s in ink:
+        n = len(s)
+        # Pressure: a slow random walk along the stroke, 1.2 to 3.4 px.
+        walk = np.cumsum(rng.normal(0, 0.25, n))
+        walk = (walk - walk.min()) / max(1e-6, np.ptp(walk))
+        widths = 1.2 + 2.2 * walk * rng.uniform(0.6, 1.0)
+        pts = s * scale
+        for i in range(n - 1):
+            a = tuple(int(v) for v in np.round(pts[i]))
+            b = tuple(int(v) for v in np.round(pts[i + 1]))
+            cv2.line(big, a, b, 255, max(1, int(round(widths[i] * scale))))
+    mask = (
+        cv2.resize(big, (width, height), interpolation=cv2.INTER_AREA).astype(
+            np.float64
+        )
+        / 255.0
+    )
+    ink_rgb = np.array([45, 45, 95]) + rng.normal(0, 8, 3)
+    yy, xx = np.mgrid[0:height, 0:width]
+    light = (
+        0.86
+        + 0.12
+        * (
+            rng.uniform(0.3, 1.0) * xx / width
+            + rng.uniform(0.3, 1.0) * yy / height
+        )
+        / 2
+    )
+    paper = np.array([238, 234, 222]) * light[..., None]
+    grain = cv2.GaussianBlur(rng.normal(0, 6, (height, width)), (0, 0), 1.2)
+    paper = paper + grain[..., None]
+    shade = 1.0 - 0.25 * cv2.GaussianBlur(
+        rng.uniform(0, 1, (height, width)), (0, 0), 3
+    )
+    a = mask[..., None] * np.clip(shade[..., None], 0.7, 1.0)
+    img = paper * (1 - a) + ink_rgb * a
+    img = cv2.GaussianBlur(np.clip(img, 0, 255), (0, 0), 0.7)
+    img = np.clip(img, 0, 255).astype(np.uint8)
+    ok, buf = cv2.imencode(
+        ".jpg",
+        cv2.cvtColor(img, cv2.COLOR_RGB2BGR),
+        [cv2.IMWRITE_JPEG_QUALITY, 82],
+    )
+    assert ok
+    return cv2.cvtColor(cv2.imdecode(buf, cv2.IMREAD_COLOR), cv2.COLOR_BGR2RGB)
 
 
 def _place(glyph, scale, x, baseline, grow):
@@ -321,9 +384,15 @@ def _covers(place, truth):
     return ix * iy / max(1, tw * th)
 
 
-def evaluate(pages):
+def evaluate(pages, letter=False):
     """Per kind: how often a mark of the right skill covers the mistake,
-    how often the first mark does, how tight the mark is, and the score."""
+    how often the first mark does, how tight the mark is, and the score.
+    letter=True judges the letter-level marks for skills 5, 7 and 8."""
+
+    def marks_for(page, n):
+        key = n + "L" if letter and n in ("5", "7", "8") else n
+        return page["places"].get(key, [])
+
     rows = {}
     for page in pages:
         row = rows.setdefault(
@@ -339,15 +408,13 @@ def evaluate(pages):
         )
         row["pages"] += 1
         for n in ("5", "7", "8"):
-            look = [
-                p for p in page["places"].get(n, []) if p["role"] == "look"
-            ]
+            look = [p for p in marks_for(page, n) if p["role"] == "look"]
             row["marks"].setdefault(n, []).append(len(look))
             row["scores"].setdefault(n, []).append(page["scores"].get(n))
         n = page["skill"]
         if n is None:
             continue
-        look = [p for p in page["places"].get(n, []) if p["role"] == "look"]
+        look = [p for p in marks_for(page, n) if p["role"] == "look"]
         hits = [p for p in look if _covers(p["bbox"], page["truth"]) >= 0.5]
         if hits:
             row["hit"] += 1
@@ -376,11 +443,24 @@ def evaluate(pages):
                 for n, v in row["scores"].items()
             },
         }
+        feats = [
+            p["scores"]["letter_features"]
+            for p in pages
+            if p["kind"] == kind and "letter_features" in p["scores"]
+        ]
+        out[kind]["letter_features_mean"] = {
+            k: round(
+                float(np.mean([f[k] for f in feats if f[k] is not None])), 3
+            )
+            for k in (feats[0] if feats else {})
+            if any(f[k] is not None for f in feats)
+        }
     return out
 
 
 def run_page(img, hand_lines, ocr):
     import computer_vision  # pylint: disable=import-outside-toplevel
+    import letter_geometry  # pylint: disable=import-outside-toplevel
     import scoring  # pylint: disable=import-outside-toplevel
 
     if ocr:
@@ -402,6 +482,13 @@ def run_page(img, hand_lines, ocr):
         for r in analysis["results"]
     }
     places = {n: regions[n].get("places", []) for n in ("1", "5", "7", "8")}
+    # The letter-level measurement (backend/letter_geometry.py), kept
+    # beside today's marks so the two can be compared on the same pages.
+    geo = letter_geometry.measure_page(img, hand_lines)
+    places["5L"] = letter_geometry.size_marks(hand_lines, geo)
+    places["7L"] = letter_geometry.baseline_marks(hand_lines, geo)
+    places["8L"] = letter_geometry.spacing_marks(hand_lines, geo)
+    scores["letter_features"] = letter_geometry.page_features(geo)
     return places, scores
 
 
@@ -419,6 +506,12 @@ def main(argv=None):
     ap.add_argument("--json")
     ap.add_argument("--save-pages")
     ap.add_argument("--ocr", action="store_true")
+    ap.add_argument(
+        "--style",
+        choices=("photo", "plain"),
+        default="photo",
+        help="photo: varying pen, light, grain, blur, JPEG; plain: even pen",
+    )
     args = ap.parse_args(argv)
 
     writers = parse(fetch(args.uji))
@@ -431,7 +524,7 @@ def main(argv=None):
         ):
             continue
         for kind, skill in KINDS:
-            img, hand_lines, truth = build_page(letters, rng, kind)
+            img, hand_lines, truth = build_page(letters, rng, kind, args.style)
             places, scores = run_page(img, hand_lines, args.ocr)
             if places is None:
                 refused.append({"writer": writer, "kind": kind, **scores})
@@ -467,7 +560,9 @@ def main(argv=None):
         "writers": len({p["writer"] for p in pages}),
         "seed": args.seed,
         "reader": "real OCR" if args.ocr else "line outlines from the ink",
+        "style": args.style,
         "by_kind": evaluate(pages),
+        "by_kind_letter_level": evaluate(pages, letter=True),
         "refused": refused,
     }
     if args.json:
