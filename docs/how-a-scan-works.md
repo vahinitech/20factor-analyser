@@ -253,3 +253,70 @@ same photo always gets the same circles. That is the analyser's
 "same photo, same scores" rule, and the tests in
 `backend/tests/test_factor_evidence.py` and `test_marked_places.py` check
 each selection, including the same page giving the same places twice.
+
+## 8. Testing the marks on pages with planted mistakes
+
+`scripts/planted_pages.py` writes pages from real handwritten letters and
+plants one known mistake on each, then checks whether a mark of the right
+skill covers it (at least half of the planted box inside the mark).
+
+- **Letters:** UJI Pen Characters, version 2 (Prat, Castro, Llorens, Marzal
+  and Vilar, 2008, doi:10.24432/C5FG8S, CC BY 4.0), only the 20 writers of
+  its published test split. Downloaded and checked by SHA-256; neither the
+  data nor the pages are committed. The same data trained imu2text's
+  drawing reader, so the evaluation and any later letter reader share one
+  licence-clean source.
+- **Pages:** one writer per page, four lines in our cast's words, small
+  letters scaled to one height, letter and word gaps varied by up to 30%
+  and 15%. One page per writer for each kind below: 120 pages a run.
+- **Lines:** handed to the evidence code as the reader would hand them, one
+  box and the smallest rotated rectangle around each line's ink.
+  `--ocr` uses the real reader instead.
+
+`backend/tests/test_planted_pages.py` checks the generator itself without
+the download.
+
+Results, seed 0, line outlines from the ink (seeds 1 and 2 agree to within
+15 points on every "marked" figure):
+
+| Planted mistake | Skill | Marked | Mark size vs mistake | Skill score (clean page: 5 7.55, 7 9.16, 8 7.91) |
+|---|---|---|---|---|
+| One line sinking 4 degrees | 7 | 100% | 0.97 | 7: 8.03; and 5 falls to 5.88 |
+| One word gap three times wider | 8 | 100% | 0.72 | 8: 6.32 |
+| One small letter 1.7 times taller | 5 | 15% | 0.01 | 5: 7.88 |
+| One word sunk below the line | 7 | 15% | 0.04 | 7: 9.05 |
+| One word gap a quarter as wide | 8 | 0% | | 8: 7.63 |
+
+"Mark size vs mistake" is the planted box's area over the mark's: 1.0 is a
+mark exactly around the mistake, 0.01 is a whole line around one letter.
+
+What this says:
+
+- **Tilted lines and wide gaps are found, and the mark is in the right
+  place.**
+- **A tall letter or a sunken word barely changes the score and is rarely
+  marked.** A line box is as tall as its tallest letter, and most lines
+  already hold a b, d, h or k, so one oversized small letter changes
+  nothing that is measured. A sunken word deepens the box but does not
+  turn its top edge, which is the angle factor 7 reads. Both need the
+  letter-level measurement in section 7.
+- **Words written too close together are missed.** `line_word_gaps` takes
+  the widest gaps as the word breaks, so a gap narrower than the gaps
+  between letters is never counted as a word break; the mark goes to a
+  letter gap instead.
+- **Tilt lowers Size Consistency** from 7.55 to 5.88 (section 4).
+- **Clean pages still get marks:** on average 0.75 size, 0.05 angle and
+  1.4 word-gap marks a page, from each writer's own variation and from
+  letter gaps read as word gaps.
+
+**Through the real reader (`--ocr`), 94 of the 120 pages were refused as
+printed** ("no handwriting"): every line found on them was classified
+printed. These pages are drawn with an even 2-pixel pen on clean paper, so
+stroke width barely varies, and that is the main sign of print the check
+uses (section 2, step 4). That makes them easier to call printed than a
+phone photo, so 94 of 120 is not a rate for real visitors. It does show
+the check can refuse real handwriting written with an even pen on clean
+paper, which a neat child with a gel pen, scanned rather than
+photographed, could also produce. The pages need varied pen width, blur
+and paper texture before the `--ocr` numbers mean anything, and the
+printed check needs its own test on neat handwriting.
