@@ -409,7 +409,7 @@ function rotate(list, lastIds, count){
   return Array.from({ length: Math.min(count, list.length) }, (_, k)=>list[(start + k) % list.length]);
 }
 /* Pictures of Vahini and friends come only from the host page, as
-   same-site paths in window.VAHINI_REPORT_ART ({cheer, tip, encourage}),
+   same-site paths in window.VAHINI_REPORT_ART ({teacher, tip, encourage}),
    validated like VAHINI_NOTICE_ART. The drawings are not part of this
    repository; without the map the report has no pictures. */
 function reportArt(key){
@@ -476,7 +476,6 @@ const FACTOR_ICON = {1:'shape',2:'order',3:'shape',4:'smooth',5:'size',6:'tall',
   11:'line',12:'slant',13:'pen',14:'pen',15:'smooth',16:'pen',17:'slant',18:'read',19:'shape',20:'page'};
 const iconSVG = n=>`<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${ICON[FACTOR_ICON[n]||'page']}</svg>`;
 const LEAF = '<svg class="sn-leaf" viewBox="0 0 40 48" aria-hidden="true"><path class="lf-stem" d="M20 46 C20 30 20 20 21 8"/><path class="lf-a" d="M21 22 C10 22 5 14 6 6 C14 6 21 12 21 22Z"/><path class="lf-b" d="M21 30 C32 30 37 22 36 14 C28 14 21 20 21 30Z"/></svg>';
-const TICK = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg>';
 const PENCIL = '<svg class="sn-pencil" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M4 20l1-4L16 5l3 3L8 19z"/><path d="M14 7l3 3"/></svg>';
 const SPARK = '<svg class="sn-spark" viewBox="0 0 26 40" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M4 4l10 10M16 20h9M4 34l10-4"/></svg>';
 
@@ -636,8 +635,24 @@ function render(host, data){
   const overallBandId=overall==null?null:bandOf(overall/10);
   const scorePill=overall==null?'':`<span class="sn-score band-${overallBandId}" data-band="${overallBandId}"><b>${overall}</b><small>${esc(t('sn.outof'))} · ${esc(stage(overallBandId))}</small></span>`;
   const best=sorted.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0]||measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
-  const cheer=artImg('cheer','rp-art-cheer');
-  const keepBand=best?`<div class="sn-keep" data-factor="${best.n}"><span class="sn-tick">${TICK}</span><span class="sn-keep-label">${esc(t('sn.keep'))}</span><div class="sn-keep-text"><h3>${esc(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best))}</h3><p>${esc(t.has('keep.text.'+best.n)?t('keep.text.'+best.n):'')}</p></div>${cheer}${LEAF}</div>`:'';
+  /* Vidhya's note (owner, 2026-10-14): the page opens the way a teacher
+     writes on a child's work. What went well, the one or two skills to
+     work on next, a promise to practise, and her score for the page.
+     Vidhya is the series' teacher; her picture comes from the host like
+     every character. Built only from this report's own scores. */
+  const lcFirst=x=>t.lang==='en'&&x?x.charAt(0).toLowerCase()+x.slice(1):x;
+  const goalOf=f=>t.has('goal.'+f.n)?t('goal.'+f.n):nameOn(1,f)+'.';
+  const grows=rowFactors.slice(0,2).map(goalOf);
+  const growText=grows.length>1?t('vt.grow.two',{a:lcFirst(grows[0]),b:lcFirst(grows[1])})
+    :grows.length?t('vt.grow.one',{a:lcFirst(grows[0])}):t('vt.grow.none');
+  const keepText=best?(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best)+'.'):'';
+  const teacherNote=best?`<div class="sn-teacher">${artImg('teacher','rp-art-teacher')}<div class="sn-note">
+      <h2 class="sn-title">${esc(t('sn.title'))}</h2>
+      <p class="sn-keep" data-factor="${best.n}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(t('vt.well',{keep:keepText}))}</p>
+      <p class="sn-grow">${esc(growText)}</p>
+      <p class="sn-promise">${esc(t('vt.promise'))}</p>
+      <div class="sn-note-end">${overall!=null?`<p class="sn-grade">${esc(t('vt.score',{score:overall,stage:stage(overallBandId)}))}</p>`:''}<p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
+    :`<h2 class="sn-title">${esc(t('sn.title'))}</h2>`;
   // "Look closer": the first two skills to grow; a spelling finding may
   // take the second row.
   const lookItems=rowFactors.slice(0,2).map(f=>({f}));
@@ -718,7 +733,10 @@ function render(host, data){
   if(ms.slope&&ms.slope.line){
     const L=ms.slope.line, [p,q]=L.baseline;
     const draw=vw=>line(p,[q[0],p[1]],'sn-m-level',vw*0.006,'8 6')+line(p,q,'sn-m-slope',vw*0.01);
-    mRows.push({key:'slope',strip:strip(pad(L.bbox,0.04,0.35),draw),text:t('m.slope.text',{mean:ms.slope.mean_deg.toFixed(1),angle:L.angle.toFixed(1)}),scores:[7,11,12,17]});
+    // Written as a teacher would say it: nearly straight below 3 degrees
+    // on average; the red line climbs when its right end is higher.
+    const lean=t(ms.slope.mean_deg<3?'m.slope.flat':'m.slope.tilt')+' '+t(q[1]<p[1]?'m.slope.up':'m.slope.down');
+    mRows.push({key:'slope',strip:strip(pad(L.bbox,0.04,0.35),draw),text:lean,scores:[7,11,12,17]});
   }
   // 3. How tall the small letters are: the line's small-letter band.
   if(ms.size&&ms.size.line){
@@ -736,14 +754,19 @@ function render(host, data){
       return line([M.usual_x,y],[x-s*0.3,y],'sn-m-arrow',vw*0.009)+line([x-s*1.2,y-s*0.7],[x-s*0.3,y],'sn-m-arrow',vw*0.009)+line([x-s*1.2,y+s*0.7],[x-s*0.3,y],'sn-m-arrow',vw*0.009);})():'');
     mRows.push({key:'margin',strip:strip(region,draw),text:t(o?'m.margin.text':'m.margin.even'),scores:[10]});
   }
-  // 5. How easily our reader read it: the hardest line, underlined.
+  // 5. How easy the writing is to read: the hardest line, underlined,
+  //    and on it up to two letters the reader was least sure of, circled
+  //    (owner, 2026-10-14; letter_boxes.hardest_letters).
   if(ms.reading&&ms.reading.line){
     const L=ms.reading.line, [x,y,w,h]=L.bbox;
     const [u0,u1]=L.underline||[[x,y+h*0.98],[x+w,y+h*0.98]];
-    const draw=vw=>line(u0,u1,'sn-m-read',vw*0.008,'7 5');
-    mRows.push({key:'read',strip:strip(pad(L.bbox,0.03,0.3),draw),text:t('m.read.text',{pct:ms.reading.confidence_pct}),scores:[1,19]});
+    const hard=(Array.isArray(L.letters)?L.letters:[]).filter(l=>Array.isArray(l.bbox)&&l.bbox.length===4).slice(0,2);
+    const ring=(b,vw)=>`<ellipse class="sn-m-read sn-m-ring" cx="${b[0]+b[2]/2}" cy="${b[1]+b[3]/2}" rx="${(Math.max(b[2],b[3]*0.32)*0.85).toFixed(1)}" ry="${(b[3]*0.55).toFixed(1)}" stroke-width="${(vw*0.007).toFixed(2)}"/>`;
+    const draw=vw=>line(u0,u1,'sn-m-read',vw*0.008,'7 5')+hard.map(l=>ring(l.bbox,vw)).join('');
+    const said=t(ms.reading.confidence_pct>=70?'m.read.easy':'m.read.hard')+' '+t(hard.length>1?'m.read.circled':hard.length?'m.read.circled.one':'m.read.line');
+    mRows.push({key:'read',strip:strip(pad(L.bbox,0.03,0.3),draw),text:said,how:t(hard.length?'m.read.how':'m.read.how.line'),scores:[1,19]});
   }
-  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)}</p><small>${esc(t('m.'+r.key+'.how'))}</small></div><div class="sn-m-scores">${r.scores.map(scoreChip).join('')}</div></div>`;
+  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${r.scores.map(scoreChip).join('')}</div></div>`;
   const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${ns.map(scoreChip).join('')}</div></div>`;
   const counts=data.pipeline||{};
   const mSub=t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
@@ -771,8 +794,8 @@ function render(host, data){
   const page1Note=[t('sn.note'),spellingStatus,rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
   const page1=`<section class="page free-report compact-report snapshot-page snapshot-${tier}" data-screen-label="Your review">
       <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}${scorePill}</div></div>
-      <h2 class="sn-title">${esc(t('sn.title'))}</h2><p class="sn-sub">${esc(t('sn.sub'))}</p>${sinceLine}
-      ${measured.length?`${keepBand}
+      ${teacherNote}${sinceLine}
+      ${measured.length?`
       <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
       ${measuredHTML}
       ${practice}${cta}`:empty}

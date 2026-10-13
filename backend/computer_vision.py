@@ -1031,7 +1031,9 @@ def _infer_doc_context(lines, layout):
     }
 
 
-def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
+def vl_analyze(
+    arr: np.ndarray, lines, include_evidence=True, read_letters=None
+):
     layout = _layout_features(arr)
     if not include_evidence:
         return {
@@ -1049,7 +1051,7 @@ def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
     import marked_places  # pylint: disable=import-outside-toplevel
 
     measurements = marked_places.page_measurements(
-        arr, _accepted_lines(arr, regions, lines)
+        arr, _accepted_lines(arr, regions, lines), read_letters=read_letters
     )
     return {
         "measurements": measurements,

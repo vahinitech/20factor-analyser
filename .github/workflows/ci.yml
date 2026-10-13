@@ -68,7 +68,7 @@ jobs:
             backend/model_map.py backend/gpu_detect.py \
             backend/computer_vision.py backend/scoring.py \
             backend/marked_places.py backend/letter_geometry.py \
-            backend/print_hand.py \
+            backend/print_hand.py backend/letter_boxes.py \
             backend/scan_slots.py backend/capacity.py \
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
@@ -108,6 +108,7 @@ jobs:
             backend.tests.test_letter_geometry \
             backend.tests.test_print_hand \
             backend.tests.test_page_measurements \
+            backend.tests.test_letter_boxes \
             backend.tests.test_api_concurrency \
             backend.tests.test_image_formats \
             backend.tests.test_daily_limit

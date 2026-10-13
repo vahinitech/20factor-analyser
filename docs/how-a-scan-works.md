@@ -462,11 +462,18 @@ read, the marks through the real reader:
 
 | Planted mistake | Line marks | Letter-level marks |
 |---|---|---|
-| Line sloping 4 degrees | 90% | 90% |
-| Word gap 3 times wider | 60% | 15% |
-| Word sunk below the line | 0% | 60% |
-| Small letter 1.7 times taller | 0% | 0% |
-| Word gap a quarter as wide | 5% | 0% |
+| Line sloping 4 degrees | 50% | 50% |
+| Word gap 3 times wider | 30% | 0% |
+| Word sunk below the line | 5% | 40% |
+| Small letter 1.7 times taller | 5% | 5% |
+| Word gap a quarter as wide | 0% | 0% |
+
+These were first published higher (90%, 60%, 60% in the best column).
+That run called the reader without the server's set-up and with
+`lang=en`, so it read with library-default models and both image
+variants; the figures above use the server's set-up and `auto`, as the
+website and the app send (2026-10-13, section 11). The `en` path also
+keeps most lines twice, which changes scores (#145).
 
 These are lower than with the ink outlines in section 9 because the
 reader's line boxes are looser and sometimes join or split lines.
@@ -476,3 +483,83 @@ lines of a heavily scaled-down typed page. `test_print_hand.py` checks both
 directions on real crops: neat handwriting from the sample page stays
 handwriting, a printed heading from the receipt stays print.
 
+
+## 11. Where each letter is: positions from the reader
+
+Small circles on a single letter need to know where each letter is. The
+line reader already knows: PaddleOCR's recogniser reads a line as a row of
+narrow columns and decides one character per column, and with
+`return_word_box` it reports the column every kept character came from.
+`backend/letter_boxes.py` maps each column back along the line's outline
+to a point on the page (a quarter of a column back, measured below), and
+the half-way points between neighbouring letters give each letter its
+left and right edges. The column's own probability is a per-letter
+confidence; PaddleOCR averages it away, so the evaluation reads it with a
+hook. Nothing in the report uses any of this yet.
+
+**How it is measured** (`scripts/letter_boxes_eval.py`, analyser image):
+the 120 planted photo-style pages of section 8, with every real letter's
+box recorded, read by the server's reader (`auto`, the server's
+models), then each kept line read again for its columns. A placed letter
+lands when its centre is inside a real letter's box.
+
+| On 120 pages, 15,968 real letters | |
+|---|---|
+| Letters on the lines the reader kept | 70% |
+| Of those, letters the reader placed | 67% |
+| Placed letters that land on a real letter | 92% |
+| Landed letters it also named correctly | 91% |
+| Distance from the letter's centre (median / 90th percentile) | 0.15 / 0.36 letter widths |
+
+The quarter-column shift was chosen on eight other planted pages (seed
+1). There, the column's middle (half a column forward) gave a median
+error of 0.30 letter widths with 83% of letters within half a letter of
+their centre; a quarter back gave 0.14 and 97%.
+
+**Per-letter confidence** separates letters named right (median 0.95)
+from letters named wrong (0.71), but not cleanly: below 0.7 catches 48%
+of the wrong ones and also 15% of the right ones.
+
+**On the real sample photo** the 16 lines give 287 placed letters. On the
+two neat lines at the top the boxes sit on their letters; on the crowded
+lower half they drift between lines, and 123 of the 287 have a confidence
+under 0.7.
+
+**Letter size from the slots.** Each placed small letter's height is the
+ink in the middle 60% of its slot, keeping only the ink pieces that reach
+across most of the slot so that a neighbour's leaning stem is left out
+(`letter_geometry.placed_letter_heights`). It is compared with the other
+copies of the same letter on the page when there are three or more,
+because writers make some letters bigger by habit (one writer's a is half
+as tall again as their n on every line); otherwise with the line's
+typical small letter. On the 20 pages with one small letter planted 1.7
+times taller (cut-off 1.5, chosen on seed 1, reported on seed 0):
+
+| | Reader slots | Ink gaps (today's letter level) |
+|---|---|---|
+| Planted letter measured at all | 40% | 5% |
+| Its measured size, when measured | 1.58 | 1.72 |
+| Tallest letter on the page is the planted one | 20% | 0% |
+| Pages (all 120) with a false "tall letter" | 63% | 37% |
+| False tall letters per page | 1.4 | 0.5 |
+
+Of the 172 false tall letters, 59 are a tall or low letter (an l, a g)
+read as a small one, 16 sit between letters, 7 are another small letter
+and 90 are the right letter really measuring that tall: an ordinary
+small letter varies about as much (95th percentile 1.4) as the planted
+one was changed. With the text known (only letters the reader named
+right) the false pages fall to 40%, still too many. A letter size circle
+from a free photo is therefore not ready: it would be wrong more often
+than right. Letter size can be measured against the printed lines of a
+worksheet instead, where the target height is printed rather than
+guessed from the child's other letters.
+
+**What this means for small circles.** When the reader places a letter it
+is nearly always on a real one, so a circle drawn only on placed letters
+points at the right place on clean writing. It misses about a third of
+the letters, so it cannot say that a letter is absent or count every
+letter, and it is not yet reliable on crowded pages. The positions are
+good enough to circle the letters the reader found hardest to read (the
+lowest per-letter confidence), which is a true statement about the
+reading; they are not good enough for letter size, as measured above.
+Any report change waits for the owner.

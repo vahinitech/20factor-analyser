@@ -92,7 +92,10 @@ async function runHeadlessChecks() {
         inline:[...document.querySelectorAll('#report-host [style]')].filter(e=>/grid-template-columns|max-width/.test(e.getAttribute('style'))).length,
         brand:!!host.querySelector('.sn-top img.sn-logo[src$="assets/vahini-logo.png"]') && /vahinitech\.com/.test(host.querySelector('.sn-top').textContent) && /Your writing snapshot/i.test(host.querySelector('.sn-eyebrow').textContent),
         pill:pill?{band:pill.dataset.band,bg:getComputedStyle(pill).backgroundColor,want:rgb(getComputedStyle(pill).getPropertyValue('--sn-'+pill.dataset.band).trim()),text:pill.textContent}:null,
-        headline:host.querySelector('.sn-title').textContent+' | '+host.querySelector('.sn-sub').textContent,
+        headline:host.querySelector('.sn-title').textContent,
+        rings:host.querySelectorAll('.sn-m[data-measure=read] ellipse.sn-m-ring').length,
+        readText:host.querySelector('.sn-m[data-measure=read] .sn-m-what p')?.textContent||'',
+        teacher:host.querySelector('.sn-teacher')?{grow:host.querySelector('.sn-grow').textContent,grade:host.querySelector('.sn-grade')?.textContent||'',sign:host.querySelector('.sn-sign').textContent}:null,
         keep:host.querySelector('.sn-keep')?host.querySelector('.sn-keep').dataset.factor:null,
         start:host.querySelector('.sn-start')?host.querySelector('.sn-start').dataset.factor:null,
         tryCall:!!host.querySelector('.sn-start .sn-try'),
@@ -144,7 +147,13 @@ async function runHeadlessChecks() {
     result.results.push(
       {ok:freeReport.pages===2 && freeReport.paper==='rgb(253, 252, 246)' && freeReport.inline===0, name:'Free report renders the two styled report pages on the theme paper', detail:JSON.stringify({pages:freeReport.pages,paper:freeReport.paper})},
       // Page 1, version C (owner approval 2026-10-11).
-      {ok:freeReport.brand && freeReport.headline==='Small changes. Clearer writing. | One page, one strength, one useful next step.', name:'Page 1: Vahini logo, vahinitech.com, "Your writing snapshot" and the headline', detail:freeReport.headline},
+      {ok:freeReport.brand && freeReport.headline==='A note from your teacher', name:'Page 1: Vahini logo, vahinitech.com, "Your writing snapshot" and Vidhya\'s note', detail:freeReport.headline},
+      // The two letters the reader found hardest, circled on the hardest line
+      // (letter_boxes.hardest_letters, owner 2026-10-14).
+      {ok:freeReport.rings===2 && /the circled letters most of all/.test(freeReport.readText), name:'Reading row circles the two hardest letters', detail:{rings:freeReport.rings,text:freeReport.readText}},
+      // Vidhya's note (owner, 2026-10-14): the skills to work on, her score
+      // for the page and her name.
+      {ok:!!freeReport.teacher && /^Two things to work on next\. First, leave the same gap between words\./.test(freeReport.teacher.grow) && /My score for this page: 74 out of 100/.test(freeReport.teacher.grade) && freeReport.teacher.sign==='Vidhya, your writing teacher', name:'Page 1: Vidhya\'s note names the skills to work on, the score and her name', detail:freeReport.teacher},
       {ok:!!freeReport.pill && freeReport.pill.band==='good' && freeReport.pill.bg===freeReport.pill.want && /74\/100 · Mastering/.test(freeReport.pill.text), name:'Page 1: the overall score pill takes its band colour and stage (74: yellow, Mastering)', detail:JSON.stringify(freeReport.pill)},
       {ok:freeReport.keep==='7' && freeReport.start==='8' && freeReport.tryCall, name:'Page 1: keep doing the strongest skill, start with the first skill to grow', detail:JSON.stringify({keep:freeReport.keep,start:freeReport.start})},
       {ok:freeReport.photo && freeReport.marks===0, name:'Page 1: the photo is shown whole, without numbered boxes (the rows below draw each measurement)', detail:JSON.stringify({photo:freeReport.photo,marks:freeReport.marks})},

@@ -237,7 +237,19 @@ print(f"[capacity] {scan_slots.PLAN}", flush=True)
 # _to_data_url/_crop_rgb/_build_region_previews/_full_page_preview/
 # _factor_region_map/_layout_features/_infer_doc_context/vl_analyze now
 # live in computer_vision.py. This module only needs vl_analyze.
-_vl_analyze = computer_vision.vl_analyze
+# The hardest letters on the hardest line are read again by the scan's
+# own PaddleOCR recogniser, so only where PaddleOCR reads the page.
+_READ_LETTERS = (
+    ocr_backends.read_line_letters
+    if OCR_BACKEND in ("paddle", "hybrid", "auto")
+    else None
+)
+
+
+def _vl_analyze(arr, lines, include_evidence=True):
+    return computer_vision.vl_analyze(
+        arr, lines, include_evidence, read_letters=_READ_LETTERS
+    )
 
 
 # _SECTIONS/_FACTOR_META/_FACTOR_EXTRAS/_mean/_std/_cv/_clamp10/_band/
