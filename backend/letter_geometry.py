@@ -179,6 +179,8 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
 
     words = []
     for group in groups:
+        if not group:
+            continue
         drops = [
             sp[3] - (slope * (sp[0] + sp[2]) / 2.0 + icpt) for sp in group
         ]
