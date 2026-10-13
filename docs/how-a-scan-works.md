@@ -525,11 +525,41 @@ two neat lines at the top the boxes sit on their letters; on the crowded
 lower half they drift between lines, and 123 of the 287 have a confidence
 under 0.7.
 
+**Letter size from the slots.** Each placed small letter's height is the
+ink in the middle 60% of its slot, keeping only the ink pieces that reach
+across most of the slot so that a neighbour's leaning stem is left out
+(`letter_geometry.placed_letter_heights`). It is compared with the other
+copies of the same letter on the page when there are three or more,
+because writers make some letters bigger by habit (one writer's a is half
+as tall again as their n on every line); otherwise with the line's
+typical small letter. On the 20 pages with one small letter planted 1.7
+times taller (cut-off 1.5, chosen on seed 1, reported on seed 0):
+
+| | Reader slots | Ink gaps (today's letter level) |
+|---|---|---|
+| Planted letter measured at all | 40% | 5% |
+| Its measured size, when measured | 1.58 | 1.72 |
+| Tallest letter on the page is the planted one | 20% | 0% |
+| Pages (all 120) with a false "tall letter" | 63% | 37% |
+| False tall letters per page | 1.4 | 0.5 |
+
+Of the 172 false tall letters, 59 are a tall or low letter (an l, a g)
+read as a small one, 16 sit between letters, 7 are another small letter
+and 90 are the right letter really measuring that tall: an ordinary
+small letter varies about as much (95th percentile 1.4) as the planted
+one was changed. With the text known (only letters the reader named
+right) the false pages fall to 40%, still too many. A letter size circle
+from a free photo is therefore not ready: it would be wrong more often
+than right. Letter size can be measured against the printed lines of a
+worksheet instead, where the target height is printed rather than
+guessed from the child's other letters.
+
 **What this means for small circles.** When the reader places a letter it
 is nearly always on a real one, so a circle drawn only on placed letters
 points at the right place on clean writing. It misses about a third of
 the letters, so it cannot say that a letter is absent or count every
-letter, and it is not yet reliable on crowded pages. Next: measure each
-placed letter's height inside its box for the size circles, check that
-on the tall-letter pages, and decide with the owner before any report
-change.
+letter, and it is not yet reliable on crowded pages. The positions are
+good enough to circle the letters the reader found hardest to read (the
+lowest per-letter confidence), which is a true statement about the
+reading; they are not good enough for letter size, as measured above.
+Any report change waits for the owner.

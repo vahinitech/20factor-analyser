@@ -51,6 +51,40 @@ class TestLetterGeometry(unittest.TestCase):
         if lg.cv2 is None:
             self.skipTest("OpenCV unavailable")
 
+    def test_placed_letter_heights_find_the_tall_letter(self):
+        # Letters placed where they really are (as a perfect reader
+        # would), measured from the ink in each slot.
+        rng = np.random.default_rng(0)
+        truth = []
+        img, lines, planted_box = planted.build_page(
+            LETTERS, rng, "tall_letter", "plain", letters_out=truth
+        )
+        gray = lg.cv2.cvtColor(img, lg.cv2.COLOR_RGB2GRAY)
+        geo = lg.measure_page(img, lines)
+        sizes = []
+        for li, (line, _g) in enumerate(zip(lines, geo)):
+            placed = [
+                {"char": t["ch"], "bbox": t["bbox"]}
+                for t in truth
+                if t["line"] == li
+            ]
+            sizes += lg.placed_letter_heights(gray, line, placed)
+        self.assertTrue(sizes)
+        lg.same_letter_ratios(sizes)
+        self.assertTrue(all(s["char"] in lg.SMALL_LETTERS for s in sizes))
+        top = max(sizes, key=lambda s: s["ratio"])
+        x, y, w, h = top["bbox"]
+        tx, ty, tw, th = planted_box
+        self.assertTrue(tx <= x + w / 2 <= tx + tw)
+        self.assertGreater(top["ratio"], 1.4)
+        others = [s["ratio"] for s in sizes if s is not top]
+        self.assertLess(abs(float(np.median(others)) - 1.0), 0.2)
+
+    def test_placed_letter_heights_need_letters(self):
+        img, lines, _truth, _geo = page("clean")
+        gray = lg.cv2.cvtColor(img, lg.cv2.COLOR_RGB2GRAY)
+        self.assertEqual(lg.placed_letter_heights(gray, lines[0], []), [])
+
     def test_level_lines_measure_level(self):
         _img, _lines, _truth, geo = page("clean")
         for g in geo:

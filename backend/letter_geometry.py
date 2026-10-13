@@ -114,11 +114,10 @@ def _xheight(mask, mx0, y0, slope, icpt):
     return xh if xh >= MIN_XHEIGHT_PX else None
 
 
-def measure_line(gray, line):  # pylint: disable=too-many-locals
-    """Word and letter geometry for one line, or None when the line is too
-    small or has no usable ink. gray: full-page uint8 grayscale."""
-    if cv2 is None:
-        return None
+def _line_ink(gray, line):
+    """The line's ink: (x0, y0, mask, blobs) for the padded line box, with
+    only the blobs whose middle lies inside the line's own box, or None.
+    gray: full-page uint8 grayscale."""
     x, y, w, h = [int(round(float(v))) for v in (line.get("box") or [])[:4]]
     if w < 6 or h < 12:
         return None
@@ -142,7 +141,18 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
         keep.append(i)
     if not comps:
         return None
-    mask = np.isin(labels, keep)
+    return x0, y0, np.isin(labels, keep), comps
+
+
+def measure_line(gray, line):  # pylint: disable=too-many-locals
+    """Word and letter geometry for one line, or None when the line is too
+    small or has no usable ink. gray: full-page uint8 grayscale."""
+    if cv2 is None:
+        return None
+    ink = _line_ink(gray, line)
+    if ink is None:
+        return None
+    x0, y0, mask, comps = ink
     spans = _spans(comps)
 
     text = str(line.get("text") or "")
@@ -249,6 +259,100 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
         "words": words,
         "letters": letters,
     }
+
+
+# The middle of a placed letter's slot: its edges are half-way points
+# to the neighbours, so their outer fifths can hold a neighbour's stroke.
+SLOT_CORE = 0.6
+# Inside the slot, ink pieces narrower than this share of it are a
+# neighbour's stroke leaning in (the stem of an l or a t), not the letter.
+SLOT_PIECE = 0.4
+# A line needs this many measured small letters for a typical height.
+MIN_PEERS = 4
+# A letter is compared with its own kind when the page has this many of
+# it: writers make some letters bigger by habit (an a half as tall again
+# as their n), and that is their style, not a size change.
+MIN_SAME = 3
+
+
+def _slot_height(mask, c0, c1):
+    """Top and bottom row of the letter's ink between columns c0 and c1:
+    the pieces of ink that reach across most of the slot."""
+    sub = mask[:, c0:c1].astype(np.uint8)
+    n, _labels, stats, _ = cv2.connectedComponentsWithStats(sub, 8)
+    if n <= 1:
+        return None
+    width = c1 - c0
+    pieces = [stats[i] for i in range(1, n)]
+    keep = [st for st in pieces if st[2] >= SLOT_PIECE * width]
+    if not keep:
+        keep = [max(pieces, key=lambda st: st[4])]
+    top = min(int(st[1]) for st in keep)
+    bottom = max(int(st[1] + st[3]) for st in keep)
+    return top, bottom
+
+
+def placed_letter_heights(gray, line, placed):
+    """Small letters the reader placed on one line (letter_boxes.py),
+    each with the height of its ink and that height over the line's
+    typical small letter (the median of the line's measured small
+    letters). Joined writing included: the slot comes from the reader,
+    not from gaps in the ink. Empty when the line has fewer than
+    MIN_PEERS measured small letters."""
+    if cv2 is None or not placed:
+        return []
+    ink = _line_ink(gray, line)
+    if ink is None:
+        return []
+    x0, y0, mask, _comps = ink
+    found = []
+    for p in placed:
+        if p["char"] not in SMALL_LETTERS:
+            continue
+        bx, _by, bw, _bh = p["bbox"]
+        trim = bw * (1.0 - SLOT_CORE) / 2.0
+        c0 = max(0, int(round(bx + trim)) - x0)
+        c1 = min(mask.shape[1], int(round(bx + bw - trim)) - x0)
+        if c1 - c0 < 2:
+            continue
+        rows = _slot_height(mask, c0, c1)
+        if rows is None:
+            continue
+        top, bottom = y0 + rows[0], y0 + rows[1]
+        found.append((p["char"], [bx, top, bw, bottom - top]))
+    if len(found) < MIN_PEERS:
+        return []
+    typical = float(np.median([b[3] for _c, b in found]))
+    return [
+        {
+            "char": c,
+            "bbox": b,
+            "height": b[3],
+            "typical": typical,
+            "ratio": b[3] / typical,
+        }
+        for c, b in found
+    ]
+
+
+def same_letter_ratios(letters):
+    """Re-measure each letter of a page (placed_letter_heights, all
+    lines) against the other copies of the same letter, in place, when
+    the page has MIN_SAME of it; otherwise it keeps its line's ratio.
+    Sets "reference" to "same letter" or "line"."""
+    heights = {}
+    for let in letters:
+        heights.setdefault(let["char"], []).append(let["height"])
+    for let in letters:
+        same = heights[let["char"]]
+        if len(same) >= MIN_SAME:
+            rest = list(same)
+            rest.remove(let["height"])
+            let["ratio"] = let["height"] / float(np.median(rest))
+            let["reference"] = "same letter"
+        else:
+            let["reference"] = "line"
+    return letters
 
 
 def measure_page(arr, lines):

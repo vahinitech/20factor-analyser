@@ -18,6 +18,16 @@ claimed once, by the nearest placed letter.
     centre error      distance from the real letter's centre, in
                       letter widths
 
+Letter size: each placed small letter's height, from the ink in the
+middle of its slot, over the same letter elsewhere on the page
+(or its line's typical small letter when the page has fewer than three)
+(letter_geometry.placed_letter_heights). On the pages with one letter
+planted 1.7 times taller it reports how often the tallest letter is the
+planted one, and on every page how many other letters cross each
+cut-off (a circle there would be a false mark). The ink-gap letters of
+letter_geometry.size_marks, today's letter-level marks, are scored the
+same way beside it.
+
 It also keeps the reader's confidence for each character (the column's
 own probability, which PaddleOCR averages away) to see whether a low
 character confidence picks out the letters it named wrongly.
@@ -41,6 +51,10 @@ sys.path.insert(0, os.path.join(HERE, "..", "backend"))
 import cv2  # noqa: E402  pylint: disable=wrong-import-position
 import planted_pages  # noqa: E402  pylint: disable=wrong-import-position
 import letter_boxes  # noqa: E402  pylint: disable=wrong-import-position
+import letter_geometry  # noqa: E402  pylint: disable=wrong-import-position
+
+CUTOFFS = (1.3, 1.4, 1.5, 1.6)
+SURE = 0.9
 
 _LAST_PROBS = []
 
@@ -145,6 +159,132 @@ def match(truth, placed):
     return out
 
 
+def _inside(box, truth):
+    x, y, w, h = box
+    tx, ty, tw, th = truth
+    return tx <= x + w / 2 <= tx + tw and ty <= y + h / 2 <= ty + th
+
+
+def _real_letter(box, truth):
+    """The real letter under a measured slot's centre, or None."""
+    x = box[0] + box[2] / 2
+    y = box[1] + box[3] / 2
+    for t in truth:
+        tx, ty, tw, th = t["bbox"]
+        if tx <= x <= tx + tw and ty - th <= y <= ty + 2 * th:
+            return t["ch"]
+    return None
+
+
+def letter_sizes(img, once, placed, truth_box, truth=()):
+    """Every placed small letter's height ratio, and whether it is the
+    planted tall letter; the same for today's ink-gap letter marks."""
+    gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    geo = letter_geometry.measure_page(img, once)
+    sizes = []
+    for li, (line, g) in enumerate(zip(once, geo)):
+        if not g:
+            continue
+        mine = [p for p in placed if p["line"] == li]
+        conf = {p["bbox"][0]: p["conf"] for p in mine}
+        for h in letter_geometry.placed_letter_heights(gray, line, mine):
+            h["planted"] = bool(truth_box) and _inside(h["bbox"], truth_box)
+            h["conf"] = conf.get(h["bbox"][0])
+            h["real"] = _real_letter(h["bbox"], truth)
+            sizes.append(h)
+    letter_geometry.same_letter_ratios(sizes)
+    marks = letter_geometry.size_marks(once, geo)
+    sizes = [
+        {
+            "char": h["char"],
+            "ratio": round(h["ratio"], 3),
+            "reference": h["reference"],
+            "conf": None if h["conf"] is None else round(h["conf"], 3),
+            "planted": h["planted"],
+            "real": h["real"],
+        }
+        for h in sizes
+    ]
+    return sizes, [
+        {
+            "ratio": m["value"],
+            "planted": bool(truth_box) and _inside(m["bbox"], truth_box),
+        }
+        for m in marks
+        if m["direction"] == "taller"
+    ]
+
+
+def size_summary(rows, key):
+    """On the tall-letter pages: the tallest letter is the planted one
+    and crosses the cut-off. On every page: other letters over it."""
+    tall = [r[key] for r in rows if r["kind"] == "tall_letter"]
+    pages = [r[key] for r in rows]
+    out = {
+        "tall_pages": len(tall),
+        "planted_letter_placed_pct": (
+            round(
+                100.0
+                * sum(any(l["planted"] for l in t) for t in tall)
+                / len(tall),
+                1,
+            )
+            if tall
+            else None
+        ),
+        "planted_ratio_median": (
+            round(
+                float(
+                    np.median(
+                        [l["ratio"] for t in tall for l in t if l["planted"]]
+                    )
+                ),
+                3,
+            )
+            if any(l["planted"] for t in tall for l in t)
+            else None
+        ),
+        "other_ratio_p95": (
+            round(
+                float(
+                    np.percentile(
+                        [
+                            l["ratio"]
+                            for t in pages
+                            for l in t
+                            if not l["planted"]
+                        ],
+                        95,
+                    )
+                ),
+                3,
+            )
+            if any(not l["planted"] for t in pages for l in t)
+            else None
+        ),
+    }
+    for c in CUTOFFS:
+        first = 0
+        for t in tall:
+            top = max(t, key=lambda l: l["ratio"], default=None)
+            first += bool(top and top["planted"] and top["ratio"] >= c)
+        false = [
+            sum(not l["planted"] and l["ratio"] >= c for l in t) for t in pages
+        ]
+        out[str(c)] = {
+            "tallest_is_planted_pct": (
+                round(100.0 * first / len(tall), 1) if tall else None
+            ),
+            "pages_with_false_mark_pct": round(
+                100.0 * sum(f > 0 for f in false) / max(1, len(false)), 1
+            ),
+            "false_marks_per_page": round(
+                float(np.mean(false)) if false else 0.0, 2
+            ),
+        }
+    return out
+
+
 def summarise(rows):
     truth = sum(r["truth"] for r in rows)
     on_kept = sum(r["truth_on_kept"] for r in rows)
@@ -210,6 +350,11 @@ def main(argv=None):
         "--rec-model",
         help="default: the server's English model (VAHINI_OCR_REC_MODEL_MAP)",
     )
+    ap.add_argument(
+        "--kinds",
+        help="comma list of planted kinds to read (all pages are still "
+        "built, so each page is the same as in a full run)",
+    )
     ap.add_argument("--json")
     ap.add_argument("--save-pages")
     args = ap.parse_args(argv)
@@ -239,9 +384,11 @@ def main(argv=None):
             continue
         for kind, _skill in planted_pages.KINDS:
             truth = []
-            img, _lines, _t = planted_pages.build_page(
+            img, _lines, planted = planted_pages.build_page(
                 letters, rng, kind, args.style, letters_out=truth
             )
+            if args.kinds and kind not in args.kinds.split(","):
+                continue
             # "auto", as the website and the app send.
             raw, _err, backend, _meta = recognizer.collect_lines(img, "auto")
             _found, hand = recognizer.extract_hand_lines(
@@ -253,6 +400,13 @@ def main(argv=None):
             once = _one_per_line(hand)
             placed = place_letters(img, once, rec)
             pairs = match(truth, placed)
+            sizes, gap_marks = letter_sizes(
+                img,
+                once,
+                placed,
+                planted if kind == "tall_letter" else None,
+                truth,
+            )
             kept_lines = {
                 t["line"]
                 for t in truth
@@ -268,6 +422,12 @@ def main(argv=None):
                 "truth_on_kept": sum(t["line"] in kept_lines for t in truth),
                 "repeated_lines": len(hand) - len(once),
                 "placed": len(placed),
+                "sizes": sizes,
+                # Letters the reader named with confidence of at least
+                # SURE: a letter it was unsure of may be two letters, or
+                # a neighbour's stroke.
+                "sizes_sure": [l for l in sizes if (l["conf"] or 0) >= SURE],
+                "gap_marks": gap_marks,
                 "pairs": [
                     {
                         "same": placed[pi]["char"].lower()
@@ -310,6 +470,13 @@ def main(argv=None):
         "style": args.style,
         "rec_model": args.rec_model,
         "all": summarise(rows),
+        "letter_size": size_summary(rows, "sizes"),
+        "letter_size_reader_sure": size_summary(rows, "sizes_sure"),
+        "letter_size_ink_gaps_today": size_summary(rows, "gap_marks"),
+        "letter_sizes_by_page": [
+            {"writer": r["writer"], "kind": r["kind"], "sizes": r["sizes"]}
+            for r in rows
+        ],
         "by_kind": {k: summarise(v) for k, v in by_kind.items()},
         "refused": refused,
     }
