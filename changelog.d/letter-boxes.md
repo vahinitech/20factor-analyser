@@ -1,0 +1,2 @@
+- Added: `backend/letter_boxes.py` places each letter of a line on the page from the reader's own character columns, and `scripts/letter_boxes_eval.py` measures it on planted pages: 92% of placed letters land on a real letter, about a third of letters are not placed, and the crowded lower half of the sample photo is not reliable yet. Not used by the report. Results in `docs/how-a-scan-works.md`, section 11.
+- Fixed: `scripts/planted_pages.py --ocr` now reads with the server's set-up and `auto`, as the website does; the section 10 table is corrected to the lower figures.

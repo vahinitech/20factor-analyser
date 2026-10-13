@@ -36,6 +36,7 @@ section 8.
 
 import argparse
 import hashlib
+import importlib.util
 import json
 import os
 import sys
@@ -143,7 +144,7 @@ def writer_scale(letters):
     return X / max(1e-6, float(np.median(heights)))
 
 
-def build_page(letters, rng, kind, style="photo"):
+def build_page(letters, rng, kind, style="photo", letters_out=None):
     """Lines of words in one writer's letters, with one planted mistake.
     Returns (image, lines, truth) where lines carry box, poly and text."""
     scale = writer_scale(letters)
@@ -188,6 +189,7 @@ def build_page(letters, rng, kind, style="photo"):
         x = line_["x0"]
         pts_line = []
         word_boxes = []
+        line_letters = []
         for wj, word in enumerate(line_["words"]):
             drop = (
                 0.6 * X
@@ -209,6 +211,7 @@ def build_page(letters, rng, kind, style="photo"):
                 if grow != 1.0:
                     truth = _box(placed)
                 word_pts.extend(placed)
+                line_letters.append((g["ch"], placed))
                 x += width + LETTER_GAP * rng.uniform(0.7, 1.3)
             if drop:
                 truth = _box(word_pts)
@@ -239,6 +242,17 @@ def build_page(letters, rng, kind, style="photo"):
             cx, cy = box[0], line_["baseline"]
             strokes = [_rotate(s, cx, cy, TILT_DEG) for s in strokes]
             truth = _box(strokes)
+            line_letters = [
+                (ch, [_rotate(s, cx, cy, TILT_DEG) for s in placed])
+                for ch, placed in line_letters
+            ]
+        if letters_out is not None:
+            # Where every letter really is, for checking letter positions
+            # from the reader (scripts/letter_boxes_eval.py).
+            letters_out.extend(
+                {"ch": ch, "line": lj, "bbox": _box(placed)}
+                for ch, placed in line_letters
+            )
         ink.extend(strokes)
         text = " ".join("".join(g["ch"] for g in w) for w in line_["words"])
         page_lines.append({"strokes": strokes, "text": text})
@@ -458,15 +472,34 @@ def evaluate(pages, letter=False):
     return out
 
 
+_SERVER = []
+
+
+def real_reader():
+    """The reader exactly as the server sets it up: loading
+    backend/ppocr-server.py runs its recognizer.configure() and backend
+    registry from the same environment. Calling recognizer directly
+    skips that and reads with library defaults (other models, and
+    repeated lines from the image variants)."""
+    if not _SERVER:
+        spec = importlib.util.spec_from_file_location(
+            "planted_server", os.path.join(ROOT, "backend", "ppocr-server.py")
+        )
+        server = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(server)
+        _SERVER.append(server)
+    return _SERVER[0].recognizer
+
+
 def run_page(img, hand_lines, ocr):
     import computer_vision  # pylint: disable=import-outside-toplevel
     import letter_geometry  # pylint: disable=import-outside-toplevel
     import scoring  # pylint: disable=import-outside-toplevel
 
     if ocr:
-        import recognizer  # pylint: disable=import-outside-toplevel
-
-        raw, _err, backend, _meta = recognizer.collect_lines(img, "en")
+        recognizer = real_reader()
+        # "auto", as the website and the app send (ocr.js, AnalyserApi).
+        raw, _err, backend, _meta = recognizer.collect_lines(img, "auto")
         found, hand_lines = recognizer.extract_hand_lines(
             img, raw, refine_backend=backend
         )
