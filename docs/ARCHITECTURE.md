@@ -1,5 +1,7 @@
 # Vahini 20-Factor Engine: Architecture & Algorithms
 
+> The system view (components, engines, languages, deployment and every measured benchmark) is in [system-architecture.md](system-architecture.md); the exact path one photo takes, with code references, is in [how-a-scan-works.md](how-a-scan-works.md).
+
 ### A plain-language guide to how Vahini reads handwriting
 
 This document explains **how the Vahini engine turns a photo of handwriting (or a pen recording)
