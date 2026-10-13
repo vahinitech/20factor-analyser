@@ -266,22 +266,11 @@ def _full_page_preview(arr: np.ndarray):
     return _to_data_url(small, quality=78)
 
 
-def _factor_region_map(arr: np.ndarray, regions, lines=None):
-    """Locate score inputs in the full handwriting set, never the preview cap.
-
-    Boxes use processed-image pixels, the same space as hand_lines/proc_w/h.
-    A context crop is not proof of a local defect. In particular, OCR proxies
-    and composite scores cannot identify an exact faulty character.
-    """
-    # Reuse the scorer's row grouping and camera-tilt correction so evidence
-    # selection follows the measurements that produced the report.
-    import marked_places
-    from scoring import (
-        _group_lines_by_rows,
-        _page_tilt_degrees,
-        _detilted_left_x,
-    )
-
+def _accepted_lines(arr, regions, lines):
+    """Handwriting lines with valid boxes clamped to the image, sorted top
+    to bottom and numbered line_1, line_2, ... (the numbering evidence,
+    places and measurements share). The number is also written back onto
+    the caller's line so classification can name the same region."""
     height, width = arr.shape[:2]
     source = (
         lines
@@ -314,6 +303,28 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
         source = item.pop("_source")
         if isinstance(source, dict):
             source["evidence_id"] = item["evidence_id"]
+
+    return accepted
+
+
+def _factor_region_map(arr: np.ndarray, regions, lines=None):
+    """Locate score inputs in the full handwriting set, never the preview cap.
+
+    Boxes use processed-image pixels, the same space as hand_lines/proc_w/h.
+    A context crop is not proof of a local defect. In particular, OCR proxies
+    and composite scores cannot identify an exact faulty character.
+    """
+    # Reuse the scorer's row grouping and camera-tilt correction so evidence
+    # selection follows the measurements that produced the report.
+    import marked_places
+    from scoring import (
+        _group_lines_by_rows,
+        _page_tilt_degrees,
+        _detilted_left_x,
+    )
+
+    height, width = arr.shape[:2]
+    accepted = _accepted_lines(arr, regions, lines)
 
     # Only accepted handwriting rectangles reach page-wide context or
     # multi-region crops. Printed headers between regions remain white.
@@ -1028,13 +1039,20 @@ def vl_analyze(arr: np.ndarray, lines, include_evidence=True):
             "document_context": {},
             "regions": [],
             "factor_regions": {},
+            "measurements": {},
             "ambiguous_word_gaps": [],
         }
     context = _infer_doc_context(lines, layout)
     context["writing_style"] = infer_writing_style(arr, lines)
     regions = _build_region_previews(arr, lines)
     factor_regions = _factor_region_map(arr, regions, lines)
+    import marked_places  # pylint: disable=import-outside-toplevel
+
+    measurements = marked_places.page_measurements(
+        arr, _accepted_lines(arr, regions, lines)
+    )
     return {
+        "measurements": measurements,
         "document_context": context,
         "layout": layout,
         "regions": regions,

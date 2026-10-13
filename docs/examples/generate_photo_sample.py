@@ -105,6 +105,7 @@ def main():
         },
         "photo": photo_data_url(arr),
         "factor_regions": trim_whole_page(payload.get("factor_regions") or {}),
+        "measurements": payload.get("measurements") or {},
     }
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
         f.write(

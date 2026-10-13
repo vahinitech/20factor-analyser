@@ -37,12 +37,13 @@ export async function checkReportLayout(page){
           const children=[...p.children].filter(c=>c.getClientRects().length>0);
           return children.some((c,i)=>i>0 && c.getBoundingClientRect().top < children[i-1].getBoundingClientRect().bottom-1);
         }),
-        priorities:document.querySelectorAll('.sn-look').length+document.querySelectorAll('.sn-start').length,
+        start:document.querySelectorAll('.sn-start').length,
+        measured:document.querySelectorAll('.sn-m').length,
         cardsIntact:[...document.querySelectorAll('.sn-look,.sn-start,.sn-keep,.coaching-card')].every(c=>c.scrollHeight<=c.clientHeight+1),
         crops:[...document.querySelectorAll('.sn-look-crop')].every(e=>getComputedStyle(e).objectFit==='contain'&&e.getBoundingClientRect().height>=45)
       };
     });
-    add(metrics.pages===2 && metrics.priorities===3,mode+': both pages, the place to start and the two parts to look at remain visible');
+    add(metrics.pages===2 && metrics.start===1 && metrics.measured>=4,mode+': both pages, the place to start and what we measured remain visible');
     add(metrics.fonts.length>0 && metrics.fonts.every(n=>n>=13 && n<=15),mode+': instructions keep their readable type, whatever the host page sets',JSON.stringify(metrics.fonts));
     add(metrics.fits && !metrics.overlap && metrics.cardsIntact,mode+': no horizontal overflow, overlapping blocks or clipped cards',JSON.stringify(metrics.heights));
     add(metrics.crops,mode+': readable evidence images preserve complete crops');

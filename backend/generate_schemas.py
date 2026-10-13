@@ -971,6 +971,23 @@ def compact():
                     "width": nullable("integer", minimum=1),
                     "height": nullable("integer", minimum=1),
                     "factor_regions": ref("factorRegions"),
+                    "measurements": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "description": (
+                            "What was measured on the page, as geometry "
+                            "to draw beside the scores, in processed-image "
+                            "pixels; never a score, so every tier gets it "
+                            "(backend/marked_places.page_measurements)."
+                        ),
+                        "properties": {
+                            "lines": {"type": "integer", "minimum": 0},
+                            "slope": {"type": "object"},
+                            "size": {"type": "object"},
+                            "margin": {"type": "object"},
+                            "reading": {"type": "object"},
+                        },
+                    },
                 }
             ),
             "error": closed({"code": {"type": "string", "minLength": 1}}),

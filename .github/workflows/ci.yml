@@ -107,6 +107,7 @@ jobs:
             backend.tests.test_planted_pages \
             backend.tests.test_letter_geometry \
             backend.tests.test_print_hand \
+            backend.tests.test_page_measurements \
             backend.tests.test_api_concurrency \
             backend.tests.test_image_formats \
             backend.tests.test_daily_limit

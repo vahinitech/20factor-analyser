@@ -868,7 +868,7 @@ async function runPipeline(){
   const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
+  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
@@ -1164,6 +1164,7 @@ function renderSampleReport(){
     detURL: data.photo || null,
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
     crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
+    measurements: data.measurements || {},
     letterFindings: null,
     history: null,
   });

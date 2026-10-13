@@ -1237,28 +1237,36 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .free-report.compact-report .other-skills p, .compact-report .other-skills .os-list{ font-size:12.5px; line-height:1.4; }
 .practice-pro .other-skills .os-list{ font-size:11.5px; line-height:1.35; }
 
-/* ---- the four sections on page 1, each with its own small map (owner,
-   2026-10-13, #137). Circles take the section's theme colour. ---------- */
-.sn-secs{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:6px; }
-.sn-sec{ border:1px solid var(--v-paper-edge); border-radius:12px; background:var(--v-surface); padding:6px 7px; break-inside:avoid; min-width:0; }
-.sn-sec h4{ margin:0 0 4px; font:700 12px/1.25 var(--sans, 'Hanken Grotesk', sans-serif); letter-spacing:.02em; color:var(--v-text); }
-.sn-sec-map{ height:118px; border-radius:8px; overflow:hidden; background:var(--v-bg-alt); border:1px solid var(--v-paper-edge); margin-bottom:5px; }
-.sn-sec-map svg{ width:100%; height:100%; display:block; }
-.sn-sec-chips{ display:flex; flex-direction:column; gap:3px; }
-.sn-sec .sn-chip{ margin:0; }
-.sn-ring ellipse{ fill:none; }
-.sn-ring text{ font-weight:800; fill:var(--v-on-accent); font-family:var(--sans, 'Hanken Grotesk', sans-serif); }
-.sn-sec[data-section="structure"] .sn-ring ellipse{ stroke:var(--v-warning); }
-.sn-sec[data-section="structure"] .sn-ring circle, .sn-sec[data-section="structure"] .sn-chip-num{ fill:var(--v-warning); background:var(--v-warning); }
-.sn-sec[data-section="spatial"] .sn-ring ellipse{ stroke:var(--v-accent); }
-.sn-sec[data-section="spatial"] .sn-ring circle, .sn-sec[data-section="spatial"] .sn-chip-num{ fill:var(--v-accent); background:var(--v-accent); }
-.sn-sec[data-section="style"] .sn-ring ellipse{ stroke:var(--v-highlight); }
-.sn-sec[data-section="style"] .sn-ring circle, .sn-sec[data-section="style"] .sn-chip-num{ fill:var(--v-highlight); background:var(--v-highlight); }
-.sn-chip-num{ display:inline-grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; color:var(--v-on-accent); font:800 10.5px/1 var(--sans, 'Hanken Grotesk', sans-serif); font-style:normal; }
-.sn-sec-pen{ border-style:dashed; background:var(--v-bg-alt); }
-.free-report.compact-report .sn-pen-note{ display:flex; gap:5px; align-items:flex-start; margin:0 0 5px; font:400 11px/1.3 var(--serif); color:var(--v-text-2); }
-.sn-pen-note svg{ width:13px; height:13px; flex:none; margin-top:2px; }
-.sn-pen-list{ display:flex; flex-direction:column; gap:3px; }
-.sn-pen-skill{ border:1px dashed var(--v-border-strong); border-radius:9px; padding:3px 7px; font-size:11.5px; color:var(--v-text-muted); }
-@media (max-width: 700px){ .sn-secs{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-.free-report.compact-report .sn-sec-whole{ margin:0 0 5px; font:400 11.5px/1.35 var(--serif); color:var(--v-text-muted); }
+/* ---- "What we measured on your page" (owner, 2026-10-13, #137): one row
+   per measurement, drawn on a strip of the writer's own page. ---------- */
+.free-report.compact-report .sn-m-sub{ margin:0 0 5px; font:400 12.5px/1.35 var(--serif); color:var(--v-text-2); }
+.sn-m{ display:grid; grid-template-columns:34% minmax(0,1fr) 26%; gap:10px; align-items:center; border:1px solid var(--v-paper-edge); border-radius:12px; background:var(--v-surface); padding:5px 7px; margin-bottom:4px; break-inside:avoid; }
+.sn-m-strip{ height:52px; border-radius:8px; overflow:hidden; background:var(--v-bg-alt); }
+.sn-m-strip svg{ width:100%; height:100%; display:block; }
+.sn-m-what h4{ margin:0; font:700 14.5px/1.2 var(--serif); }
+.free-report.compact-report .sn-m-what p{ margin:1px 0 0; font:400 12px/1.3 var(--serif); color:var(--v-text-2); }
+.sn-m-what small{ display:block; font-size:10.5px; color:var(--v-text-muted); margin-top:1px; }
+.sn-m-scores{ display:flex; flex-direction:column; gap:3px; }
+.sn-m-row{ flex-direction:row; flex-wrap:wrap; }
+.sn-m-row .sn-chip{ flex:1 1 140px; }
+.sn-lockchip{ display:flex; align-items:center; gap:6px; border:1px dashed var(--v-border-strong); border-radius:16px; padding:3px 9px; font-size:12px; color:var(--v-text-muted); background:var(--v-bg-alt); }
+.sn-lockchip i{ font-style:normal; font-size:10.5px; font-weight:700; color:var(--v-accent-text); margin-left:auto; white-space:nowrap; }
+.sn-m-group{ display:grid; grid-template-columns:34% 1fr; gap:10px; align-items:center; margin:4px 0; font-size:12px; }
+.sn-m-group > b{ font:700 12.5px/1.3 var(--serif); }
+.sn-m-pen{ border:1px dashed var(--v-accent); border-radius:12px; background:var(--v-accent-soft); padding:5px 8px; margin:4px 0; }
+.free-report.compact-report .sn-m-pen p{ display:flex; gap:6px; align-items:flex-start; margin:0 0 4px; font:400 11.5px/1.35 var(--serif); color:var(--v-accent-text); }
+.sn-m-pen p svg{ width:13px; height:13px; flex:none; margin-top:2px; }
+.sn-m-gap, .sn-m-slope{ stroke:var(--v-highlight); fill:none; stroke-linecap:round; }
+.sn-m-level{ stroke:var(--v-text-muted); fill:none; }
+.sn-m-band{ stroke:var(--v-success); fill:none; }
+.sn-m-edge{ stroke:var(--v-accent); fill:none; }
+.sn-m-arrow{ stroke:var(--v-highlight); fill:none; stroke-linecap:round; }
+.sn-m-read{ stroke:var(--v-warning); fill:none; }
+.sn-m-how{ margin:6px 0; font-size:12.5px; }
+.sn-m-how summary{ cursor:pointer; font:700 13px var(--serif); color:var(--v-accent-text); }
+.sn-m-how table{ width:100%; border-collapse:collapse; margin-top:6px; }
+.sn-m-how th, .sn-m-how td{ text-align:left; padding:4px 6px; border-bottom:1px solid var(--v-paper-edge); vertical-align:top; }
+.sn-m-how th{ font-weight:700; color:var(--v-text); }
+@media print{ .sn-m-how{ display:none !important; } }
+@media (max-width: 700px){ .sn-m, .sn-m-group{ grid-template-columns:1fr; } }
+.sn-pen-skill{ border:1px dashed var(--v-border-strong); border-radius:9px; padding:3px 8px; font-size:11.5px; color:var(--v-text-muted); background:var(--v-surface); }

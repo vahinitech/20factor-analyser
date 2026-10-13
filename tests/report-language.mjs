@@ -134,7 +134,9 @@ try {
     const STAGES = ['నేర్చుకుంటోంది', 'మెరుగవుతోంది', 'పట్టు సాధిస్తోంది', 'బలంగా ఉంది'];
     add(te.stages.length > 0 && te.stages.every(s => STAGES.includes(s)), `${tier}: Telugu stage names`, te.stages);
     const names = await page.evaluate(() => ({
-      p1: [...document.querySelectorAll('.sn-start .sn-meta, .sn-look h4')].map(e => e.textContent),
+      // Page 1 names a skill in full once, in "Start here"; the measured
+      // rows use the short chip names (owner, 2026-10-13).
+      p1: [...document.querySelectorAll('.sn-start .sn-meta')].map(e => e.textContent),
       p2: [...document.querySelectorAll('.practice-row:not(.spelling-row) h3')].map(e => e.textContent),
       open: '',
       others: [...document.querySelectorAll('.other-skills [data-factor]')].map(e => e.textContent),
@@ -142,7 +144,7 @@ try {
     }));
     const bracket = /[ఀ-౿][^()]*\([A-Z][A-Za-z ]+\)/;
     const p1Brackets = names.p1.join(' ').match(/\([A-Z][A-Za-z ]+\)/g) || [];
-    add(bracket.test(names.p1[0]) && p1Brackets.length >= 2 && new Set(p1Brackets).size === p1Brackets.length && names.p2.every(n => bracket.test(n)),
+    add(bracket.test(names.p1[0]) && p1Brackets.length === 1 && names.p2.every(n => bracket.test(n)),
       `${tier}: each skill name carries its English name in brackets on first use on each page`, names);
     const bracketsOnPage2 = (names.open + names.p2.join('') + names.others.join('')).match(/\([A-Z][A-Za-z ]+\)/g) || [];
     add(new Set(bracketsOnPage2).size === bracketsOnPage2.length, `${tier}: only the first use on page 2 has the brackets`, bracketsOnPage2);

@@ -120,7 +120,18 @@
 
   function renderReport(analysis, hostId='host', imu=null){
     const cropURL = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="40"><rect width="1000" height="40" fill="white"/><rect width="20" height="40" fill="red"/><rect x="980" width="20" height="40" fill="blue"/></svg>');
+    // A synthetic page and what was measured on it (owner, 2026-10-13):
+    // the page 1 rows draw these on strips of the photo.
+    const PAGE_URL = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="400"><rect width="1000" height="400" fill="white"/><rect x="100" y="60" width="700" height="30" fill="#333"/><rect x="100" y="160" width="700" height="30" fill="#333"/><rect x="160" y="260" width="600" height="30" fill="#333"/></svg>');
+    const MEASURED = {
+      lines:3,
+      slope:{mean_deg:1.2,line:{region_id:'line_3',bbox:[160,250,600,50],angle:2.4,baseline:[[160,295],[760,270]]}},
+      size:{line:{region_id:'line_1',bbox:[100,55,700,40],baseline:[[100,90],[800,90]],midline:[[100,70],[800,70]]}},
+      margin:{usual_x:100,top:55,bottom:300,off:[{region_id:'line_3',bbox:[160,250,600,50]}]},
+      reading:{confidence_pct:80,line:{region_id:'line_2',bbox:[100,155,700,40],underline:[[100,195],[800,195]]}},
+    };
     const evidence = Object.fromEntries(analysis.results.map(f=>[f.n, {
+      source_size:[1000,400],
       url:cropURL, location_url:cropURL, status:'context',
       caption:'region 10: Synthetic evidence; exact fault not localized.',
       region_ids:['region_14'], selection_method:f.n===5?'height-deviation':f.n===6?'zone-context':f.n===9?'character-width-proxy-context':f.n===17?'line-angle-spread-context':'detilted-left-deviation',
@@ -129,7 +140,7 @@
     VahiniReport.render(host, {
       intake:{ role:'individual', writerName:'' },
       analysis, imu, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
-      ocrEngine:'server', detURL:'', crops:evidence, letterFindings:null, history:null,
+      ocrEngine:'server', detURL:PAGE_URL, crops:evidence, measurements:MEASURED, letterFindings:null, history:null,
       pipeline:{ nLines:3, nWords:9, nChars:36, ocrEngine:'server' },
     });
     return host;
@@ -155,20 +166,19 @@
 
     const pages=host.querySelectorAll('.page');
     add(pages.length===2, 'Full report restores two readable pages');
-    // Page 1, version C (owner approval 2026-10-11): one strength, one
-    // place to start, two parts of the page to look at closely.
-    add(host.querySelectorAll('.sn-keep').length===1 && host.querySelectorAll('.sn-start').length===1 && host.querySelectorAll('.sn-look').length===2 && !host.querySelector('.fscore'), 'Page 1 keeps one strength, one place to start and two parts to look at');
+    // Page 1 (version C, 2026-10-11; measured rows, owner approval
+    // 2026-10-13): one strength, one place to start, then what we measured.
+    add(host.querySelectorAll('.sn-keep').length===1 && host.querySelectorAll('.sn-start').length===1 && host.querySelectorAll('.sn-m').length===4 && !host.querySelector('.sn-look') && !host.querySelector('.fscore'), 'Page 1 keeps one strength, one place to start and what we measured');
     add(!host.querySelector('.report-score-table') && host.querySelector('.sn-score b').textContent===String(makeAnalysis([8.2,6.1,9.0,7.5,4.2,6.8,7.1,5.5,3.9,6.0,7.8,5.1,6.4,6.9,7.2,5.8,4.8,6.6,7.0,6.3]).overall) && /\/100/.test(host.querySelector('.sn-score').textContent), 'Overall score stays visible without a long score table');
-    add([...host.querySelectorAll('.practice-row')].length===3 && [...host.querySelectorAll('.practice-row')].every(r=>r.querySelector('[data-exercise]')) && host.querySelectorAll('.sn-look .sn-look-crop').length===2, 'Each skill to grow has its exercise, and page 1 shows evidence from the upload');
+    add([...host.querySelectorAll('.practice-row')].length===3 && [...host.querySelectorAll('.practice-row')].every(r=>r.querySelector('[data-exercise]')) && [...host.querySelectorAll('.sn-m')].every(r=>r.querySelector('svg image') && r.querySelector('svg line')), 'Each skill to grow has its exercise, and page 1 draws each measurement on the upload');
     add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Your review|Practise and improve', 'All report sections appear in the required order');
     add(!host.querySelector('.projection-chart'), 'Compact free report omits the speculative prediction');
     // Practice report (owner approval 2026-10-11, #122): each skill row has
     // its exercise, this week's tries and Pihu's tip beside it.
     add([...host.querySelectorAll('.coaching-card')].every(r=>r.querySelectorAll('.pr-steps li').length>0 && r.querySelector('.pr-plan') && r.querySelector('.pr-tip')) && host.querySelectorAll('.coaching-card .pr-model .md').length>=3, 'Practice rows include numbered steps, a drawn model, a weekly plan and a tip');
-    add(host.querySelectorAll('.sn-look p').length===2 && !/CV|RMS|ratio err/.test(host.textContent), 'What we saw is said in plain language');
-    const cropImages=[...host.querySelectorAll('.sn-look-crop')];
-    add(cropImages.length>0 && cropImages.every(img=>getComputedStyle(img).objectFit==='contain'), 'Evidence crops preserve both ends of handwriting lines');
-    add([...host.querySelectorAll('.sn-look')].every((r,i)=>r.querySelector('h4 em').textContent.trim()===(i+1)+' ·' && r.querySelector('.sn-act b') && r.querySelector('a.sn-sheet')), 'Each part to look at is numbered and has one next action with its practice sheet');
+    add(host.querySelectorAll('.sn-m-what p').length===4 && !/CV|RMS|ratio err/.test(host.textContent), 'What we measured is said in plain language');
+    add([...host.querySelectorAll('.sn-m')].every(r=>r.querySelectorAll('.sn-m-scores .sn-chip, .sn-m-scores .sn-lockchip').length>0), 'Each measurement names the scores built from it');
+    add(host.querySelector('.sn-m-how table') && host.querySelectorAll('.sn-m-how tbody tr').length===10, 'How each score is built lists every measurement');
 
     const classifiedAnalysis = makeAnalysis(Array(20).fill(8));
     classifiedAnalysis.textClassification = {
@@ -215,7 +225,7 @@
     const spellingAnalysis=makeAnalysis(Array(20).fill(4));
     spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
     renderReport(spellingAnalysis,'classification-host');
-    add(factors('.sn-look')==='1,spelling' && factors('.practice-row')==='1,2,3,spelling', 'Spelling takes the second look-closer row and adds its own practice row');
+    add(factors('.practice-row')==='1,2,3,spelling', 'Spelling adds its own practice row after the skills');
     add(/receive/.test(classifiedHost.textContent) && !/becuase/.test(classifiedHost.textContent), 'Spelling correction uses handwritten source text and excludes printed words');
     spellingAnalysis.recognition.level='low';renderReport(spellingAnalysis,'classification-host');
     add(!factors('.sn-look').includes('spelling') && /not clear enough/.test(classifiedHost.textContent), 'Low-confidence OCR defers spelling instead of accusing the writer');

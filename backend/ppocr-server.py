@@ -568,6 +568,7 @@ def _analyze_vl_process(arr, raw, lang):
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
         "factor_regions": vl.get("factor_regions", {}),
+        "measurements": vl.get("measurements", {}),
         "ambiguous_word_gaps": vl.get("ambiguous_word_gaps", []),
     }
 
@@ -825,6 +826,7 @@ def _report_python_process(
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
         "factor_regions": vl.get("factor_regions", {}),
+        "measurements": vl.get("measurements", {}),
         "ambiguous_word_gaps": vl.get("ambiguous_word_gaps", []),
     }
 

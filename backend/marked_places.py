@@ -32,14 +32,19 @@ Selection is deterministic: sorted by deviation, then top, then left.
 docs/how-a-scan-works.md, section 7, explains each rule.
 """
 
+import re
+
 import numpy as np
 
 import computer_vision
+import letter_geometry
 
 MAX_LOOK = 3
 # A line is "taller" or "shorter" when its height is this share away
 # from the page's median line height; "keep" when within KEEP_SHARE.
 SIZE_LOOK_SHARE = 0.20
+# A word's small letters 30% taller or shorter than the page's usual.
+WORD_SIZE_LOOK_SHARE = 0.30
 # Lines tilted at least this many degrees. Factor 7 loses its full 10
 # points at 8 degrees, so 2 degrees costs a quarter of the scale.
 ANGLE_LOOK_DEG = 2.0
@@ -79,6 +84,60 @@ def _order(entries):
     """entries: (deviation, item, bbox, ...). Largest deviation first,
     then top to bottom, then left to right."""
     return sorted(entries, key=lambda e: (-e[0], e[2][1], e[2][0]))
+
+
+def _word_size_places(lines, geo):
+    """Words whose small-letter height is far from the page's usual one
+    (letter_geometry.py), the measurement Letter size is scored from."""
+    words = [
+        (item, wd)
+        for item, g in zip(lines, geo)
+        if g
+        for wd in g["words"]
+        if wd["xheight"]
+    ]
+    if len(words) < MIN_LINES:
+        return None
+    median = float(np.median([wd["xheight"] for _, wd in words]))
+    if median <= 0:
+        return None
+    rows = _order(
+        [
+            (abs(wd["xheight"] - median) / median, item, wd["bbox"], wd)
+            for item, wd in words
+        ]
+    )
+    out = [
+        _place(
+            item,
+            box,
+            "word",
+            "look",
+            "word_xheight",
+            wd["xheight"],
+            median,
+            dev,
+            "taller" if wd["xheight"] > median else "shorter",
+        )
+        for dev, item, box, wd in rows
+        if dev >= WORD_SIZE_LOOK_SHARE
+    ][:MAX_LOOK]
+    dev, item, box, wd = rows[-1]
+    if dev <= KEEP_SHARE:
+        out.append(
+            _place(
+                item,
+                box,
+                "word",
+                "keep",
+                "word_xheight",
+                wd["xheight"],
+                median,
+                dev,
+                "even",
+            )
+        )
+    return out
 
 
 def _size_places(lines):
@@ -152,8 +211,16 @@ def _angle_places(lines):
     return out
 
 
+def _wordy(item):
+    """A line of letters: three or more, and more letters than anything
+    else (not a row of slashes or a row of digits; #140)."""
+    text = re.sub(r"\s+", "", str(item.get("text") or ""))
+    letters = sum(1 for ch in text if ch.isalpha())
+    return letters >= 3 and letters > len(text) / 2
+
+
 def _reading_places(lines):
-    read = [l for l in lines if str(l.get("text") or "").strip()]
+    read = [l for l in lines if _wordy(l)]
     if len(read) < 2:
         return []
     rows = _order(
@@ -278,10 +345,125 @@ def free_skill_places(arr, accepted, rows):
     list, already numbered). Skills that need reading get no places when
     nothing was read (the cv-fallback path)."""
     read = any(str(l.get("text") or "").strip() for l in accepted)
-    places = {"5": _size_places(accepted)}
+    geo = letter_geometry.measure_page(arr, accepted)
+    by_word = _word_size_places(accepted, geo)
+    places = {"5": by_word if by_word is not None else _size_places(accepted)}
     if read:
         places["1"] = _reading_places(accepted)
         places["7"] = _angle_places(accepted)
         places["8"] = _gap_places(arr, accepted, rows)
         places["18"] = _legibility_places(places)
     return places
+
+
+def _point_pairs(pts):
+    return [[round(float(x), 1), round(float(y), 1)] for x, y in pts]
+
+
+def page_measurements(arr, accepted):
+    """What was measured on the page, as geometry to draw beside the
+    scores (the report's "What we measured on your page"): the steepest
+    line's fitted baseline, one line's small-letter band, the usual
+    starting edge and the lines that start off it, and the line the
+    reader found hardest. Coordinates are processed-image pixels. Holds
+    measurements only, never a score, so every tier may receive it."""
+    if not accepted:
+        return {}
+    width = float(arr.shape[1])
+    geo = letter_geometry.measure_page(arr, accepted)
+    out = {"lines": len(accepted)}
+    # The slope drawn is the one Writing on the line is scored from: each
+    # line's outline from the reader (its top edge gives the angle,
+    # scoring.py), drawn along the outline's bottom edge. A fitted
+    # baseline can catch a neighbouring line where outlines overlap.
+    angled = [
+        (item, a)
+        for item in accepted
+        if (a := _line_angle(item)) is not None
+        and len(item.get("poly") or []) >= 4
+    ]
+    if angled:
+        item, angle = sorted(angled, key=lambda p: (-p[1], p[0]["box"][1]))[0]
+        poly = item["poly"]
+        out["slope"] = {
+            "mean_deg": round(float(np.mean([a for _, a in angled])), 2),
+            "line": {
+                "region_id": item["evidence_id"],
+                "bbox": [int(v) for v in item["box"]],
+                "angle": round(float(angle), 2),
+                "baseline": _point_pairs([poly[3], poly[2]]),
+            },
+        }
+    banded = [
+        (item, g)
+        for item, g in zip(accepted, geo)
+        if g and len(g["words"]) >= 3
+    ]
+    if banded:
+        median = float(np.median([g["xheight"] for _, g in banded]))
+        item, g = sorted(
+            banded,
+            key=lambda p: (
+                abs(p[1]["xheight"] - median),
+                -len(p[1]["words"]),
+                p[0]["box"][1],
+            ),
+        )[0]
+        out["size"] = {
+            "line": {
+                "region_id": item["evidence_id"],
+                "bbox": [int(v) for v in item["box"]],
+                "baseline": _point_pairs(g["baseline"]),
+                "midline": _point_pairs(g["midline"]),
+            },
+        }
+    lefts = [float(item["box"][0]) for item in accepted]
+    if len(lefts) >= MIN_LINES:
+        usual = float(np.median(lefts))
+        off = sorted(
+            [
+                item
+                for item in accepted
+                if abs(float(item["box"][0]) - usual) >= 0.04 * width
+            ],
+            key=lambda item: (
+                -abs(float(item["box"][0]) - usual),
+                item["box"][1],
+            ),
+        )[:2]
+        out["margin"] = {
+            "usual_x": round(usual, 1),
+            "top": int(min(i["box"][1] for i in accepted)),
+            "bottom": int(max(i["box"][1] + i["box"][3] for i in accepted)),
+            "off": [
+                {
+                    "region_id": i["evidence_id"],
+                    "bbox": [int(v) for v in i["box"]],
+                }
+                for i in off
+            ],
+        }
+    read = [item for item in accepted if _wordy(item)]
+    if len(read) >= 2:
+        item = sorted(
+            read, key=lambda i: (float(i.get("score", 0) or 0), i["box"][1])
+        )[0]
+        line = {
+            "region_id": item["evidence_id"],
+            "bbox": [int(v) for v in item["box"]],
+        }
+        poly = item.get("poly") or []
+        if len(poly) >= 4:
+            line["underline"] = _point_pairs([poly[3], poly[2]])
+        out["reading"] = {
+            "confidence_pct": int(
+                round(
+                    100
+                    * float(
+                        np.mean([float(i.get("score", 0) or 0) for i in read])
+                    )
+                )
+            ),
+            "line": line,
+        }
+    return out
