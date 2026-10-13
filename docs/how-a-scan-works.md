@@ -253,3 +253,151 @@ same photo always gets the same circles. That is the analyser's
 "same photo, same scores" rule, and the tests in
 `backend/tests/test_factor_evidence.py` and `test_marked_places.py` check
 each selection, including the same page giving the same places twice.
+
+## 8. Testing the marks on pages with planted mistakes
+
+`scripts/planted_pages.py` writes pages from real handwritten letters and
+plants one known mistake on each, then checks whether a mark of the right
+skill covers it (at least half of the planted box inside the mark).
+
+- **Letters:** UJI Pen Characters, version 2 (Prat, Castro, Llorens, Marzal
+  and Vilar, 2008, doi:10.24432/C5FG8S, CC BY 4.0), only the 20 writers of
+  its published test split. Downloaded and checked by SHA-256; neither the
+  data nor the pages are committed. The same data trained imu2text's
+  drawing reader, so the evaluation and any later letter reader share one
+  licence-clean source.
+- **Pages:** one writer per page, four lines in our cast's words, small
+  letters scaled to one height, letter and word gaps varied by up to 30%
+  and 15%. One page per writer for each kind below: 120 pages a run.
+- **Lines:** handed to the evidence code as the reader would hand them, one
+  box and the smallest rotated rectangle around each line's ink.
+  `--ocr` uses the real reader instead.
+
+`backend/tests/test_planted_pages.py` checks the generator itself without
+the download.
+
+Results, seed 0, line outlines from the ink (seeds 1 and 2 agree to within
+15 points on every "marked" figure):
+
+| Planted mistake | Skill | Marked | Mark size vs mistake | Skill score (clean page: 5 7.55, 7 9.16, 8 7.91) |
+|---|---|---|---|---|
+| One line sinking 4 degrees | 7 | 100% | 0.97 | 7: 8.03; and 5 falls to 5.88 |
+| One word gap three times wider | 8 | 100% | 0.72 | 8: 6.32 |
+| One small letter 1.7 times taller | 5 | 15% | 0.01 | 5: 7.88 |
+| One word sunk below the line | 7 | 15% | 0.04 | 7: 9.05 |
+| One word gap a quarter as wide | 8 | 0% | | 8: 7.63 |
+
+"Mark size vs mistake" is the planted box's area over the mark's: 1.0 is a
+mark exactly around the mistake, 0.01 is a whole line around one letter.
+
+What this says:
+
+- **Tilted lines and wide gaps are found, and the mark is in the right
+  place.**
+- **A tall letter or a sunken word barely changes the score and is rarely
+  marked.** A line box is as tall as its tallest letter, and most lines
+  already hold a b, d, h or k, so one oversized small letter changes
+  nothing that is measured. A sunken word deepens the box but does not
+  turn its top edge, which is the angle factor 7 reads. Both need the
+  letter-level measurement in section 7.
+- **Words written too close together are missed.** `line_word_gaps` takes
+  the widest gaps as the word breaks, so a gap narrower than the gaps
+  between letters is never counted as a word break; the mark goes to a
+  letter gap instead.
+- **Tilt lowers Size Consistency** from 7.55 to 5.88 (section 4).
+- **Clean pages still get marks:** on average 0.75 size, 0.05 angle and
+  1.4 word-gap marks a page, from each writer's own variation and from
+  letter gaps read as word gaps.
+
+**Through the real reader (`--ocr`), 94 of the 120 pages were refused as
+printed**, and 95 of 120 again after the pages were drawn as photos
+(`--style photo`, the default: pen width that changes with pressure,
+uneven light, paper grain, blur and JPEG). The cause is one rule in
+`classify.classify_lines`: a line read with confidence 0.93 or more
+becomes printed (0.85) unless its stroke width varies a lot. Judged line
+by line, these handwritten lines score 0.26 to 0.51, well under the 0.58
+cut-off; the rule lifts every one of them. The same rule relabels six
+handwritten lines of `tests/fixtures/handwriting-sample.jpg` ("The quick
+brown fox", "Dodo and Piku write letters", "Stay on the line" among them);
+that page is kept only because a less confident second reading of each
+line survives. A second rule counts any line read at 0.96 as evidence that
+the page holds print.
+
+Requiring even letter heights before either rule applies (glyph-height
+variation under 0.25: type measures 0.00 to 0.16 on
+`handwritten_printed_2.jpg`, lowercase handwriting 0.33 to 0.44) keeps the
+six sample lines and passes every existing test, but lets two printed
+fixtures through: the tracing worksheet in `handwritten_printed_1.jpg`
+(capital and small letter pairs vary in height) and the receipt's printed
+"Received from Mrs" label. The three structural measures the check has
+(stroke width, letter height, edge sharpness) overlap between neat
+handwriting and a clean font, so this needs a better signal, not a new
+threshold. That change is not made.
+
+## 9. Measuring inside the line: letters, words and the baseline
+
+`backend/letter_geometry.py` measures what section 8 showed the line boxes
+cannot see. Per line:
+
+1. Binarise and take the ink blobs whose middle lies inside the line's box.
+   Each blob is a letter (print) or a word (joined writing); dots and specks
+   join the nearest blob.
+2. Fit a straight baseline through the bottoms of the blobs with Theil-Sen
+   (the median of the slopes between every pair), so tails and one sunken
+   word cannot tilt it. Its angle is the line's slope.
+3. Shift each column so that baseline is level, smooth the row counts, and
+   take the densest band (`zone_analysis.dense_band`): the small-letter
+   height, measured along the line, so a sloping line no longer looks tall.
+4. Split into words at the widest gaps; when the number of blobs equals the
+   number of letters in the text, split where the text says each word ends
+   instead, which also finds words written too close.
+5. Each word's distance from the baseline is the median over its blobs.
+   When blobs and letters match, each small letter's height is compared with
+   the line's small-letter height.
+
+Marks: a small letter 55% or more off the small-letter height, a word 0.35
+of a small letter or more off the baseline, a line at 2 degrees or more, a
+text-placed word gap 50% or more off the page's median. These were set on
+seed 1 and are reported on seed 0, photo-style pages, 120 pages:
+
+| Planted mistake | Line marks (section 7) | Letter-level marks | Mark size vs mistake |
+|---|---|---|---|
+| Word sunk below the line | 10% | **95%** | 0.94 |
+| Line sinking 4 degrees | 100% | 90% | 0.97 |
+| Small letter 1.7 times taller | 15% | 15% | 0.92 |
+| Word gap 3 times wider | 95% | 25% | 1.00 |
+| Word gap a quarter as wide | 15% | 15% | |
+
+Marks on clean pages, per page: 0.85 letter size, 0.5 baseline, 0.4 gap.
+
+- The **sunken word** goes from almost never found to almost always, with the
+  mark around the word.
+- The **slope** is measured to within 0.1 degrees (3.97 on a 4-degree line)
+  and is about 0 on level lines.
+- **Size no longer counts tilt.** Small-letter height variation is the same on
+  a clean page and a page with a sinking line (0.13 and 0.13), where line box
+  heights took Size Consistency from 7.93 to 5.67.
+- A **tall letter** is found only when every letter of its word stands apart
+  and the text is known (letters and blobs match on about a third of lines);
+  when found, the mark is the letter itself. These writers' own small
+  letters are often far apart in height too (clean pages carry 0.85 letter
+  marks each at the 55% line), so one letter 1.7 times taller is often
+  within their normal spread.
+- **Word gaps** stay with the existing method (section 7), which finds wide
+  gaps far more often; the text-placed gaps add the narrow ones it misses.
+
+Candidate scores, computed beside today's and not used by the report
+(`letter_geometry.page_features`):
+
+| Page | Size today | Size from small-letter heights | Baseline today | Baseline from the fitted baseline and sunken words |
+|---|---|---|---|---|
+| Clean | 7.93 | 6.71 | 9.12 | 9.51 |
+| Line sinking 4 degrees | 5.67 | 6.71 | 8.00 | 8.46 |
+| Word sunk below the line | 7.45 | 6.87 | 9.11 | 9.07 |
+| Small letter 1.7 times taller | 7.69 | 6.43 | 9.06 | 9.36 |
+
+The candidate size score is stable under tilt but sits about one point
+lower overall (its 0.40 full scale is a first choice), and neither
+candidate moves much for one oversized letter or one sunken word: a single
+mistake among about 30 words is a small share of a page. Switching the
+report's scores to these needs those choices made first.

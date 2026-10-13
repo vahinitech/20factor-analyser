@@ -1,0 +1,84 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# (c) 2026 Vahini Technologies.
+"""scripts/planted_pages.py plants each mistake where it says it did.
+
+Uses drawn rectangles instead of the UJI letters, so it needs no
+download."""
+
+import importlib.util
+import os
+import unittest
+
+import numpy as np
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+spec = importlib.util.spec_from_file_location(
+    "planted_pages", os.path.join(ROOT, "scripts", "planted_pages.py")
+)
+planted = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(planted)
+
+
+def box_letter(ch):
+    """A letter as an outline: tall letters twice the small height,
+    tails hanging below."""
+    h = 2.0 if ch in planted.TALL or ch in planted.LOW else 1.0
+    return [np.array([[0, 0], [0.8, 0], [0.8, h], [0, h], [0, 0]])]
+
+
+LETTERS = {
+    ch: [box_letter(ch), box_letter(ch)]
+    for ch in set("".join(planted.SENTENCES).replace(" ", ""))
+}
+
+
+class TestPlantedPages(unittest.TestCase):
+    def page(self, kind, seed=0):
+        rng = np.random.default_rng(seed)
+        return planted.build_page(LETTERS, rng, kind)
+
+    def test_every_mistake_has_a_box_on_the_page(self):
+        for kind, _skill in planted.KINDS:
+            img, lines, truth = self.page(kind)
+            self.assertEqual(len(lines), 4)
+            if kind == "clean":
+                self.assertIsNone(truth)
+                continue
+            x, y, w, h = truth
+            self.assertGreater(w * h, 0, kind)
+            self.assertTrue(
+                0 <= x and x + w <= img.shape[1] and y + h <= img.shape[0],
+                kind,
+            )
+
+    def test_small_letters_share_one_height(self):
+        self.assertAlmostEqual(planted.writer_scale(LETTERS) * 1.0, planted.X)
+
+    def test_wide_gap_is_three_word_gaps(self):
+        _img, _lines, truth = self.page("wide_gap")
+        # The letter gap before it varies by 30%, and boxes round outward.
+        self.assertAlmostEqual(truth[2], 3 * planted.WORD_GAP, delta=3)
+
+    def test_tall_letter_is_taller(self):
+        _img, _lines, truth = self.page("tall_letter")
+        self.assertAlmostEqual(truth[3], 1.7 * planted.X, delta=2)
+
+    def test_tilted_line_is_the_last_and_its_outline_slopes(self):
+        _img, lines, _truth = self.page("tilted_line")
+        (x0, y0), (x1, y1) = lines[-1]["poly"][:2]
+        angle = np.degrees(np.arctan2(y1 - y0, x1 - x0))
+        self.assertAlmostEqual(angle, planted.TILT_DEG, delta=0.5)
+
+    def test_same_seed_same_page(self):
+        a = self.page("low_word", seed=3)
+        b = self.page("low_word", seed=3)
+        self.assertTrue(np.array_equal(a[0], b[0]))
+        self.assertEqual(a[2], b[2])
+
+    def test_covers_measures_the_planted_box_inside_the_mark(self):
+        self.assertEqual(planted._covers([0, 0, 10, 10], [2, 2, 4, 4]), 1.0)
+        self.assertEqual(planted._covers([0, 0, 10, 10], [8, 0, 4, 10]), 0.5)
+
+
+if __name__ == "__main__":
+    unittest.main()
