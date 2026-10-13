@@ -275,6 +275,7 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
     """
     # Reuse the scorer's row grouping and camera-tilt correction so evidence
     # selection follows the measurements that produced the report.
+    import marked_places
     from scoring import (
         _group_lines_by_rows,
         _page_tilt_degrees,
@@ -541,13 +542,31 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             "Observed gap differs most from the page median.",
             "measurement",
         )
-    else:
+    places = marked_places.free_skill_places(
+        arr, accepted, _group_lines_by_rows(accepted)
+    )
+    ink_gaps = [p for p in places.get("8", []) if p["role"] == "look"]
+    if not gaps and ink_gaps:
+        # One OCR box per line leaves no gap between boxes; the scorer
+        # measures the gaps inside the line, so show that line.
+        line = next(
+            l for l in accepted if l["evidence_id"] == ink_gaps[0]["region_id"]
+        )
+        out["8"] = evidence(
+            [line],
+            "ink-word-gap-deviation",
+            "Word gap differs most from the page median.",
+            "measurement",
+        )
+    elif not gaps:
         out["8"] = evidence(
             accepted,
             "spacing-context",
             "No between-region word gap available; fault not localized.",
             page=True,
         )
+    for n, found in places.items():
+        out[n]["places"] = found
     for n in range(13, 17):
         out[str(n)] = unavailable(
             "Requires sensor-pen data; no photo location can show this measurement."
@@ -715,16 +734,37 @@ def line_word_gaps(arr, line):
     comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
     if not comps or len(comps) < 2:
         return None
+    breaks = line_word_breaks(arr, line, n_words, comps)
+    return [gap for gap, _left, _right in breaks] if breaks else None
+
+
+def line_word_breaks(arr, line, n_words=None, comps=None):
+    """The word breaks line_word_gaps measures, with their place: a list of
+    (gap, x_left, x_right) in processed-image pixels, widest first (ties
+    left to right). x_left is where the ink of one word ends and x_right
+    where the next begins. None when the line cannot be measured."""
+    if n_words is None:
+        text = str(line.get("text", "") or "")
+        n_words = len([w for w in re.split(r"\s+", text.strip()) if w])
+        if n_words < 2:
+            return None
+    if comps is None:
+        comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+    if not comps or len(comps) < 2:
+        return None
     spans = []
     for x, _y, w, _h in comps:
         if spans and x <= spans[-1][1]:
             spans[-1][1] = max(spans[-1][1], x + w)
         else:
             spans.append([x, x + w])
-    gaps = [spans[i + 1][0] - spans[i][1] for i in range(len(spans) - 1)]
+    gaps = [
+        (spans[i + 1][0] - spans[i][1], spans[i][1], spans[i + 1][0])
+        for i in range(len(spans) - 1)
+    ]
     if len(gaps) < n_words - 1:
         return None
-    return sorted(gaps, reverse=True)[: n_words - 1]
+    return sorted(gaps, key=lambda g: (-g[0], g[1]))[: n_words - 1]
 
 
 def _line_ink_component_count(arr, box):

@@ -19,7 +19,7 @@ Consistency (5), Baseline Alignment (7), Word Spacing (8) and Legibility (18)
 | Busy server | No free scan slot: 503 with `Retry-After` | `scan_slots.py:61-70` |
 | Decode | JPEG, PNG, WebP; PDF uses page 1 only, drawn at 150 DPI | `computer_vision.to_numpy`, `computer_vision.py:39-99` |
 | Turn upright | The phone's EXIF orientation is applied, then RGB | `computer_vision.py:84` |
-| Shrink | Longest side at most `VAHINI_OCR_MAX_SIDE` (2200 by default, never under 960), LANCZOS | `config.py:96-98` |
+| Shrink | Longest side at most `VAHINI_OCR_MAX_SIDE` (2200 by default, never under 960), LANCZOS. The website's stage compose file sets 2600; production uses the default | `config.py:96-98` |
 | Repeat answers | The same bytes within 180 s get the stored answer | `cache.py`, key built at `ppocr-server.py:835-840` |
 
 The shrunk, upright picture is the **processed image**. Every box in a report
@@ -134,6 +134,12 @@ Code: features at `scoring.py:422-560`, formulas at `scoring.py:571-612`,
 
 Three things a reader of a report should know:
 
+- **Size Consistency also counts tilt as size.** A line box is level, so a
+  sloping line's box is taller by about its width times the tangent of its
+  angle. On the sample photo, a 654-pixel line at 4.5 degrees gains about
+  51 pixels, and that line is the one Size Consistency marks as tallest.
+  The fix is to measure height across the line's own slope, or per letter
+  (section 7).
 - **Size Consistency compares lines, not letters.** It measures how much the
   line boxes differ in height. A line box is as tall as its tallest letter, so
   one tall letter makes its whole line taller, but the score does not say
@@ -188,7 +194,8 @@ Two gaps between what is scored and what is marked:
 
 - **Word Spacing marks only gaps between line boxes**, but most of its score
   comes from gaps inside lines (section 3). With one box per line there is
-  usually no pair, so skill 8 shows the whole page.
+  usually no pair. The crop then falls back to the line with the gap that
+  stands out most (section 7), or the whole page when no gap was measured.
 - **Every mark is a whole line.** No mark today is a single letter or word.
 
 The report draws marks only for its two "Look closer" skills, both in one
@@ -197,25 +204,52 @@ theme colour, and reads only `bbox`, `source_size` and `url` from each entry
 returns these entries for skills 1, 5, 7, 8 and 18
 (`compact_reports.py:165-175`).
 
-## 7. Choosing exact words and letters to circle: what can be honest
+## 7. Choosing exact words and letters to circle
+
+`backend/marked_places.py` adds a `places` list to the evidence of skills
+1, 5, 7, 8 and 18: up to three measurements that stand apart from the page
+(`role: "look"`) and at most one closest to the page's usual (`role:
+"keep"`, the writing to keep doing). Each place has its box, the
+measurement, the value it was compared with and how far it is from it
+(`deviation`, used only to rank; it is not a probability), plus the OCR
+confidence of its line. The rules:
+
+| Skill | Places | Marked when | Kept when |
+|---|---|---|---|
+| 5 | Lines, by height against the median line height | 20% or more away | within 10% |
+| 7 | Lines, by angle | 2 degrees or more | 1 degree or less |
+| 1 | Lines, by OCR confidence | below 0.85 | the clearest line, at 0.85 or more |
+| 8 | Word gaps, from ink inside lines and between boxes on a row, each over its line's height | 50% or more away from the median gap | within 15% |
+| 18 | The first marked place of 1, 5, 8 and 7, then the second, by blend weight, one per box | | |
+
+A page needs at least three lines (5), two angled lines (7), two read lines
+(1) or three gaps (8). Nothing is marked for 1, 7, 8 or 18 when nothing was
+read. When a line holds all the word gaps (one OCR box per line), the
+Word Spacing crop is now the line with the gap that stands out most
+(`ink-word-gap-deviation`) instead of the whole page.
+
+Checked on the sample photo, the word-gap boxes sit exactly in the spaces
+between words and the angle boxes on the sloping lines. The size boxes show
+the tilt problem in section 4. The confidence boxes include a row of
+practice slashes, which the OCR reads poorly because they are not letters.
+
+### What a letter-level circle needs
 
 A circle on the report says "this is why". It can only say that when the
 place was part of the measurement behind the score. With the measurements
 above:
 
-| Skill | Can circle exactly, today's score unchanged | Needs a new measurement first |
+| Skill | Circled today, score unchanged | Needs a new measurement first |
 |---|---|---|
-| 8 Word Spacing | **Yes.** Each word gap inside a line is measured from ink; keeping each gap's left and right edge (section 3 already knows them) gives the 2 or 3 gaps furthest from the page's usual gap, ranked by `abs(gap / line height - median)` | None |
+| 8 Word Spacing | **Exact.** The word gaps the score uses | None |
 | 5 Size Consistency | The 2 or 3 **lines** furthest from the median height | Letter-level size: measure each small letter's height against the page's usual small-letter height (zone analysis, `zone_analysis.py:96-145`, already finds each line's midline and baseline). Changes the factor-5 score for every photo |
 | 7 Baseline Alignment | The 2 or 3 steepest **lines** | Letter-level: each ink component's bottom against a straight baseline fitted through the line. Changes the factor-7 score |
 | 1 Letter Formation | The 2 or 3 **lines** read with least confidence | Per-letter OCR confidence, which Paddle does not return through the current calls; TrOCR's per-token scores are averaged away (`ocr_backends.py:684-688`) |
 | 18 Legibility | The marks of 1, 5, 7 and 8, in the blend's weights | Follows the others |
 
-A "keep doing this" tick needs the same rule turned round: the line or gap
-closest to the page's own median.
-
 Any new location must come only from the processed image and the handwriting
 lines, sorted with a fixed tie-break (deviation, then top, then left), so the
 same photo always gets the same circles. That is the analyser's
 "same photo, same scores" rule, and the tests in
-`backend/tests/test_factor_evidence.py` check each selection.
+`backend/tests/test_factor_evidence.py` and `test_marked_places.py` check
+each selection, including the same page giving the same places twice.
