@@ -41,6 +41,29 @@ redistributed as part of the client build.
 
 ---
 
+## Trained weights: the print-or-handwriting line reader
+
+`backend/models/print_hand.json` holds weights trained by
+`scripts/train_print_hand.py`. No training data is redistributed; the
+weights were learned from:
+
+- **UJI Pen Characters (Version 2)**: Prat, Castro, Llorens, Marzal and
+  Vilar, 2008, UCI Machine Learning Repository, doi:10.24432/C5FG8S.
+  **CC BY 4.0** <https://creativecommons.org/licenses/by/4.0/>. Pen
+  trajectories of 60 writers; the 40 training writers trained the reader
+  and the 20 test writers make `scripts/planted_pages.py`'s test pages.
+- **Fonts from github.com/google/fonts** at commit
+  `66928797f271fed5ee428544e7229685e2d90127`, listed with their SHA-256 in
+  `scripts/print_hand_data.py`: Noto Serif, Noto Sans, Noto Sans Mono,
+  Courier Prime, Andika, Lato, Space Mono, Oswald, PT Serif, PT Sans,
+  Merriweather, Source Code Pro, Comic Neue, Libre Baskerville, Dancing
+  Script, Pacifico, Caveat, Kalam, Patrick Hand, Great Vibes, Indie Flower,
+  Shadows Into Light and Sacramento (**OFL-1.1**), and Special Elite
+  (**Apache License 2.0**). Text drawn in them was the reader's printed
+  examples; no font file is included.
+
+---
+
 ## Hosted runtime services (no code redistributed)
 
 | Service | Provider | Terms |
