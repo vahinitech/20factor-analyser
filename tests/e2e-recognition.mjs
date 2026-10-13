@@ -125,10 +125,12 @@ async function main() {
     // Free report page 1 (version C, owner approval 2026-10-11) and the
     // next step beside it.
     const chips = await page.locator('#report-host .sn-chip').count();
-    const crops = await page.locator('#report-host .sn-look img.sn-look-crop').count();
+    // Page 1 draws each measurement on a strip of the uploaded photo
+    // (owner, 2026-10-13): the live server must send evidence.measurements.
+    const strips = await page.locator('#report-host .sn-m svg image').count();
     const photo = await page.locator('#report-host .sn-zoom svg image, #report-host .sn-zoom img').count();
-    if (chips === 5 && crops > 0 && photo === 1) ok('free report shows the photo, five skills and crops from it', `${crops} crops`);
-    else fail('free report shows the photo, five skills and crops from it', `chips ${chips}, crops ${crops}, photo ${photo}`);
+    if (chips === 5 && strips >= 3 && photo === 1) ok('free report shows the photo, five skills and what was measured on it', `${strips} measurement strips`);
+    else fail('free report shows the photo, five skills and what was measured on it', `chips ${chips}, strips ${strips}, photo ${photo}`);
     const nextVisible = await page.locator('#next-steps').isVisible();
     const sheet = await page.getAttribute('#ns-practice-link', 'href');
     if (nextVisible && /\.pdf$|practice\.html/.test(sheet || '')) ok('next step links a practice sheet', sheet);

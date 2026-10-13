@@ -124,7 +124,7 @@ overall score are in [scoring-criteria.md](scoring-criteria.md).
 | Skill | Measured from | Score | Needs reading? |
 |---|---|---|---|
 | **1 Letter Formation** | `avg_score`: the mean OCR confidence of the handwriting lines; `height_cv`: how much line heights vary | `avg_score x 7.2 + (1 - height_cv) x 2.8` | Yes |
-| **5 Size Consistency** | `height_cv`: standard deviation / mean of the **line box heights** | `(1 - height_cv / 0.65) x 10` | No |
+| **5 Size Consistency** | `size_cv`: standard deviation / mean of each **word's small-letter height**, measured along its line's own baseline (`letter_geometry.py`; since 2026-10-13, #135). Fewer than three words measured: line box heights, as before | `(1 - size_cv / 0.60) x 10` (line boxes: `/ 0.65`) | No |
 | **7 Baseline Alignment** | `line_slope_abs`: mean of each line's angle, from the first two corners of its polygon (the top edge) | `(1 - angle / 8 degrees) x 10` | Yes |
 | **8 Word Spacing** | `word_gap_cv`: variation of every word gap, each divided by its line's height. Gaps come from section 3, plus gaps between separate line boxes on one row | `(1 - word_gap_cv / 1.4) x 10` | Yes |
 | **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
@@ -134,17 +134,12 @@ Code: features at `scoring.py:422-560`, formulas at `scoring.py:571-612`,
 
 Three things a reader of a report should know:
 
-- **Size Consistency also counts tilt as size.** A line box is level, so a
-  sloping line's box is taller by about its width times the tangent of its
-  angle. On the sample photo, a 654-pixel line at 4.5 degrees gains about
-  51 pixels, and that line is the one Size Consistency marks as tallest.
-  The fix is to measure height across the line's own slope, or per letter
-  (section 7).
-- **Size Consistency compares lines, not letters.** It measures how much the
-  line boxes differ in height. A line box is as tall as its tallest letter, so
-  one tall letter makes its whole line taller, but the score does not say
-  which letter. (The report's "based on N letters" counts the letters read,
-  not letters measured.)
+- **Size Consistency is measured word by word (since 2026-10-13, #135).**
+  It used to compare line box heights; a box drawn level around a sloping
+  line is taller by its width times the slope, so a 654-pixel line at 4.5
+  degrees gained about 51 pixels and tilt counted as size. Measured along
+  each line's own baseline, a sloping line no longer changes it (sections
+  8 and 9). On the sample page Size moved from 4.9 to 6.1.
 - **Letter Formation leans on how sure the OCR is.** Clear letters are read
   with high confidence, so a low average means letters were hard to read. It
   cannot point at one letter. The recognition note in every report says the

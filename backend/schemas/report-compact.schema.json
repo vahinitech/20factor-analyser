@@ -268,7 +268,8 @@
       "required": [
         "width",
         "height",
-        "factor_regions"
+        "factor_regions",
+        "measurements"
       ],
       "properties": {
         "width": {
@@ -287,6 +288,29 @@
         },
         "factor_regions": {
           "$ref": "common.schema.json#/definitions/factorRegions"
+        },
+        "measurements": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "What was measured on the page, as geometry to draw beside the scores, in processed-image pixels; never a score, so every tier gets it (backend/marked_places.page_measurements).",
+          "properties": {
+            "lines": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "slope": {
+              "type": "object"
+            },
+            "size": {
+              "type": "object"
+            },
+            "margin": {
+              "type": "object"
+            },
+            "reading": {
+              "type": "object"
+            }
+          }
         }
       }
     },

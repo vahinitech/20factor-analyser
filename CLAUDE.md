@@ -9,9 +9,17 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
-  zoomed to the parts it looks at, with numbered boxes, two rows with crops
-  cut from that photo and a chip per Free factor (1, 5, 7, 8, 18); the
-  server sends Free the evidence regions of those five factors only.
+  whole, then "What we measured on your page" (owner, 2026-10-13): one row
+  per real measurement (word gaps, line slope, small-letter height, line
+  starts, how sure the reader was), drawn on a strip of the writer's own
+  page as it was measured, never circled, with every score built from it.
+  Free sees every measurement; scores outside its five are named "full
+  review". Estimates, blends and the pen skills (Vahini sensor pen) are
+  labelled as such, and "How each score is built" (screen only) lists the
+  whole map. The server sends every tier the measurement geometry
+  (`evidence.measurements`, no scores) and Free the evidence regions of its
+  five factors. The sample page opens on all 20 factors; `?example=free`
+  shows the Free report.
   Details in the report format baseline.
 
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through

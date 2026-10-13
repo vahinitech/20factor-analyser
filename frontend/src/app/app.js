@@ -846,6 +846,7 @@ async function runPipeline(){
     layout: pyReport.layout || null,
     regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
     factor_regions: pyReport.factor_regions || {},
+    measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
   // Redraw the sample with the detected word boxes (orange) + baselines
@@ -868,7 +869,7 @@ async function runPipeline(){
   const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, letterFindings:null, history });
+  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
@@ -1105,12 +1106,14 @@ async function finishIMU(){
     layout: pyReport.layout || null,
     regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
     factor_regions: pyReport.factor_regions || {},
+    measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
   const rendered = VahiniReport.render($('#report-host'), {
     intake: state.intake, analysis, expectedText: state.expected, recognizedText: state.expected,
     detURL,
     crops: serverFactorCrops(vlResult),
+    measurements: vlResult.measurements || {},
     letterFindings: null,
     history: loadHistory(state.intake.writerName),
     pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
@@ -1145,10 +1148,13 @@ function renderSampleReport(){
   if (!host || !data || !data.analysis) return;
   collectIntake();
   const s = data.sample || {};
-  const proExample = new URLSearchParams(location.search).get('example') === 'pro';
-  // The page ships the Free heading; the Pro example names its own tier.
+  // The sample opens on all 20 factors (owner, 2026-10-13, #138);
+  // ?example=free shows exactly what a free photo check gives. ?example=pro
+  // is the old address of the 20-factor view and still opens it.
+  const proExample = new URLSearchParams(location.search).get('example') !== 'free';
+  // The page ships the 20-factor heading; the Free example names its own.
   const title = $('#sample-title');
-  if (title && proExample) title.textContent = 'What your Pro handwriting report looks like';
+  if (title && !proExample) title.textContent = 'What your Free handwriting report looks like';
   const sampleAnalysis = proExample ? data.analysis : {...data.analysis, access:{tier:'free'}, results:data.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
   VahiniReport.render(host, {
     intake: state.intake,
@@ -1161,6 +1167,7 @@ function renderSampleReport(){
     detURL: data.photo || null,
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
     crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
+    measurements: data.measurements || {},
     letterFindings: null,
     history: null,
   });

@@ -1236,3 +1236,37 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 /* "Other skills": larger text (owner, 2026-10-11). */
 .free-report.compact-report .other-skills p, .compact-report .other-skills .os-list{ font-size:12.5px; line-height:1.4; }
 .practice-pro .other-skills .os-list{ font-size:11.5px; line-height:1.35; }
+
+/* ---- "What we measured on your page" (owner, 2026-10-13, #137): one row
+   per measurement, drawn on a strip of the writer's own page. ---------- */
+.free-report.compact-report .sn-m-sub{ margin:0 0 5px; font:400 12.5px/1.35 var(--serif); color:var(--v-text-2); }
+.sn-m{ display:grid; grid-template-columns:34% minmax(0,1fr) 26%; gap:10px; align-items:center; border:1px solid var(--v-paper-edge); border-radius:12px; background:var(--v-surface); padding:5px 7px; margin-bottom:4px; break-inside:avoid; }
+.sn-m-strip{ height:52px; border-radius:8px; overflow:hidden; background:var(--v-bg-alt); }
+.sn-m-strip svg{ width:100%; height:100%; display:block; }
+.sn-m-what h4{ margin:0; font:700 14.5px/1.2 var(--serif); }
+.free-report.compact-report .sn-m-what p{ margin:1px 0 0; font:400 12px/1.3 var(--serif); color:var(--v-text-2); }
+.sn-m-what small{ display:block; font-size:10.5px; color:var(--v-text-muted); margin-top:1px; }
+.sn-m-scores{ display:flex; flex-direction:column; gap:3px; }
+.sn-m-row{ flex-direction:row; flex-wrap:wrap; }
+.sn-m-row .sn-chip{ flex:1 1 140px; }
+.sn-lockchip{ display:flex; align-items:center; gap:6px; border:1px dashed var(--v-border-strong); border-radius:16px; padding:3px 9px; font-size:12px; color:var(--v-text-muted); background:var(--v-bg-alt); }
+.sn-lockchip i{ font-style:normal; font-size:10.5px; font-weight:700; color:var(--v-accent-text); margin-left:auto; white-space:nowrap; }
+.sn-m-group{ display:grid; grid-template-columns:34% 1fr; gap:10px; align-items:center; margin:4px 0; font-size:12px; }
+.sn-m-group > b{ font:700 12.5px/1.3 var(--serif); }
+.sn-m-pen{ border:1px dashed var(--v-accent); border-radius:12px; background:var(--v-accent-soft); padding:5px 8px; margin:4px 0; }
+.free-report.compact-report .sn-m-pen p{ display:flex; gap:6px; align-items:flex-start; margin:0 0 4px; font:400 11.5px/1.35 var(--serif); color:var(--v-accent-text); }
+.sn-m-pen p svg{ width:13px; height:13px; flex:none; margin-top:2px; }
+.sn-m-gap, .sn-m-slope{ stroke:var(--v-highlight); fill:none; stroke-linecap:round; }
+.sn-m-level{ stroke:var(--v-text-muted); fill:none; }
+.sn-m-band{ stroke:var(--v-success); fill:none; }
+.sn-m-edge{ stroke:var(--v-accent); fill:none; }
+.sn-m-arrow{ stroke:var(--v-highlight); fill:none; stroke-linecap:round; }
+.sn-m-read{ stroke:var(--v-warning); fill:none; }
+.sn-m-how{ margin:6px 0; font-size:12.5px; }
+.sn-m-how summary{ cursor:pointer; font:700 13px var(--serif); color:var(--v-accent-text); }
+.sn-m-how table{ width:100%; border-collapse:collapse; margin-top:6px; }
+.sn-m-how th, .sn-m-how td{ text-align:left; padding:4px 6px; border-bottom:1px solid var(--v-paper-edge); vertical-align:top; }
+.sn-m-how th{ font-weight:700; color:var(--v-text); }
+@media print{ .sn-m-how{ display:none !important; } }
+@media (max-width: 700px){ .sn-m, .sn-m-group{ grid-template-columns:1fr; } }
+.sn-pen-skill{ border:1px dashed var(--v-border-strong); border-radius:9px; padding:3px 8px; font-size:11.5px; color:var(--v-text-muted); background:var(--v-surface); }

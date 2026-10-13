@@ -21,6 +21,7 @@ from finishing_letters import analyze_finishing_letters
 from style_analysis import analyze_style
 from tbar_analysis import analyze_tbars
 from baseline_track import track_rows
+import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
 
@@ -525,7 +526,23 @@ def _extract_features(arr: np.ndarray, lines, layout):
                 vals.append(float(np.std(patch.astype(np.float32))))
         ink_cv = _cv(vals) if vals else 0.0
 
+    # Letter size from the small-letter height of each word, measured along
+    # its line's own baseline (letter_geometry.py). Line box heights grow
+    # with a line's slope, so they counted tilt as size (#135); they remain
+    # the fallback when fewer than three words can be measured.
+    word_xh = [
+        wd["xheight"]
+        for g in letter_geometry.measure_page(arr, lines)
+        if g
+        for wd in g["words"]
+        if wd["xheight"]
+    ]
+    size_by_words = len(word_xh) >= 3
+
     return {
+        "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
+        "size_basis": "words" if size_by_words else "lines",
+        "size_count": len(word_xh) if size_by_words else n_lines,
         "n_lines": n_lines,
         "n_words": n_words,
         "n_chars": n_chars,
@@ -578,7 +595,13 @@ def _score_factor_map(fx):
     )
     s[3] = _clamp10((min(1.0, fx["loop_ratio"] / 0.28)) * 10.0)
     s[4] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.8)) * 10.0)
-    s[5] = _clamp10((1.0 - min(1.0, fx["height_cv"] / 0.65)) * 10.0)
+    # Word x-heights vary less than line boxes did, so their full scale is
+    # 0.60 (a clean planted page scores about 7.8, as line boxes did).
+    size_scale = 0.60 if fx.get("size_basis") == "words" else 0.65
+    s[5] = _clamp10(
+        (1.0 - min(1.0, fx.get("size_cv", fx["height_cv"]) / size_scale))
+        * 10.0
+    )
     s[6] = _clamp10(
         (1.0 - min(1.0, abs(fx["tall_ratio"] - 0.34) / 0.34)) * 10.0
     )
@@ -625,7 +648,7 @@ _INPUT_FEATURES = {
     2: ("char_w_cv", "avg_score"),
     3: ("loop_ratio",),
     4: ("width_cv",),
-    5: ("height_cv",),
+    5: ("size_cv",),
     6: ("tall_ratio",),
     7: ("line_slope_abs",),
     8: ("word_gap_cv", "word_gap_count"),
@@ -717,7 +740,11 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         2: f"{fx['n_words']} words",
         3: f"{fx['n_chars']} letters",
         4: f"{fx['n_lines']} lines",
-        5: f"{fx['n_chars']} letters",
+        5: (
+            f"{fx['size_count']} words"
+            if fx.get("size_basis") == "words"
+            else f"{fx['n_lines']} lines"
+        ),
         6: f"{fx['n_chars']} letters",
         7: f"{fx['n_lines']} lines",
         8: f"{fx['n_words']} words",

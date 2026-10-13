@@ -172,6 +172,9 @@ def build_compact(payload, access, include=()):
                 for k, v in regions.items()
                 if str(k).isdigit() and int(k) in allowed
             },
+            # Geometry of what was measured, never a score: every tier
+            # gets it, so a Free report can show the whole page was read.
+            "measurements": payload.get("measurements") or {},
         }
     if not report["ok"]:
         report["error"] = {

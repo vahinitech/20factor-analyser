@@ -53,7 +53,7 @@ score falls linearly and hits zero at the stated limit.
 | 2 | Stroke Order Consistency | stroke order proxy: char-width consistency + confidence | `5.4 + 2.6·(1 − char-width CV) + 2.0·conf` | edit dist ≤2 |
 | 3 | Loop Closure | share of loop-bearing letters (a o d p e g q) among letters read | `10 · min(1, loop share / 0.28)` | ≥95% closed |
 | 4 | Line Quality (Smoothness) | stroke smoothness proxy: line-width consistency | `10 · (1 − min(1, width CV / 0.8))` | jitter ≤0.5 px |
-| 5 | Size Consistency | letter-height consistency across lines | `10 · (1 − min(1, height CV / 0.65))` | height CV ≤0.12 |
+| 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
 | 8 | Word Spacing | consistency of word gaps, in line heights: gaps between detected segments sharing a row, plus the widest (words − 1) ink gaps inside each line. Not measured below three gaps | `10 · (1 − min(1, gap CV / 1.4))` | ≈1.0 x-h, CV ≤0.25 |

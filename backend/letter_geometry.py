@@ -233,8 +233,15 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
                     "gap": max(0.0, float(x_r - x_l)) / line_xh,
                 }
             )
+    left = float(min(sp[0] for sp in spans))
+    right = float(max(sp[2] for sp in spans))
+    base_l, base_r = slope * left + icpt, slope * right + icpt
     return {
         "gaps": gaps_out,
+        # The fitted baseline and the small-letter line above it, as two
+        # points each, for drawing the measurement on the page.
+        "baseline": [[left, base_l], [right, base_r]],
+        "midline": [[left, base_l - line_xh], [right, base_r - line_xh]],
         "angle": (
             abs(math.degrees(math.atan(slope))) if len(spans) >= 3 else None
         ),

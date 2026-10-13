@@ -645,10 +645,9 @@ function render(host, data){
   // The photo, zoomed to the parts the rows point at: an SVG viewBox over
   // the photo (meet), every numbered box kept whole.
   const det=data.detURL||'';
-  const marks=lookItems.map((it,i)=>{
-    const c=it.f&&crops[it.f.n], b=c&&c.bbox;
-    return it.f&&Array.isArray(b)&&b.length===4&&!wholePageCrop(c)?{b,num:i+1}:null;
-  }).filter(Boolean);
+  // The measurement rows below carry the drawings; the photo is shown
+  // whole, without numbered boxes.
+  const marks=[];
   const size=[...lookItems.map(it=>it.f&&crops[it.f.n]?.source_size),...Object.values(crops).map(c=>c&&c.source_size)].find(s=>Array.isArray(s)&&s.length===2&&s[0]>0&&s[1]>0);
   const zoom=()=>{
     if(!det) return '';
@@ -675,22 +674,91 @@ function render(host, data){
       <h3>${esc(t.has('goal.'+first.n)?t('goal.'+first.n):nameOn(1,first))}</h3>${stepList(t.has('look.'+first.n)?t('look.'+first.n):'').map(s=>`<p>${esc(s)}</p>`).join('')}
       <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(first.score.toFixed(1))}/10</span> · ${esc(stage(bandOf(first.score)))}</p>
       <span class="sn-try">${PENCIL}${esc(t('sn.start.try.'+(firstExModel&&t.has('sn.start.try.'+firstExModel.unit)?firstExModel.unit:'row')))}</span></div>`:'';
-  const lookRow=(it,i)=>{
-    if(it.spelling){
-      const s=it.spelling;
-      return `<div class="sn-look" data-factor="spelling"><div class="sn-look-crop sn-look-word">${esc(s.word)}</div><div><h4><em>${i+1} ·</em> ${esc(t('spell.title'))}</h4><p>${t.html('sn.spell.saw',{word:`<b>${esc(s.word)}</b>`,suggestion:`<b>${esc(s.suggestion)}</b>`})}</p></div>
-        <div class="sn-act">${PENCIL}<div><b>${esc(t('sn.next'))}</b>${esc(t('sn.spell.action'))}</div></div></div>`;
-    }
-    const f=it.f, c=crops[f.n], sheet=worksheetFor(f);
-    const crop=wholePageCrop(c)?`<p class="sn-look-none">${esc(t('sn.wholepage'))}</p>`
-      :c&&c.url?`<img class="sn-look-crop" src="${esc(c.url)}" alt="${esc(t('sn.crop.alt',{skill:skillName(f)}))}">`
-      :`<p class="sn-look-none">${esc(t('sn.nocrop'))}</p>`;
-    return `<div class="sn-look" data-factor="${f.n}">${crop}<div><h4><em>${i+1} ·</em> ${esc(nameOn(1,f))}</h4><p>${esc(t.has('saw.'+f.n)?t('saw.'+f.n):'')}</p></div>
-      <div class="sn-act">${PENCIL}<div><b>${esc(t('sn.next'))}</b>${esc(t.has('action.'+f.n)?t('action.'+f.n):'')}${sheet?` <a class="sn-sheet" href="${esc(sheetURL(sheet))}">${esc(t('sn.sheet',{title:sheet.title}))}</a>`:''}</div></div></div>`;
-  };
   const chipList=measured.slice().sort((a,b)=>a.n-b.n);
-  const chips=chipList.map(f=>{const band=bandOf(f.score), g=improved.includes(f);
-    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;}).join('');
+  /* ---- "What we measured on your page" (owner, 2026-10-13, #137): one
+     row per real measurement, drawn on the writer's own page as it was
+     measured (no circles), with every score built from it. Free sees every
+     measurement; scores outside its tier are named, not hidden. Estimates,
+     blends and the pen skills are labelled as what they are. ------------ */
+  const chipHTML=f=>{const band=bandOf(f.score), g=improved.includes(f);
+    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;};
+  const ms=data.measurements||{};
+  const live=n=>measured.find(f=>f.n===n);
+  const scoreChip=n=>{const f=live(n);
+    if(f) return chipHTML(f);
+    return `<div class="sn-lockchip" data-locked="${n}"><span class="sn-cn">${esc(t('chip.'+n))}</span><i>${esc(t(free?'m.full':'m.nophoto'))}</i></div>`;};
+  // A strip of the photo around one region, with drawings on top in
+  // processed-image pixels (the photo is drawn at its own size).
+  const strip=(region,draw,cls='')=>{
+    if(!det||!size||!region) return '';
+    const [W,H]=size;
+    let [x0,y0,x1,y1]=region;
+    x0=Math.max(0,x0); y0=Math.max(0,y0); x1=Math.min(W,x1); y1=Math.min(H,y1);
+    const want=3.2; let w=x1-x0, h=y1-y0;
+    if(w/h<want){ const nw=Math.min(W,h*want), cx=(x0+x1)/2; x0=Math.max(0,Math.min(W-nw,cx-nw/2)); x1=x0+nw; }
+    else { const nh=Math.min(H,w/want), cy=(y0+y1)/2; y0=Math.max(0,Math.min(H-nh,cy-nh/2)); y1=y0+nh; }
+    const vw=x1-x0;
+    return `<div class="sn-m-strip${cls}"><svg viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${vw.toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${esc(t('m.strip.alt'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/>${draw(vw)}</svg></div>`;
+  };
+  const line=(p,q,cls,sw,dash)=>`<line class="${cls}" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke-width="${sw.toFixed(2)}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
+  const pad=(b,fx,fy)=>[b[0]-b[2]*fx,b[1]-b[3]*fy,b[0]+b[2]*(1+fx),b[1]+b[3]*(1+fy)];
+  const mRows=[];
+  // 1. Gaps between words: brackets in the gaps the analyser measured.
+  const gaps=((crops[8]||{}).places||[]).filter(p=>p.role==='look'&&p.kind==='gap'&&Array.isArray(p.bbox));
+  if(gaps.length&&size){
+    const g=gaps[0].bbox, W=size[0];
+    const region=[g[0]-0.16*W,g[1]-g[3]*0.15,g[0]+g[2]+0.16*W,g[1]+g[3]*1.15];
+    const inside=gaps.filter(p=>p.bbox[1]<region[3]&&p.bbox[1]+p.bbox[3]>region[1]);
+    const draw=vw=>inside.map(p=>{const [x,y,w,h]=p.bbox, my=y+h/2, sw=vw*0.009;
+      return line([x,my],[x+w,my],'sn-m-gap',sw)+line([x,y+h*0.3],[x,y+h*0.7],'sn-m-gap',sw)+line([x+w,y+h*0.3],[x+w,y+h*0.7],'sn-m-gap',sw);}).join('');
+    mRows.push({key:'gaps',strip:strip(region,draw),text:t(gaps[0].direction==='narrower'?'m.gaps.narrower':'m.gaps.wider'),scores:[8]});
+  }
+  // 2. How each line sits: the steepest line's fitted baseline in red,
+  //    against a dashed level line from the same start.
+  if(ms.slope&&ms.slope.line){
+    const L=ms.slope.line, [p,q]=L.baseline;
+    const draw=vw=>line(p,[q[0],p[1]],'sn-m-level',vw*0.006,'8 6')+line(p,q,'sn-m-slope',vw*0.01);
+    mRows.push({key:'slope',strip:strip(pad(L.bbox,0.04,0.35),draw),text:t('m.slope.text',{mean:ms.slope.mean_deg.toFixed(1),angle:L.angle.toFixed(1)}),scores:[7,11,12,17]});
+  }
+  // 3. How tall the small letters are: the line's small-letter band.
+  if(ms.size&&ms.size.line){
+    const L=ms.size.line;
+    const draw=vw=>line(L.midline[0],L.midline[1],'sn-m-band',vw*0.007)+line(L.baseline[0],L.baseline[1],'sn-m-band',vw*0.007);
+    mRows.push({key:'size',strip:strip(pad(L.bbox,0.02,0.3),draw),text:t('m.size.text'),scores:[5,6]});
+  }
+  // 4. Where each line starts: the usual starting edge, and an arrow to a
+  //    line that starts away from it.
+  if(ms.margin&&size){
+    const M=ms.margin, o=(M.off||[])[0], W=size[0];
+    const region=o?[M.usual_x-0.05*W,o.bbox[1]-o.bbox[3]*1.4,M.usual_x+0.42*W,o.bbox[1]+o.bbox[3]*1.2]
+      :[M.usual_x-0.05*W,M.top,M.usual_x+0.42*W,M.top+0.18*size[1]];
+    const draw=vw=>line([M.usual_x,region[1]],[M.usual_x,region[3]],'sn-m-edge',vw*0.007,'10 7')+(o?(()=>{const y=o.bbox[1]+o.bbox[3]/2, x=o.bbox[0], s=vw*0.02;
+      return line([M.usual_x,y],[x-s*0.3,y],'sn-m-arrow',vw*0.009)+line([x-s*1.2,y-s*0.7],[x-s*0.3,y],'sn-m-arrow',vw*0.009)+line([x-s*1.2,y+s*0.7],[x-s*0.3,y],'sn-m-arrow',vw*0.009);})():'');
+    mRows.push({key:'margin',strip:strip(region,draw),text:t(o?'m.margin.text':'m.margin.even'),scores:[10]});
+  }
+  // 5. How easily our reader read it: the hardest line, underlined.
+  if(ms.reading&&ms.reading.line){
+    const L=ms.reading.line, [x,y,w,h]=L.bbox;
+    const [u0,u1]=L.underline||[[x,y+h*0.98],[x+w,y+h*0.98]];
+    const draw=vw=>line(u0,u1,'sn-m-read',vw*0.008,'7 5');
+    mRows.push({key:'read',strip:strip(pad(L.bbox,0.03,0.3),draw),text:t('m.read.text',{pct:ms.reading.confidence_pct}),scores:[1,19]});
+  }
+  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)}</p><small>${esc(t('m.'+r.key+'.how'))}</small></div><div class="sn-m-scores">${r.scores.map(scoreChip).join('')}</div></div>`;
+  const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${ns.map(scoreChip).join('')}</div></div>`;
+  const counts=data.pipeline||{};
+  const mSub=t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
+  const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${[13,14,15,16].map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
+  // The whole map, measurement by measurement, on screen only: what we
+  // measure, the scores built from it, and whether a page can show it.
+  const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[2,9,4],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',[13,14,15,16],'pen']];
+  const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>{const f=live(n);return esc(t('chip.'+n))+(f?` <b>${esc(f.score.toFixed(1))}</b>`:'');}).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
+  // A score whose measurement row could not be drawn (no photo, or too
+  // little to measure) is still shown, never dropped.
+  const shownN=new Set([...mRows.flatMap(r=>r.scores),18,20,2,9,4,3,13,14,15,16]);
+  const leftover=measured.filter(f=>!shownN.has(f.n)).map(f=>f.n).sort((a,b)=>a-b);
+  const measuredHTML=`<div class="sn-h3row"><h3 class="sn-h3">${esc(t('m.title'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
+      <p class="sn-m-sub">${esc(mSub)}</p>${mRows.map(mRow).join('')}
+      ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[2,9,4,3])}${pen}${howTable}`;
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
   const firstSheet=worksheetFor(first)||rowFactors.map(worksheetFor).find(Boolean)||null;
@@ -706,9 +774,7 @@ function render(host, data){
       <h2 class="sn-title">${esc(t('sn.title'))}</h2><p class="sn-sub">${esc(t('sn.sub'))}</p>${sinceLine}
       ${measured.length?`${keepBand}
       <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
-      ${lookItems.length?`<h3 class="sn-h3">${esc(t('sn.look'))}</h3>${lookItems.map(lookRow).join('')}`:''}
-      <div class="sn-h3row"><h3 class="sn-h3">${esc(t('sn.chips'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
-      <div class="sn-chips">${chips}</div>
+      ${measuredHTML}
       ${practice}${cta}`:empty}
       ${foot(1,page1Note)}</section>`;
 

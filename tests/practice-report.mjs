@@ -101,7 +101,7 @@ try {
   const page = await browser.newPage({ viewport: { width: 1200, height: 1000 } });
   await useDesign(page);
   const errors = []; page.on('pageerror', e => errors.push(e.message));
-  await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
+  await page.goto(BASE + '/frontend/sample-report.html?example=free', { waitUntil: 'load' });
   await page.waitForSelector('#report-host .practice-page');
   await page.evaluate(src => { window.__craft = window.VahiniCraft; (0, eval)(src); }, RENDER);
   // The heading names the tier the example shows.
@@ -112,8 +112,8 @@ try {
   await proPage.waitForSelector('#report-host .practice-page');
   const proTitle = await proPage.textContent('#sample-title');
   await proPage.close();
-  add(freeTitle === 'What your Free handwriting report looks like' && proTitle === 'What your Pro handwriting report looks like',
-    'The sample heading names Free, or Pro on the Pro example', { freeTitle, proTitle });
+  add(freeTitle === 'What your Free handwriting report looks like' && proTitle === 'All 20 handwriting factors, from one sample page',
+    'The sample heading names Free, or all 20 factors on the 20-factor example', { freeTitle, proTitle });
 
   // Bundled catalogue matches the committed one.
   const bundled = await page.evaluate(() => window.VahiniPracticeCatalog);
@@ -125,8 +125,10 @@ try {
   // Free: rows follow the priorities; one exercise and one tip each.
   const free = await page.evaluate(() => window.__render({ free: true }));
   const freeFactors = free.rows.map(r => r.factor);
-  add(JSON.stringify(freeFactors) === '["5","8","7"]' && free.start === '5' && JSON.stringify(free.look) === '["5","8"]',
-    'Free rows are the lowest measured skills below 8.5; page 1 starts with the first and looks closer at the first two', { freeFactors, start: free.start, look: free.look });
+  // Letter size is scored from word heights since 2026-10-13 (#135): the
+  // sample's lowest skill is now word spacing (5.7), then size (6.1).
+  add(JSON.stringify(freeFactors) === '["8","5","1"]' && free.start === '8' && free.look.length === 0,
+    'Free rows are the lowest measured skills below 8.5; page 1 starts with the first, and shows what was measured instead of look-closer rows', { freeFactors, start: free.start, look: free.look });
   add(free.rows.every(r => r.exercises.length === 1 && r.tips.length === 1 && r.tipLabels),
     'Free shows one exercise and one tip per skill', free.rows);
   add(free.rows.every(r => r.exercises.concat(r.tips).every(id => String(owner[id]) === r.factor)),
@@ -134,12 +136,11 @@ try {
   add(row5first(free) === 'size.two-line-ladder' && free.rows.every(r => r.model && r.models.every(m => m !== 'focus')),
     'A first check picks by need (the two-line ladder for letter size) and draws each exercise\'s own model', free.rows.map(r => [r.exercises, r.models]));
   const row = n => free.rows.find(r => r.factor === n);
-  add(/5\.0\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
-    && row('7').now === 'Mastering' && row('7').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
-  // Tries follow the row's own skill (owner, 2026-10-11): "sit on the line"
-  // also helps letter size (5.0, Improving), but its row is Mastering
-  // (7.1), so it asks 5 a day.
-  add(/10 tries a day, for 7 days\./.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('7').plan),
+  add(/6\.1\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
+    && row('1').now === 'Mastering' && row('1').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
+  // Tries follow the row's own skill (owner, 2026-10-11): letter size is
+  // Improving (6.1), so 10 a day; letter shapes is Mastering (7.0), so 5.
+  add(/10 tries a day, for 7 days\./.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('1').plan),
     'Tries follow the row\'s own skill, not a weaker skill its exercise also helps', free.rows.map(r => r.plan));
   const solo7 = await page.evaluate(() => window.__render({ free: true, scores: { 1: 9.5, 5: 9.5, 8: 9.5, 18: 9.5 } }));
   add(/5 tries a day, for 7 days/.test(solo7.rows[0].plan), 'A Mastering skill on its own asks 5 a day', solo7.rows.map(r => r.plan));
@@ -153,9 +154,9 @@ try {
     'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
   add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
     'The bundle and the served catalogue carry each skill\'s why, win and page');
-  add(/Your letter shapes are clear\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
+  add(/Your words sit on the line\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
     'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
-  add(JSON.stringify(free.others) === '["18","1"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
+  add(JSON.stringify(free.others) === '["18","7"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
     'Other skills we checked lists the rest, then what Pro adds, with no price', { others: free.others, note: free.proNote });
   add(!free.rows.some(r => r.factor === 'spelling'), 'No spelling row without a finding');
   add(free.art.length === 0, 'Without a picture map the report has no pictures');
@@ -170,7 +171,7 @@ try {
 
   // Spelling row only when the limited check found a word; extra to the skills.
   const spelled = await page.evaluate(() => window.__render({ free: true, spelling: true }));
-  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["5","8","7","spelling"]' && /We read recieve\. Did you mean receive\?/.test(spelled.text)
+  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /We read recieve\. Did you mean receive\?/.test(spelled.text)
     && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.look-cover-write',
     'A spelling finding adds its own row after the skills', spelled.rows.map(r => r.factor));
 
@@ -239,7 +240,7 @@ try {
         add(row.model, `${tier}${L}: skill ${n} has a drawn model to copy`, row);
         const sheet = sheets.find(w => w.factors.includes(n));
         add(sheet ? (row.sheet || '').includes('/worksheets/' + sheet.id + '.pdf') : !row.sheet, `${tier}${L}: skill ${n} links its own worksheet`, { want: sheet && sheet.id, got: row.sheet });
-        add(r.start === String(n) && r.look[0] === String(n), `${tier}${L}: page 1 starts with skill ${n} and looks closer at it`, { start: r.start, look: r.look });
+        add(r.start === String(n) && r.look.length === 0, `${tier}${L}: page 1 starts with skill ${n}`, { start: r.start, look: r.look });
       }
     }
   }
