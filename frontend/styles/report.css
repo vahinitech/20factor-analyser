@@ -998,26 +998,25 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .band-focus.sn-score, .sn-chip b.band-focus{ background:var(--sn-focus); }
 .sn-band-text.band-strong{ color:var(--sn-strong); } .sn-band-text.band-good{ color:var(--sn-good); }
 .sn-band-text.band-dev{ color:var(--sn-dev); } .sn-band-text.band-focus{ color:var(--sn-focus); }
-.free-report.compact-report h2.sn-title{ font:700 33px/1.04 var(--serif); letter-spacing:-.02em; margin:4px 0 2px; }
-.free-report.compact-report p.sn-sub{ font:400 15.5px/1.3 var(--serif); margin:0 0 8px; color:var(--v-text); }
+.free-report.compact-report h2.sn-title{ font:700 23px/1.1 var(--serif); letter-spacing:-.01em; margin:1px 0 3px; }
 .free-report.compact-report .since-last{ font-size:12px; margin:0 0 6px; color:var(--v-accent-text); font-weight:600; }
-.sn-keep{ display:flex; align-items:center; gap:14px; background:var(--v-success-bg); border-radius:16px; padding:7px 16px; }
-.sn-tick{ width:42px; height:42px; border-radius:50%; background:var(--v-success); color:var(--v-on-accent); display:grid; place-items:center; flex:none; }
-.sn-tick svg{ width:24px; height:24px; }
-.sn-keep-label{ font:700 11px var(--sans); letter-spacing:.2em; text-transform:uppercase; color:var(--v-success); padding-right:14px; border-right:1.5px solid var(--v-success); align-self:stretch; display:flex; align-items:center; }
-.sn-keep-text{ flex:1; min-width:0; }
-.free-report.compact-report .sn-keep h3{ font:700 20px/1.2 var(--serif); margin:0; }
-.free-report.compact-report .sn-keep p{ margin:2px 0 0; font:400 14px/1.3 var(--serif); }
+/* Vidhya's note (owner, 2026-10-14): a teacher's few lines on the page,
+   her picture beside them and her name written by hand at the end. */
+.sn-teacher{ display:flex; align-items:center; gap:10px; background:var(--v-success-bg); border-radius:16px; padding:6px 16px 6px 4px; margin:4px 0 0; }
+.compact-report .sn-teacher .rp-art-teacher{ flex:none; width:76px; height:118px; object-fit:cover; object-position:center top; }
+.sn-note{ flex:1; min-width:0; padding-left:6px; }
+.free-report.compact-report .sn-note p{ margin:0 0 2px; font:400 14px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .sn-note .sn-hello{ font-weight:700; }
+.sn-note-end{ display:flex; justify-content:space-between; align-items:baseline; gap:2px 14px; flex-wrap:wrap; margin-top:1px; }
+.free-report.compact-report .sn-note p.sn-grade{ font-weight:700; margin:0; }
+.free-report.compact-report .sn-note p.sn-sign{ font:600 23px/1 var(--handB); color:var(--v-accent-text); margin:0; }
 .sn-leaf{ width:30px; height:38px; flex:none; }
 .sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
 .sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }
-/* Vahini is a tall figure on a square picture: contain drew her 40px high.
-   Cover crops only the empty sides, so she fills the strip's height. */
-.compact-report .sn-keep .rp-art-cheer{ width:50px; height:72px; margin:-5px 0; object-fit:cover; }
 .sn-mid{ display:grid; grid-template-columns:53% minmax(0,1fr); gap:14px; margin:10px 0 2px; }
 .sn-mid.no-photo{ grid-template-columns:1fr; }
 .sn-zoom{ margin:0; min-width:0; }
-.sn-zoom-frame{ border-radius:14px; overflow:hidden; background:var(--v-bg-alt); border:1px solid var(--v-paper-edge); height:212px; }
+.sn-zoom-frame{ border-radius:14px; overflow:hidden; background:var(--v-bg-alt); border:1px solid var(--v-paper-edge); height:192px; }
 .sn-zoom-frame svg, .sn-zoom-frame img{ width:100%; height:100%; display:block; object-fit:contain; }
 .sn-mark rect{ fill:none; stroke:var(--v-highlight); }
 .sn-mark circle{ fill:var(--v-highlight); stroke:var(--v-surface); }
@@ -1094,7 +1093,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .sn-pgrid, .sn-pgrid.no-qr{ grid-template-columns:1fr; }
   .sn-turn{ border-left:0; padding-left:0; }
   .free-report.compact-report h2.sn-title{ font-size:27px; }
-  .sn-keep{ flex-wrap:wrap; } .sn-keep-label{ border-right:0; }
+  .compact-report .sn-teacher .rp-art-teacher{ width:58px; height:92px; }
 }
 
 /* Page 2 in plain steps, with a drawing per exercise kind (the catalogue's
@@ -1187,8 +1186,6 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .practice-pro .pr-ex .pr-model-label{ font-size:9px; }
 .practice-pro .pr-ex .pr-model-art{ flex:none; height:34px; }
 @media screen and (max-width:700px){
-  .sn-keep-text{ flex:1 1 100%; order:3; }
-  .sn-keep .sn-leaf, .sn-keep .rp-art{ display:none; }
   .sn-top{ flex-wrap:wrap; } .sn-right{ align-items:flex-start; text-align:left; }
 }
 /* While the PDF is drawn: html2canvas copies a pseudo-element's computed
@@ -1240,12 +1237,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 /* ---- "What we measured on your page" (owner, 2026-10-13, #137): one row
    per measurement, drawn on a strip of the writer's own page. ---------- */
 .free-report.compact-report .sn-m-sub{ margin:0 0 5px; font:400 12.5px/1.35 var(--serif); color:var(--v-text-2); }
-.sn-m{ display:grid; grid-template-columns:34% minmax(0,1fr) 26%; gap:10px; align-items:center; border:1px solid var(--v-paper-edge); border-radius:12px; background:var(--v-surface); padding:5px 7px; margin-bottom:4px; break-inside:avoid; }
+.sn-m{ display:grid; grid-template-columns:31% minmax(0,1fr) 25%; gap:10px; align-items:center; border:1px solid var(--v-paper-edge); border-radius:12px; background:var(--v-surface); padding:5px 7px; margin-bottom:4px; break-inside:avoid; }
 .sn-m-strip{ height:52px; border-radius:8px; overflow:hidden; background:var(--v-bg-alt); }
 .sn-m-strip svg{ width:100%; height:100%; display:block; }
 .sn-m-what h4{ margin:0; font:700 14.5px/1.2 var(--serif); }
 .free-report.compact-report .sn-m-what p{ margin:1px 0 0; font:400 12px/1.3 var(--serif); color:var(--v-text-2); }
-.sn-m-what small{ display:block; font-size:10.5px; color:var(--v-text-muted); margin-top:1px; }
+.sn-m-what small{ font:400 10.5px var(--sans); color:var(--v-text-muted); white-space:nowrap; }
 .sn-m-scores{ display:flex; flex-direction:column; gap:3px; }
 .sn-m-row{ flex-direction:row; flex-wrap:wrap; }
 .sn-m-row .sn-chip{ flex:1 1 140px; }
@@ -1262,6 +1259,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-m-edge{ stroke:var(--v-accent); fill:none; }
 .sn-m-arrow{ stroke:var(--v-highlight); fill:none; stroke-linecap:round; }
 .sn-m-read{ stroke:var(--v-warning); fill:none; }
+.sn-m-ring{ stroke-linecap:round; }
 .sn-m-how{ margin:6px 0; font-size:12.5px; }
 .sn-m-how summary{ cursor:pointer; font:700 13px var(--serif); color:var(--v-accent-text); }
 .sn-m-how table{ width:100%; border-collapse:collapse; margin-top:6px; }

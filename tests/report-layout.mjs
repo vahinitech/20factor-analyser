@@ -78,7 +78,7 @@ export async function checkReportLayout(page){
    spelling row, Pro's two exercises and two tips each, the other-skills box
    and all four pictures), with and without the host's picture map, and
    when the sheets run as long as a real photo makes them. */
-export const REPORT_ART = { cheer:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
+export const REPORT_ART = { teacher:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
 export async function renderLongest(page, pro){
   await page.evaluate(pro=>{
     const d=window.VAHINI_SAMPLE_REPORT;
@@ -114,7 +114,7 @@ export async function checkPracticePrint(browser, baseUrl){
         maxTips:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('.pr-tip').length)),
       }));
       add(shape.rows===4&&shape.spelling&&shape.others&&shape.maxEx===(pro?2:1)&&shape.maxTips===(pro?2:1),label+': longest case has three skills, spelling and the other skills',JSON.stringify(shape));
-      add(art?shape.art==='cheer,encourage,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
+      add(art?shape.art==='encourage,teacher,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
       await page.emulateMedia({media:'print'});
       add(await pdfPages(page)===2,label+': prints on exactly two A4 pages');
       // Page 2's left column (why, win, More) never makes a row taller than

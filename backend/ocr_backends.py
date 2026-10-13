@@ -370,6 +370,57 @@ def get_engine_safe(lang: str):
             raise
 
 
+def read_line_letters(crop, lang):
+    """One line crop read again by the scan's own recogniser with word
+    boxes on: (rec_text, column probabilities), or None. rec_text is
+    (text, [column count, words, columns per word, kinds]); the
+    probabilities are the recogniser's confidence in each column, which
+    PaddleOCR otherwise only reports as a mean. Uses the cached engine,
+    under its lock, so it loads no second model. letter_boxes.py places
+    the letters."""
+    try:
+        engine = get_engine(lang or "en")
+    except Exception:  # pylint: disable=broad-except
+        return None
+    pipeline = getattr(engine, "paddlex_pipeline", None)
+    inner = getattr(pipeline, "_pipeline", pipeline)
+    model = getattr(inner, "text_rec_model", None)
+    post = getattr(model, "post_op", None)
+    if model is None or post is None or not hasattr(post, "decode"):
+        return None
+    seen = []
+    decode = post.decode
+    own = "decode" in vars(post)
+
+    def keep(text_index, *args, **kwargs):
+        probs = kwargs.get("text_prob", args[0] if args else None)
+        seen[:] = (
+            [np.asarray(p, dtype=float) for p in probs]
+            if probs is not None
+            else []
+        )
+        return decode(text_index, *args, **kwargs)
+
+    with _lock_for_engine(engine):
+        post.decode = keep
+        try:
+            got = list(model([crop], return_word_box=True))
+        except Exception:  # pylint: disable=broad-except
+            return None
+        finally:
+            if own:
+                post.decode = decode
+            else:
+                del post.decode
+    if not got or not seen:
+        return None
+    try:
+        rec_text = got[0]["rec_text"]
+    except (KeyError, TypeError, IndexError):
+        return None
+    return rec_text, seen[0]
+
+
 def run(engine, arr: np.ndarray, lang: str):
     """Return list[line] across PaddleOCR API variants."""
     # Prefer the classic ocr() entrypoint on CPU builds to avoid PIR/oneDNN

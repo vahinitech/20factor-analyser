@@ -256,7 +256,7 @@ try {
   add(crossed.length === 0, 'Four re-checks in a row never show another skill\'s exercise or tip', crossed);
 
   // Characters: only from a same-site map.
-  await page.evaluate(() => { window.VAHINI_REPORT_ART = { cheer: 'https://evil.example/a.png', buddy: '//evil.example/b.png', tip: 'javascript:alert(1)', encourage: '/frontend/assets/vahini-logo.png' }; });
+  await page.evaluate(() => { window.VAHINI_REPORT_ART = { teacher: 'https://evil.example/a.png', buddy: '//evil.example/b.png', tip: 'javascript:alert(1)', encourage: '/frontend/assets/vahini-logo.png' }; });
   const art = await page.evaluate(() => window.__render({ free: true }));
   add(JSON.stringify(art.art) === '["/frontend/assets/vahini-logo.png"]', 'Pictures other than same-site paths are ignored', art.art);
   await page.evaluate(() => { delete window.VAHINI_REPORT_ART; });
@@ -266,13 +266,13 @@ try {
     window.__render({ free: true });
     const host = document.querySelector('#report-host') || document.body;
     const before = host.querySelectorAll('img.rp-art').length, slots = host.querySelectorAll('[data-art-slot]').length;
-    window.VAHINI_REPORT_ART = { cheer: '/frontend/assets/vahini-logo.png', buddy: 'https://evil.example/b.png', tip: '/frontend/assets/vahini-logo.png', encourage: '/frontend/assets/vahini-logo.png' };
+    window.VAHINI_REPORT_ART = { teacher: '/frontend/assets/vahini-logo.png', buddy: 'https://evil.example/b.png', tip: '/frontend/assets/vahini-logo.png', encourage: '/frontend/assets/vahini-logo.png' };
     VahiniReport.fillReportArt(document);
     const after = [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('data-art'));
     delete window.VAHINI_REPORT_ART;
     return { before, slots, after };
   });
-  add(late.before === 0 && late.slots > 0 && late.after.includes('cheer') && late.after.includes('encourage') && !late.after.includes('buddy'),
+  add(late.before === 0 && late.slots > 0 && late.after.includes('teacher') && late.after.includes('encourage') && !late.after.includes('buddy'),
     'A picture map set after the report fills the empty slots, same-site only', late);
 
   // Words for children: nothing rendered uses an avoided word.

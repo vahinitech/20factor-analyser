@@ -75,12 +75,13 @@ not part of this repository.
 ## Pictures on the report (optional)
 
 The report can show Vahini and friends, one job each (approved
-2026-10-11, #122; places from version C). The host page sets
-`window.VAHINI_REPORT_ART`, an object of same-site image paths:
+2026-10-11, #122; places from version C; Vidhya's note on page 1, owner
+2026-10-14). The host page sets `window.VAHINI_REPORT_ART`, an object of
+same-site image paths:
 
 ```js
 window.VAHINI_REPORT_ART = {
-  cheer: '/site/assets/characters/vahini.webp',      // page 1, "Keep doing this"
+  teacher: '/site/assets/characters/vidhya.webp',    // page 1, Vidhya's note
   tip: '/site/assets/characters/pihu.webp',          // small, in every tip
   encourage: '/site/assets/characters/tara.webp',    // beside page 2's closing line
 };
@@ -88,8 +89,8 @@ window.VAHINI_REPORT_ART = {
 
 Values are checked like `VAHINI_NOTICE_ART`: anything that is not a
 same-site path is ignored. The pictures are decorative (`alt=""`); without
-the map the report has none and keeps the same layout. `buddy` is no longer
-used. The drawings are not part of this repository.
+the map the report has none and keeps the same layout. `buddy` and `cheer`
+are no longer used. The drawings are not part of this repository.
 
 ## Saved checks and "Your progress"
 

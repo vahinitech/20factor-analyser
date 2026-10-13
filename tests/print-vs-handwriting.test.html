@@ -177,6 +177,8 @@
     // its exercise, this week's tries and Pihu's tip beside it.
     add([...host.querySelectorAll('.coaching-card')].every(r=>r.querySelectorAll('.pr-steps li').length>0 && r.querySelector('.pr-plan') && r.querySelector('.pr-tip')) && host.querySelectorAll('.coaching-card .pr-model .md').length>=3, 'Practice rows include numbered steps, a drawn model, a weekly plan and a tip');
     add(host.querySelectorAll('.sn-m-what p').length===4 && !/CV|RMS|ratio err/.test(host.textContent), 'What we measured is said in plain language');
+    // No letters came back for the hardest line: underline only, no circles.
+    add(!host.querySelector('.sn-m-ring') && /The underlined line was the hardest\. Write it again slowly/.test(host.querySelector('.sn-m[data-measure=read] p')?.textContent||''), 'Reading row without letters underlines the line and draws no circles');
     add([...host.querySelectorAll('.sn-m')].every(r=>r.querySelectorAll('.sn-m-scores .sn-chip, .sn-m-scores .sn-lockchip').length>0), 'Each measurement names the scores built from it');
     add(host.querySelector('.sn-m-how table') && host.querySelectorAll('.sn-m-how tbody tr').length===10, 'How each score is built lists every measurement');
 

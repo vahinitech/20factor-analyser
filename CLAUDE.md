@@ -9,10 +9,13 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
-  whole, then "What we measured on your page" (owner, 2026-10-13): one row
+  whole, then "What your page shows" (owner, 2026-10-13; teacher's voice
+  and Vidhya's note at the top, owner 2026-10-14): one row
   per real measurement (word gaps, line slope, small-letter height, line
   starts, how sure the reader was), drawn on a strip of the writer's own
-  page as it was measured, never circled, with every score built from it.
+  page as it was measured, with every score built from it. The only
+  circles are the reading row's two least-sure letters (below 0.7, one per
+  word); letter-size circles were measured and are not reliable (#146).
   Free sees every measurement; scores outside its five are named "full
   review". Estimates, blends and the pen skills (Vahini sensor pen) are
   labelled as such, and "How each score is built" (screen only) lists the

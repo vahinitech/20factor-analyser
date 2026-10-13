@@ -37,6 +37,7 @@ import re
 import numpy as np
 
 import computer_vision
+import letter_boxes
 import letter_geometry
 
 MAX_LOOK = 3
@@ -360,7 +361,7 @@ def _point_pairs(pts):
     return [[round(float(x), 1), round(float(y), 1)] for x, y in pts]
 
 
-def page_measurements(arr, accepted):
+def page_measurements(arr, accepted, read_letters=None):
     """What was measured on the page, as geometry to draw beside the
     scores (the report's "What we measured on your page"): the steepest
     line's fitted baseline, one line's small-letter band, the usual
@@ -455,6 +456,12 @@ def page_measurements(arr, accepted):
         poly = item.get("poly") or []
         if len(poly) >= 4:
             line["underline"] = _point_pairs([poly[3], poly[2]])
+            # The letters the reader found hardest on that line, when the
+            # scan's recogniser can read it again (letter_boxes.py).
+            if read_letters is not None:
+                letters = letter_boxes.hardest_letters(arr, item, read_letters)
+                if letters:
+                    line["letters"] = letters
         out["reading"] = {
             "confidence_pct": int(
                 round(
