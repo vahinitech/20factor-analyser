@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-// Many-to-many practice selection (docs/PRACTICE-FRAMEWORK.md, "Many-to-many
+// Many-to-many practice selection (docs/10-practice-framework.md, "Many-to-many
 // selection"): need per skill, composites passing their need on, the same
 // report always picking the same practice, rotation through last time's
 // ids, tier limits, tries from the row's own skill, and every
@@ -13,8 +13,8 @@ vm.runInContext(fs.readFileSync('frontend/src/report/practice-select.js', 'utf8'
 const S = window.VahiniPracticeSelect;
 
 // The catalogue version that serves the practice catalogue today: the one
-// docs/PRACTICE-MAP.md names (generated, and checked current by CI).
-const current = fs.readFileSync('docs/PRACTICE-MAP.md', 'utf8').match(/catalogue version `([0-9a-f]+)`/)[1];
+// docs/11-practice-map.md names (generated, and checked current by CI).
+const current = fs.readFileSync('docs/11-practice-map.md', 'utf8').match(/catalogue version `([0-9a-f]+)`/)[1];
 const served = JSON.parse(fs.readFileSync(`backend/catalogs/${current}.json`, 'utf8'));
 assert.ok(served.factors.every(x => x.exercises.every(e => e.helps)), 'the current catalogue says what each exercise helps');
 const cat = { ...served.practice, factors: Object.fromEntries(served.factors.map(f => [String(f.n), { exercises: f.exercises, tips: f.tips }])) };

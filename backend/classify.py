@@ -405,7 +405,7 @@ def classify_lines(arr, lines, threshold=None):
         # real letterheads on worn paper. Skip the override only when stroke
         # width is clearly variable, which protects exceptionally neat
         # handwriting.
-        # Neat handwriting reads at 0.93 too (docs/how-a-scan-works.md,
+        # Neat handwriting reads at 0.93 too (docs/02-how-a-scan-works.md,
         # section 8); the line reader (print_hand.py) vetoes the override
         # when it sees handwriting, and has no say when it cannot judge.
         if (

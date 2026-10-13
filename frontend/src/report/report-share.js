@@ -16,7 +16,7 @@
      other asset. A phone that can share files (Web Share Level 2) gets the
      share sheet, where the family picks WhatsApp; anything else saves the
      PDF and opens https://wa.me/ with a note to attach it.
-   docs/PRACTICE-FRAMEWORK.md sections 9 and 10.
+   docs/10-practice-framework.md sections 9 and 10.
    ========================================================================= */
 (function (global) {
 'use strict';

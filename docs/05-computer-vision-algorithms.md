@@ -443,4 +443,4 @@ silently change scores until field data validates the thresholds.
 
 ---
 
-© 2026 Vahini Technologies · vahinitech.com · See `ARCHITECTURE.md` for the factor formulas and scoring bands.
+© 2026 Vahini Technologies · vahinitech.com · See `04-algorithms-plain-guide.md` for the factor formulas and scoring bands.

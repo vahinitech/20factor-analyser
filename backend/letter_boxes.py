@@ -14,7 +14,7 @@ Nothing here runs a model. ``recognise_columns`` takes the recogniser's
 own ``rec_text`` result (text, then [column count, words, columns per
 word, kinds]); ``letter_boxes`` places the letters on the page.
 How well this works is measured on planted pages by
-scripts/letter_boxes_eval.py (docs/how-a-scan-works.md, section 11).
+scripts/letter_boxes_eval.py (docs/02-how-a-scan-works.md, section 11).
 """
 
 import numpy as np

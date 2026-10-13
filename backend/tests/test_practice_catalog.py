@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 """The practice catalogue: its rules, the versioned catalogue that serves
-it and the tier numbers /api/v2/me returns (docs/PRACTICE-FRAMEWORK.md)."""
+it and the tier numbers /api/v2/me returns (docs/10-practice-framework.md)."""
 
 import copy
 import importlib.util

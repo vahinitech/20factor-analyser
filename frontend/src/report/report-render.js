@@ -351,7 +351,7 @@ function applyPenDynamics(analysis, imu){
   return analysis;
 }
 
-/* ---- practice (docs/PRACTICE-FRAMEWORK.md; owner approval 2026-10-11, #122)
+/* ---- practice (docs/10-practice-framework.md; owner approval 2026-10-11, #122)
    Exercises, tips and how many tries come from the practice catalogue
    (backend/practice_catalog.py), never from this file: the catalogue served
    with the report's dictionary version when there is one, otherwise the copy

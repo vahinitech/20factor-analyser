@@ -2,7 +2,7 @@
 
 What the report actually does today, what a human coach would notice that
 Vahini does not check yet, and the open gaps in priority order. Companion to
-`ARCHITECTURE.md` (how it works) and `VISION-MODELS.md` (which OCR engine).
+`04-algorithms-plain-guide.md` (how it works) and `06-reading-engines.md` (which OCR engine).
 Last reviewed July 2026.
 
 ## Does Vahini read the page like a human coach would?
@@ -83,7 +83,7 @@ OCR text as a secondary signal.
 |---|---|---|
 | Letter-level findings partially retired | Cursive/print style detection is back (server-side, see "What works today"); stray capitals, letterform variance and punctuation audit still don't run: these were part of the same retired browser-side pass (`letters.js`) with no server equivalent yet | Reimplement the remaining checks server-side once there is budget for it |
 | No spelling check | Spelling mistakes are not flagged at all | Same rewrite as above, or a dictionary pass on recognised text |
-| Feedback endpoint not centralised | Lead-capture data from the PDF download dialog is stored in the browser's local storage and posted to `/persist/feedback`, but nothing in this repo implements that service | Deploy a feedback-capture backend and point the deployment's reverse proxy at it; see `docs/PERSISTENCE-VOLUMES.md` |
+| Feedback endpoint not centralised | Lead-capture data from the PDF download dialog is stored in the browser's local storage and posted to `/persist/feedback`, but nothing in this repo implements that service | Deploy a feedback-capture backend and point the deployment's reverse proxy at it; see `docs/15-persistence.md` |
 | No real IMU pen data | The four Dynamics factors are estimated from a photo, not measured from pen motion | Capture from the dual-IMU sensor pen |
 | Indic geometry thresholds tuned on Latin samples | Telugu and Hindi quality scores are less reliable than English | Refit the reference bands on Indic handwriting samples |
 | Letter-shape factors assume Latin letterforms | Loop closure and ascender/descender proxies (a/o/e/g, b/d/f/h/k/l/t/g/j/p/q/y) are not meaningful for Telugu | Script-aware letter models |

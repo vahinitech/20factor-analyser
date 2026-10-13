@@ -29,7 +29,7 @@ Every place is a dict in processed-image pixels:
     line_confidence  the OCR confidence of the line the place is in
 
 Selection is deterministic: sorted by deviation, then top, then left.
-docs/how-a-scan-works.md, section 7, explains each rule.
+docs/02-how-a-scan-works.md, section 7, explains each rule.
 """
 
 import re

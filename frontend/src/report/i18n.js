@@ -2,7 +2,7 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Report language ("Print in", docs/PRACTICE-FRAMEWORK.md section 9).
+   Report language ("Print in", docs/10-practice-framework.md section 9).
    Looks up report words by id in strings/<lang>.js, falling back to
    English for any id a language lacks, and keeps the visitor's choice in
    this browser only (localStorage, which may be blocked: then the choice

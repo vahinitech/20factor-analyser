@@ -1,0 +1,1 @@
+- Docs: the documents in `docs/` are numbered in reading order, from `00-start-here.md` (which lists them all) to `16-roadmap.md`. The evidence-fields note is part of `02-how-a-scan-works.md`, and three superseded notes on earlier report layouts moved to `docs/history/`. Every link, comment and CODEOWNERS entry points at the new names.

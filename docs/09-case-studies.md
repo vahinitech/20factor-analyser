@@ -51,7 +51,7 @@ straightness, tilt spread and slant all read the same line-angle
 geometry from different directions, and the margin measurement improves
 because the page-tilt correction no longer has a large sinking signal to
 fold into the left edge (see the audit note in
-[`example-report.md`](example-report.md)). Deterministic scoring makes
+[`08-example-report.md`](08-example-report.md)). Deterministic scoring makes
 that chain inspectable instead of mysterious.
 
 Full JSON: [before](examples/case1-baseline-before.json) ·
@@ -143,4 +143,4 @@ Full JSON: [before](examples/case3-size-margin-before.json) ·
   report — the practice plan is generated from the same measurements as
   the scores.
 - The full factor definitions, formulas, targets and band cut-offs are
-  in [`scoring-criteria.md`](scoring-criteria.md).
+  in [`03-scoring-criteria.md`](03-scoring-criteria.md).

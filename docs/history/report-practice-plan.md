@@ -1,6 +1,6 @@
 # Free handwriting review
 
-Practice content is moving to the practice catalogue: exercises, tips and practice amounts per factor, by score band and tier, and report text per language. See [PRACTICE-FRAMEWORK.md](PRACTICE-FRAMEWORK.md).
+Practice content is moving to the practice catalogue: exercises, tips and practice amounts per factor, by score band and tier, and report text per language. See [10-practice-framework.md](10-practice-framework.md).
 
 The free experience serves school students, especially classes 5–10 and class 12, while remaining useful to anyone practising handwriting. Teachers and schools can use the same short review.
 

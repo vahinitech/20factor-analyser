@@ -30,7 +30,7 @@ image only).
     python scripts/planted_pages.py                 # download, run, print
     python scripts/planted_pages.py --json out.json --save-pages dir/
 
-The results and what they mean are in docs/how-a-scan-works.md,
+The results and what they mean are in docs/02-how-a-scan-works.md,
 section 8.
 """
 

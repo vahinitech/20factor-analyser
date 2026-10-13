@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) 2026 Vahini Technologies.
 // "Print in", "Share PDF on WhatsApp" and the side panel
-// (docs/PRACTICE-FRAMEWORK.md, sections 9 and 10; owner approval of
+// (docs/10-practice-framework.md, sections 9 and 10; owner approval of
 // version C, 2026-10-11): choosing Telugu redraws the same report in Telugu
 // (scores, crops, the page photo, exercises and pictures unchanged), English
 // comes back exactly as it was, the choice is kept in this browser, "Your
@@ -109,7 +109,7 @@ const SNAPSHOT = `(() => {
 try {
   await waitUp();
   const browser = await chromium.launch();
-  const catalogue = JSON.parse(readFileSync('backend/catalogs/' + readFileSync('docs/PRACTICE-MAP.md', 'utf8').match(/catalogue version `(\w+)`/)[1] + '.json', 'utf8'));
+  const catalogue = JSON.parse(readFileSync('backend/catalogs/' + readFileSync('docs/11-practice-map.md', 'utf8').match(/catalogue version `(\w+)`/)[1] + '.json', 'utf8'));
   const owner = {}, teTitle = {};
   catalogue.factors.forEach(f => {
     (f.exercises || []).forEach(e => { owner[e.id] = f.n; teTitle[e.id] = e.i18n.te.title; });

@@ -35,7 +35,7 @@ explains every number the engine produces.
 | Style & Readability — slant, legibility & neatness | 20% | 87 |
 
 Every factor lands in one of four bands (cut-offs in
-[`scoring-criteria.md`](scoring-criteria.md)): **strong**, **good**,
+[`03-scoring-criteria.md`](03-scoring-criteria.md)): **strong**, **good**,
 **developing**, **focus**.
 
 Strongest factors on this page: Loop Closure 10.0, Stroke Order
@@ -164,4 +164,4 @@ factor 6) — prescribes short daily sets, and predicts how many practice
 tries typically reach the next milestone, baselined off the same
 corrected overall score (`frontend/src/engine/forecast.js`). Rescanning
 after a few days of practice moves the measured columns — see the
-before/after arcs in [`case-studies.md`](case-studies.md).
+before/after arcs in [`09-case-studies.md`](09-case-studies.md).

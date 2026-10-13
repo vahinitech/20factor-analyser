@@ -2,7 +2,7 @@
    © 2026 Vahini Technologies. Contact: info@vahinitech.com.
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
-   Choosing the practice a report prints (docs/PRACTICE-FRAMEWORK.md,
+   Choosing the practice a report prints (docs/10-practice-framework.md,
    "Many-to-many selection"). Every exercise and tip in the catalogue says
    which skills it helps (helps: {factor: weight}, its own factor 1.0).
 

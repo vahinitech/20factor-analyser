@@ -1,8 +1,8 @@
 # Copilot analyser guidance
 
-Read `CLAUDE.md` and, for report/API/frontend changes, `docs/AI-REPORT-CONTRACT.md` and `backend/API-V2.md`. Use `.github/instructions/code-review.instructions.md` for reviews.
+Read `CLAUDE.md` and, for report/API/frontend changes, `docs/12-report-rules.md` and `backend/API-V2.md`. Use `.github/instructions/code-review.instructions.md` for reviews.
 
-**Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](../docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
+**Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](../docs/12-report-rules.md#report-format-baseline-owner-approval-required).
 
 Free exposes five factors; Pro exposes all twenty through server-owned access. Preserve expanded API compatibility, compact dictionary versions, proxy limitations and printable report parity. Rebuild generated bundles. Check the companion `vahinitech/vahini-web` pin for consumer changes. Report validation actually performed; core tests are not a full OCR load test or native app validation.
 
