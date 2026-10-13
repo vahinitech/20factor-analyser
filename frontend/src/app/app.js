@@ -846,6 +846,7 @@ async function runPipeline(){
     layout: pyReport.layout || null,
     regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
     factor_regions: pyReport.factor_regions || {},
+    measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
   // Redraw the sample with the detected word boxes (orange) + baselines
@@ -1105,12 +1106,14 @@ async function finishIMU(){
     layout: pyReport.layout || null,
     regions: Array.isArray(pyReport.regions) ? pyReport.regions : [],
     factor_regions: pyReport.factor_regions || {},
+    measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
   const rendered = VahiniReport.render($('#report-host'), {
     intake: state.intake, analysis, expectedText: state.expected, recognizedText: state.expected,
     detURL,
     crops: serverFactorCrops(vlResult),
+    measurements: vlResult.measurements || {},
     letterFindings: null,
     history: loadHistory(state.intake.writerName),
     pipeline: { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'imu', mode:'imu', vl:vlResult, timing: pyReport._timing||null },
