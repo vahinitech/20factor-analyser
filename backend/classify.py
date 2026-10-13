@@ -32,6 +32,7 @@ except Exception:  # pragma: no cover - cv2 optional
     cv2 = None
 
 from geometry import clamp_box  # noqa: E402 (after the optional cv2 import)
+import print_hand  # noqa: E402
 
 
 def _env_f(name, default):
@@ -305,6 +306,23 @@ def _crop(arr, box):
     return arr[y0:y1, x0:x1]
 
 
+# The line reader's answer counts as "handwriting" below this.
+READER_HAND_BELOW = 0.1
+
+
+def _reader_says_print(crop):
+    """print_hand.py's probability of print for an RGB crop, or None."""
+    if crop is None or not crop.size or cv2 is None:
+        return None
+    gray = cv2.cvtColor(crop, cv2.COLOR_RGB2GRAY)
+    return print_hand.print_probability(gray)
+
+
+def _reader_hand(ln):
+    p = ln.get("_model")
+    return p is not None and p < READER_HAND_BELOW
+
+
 def classify_lines(arr, lines, threshold=None):
     """Annotate each line with `printed_prob` and `printed_hint`.
 
@@ -325,6 +343,7 @@ def classify_lines(arr, lines, threshold=None):
         )
         ln["printed_prob"] = round(prob, 3)
         ln["_feat"] = feat
+        ln["_model"] = _reader_says_print(crop)
         probs.append(prob)
 
     # Page-adaptive nudge: when the page clearly contains printed structure
@@ -337,7 +356,8 @@ def classify_lines(arr, lines, threshold=None):
     def _is_strong_printed(ln, p):
         sc = float(ln.get("score", 0.0) or 0.0)
         t = str(ln.get("text", "") or "").strip()
-        return p >= 0.70 or (sc >= 0.96 and len(t) >= 6)
+        confident = sc >= 0.96 and len(t) >= 6 and not _reader_hand(ln)
+        return p >= 0.70 or confident
 
     strong_count = sum(
         1 for ln, p in zip(lines, probs) if _is_strong_printed(ln, p)
@@ -385,17 +405,22 @@ def classify_lines(arr, lines, threshold=None):
         # real letterheads on worn paper. Skip the override only when stroke
         # width is clearly variable, which protects exceptionally neat
         # handwriting.
+        # Neat handwriting reads at 0.93 too (docs/how-a-scan-works.md,
+        # section 8); the line reader (print_hand.py) vetoes the override
+        # when it sees handwriting, and has no say when it cannot judge.
         if (
             sc >= 0.93
             and len(text) >= 6
             and clean >= 0.6
             and (not sw or sw < 0.5)
+            and not _reader_hand(ln)
         ):
             prob = max(prob, 0.85)
 
         ln["printed_prob"] = round(prob, 3)
         ln["printed_hint"] = bool(prob >= threshold)
         ln.pop("_feat", None)
+        ln.pop("_model", None)
     return lines
 
 
