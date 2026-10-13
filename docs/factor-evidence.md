@@ -1,5 +1,7 @@
 # Factor evidence locations
 
+The full path from photo to marked place, with confidence and the limits of each selection, is in [how-a-scan-works.md](how-a-scan-works.md).
+
 The report pairs a complete crop with a small page map highlighting its source. Evidence is selected from all accepted handwriting regions, independently of the eight-image preview limit.
 
 Each `factor_regions` entry keeps `url` and `caption` and adds:

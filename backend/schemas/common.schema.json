@@ -635,6 +635,96 @@
           "selection_method": {
             "type": "string"
           },
+          "places": {
+            "type": "array",
+            "description": "Free skills 1, 5, 7, 8 and 18: up to three measurements that stand apart from the page ('look') and at most one closest to it ('keep'), each with its box. Ranked by deviation, which is not a probability. backend/marked_places.py.",
+            "maxItems": 4,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "bbox",
+                "kind",
+                "role",
+                "region_id",
+                "measure",
+                "value",
+                "reference",
+                "deviation",
+                "direction",
+                "line_confidence"
+              ],
+              "properties": {
+                "bbox": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "minItems": 4,
+                  "maxItems": 4
+                },
+                "kind": {
+                  "enum": [
+                    "line",
+                    "gap"
+                  ]
+                },
+                "role": {
+                  "enum": [
+                    "look",
+                    "keep"
+                  ]
+                },
+                "region_id": {
+                  "type": "string"
+                },
+                "measure": {
+                  "enum": [
+                    "line_height",
+                    "line_angle",
+                    "read_confidence",
+                    "word_gap"
+                  ]
+                },
+                "value": {
+                  "type": "number"
+                },
+                "reference": {
+                  "type": "number"
+                },
+                "deviation": {
+                  "type": "number",
+                  "minimum": 0
+                },
+                "direction": {
+                  "enum": [
+                    "taller",
+                    "shorter",
+                    "even",
+                    "tilted",
+                    "level",
+                    "unclear",
+                    "clear",
+                    "wider",
+                    "narrower"
+                  ]
+                },
+                "line_confidence": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "from_factor": {
+                  "enum": [
+                    1,
+                    5,
+                    7,
+                    8
+                  ]
+                }
+              }
+            }
+          },
           "location_url": {
             "type": "string",
             "pattern": "^(data:image/(jpeg|png|webp);base64,|$)"
