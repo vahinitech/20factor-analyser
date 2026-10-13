@@ -1393,7 +1393,7 @@
           }
         }
       },
-      "description": "Practice settings (docs/PRACTICE-FRAMEWORK.md): stage names by band, tries by band, tier defaults and the spelling exercise. Text avoids the words weak, poor, bad, wrong, problem, inadequate, fail, lowest, mistake."
+      "description": "Practice settings (docs/10-practice-framework.md): stage names by band, tries by band, tier defaults and the spelling exercise. Text avoids the words weak, poor, bad, wrong, problem, inadequate, fail, lowest, mistake."
     },
     "version": {
       "$ref": "common.schema.json#/definitions/catalogVersion"

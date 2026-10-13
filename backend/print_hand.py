@@ -6,7 +6,7 @@ classify.py decides print from stroke width, letter heights, edges and
 how confidently the OCR read a line. Neat handwriting reads as
 confidently as type, and on those measures it overlaps a clean font, so
 pages of neat handwriting were refused as print
-(docs/how-a-scan-works.md, sections 8 and 10). This reader looks at the
+(docs/02-how-a-scan-works.md, sections 8 and 10). This reader looks at the
 ink itself.
 
 How it reads a line:

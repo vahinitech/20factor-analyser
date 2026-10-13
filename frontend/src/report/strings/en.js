@@ -3,7 +3,7 @@
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Report words, English: the source for every other language
-   (docs/PRACTICE-FRAMEWORK.md, "Print in the parent's language").
+   (docs/10-practice-framework.md, "Print in the parent's language").
 
    Every sentence the two report pages, "Your progress" and the side panel
    print is looked up here by id, in plain English: short sentences, one

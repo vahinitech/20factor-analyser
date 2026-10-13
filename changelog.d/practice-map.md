@@ -1,1 +1,1 @@
-- `docs/PRACTICE-MAP.md` shows every factor with its exercises and tips by name, generated from `backend/practice_catalog.py` by `scripts/practice_map.py`; CI fails if it is out of date.
+- `docs/11-practice-map.md` shows every factor with its exercises and tips by name, generated from `backend/practice_catalog.py` by `scripts/practice_map.py`; CI fails if it is out of date.

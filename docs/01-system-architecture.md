@@ -5,8 +5,8 @@ scores, the places on the page behind them, and practice. This page is the
 system view: what runs where, which engines read the page, which languages
 and scripts are supported, and every performance figure that has been
 measured, with its source. How one photo is read and scored, step by step,
-is in [how-a-scan-works.md](how-a-scan-works.md); the plain-language guide
-to the algorithms is [ARCHITECTURE.md](ARCHITECTURE.md).
+is in [02-how-a-scan-works.md](02-how-a-scan-works.md); the plain-language guide
+to the algorithms is [04-algorithms-plain-guide.md](04-algorithms-plain-guide.md).
 
 A number appears here only when it comes from the code or a recorded
 measurement. Where nothing has been measured, the page says so.
@@ -72,7 +72,7 @@ flowchart TD
 ```
 
 Every step, with code references, is in
-[how-a-scan-works.md](how-a-scan-works.md), sections 1 to 7.
+[02-how-a-scan-works.md](02-how-a-scan-works.md), sections 1 to 7.
 
 ## 3. Engines
 
@@ -191,7 +191,7 @@ are limited to 3 a day per address; Pro keys are not limited.
 ### Load test (real models, stage, 2026-10-07)
 
 2,500 MB container with no swap, 4 cores, 1 scan at a time and 4 waiting,
-the committed sample photo. Source: `docs/api-review.md:49-57`,
+the committed sample photo. Source: `docs/13-api-and-capacity.md:49-57`,
 `backend/load_test.py`.
 
 | Sent at once | Read | Refused (503) | Median | Slowest | Reports a minute |
@@ -207,7 +207,7 @@ refused. Before the scan cap, four scans at once killed the container.
 ### Marking the right place (planted pages, 2026-10-13)
 
 120 pages from the 20 test writers of UJI Pen Characters, one planted
-mistake each; full method in [how-a-scan-works.md](how-a-scan-works.md),
+mistake each; full method in [02-how-a-scan-works.md](02-how-a-scan-works.md),
 sections 8 and 9.
 
 | Planted mistake | Marked, line measures | Marked, letter-level measures |
@@ -222,7 +222,7 @@ sections 8 and 9.
 
 Trained on 12,000 lines (UJI training writers and 21 fonts), seed 0.
 Source: `scripts/train_print_hand.py` output, recorded in
-[how-a-scan-works.md](how-a-scan-works.md), section 10.
+[02-how-a-scan-works.md](02-how-a-scan-works.md), section 10.
 
 | Test | Lines | Correct |
 |---|---|---|
@@ -292,4 +292,4 @@ exact, 95.32% in the top three (`results/drawing_reader/summary.json`).
   comments), about 0.6 GB with a 1.61 GB peak (`capacity.py`), and "about
   1.6 GB" (vahini-web CLAUDE.md). The load test peak was 1.43 GB.
 - **One process, no durable queue**: a waiting scan is lost if the analyser
-  restarts (`docs/api-review.md`).
+  restarts (`docs/13-api-and-capacity.md`).

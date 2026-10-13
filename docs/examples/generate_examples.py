@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
 #
-# generate_examples.py — produces the JSON behind docs/example-report.md
-# and docs/case-studies.md by running the REAL scorer
+# generate_examples.py — produces the JSON behind docs/08-example-report.md
+# and docs/09-case-studies.md by running the REAL scorer
 # (backend/scoring.py build_analysis) on synthetic page geometry.
 #
 # Why synthetic: the repo policy (CONTRIBUTING.md) forbids committing real
@@ -183,9 +183,9 @@ def make_page(
 
 
 # One entry per generated JSON file. `params` portrays the writer;
-# docs/case-studies.md tells the story around the resulting numbers.
+# docs/09-case-studies.md tells the story around the resulting numbers.
 SCENARIOS = {
-    # The worked example for docs/example-report.md: a competent but
+    # The worked example for docs/08-example-report.md: a competent but
     # uneven hand — the baseline sinks, letter heights wander, and
     # ascenders stop short of the 1:2 reach.
     "example-report": dict(
@@ -285,7 +285,7 @@ SCENARIOS = {
 
 
 # The before/after scenario pairs case-studies.html shows; the stories
-# around them live in docs/case-studies.md and in the page itself.
+# around them live in docs/09-case-studies.md and in the page itself.
 CASE_PAIRS = [
     ("case1", "case1-baseline-before", "case1-baseline-after"),
     ("case2", "case2-spacing-before", "case2-spacing-after"),
@@ -317,7 +317,7 @@ def _trim_for_cases(result):
 
 def write_frontend_cases(results_by_name):
     """Emit frontend/scripts/core/case-studies-data.js: the trimmed
-    before/after analyses behind docs/case-studies.md, in the shape
+    before/after analyses behind docs/09-case-studies.md, in the shape
     case-studies.html renders. Written here, like the sample report data,
     so the docs JSONs and the in-app case studies cannot drift apart."""
     payload = {
@@ -342,7 +342,7 @@ def write_frontend_cases(results_by_name):
             " edit by hand.\n"
             "   Real build_analysis output for the three before/after"
             " practice pairs\n"
-            "   (docs/case-studies.md tells their stories);"
+            "   (docs/09-case-studies.md tells their stories);"
             " case-studies.html renders\n"
             "   the comparison. */\n"
         )

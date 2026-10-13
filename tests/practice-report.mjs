@@ -89,8 +89,8 @@ try {
     // The same data the bundle carries, read here from the backend module's
     // served form via the committed catalogue file.
     const fs = await import('node:fs');
-    // The version docs/PRACTICE-MAP.md names: the one serving it today.
-    const current = fs.readFileSync('docs/PRACTICE-MAP.md', 'utf8').match(/catalogue version `([0-9a-f]+)`/)[1];
+    // The version docs/11-practice-map.md names: the one serving it today.
+    const current = fs.readFileSync('docs/11-practice-map.md', 'utf8').match(/catalogue version `([0-9a-f]+)`/)[1];
     return JSON.parse(fs.readFileSync(`backend/catalogs/${current}.json`, 'utf8'));
   })();
   add(!!catalogue, 'A committed catalogue version carries the practice block');

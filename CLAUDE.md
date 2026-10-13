@@ -2,11 +2,11 @@
 
 ## Report workflow and skills
 
-For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRACT.md) and [backend/API-V2.md](backend/API-V2.md). The repository skill is [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md); `skills.md` retains the writing rules.
+For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) and [backend/API-V2.md](backend/API-V2.md). The repository skill is [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md); `skills.md` retains the writing rules.
 
 ## Working rules (apply to every change)
 
-- **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/AI-REPORT-CONTRACT.md#report-format-baseline-owner-approval-required).
+- **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/12-report-rules.md#report-format-baseline-owner-approval-required).
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
   whole, then "What your page shows" (owner, 2026-10-13; teacher's voice
@@ -33,7 +33,7 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   GPUs with constants measured on the deploy box; change a constant only
   with a load-test measurement (`backend/load_test.py`, stage only), and
   never remove the cap. Model and numbers:
-  #97 and `docs/api-review.md`.
+  #97 and `docs/13-api-and-capacity.md`.
 - **The bundle and the asset stamps are build output, never committed.**
   `engine.bundle.js` and the `?v=<hash>` on each page's `scripts/core/*.js`
   and `styles/*.css` (vahini-web and Cloudflare cache those for 30 days)
@@ -107,7 +107,7 @@ For report/API changes, read [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRAC
   characters (Vahini, Bheema, Pihu, Tara) only from `window.VAHINI_REPORT_ART`: same-site paths, `frontend/README.md`; the drawings are proprietary and stay out of this
   AGPL repository. Colours are `var(--v-*)` tokens, never hex codes: the redesigned report (page 1, the practice sheet, the side panel and the shared PDF, version C, 2026-10-11) follows the website theme, and only the four score colours, paper and rules are the report's own (`tests/report-colours.test.mjs`). The brand row (logo, vahinitech.com) and the patent line inside the report pages are the owner's instruction for version C and are part of the report, not site chrome.
 - **Practice is data: every exercise and tip belongs to a factor.** The
-  practice catalogue ([docs/PRACTICE-FRAMEWORK.md](docs/PRACTICE-FRAMEWORK.md))
+  practice catalogue ([docs/10-practice-framework.md](docs/10-practice-framework.md))
   holds one development area per factor (meaning, exercises with levels and
   amounts, tips, worksheet, translations), in `backend/practice_catalog.py`,
   checked on import and served with the factor catalogue. The score band

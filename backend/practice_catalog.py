@@ -3,7 +3,7 @@
 # (data module: the exercises and tips are most of it)
 """The practice catalogue: exercises and tips for every factor.
 
-Practice is data, not renderer code (docs/PRACTICE-FRAMEWORK.md, approved
+Practice is data, not renderer code (docs/10-practice-framework.md, approved
 by the owner on 2026-10-11 in #122). Each factor is one development area
 with exercises ordered by level and short tips. The score band sets how
 many tries a day (DOSAGE), and the tier sets how many skills, exercises
@@ -160,7 +160,7 @@ MODELS = (
 )
 
 # How much an exercise or tip helps a skill other than its own (its own
-# skill is always 1.0): docs/PRACTICE-FRAMEWORK.md, "Many-to-many
+# skill is always 1.0): docs/10-practice-framework.md, "Many-to-many
 # selection".
 HELP_MIN = 0.3
 HELP_MAX = 0.8

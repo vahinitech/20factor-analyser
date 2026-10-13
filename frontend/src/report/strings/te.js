@@ -12,7 +12,7 @@
 
    Same ids as en.js. A missing id prints the English sentence instead;
    tests/report-strings.test.mjs fails while any id is missing here.
-   Rules for this table (docs/PRACTICE-FRAMEWORK.md, "Words for children"):
+   Rules for this table (docs/10-practice-framework.md, "Words for children"):
    simple words a parent with basic schooling reads easily; describe the
    writing, never the child; no judging words (the Telugu list is in
    backend/practice_catalog.py AVOID_WORDS_TE, and the test scans for it);

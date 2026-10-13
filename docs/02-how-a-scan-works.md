@@ -3,7 +3,7 @@
 This is the path one photo takes through the analyser, written from the code.
 Every statement names the function and file it comes from. Line numbers are
 at commit `fbb4909`; when they drift, the function names still find the code.
-[computer-vision-algorithms.md](computer-vision-algorithms.md) explains the
+[05-computer-vision-algorithms.md](05-computer-vision-algorithms.md) explains the
 same techniques for a general reader. This page is the precise version, and
 it is the one to update when the code changes.
 
@@ -119,7 +119,7 @@ are the word breaks.
 All scores are 0 to 10, rounded to one decimal (`scoring._score_factor_map`,
 `scoring.py:571-620`). Bands: 8.5 and above Strong, 7.0 Good, 4.5 Developing,
 below that Focus (`_band`, `scoring.py:379-386`). Section weights and the
-overall score are in [scoring-criteria.md](scoring-criteria.md).
+overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 
 | Skill | Measured from | Score | Needs reading? |
 |---|---|---|---|
@@ -198,6 +198,28 @@ theme colour, and reads only `bbox`, `source_size` and `url` from each entry
 (`report-render.js:643-690`; `report.css:1022-1024`). The free compact API
 returns these entries for skills 1, 5, 7, 8 and 18
 (`compact_reports.py:165-175`).
+
+### The fields of each evidence entry
+
+The report pairs a complete crop with a small page map highlighting its source. Evidence is selected from all accepted handwriting regions, independently of the eight-image preview limit.
+
+Each `factor_regions` entry keeps `url` and `caption` and adds:
+
+- `status`: `measurement`, `context`, or `unavailable`.
+- `bbox`: `[x, y, width, height]` of the encoded crop in processed-image pixels, or null when unavailable.
+- `source_size`: `[width, height]` of that processed image.
+- `coordinate_space`: `processed-image`. Coordinates follow EXIF correction and server resizing; they are not raw upload coordinates.
+- `region_ids`: selected handwriting regions, numbered top to bottom then left to right within this evidence response. These identify detected regions, which may be words or lines depending on the OCR backend.
+- `selection_method`: the rule used to select the crop.
+- `location_url`: a small page map with selected boxes highlighted.
+
+Size evidence selects the largest height deviation from the median. Baseline and straightness evidence select the largest absolute polygon angle. Margin evidence selects the largest corrected-left-edge deviation, using the scorer's camera-tilt correction. Word-spacing evidence uses the scorer's row grouping and selects the largest normalized-gap deviation, showing both adjacent regions.
+
+A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop-letter frequency or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
+
+Aggregate images and page maps retain accepted handwriting rectangles and blank the rest. This prevents excluded headers and labels from returning through whole-page previews. It does not correct a printed region that the upstream classifier mistakenly accepts, or separate printed and handwritten pixels inside one accepted box.
+
+The browser uses `object-fit: contain` so the crop is not cut off again during display. Older consumers can continue reading `url` and `caption`, but must allow an empty URL for unavailable evidence. Changes to scoring proxies and minimum evidence are tracked in issues #46 and #47.
 
 ## 7. Choosing exact words and letters to circle
 

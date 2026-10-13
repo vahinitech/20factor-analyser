@@ -84,7 +84,7 @@ jobs:
             backend/tests/test_daily_limit.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
-      - name: Practice map is current (docs/PRACTICE-MAP.md)
+      - name: Practice map is current (docs/11-practice-map.md)
         run: python scripts/practice_map.py --check
       - name: Verify generated JSON Schemas
         run: python backend/generate_schemas.py --check

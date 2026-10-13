@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-// The report's string tables (docs/PRACTICE-FRAMEWORK.md, "Print in the
+// The report's string tables (docs/10-practice-framework.md, "Print in the
 // parent's language"): every id English has, each listed language has too
 // (a missing one is printed in English for that sentence, and listed here);
 // placeholders and count forms match English; a missing id falls back to

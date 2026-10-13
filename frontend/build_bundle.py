@@ -5,7 +5,7 @@
 #
 # The browser only loads the packed bundle; the readable engine sources live in
 # frontend/src/. This script concatenates the sources in the documented order
-# (docs/BUILD.md), base64-encodes the UTF-8 bytes, and wraps them in the same
+# (docs/14-build.md), base64-encodes the UTF-8 bytes, and wraps them in the same
 # self-decoding loader the existing bundle uses:
 #
 #     (0, eval)(decodeURIComponent(escape(atob(_v))));

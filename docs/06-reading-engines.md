@@ -88,7 +88,7 @@ revisiting then.
 5. Keep building the sensor-pen dataset regardless. Every capture is
    labelled Indic-handwriting motion data, the asset that eventually lets
    Vahini fine-tune any of these engines for its own users. See the "data
-   moat" section in `ROADMAP.md`.
+   moat" section in `16-roadmap.md`.
 
 Privacy guardrail: Vahini's promise is that handwriting images are
 processed and not retained. Every engine listed as deployed upholds that.
@@ -108,4 +108,4 @@ one with explicit consent and a privacy review first.
   engine reads). A VLM like Chandra does both at once.
 - Self-host: run the model on your own machine, so data never leaves it.
 
-Companion to `ARCHITECTURE.md` and `ROADMAP.md`.
+Companion to `04-algorithms-plain-guide.md` and `16-roadmap.md`.

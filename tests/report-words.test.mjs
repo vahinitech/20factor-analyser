@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-// Words for children (docs/PRACTICE-FRAMEWORK.md, section 7): no string in
+// Words for children (docs/10-practice-framework.md, section 7): no string in
 // the report renderer, the progress panel, the share bar or the string
 // tables (every language) may use a word that judges the child, in English
 // or in Telugu, and none may hold an em dash. The practice catalogue has the same

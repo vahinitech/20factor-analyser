@@ -5,7 +5,7 @@
 Unlike backend/tests/benchmark_concurrency.py (stubbed OCR), this measures
 the deployed models: how many simultaneous scans complete with a real
 reading, how many are refused with 503 by the scan cap, and how long they
-take. It is how the numbers in issue #97 and docs/api-review.md were taken.
+take. It is how the numbers in issue #97 and docs/13-api-and-capacity.md were taken.
 
 Every request is a cache miss: the photo's bytes get a random tail after the
 image data. JPEG and PNG decoders ignore it; the server's cache keys on the

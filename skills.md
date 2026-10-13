@@ -1,6 +1,6 @@
 # Skill index
 
-For implementation and review of Free/Pro reports, compact APIs and PDFs, use [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md) and [docs/AI-REPORT-CONTRACT.md](docs/AI-REPORT-CONTRACT.md). The writing rules below remain applicable to prose.
+For implementation and review of Free/Pro reports, compact APIs and PDFs, use [.claude/skills/vahini-report-change/SKILL.md](.claude/skills/vahini-report-change/SKILL.md) and [docs/12-report-rules.md](docs/12-report-rules.md). The writing rules below remain applicable to prose.
 
 # Writing skills: AI-isms to avoid
 

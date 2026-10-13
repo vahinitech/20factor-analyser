@@ -1177,7 +1177,7 @@ function renderSampleReport(){
 
 /* ---------- case studies page (case-studies.html) ----------
    Three before/after practice arcs. The prose mirrors
-   docs/case-studies.md; every number is read from
+   docs/09-case-studies.md; every number is read from
    window.VAHINI_CASE_STUDIES (real build_analysis output pairs emitted
    by docs/examples/generate_examples.py), never typed into the page, so
    the docs, the JSONs and this page cannot disagree. */

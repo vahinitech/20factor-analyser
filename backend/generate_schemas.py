@@ -429,7 +429,7 @@ def translations(fields, optional=()):
 
 def helps_map():
     """``helps``: which skills an exercise or tip develops, by factor
-    number, its own at 1.0 (docs/PRACTICE-FRAMEWORK.md, "Many-to-many
+    number, its own at 1.0 (docs/10-practice-framework.md, "Many-to-many
     selection")."""
     return {
         "type": "object",
@@ -559,7 +559,7 @@ def practice_block():
             "spelling": closed({"exercises": exercises, "tips": tips}),
         },
         description=(
-            "Practice settings (docs/PRACTICE-FRAMEWORK.md): stage names "
+            "Practice settings (docs/10-practice-framework.md): stage names "
             "by band, tries by band, tier defaults and the spelling "
             "exercise. Text avoids the words " + ", ".join(AVOID_WORDS) + "."
         ),

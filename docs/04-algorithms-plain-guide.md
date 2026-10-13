@@ -1,6 +1,6 @@
 # Vahini 20-Factor Engine: Architecture & Algorithms
 
-> The system view (components, engines, languages, deployment and every measured benchmark) is in [system-architecture.md](system-architecture.md); the exact path one photo takes, with code references, is in [how-a-scan-works.md](how-a-scan-works.md).
+> The system view (components, engines, languages, deployment and every measured benchmark) is in [01-system-architecture.md](01-system-architecture.md); the exact path one photo takes, with code references, is in [02-how-a-scan-works.md](02-how-a-scan-works.md).
 
 ### A plain-language guide to how Vahini reads handwriting
 
@@ -558,7 +558,7 @@ measured skills as priorities (as before), then for each one:
 The data lives in one catalogue served with the versioned factor catalogue,
 so the Free and Pro reports, vahinitech.com's factor pages and the app all
 show the same exercises. Details, mock-ups and tests:
-[PRACTICE-FRAMEWORK.md](PRACTICE-FRAMEWORK.md).
+[10-practice-framework.md](10-practice-framework.md).
 
 ## 10. Writing-Craft layer & OCR (content-level feedback)
 
@@ -589,7 +589,7 @@ score, so imperfect OCR still yields useful guidance.
 **Hard letters (l/c, k→ic, e/c, o-variation).** Telling near-identical handwritten letters apart is a
 recognition problem in its own right. The full engineering answer: CRNN preprocessing/decoding changes,
 TrOCR vs CRNN, hard-negative augmentation, and an n-gram-LM (KenLM) CTC beam-search tie-breaker, plus
-Vahini's reference-text alignment shortcut: is documented in **`OCR-AMBIGUITY.md`**.
+Vahini's reference-text alignment shortcut: is documented in **`07-ambiguous-handwriting.md`**.
 
 ---
 
@@ -737,7 +737,7 @@ grammar, homophones, formatting, sign-offs; see §10) is unaffected and still ru
 recognition server returns text with reasonable confidence.
 
 Re-introducing per-letter findings would need a server-side rewrite against the server's own
-detection geometry. Tracked in `ROADMAP.md` §3.
+detection geometry. Tracked in `16-roadmap.md` §3.
 
 ---
 
@@ -780,7 +780,7 @@ frequency (C1); age/grade norm bands once coach calibration data exists; behavio
 (hesitant / impulsive / fatigue) **only after** real IMU data, always labelled indicators: never
 diagnosis; script/language expansion (Hindi, Telugu, Tamil, Kannada).
 
-See also **`computer-vision-algorithms.md`**: a learner-friendly walkthrough of every CV algorithm
+See also **`05-computer-vision-algorithms.md`**: a learner-friendly walkthrough of every CV algorithm
 used (what it is, why, and how it works step by step).
 
 ---
@@ -789,7 +789,7 @@ used (what it is, why, and how it works step by step).
 
 | Part | Today | Next upgrade |
 |---|---|---|
-| Reading the actual words (OCR) | **PaddleOCR** server, plus TrOCR and Surya for handwriting in hybrid mode | Better Telugu/Hindi accuracy from real sample data; see `ROADMAP.md` |
+| Reading the actual words (OCR) | **PaddleOCR** server, plus TrOCR and Surya for handwriting in hybrid mode | Better Telugu/Hindi accuracy from real sample data; see `16-roadmap.md` |
 | Motion factors (F13–F16) | Photo estimate / pen **simulation** | Live IMU pen data |
 | Legibility (F18) | Transparent blend | Model calibrated to coach ratings |
 | Character distinction (F19) | Letter-target heuristic | Learned letter-similarity model |

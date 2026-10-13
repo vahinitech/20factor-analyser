@@ -10,10 +10,10 @@ If this page and the code ever disagree, the code wins; please file an
 issue.
 
 A worked report using these criteria is in
-[`example-report.md`](example-report.md); before/after arcs in
-[`case-studies.md`](case-studies.md). How the underlying pixel
+[`08-example-report.md`](08-example-report.md); before/after arcs in
+[`09-case-studies.md`](09-case-studies.md). How the underlying pixel
 measurements are made is a separate walkthrough:
-[`computer-vision-algorithms.md`](computer-vision-algorithms.md).
+[`05-computer-vision-algorithms.md`](05-computer-vision-algorithms.md).
 
 ## Sections, weights and the overall score
 
@@ -110,17 +110,17 @@ paper does not count as reach; reach =
 - **Slant (#17) is page-level tilt variability**, not a per-letter
   cursive-lean angle; loop closure is letter-share, not per-letter
   contour tracing. Both simplifications are stated in
-  [`computer-vision-algorithms.md`](computer-vision-algorithms.md).
+  [`05-computer-vision-algorithms.md`](05-computer-vision-algorithms.md).
 - **Fragmented detection hurts spatial scores.** Word Spacing reads the
   gaps between detected segments on one row, so a line detected whole
   shows no measurable gap irregularity (scores 10); a page whose gaps
   split detection also drags Margin Discipline down, since fragments'
   left edges start mid-page. Case 2 in
-  [`case-studies.md`](case-studies.md) shows both sides of this.
+  [`09-case-studies.md`](09-case-studies.md) shows both sides of this.
 - **Sinking writing vs a tilted photo are indistinguishable** from line
   geometry alone; the report prints that caveat next to the baseline
   drift note, and the margin measurement shares the coupling (audit
-  note in [`example-report.md`](example-report.md)).
+  note in [`08-example-report.md`](08-example-report.md)).
 - **Two of the coaches' eight questions are never faked**: posture and
   page-to-page endurance appear with an honest note instead of a number
   unless the pen / a multi-page assessment measures them.

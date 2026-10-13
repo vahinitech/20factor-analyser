@@ -4,7 +4,7 @@
 
 The scorer measures size and baseline from whole line boxes, which cannot
 see one oversized letter or one word that drops below the line, and which
-count a sloping line as a taller one (docs/how-a-scan-works.md, sections 4
+count a sloping line as a taller one (docs/02-how-a-scan-works.md, sections 4
 and 8). This measures inside the line instead:
 
 1. Binarise the line (zone_analysis.binarise) and take its ink blobs,

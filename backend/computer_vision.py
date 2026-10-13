@@ -664,7 +664,7 @@ def _layout_features(arr: np.ndarray):
 # Deliberately not a graded factor: no curriculum treats cursive as more
 # "correct" than print (many schools teach print-first and rarely touch
 # cursive), so this is shown as context only, the same way document_type is,
-# never as a target a page can fall short of. See docs/ARCHITECTURE.md.
+# never as a target a page can fall short of. See docs/04-algorithms-plain-guide.md.
 _STYLE_MIN_LETTERS = 12  # below this much Latin-letter evidence, say nothing
 _STYLE_CURSIVE_MAX = 0.45
 _STYLE_PRINT_MIN = 0.75
@@ -787,7 +787,7 @@ def infer_writing_style(arr, lines):
     """Print, semi-cursive or cursive, from how many separate ink blobs
     each line's letters actually form, not from asking an OCR/VLM to
     guess. Requires enough Latin-letter text to have real evidence (see
-    docs/ROADMAP.md: letterform-based signals in this codebase assume
+    docs/16-roadmap.md: letterform-based signals in this codebase assume
     Latin script); returns confidence=0.0/style=None rather than a guess
     when there isn't enough."""
     total_letters = 0
@@ -822,7 +822,7 @@ def infer_writing_style(arr, lines):
 
     # More letters sampled and a ratio further from either boundary both
     # raise confidence; this is a starting calibration, not a claim of
-    # measured accuracy, see docs/ROADMAP.md.
+    # measured accuracy, see docs/16-roadmap.md.
     evidence_conf = min(1.0, total_letters / 60.0)
     boundary_dist = min(
         abs(ratio - _STYLE_CURSIVE_MAX), abs(ratio - _STYLE_PRINT_MIN)
