@@ -8,7 +8,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
 const page = fs.readFileSync(new URL('../frontend/analyser.html', import.meta.url), 'utf8');
-const plain = s => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#x27;|&#39;/g, "'").trim();
+// Text as a reader sees it: tags removed until none are left, then each
+// entity decoded once, in a single pass (so "&amp;lt;" stays "&lt;").
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#x27;': "'", '&#39;': "'" };
+const plain = (s) => {
+  let text = s, before;
+  do { before = text; text = text.replace(/<[^<>]*>/g, ''); } while (text !== before);
+  return text.replace(/&(?:amp|lt|gt|quot|#x27|#39);/g, (e) => ENTITIES[e]).trim();
+};
 
 const visible = [...page.matchAll(/<details(?: open)?><summary>([\s\S]*?)<\/summary>\s*<p>([\s\S]*?)<\/p><\/details>/g)]
   .map(m => [plain(m[1]), plain(m[2])]);
