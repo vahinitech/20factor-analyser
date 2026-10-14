@@ -131,7 +131,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
