@@ -1,0 +1,1 @@
+- Docs: agents resolve every review comment, code-scanning alert and merge conflict on a PR, then wait for CI on the final commit, before merging (owner, 2026-10-14).
