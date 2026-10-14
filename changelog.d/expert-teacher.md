@@ -1,0 +1,1 @@
+- Changed: Vidhya signs the report as "your handwriting expert teacher" (Telugu "మీ చేతిరాత నిపుణురాలైన టీచర్"), and the Telugu for writing on the line says "గీత పైన రాయండి" instead of seating the words on it (owner, 2026-10-14). New practice catalogue version 09ab98851399f2382009.
