@@ -1,0 +1,1 @@
+- Fixed: the Telugu of Vidhya's note, "What your page shows" and the Pro note is the owner's wording (2026-10-14), in the respectful form a teacher uses, with వరుస for a line of writing and గీత only for a drawn line. The rest of the Telugu report is listed for the owner's review.
