@@ -212,7 +212,7 @@ S.en = {
   'vt.grow.none': 'Every skill here is strong. Keep writing a little each day.',
   'vt.promise': 'Practise for a few minutes every day this week. Trust me, you will see the difference on your next page.',
   'vt.score': 'My score for this page: {score} out of 100, {stage}.',
-  'vt.sign': 'Vidhya, your writing teacher',
+  'vt.sign': 'Vidhya, your handwriting expert teacher',
   'm.slope.flat': 'Most of your lines are nearly straight.',
   'm.slope.tilt': 'Some of your lines climb or slip a little.',
   'm.slope.up': 'The red line shows the one that climbs the most. The dashed line beside it is straight. Keep your eyes on the line as you write.',
