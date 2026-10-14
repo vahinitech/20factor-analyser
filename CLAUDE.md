@@ -93,6 +93,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   (`.claude/skills/natural-writing/SKILL.md`) plus `skills.md` at the root.
 - **Conventional commits** (`feat:`, `fix:`, `docs:`, `test:`); body says why.
 - **Build and test before every commit; CI green before merge.**
+- **Resolve comments and conflicts first, then merge (owner, 2026-10-14).** Before merging a pull request: answer every review comment and code-scanning alert on it, by fixing the code or replying why not, and resolve each thread; a bot's comment (CodeQL, Copilot) counts like a person's. Bring the branch up to date with `main` and resolve any merge conflict. Then wait for CI on that final commit to pass, and only then merge. Check with `gh pr view <n> --json mergeable` (must be `MERGEABLE`) and `gh api graphql -f query='{repository(owner:"vahinitech",name:"<repo>"){pullRequest(number:<n>){reviewThreads(first:100){nodes{isResolved}}}}}'` (every `isResolved` true). #150 merged with two CodeQL threads still showing open; the code was fixed, but nobody could tell from the PR.
 - **Docs-only changes skip CI** — `ci.yml` has `paths-ignore: ['**/*.md',
   'docs/**']`; a PR touching only markdown never triggers the pipeline. A
   mixed PR (docs + code) still runs everything — the filter only fires
