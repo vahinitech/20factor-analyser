@@ -1,0 +1,1 @@
+- Removed: 60 report strings in each language that no code reads any more (`keep.text.*`, `saw.*`, `action.*`), left from the report's earlier layouts. They are not shown to anyone, so nobody has to review their Telugu.
