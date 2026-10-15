@@ -243,6 +243,12 @@ async function serverPythonReport(blob, expectedText){
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
+      // The stored report's receipt (backend/report_store.py) goes to the
+      // browser's saved checks; earlier receipts are renewed for 12 months.
+      if (global.VahiniProgress){
+        global.VahiniProgress.receiptFor(j && j.receipt);
+        if (j && j.receipt) global.VahiniProgress.renew(requestUrl);
+      }
       if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
       // The visitor's practice numbers from /api/v2/me (practice report, #122).
       if(j && j.analysis && account && account.practice) j.analysis.practiceLimits = account.practice;

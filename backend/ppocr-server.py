@@ -31,6 +31,7 @@
 #   The first request for a new language is therefore slow (it downloads); every
 #   request after that is fast. To pre-warm at deploy time, see README "warm-up".
 
+import logging
 import os
 import sys
 import time
@@ -58,7 +59,8 @@ import compact_reports
 import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
 import debug_store  # stage-only photo keeping, off unless provisioned
-from typing import Literal
+import report_store  # report records for later comparison, no photos
+from typing import List, Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
@@ -78,6 +80,7 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
@@ -138,7 +141,7 @@ ALLOWED_ORIGINS = SETTINGS.allowed_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_methods=["POST", "GET", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -278,6 +281,8 @@ def health():
         "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
         # True only on stage with debug storage provisioned (debug_store.py).
         "debug_store": debug_store.STORE.enabled,
+        # Report records for later comparison (report_store.py).
+        "report_store": report_store.STORE.enabled,
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
@@ -970,13 +975,71 @@ async def api_report(
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
-        return compact_reports.build_compact(payload, access, fields)
+        report = compact_reports.build_compact(payload, access, fields)
+        receipt = await run_in_threadpool(_keep_report, payload, access)
+        if receipt:
+            report["receipt"] = receipt
+        return report
     payload = await _report_payload(image, lang, expected_text)
     _spend_if_report(charge, payload)
     return report_contract.public_report(
         payload,
         await run_in_threadpool(entitlements.access_for, authorization),
     )
+
+
+_store_log = logging.getLogger("vahini.report_store")
+
+
+def _keep_report(payload, access):
+    """Keep this report's record (report_store.py) and return its
+    receipt, or None. Built from a compact projection without the text;
+    the evidence block is read for its marks only."""
+    store = report_store.STORE
+    if not store.enabled or payload.get("ok") is not True:
+        return None
+    try:
+        source = compact_reports.build_compact(payload, access, {"evidence"})
+        return store.save(source)
+    except Exception as exc:  # pylint: disable=broad-except
+        # Keeping a record must never cost a family their report.
+        _store_log.warning("report store: %s", exc)
+        return None
+
+
+class _Receipts(BaseModel):
+    receipts: List[dict] = []
+
+
+def _stored(report_id, token):
+    record = report_store.STORE.read(report_id, token or "")
+    if record is None:
+        # Unknown, expired, deleted or a wrong token: all the same.
+        raise HTTPException(404, "No such report")
+    return record
+
+
+@app.get("/api/v2/reports/{report_id}")
+def api_stored_report(
+    report_id: str, x_report_token: str = Header(default=None)
+):
+    return _stored(report_id, x_report_token)
+
+
+@app.delete("/api/v2/reports/{report_id}", status_code=204)
+def api_delete_report(
+    report_id: str, x_report_token: str = Header(default=None)
+):
+    if not report_store.STORE.delete(report_id, x_report_token or ""):
+        raise HTTPException(404, "No such report")
+    return Response(status_code=204)
+
+
+@app.post("/api/v2/reports/renew")
+def api_renew_reports(body: _Receipts):
+    """The family checked again: keep their earlier reports another
+    12 months. Unknown receipts are skipped silently."""
+    return {"renewed": report_store.STORE.renew(body.receipts)}
 
 
 @app.get("/api/v2/catalog/{version}")

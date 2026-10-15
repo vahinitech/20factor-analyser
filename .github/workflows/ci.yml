@@ -82,7 +82,8 @@ jobs:
             backend/tests/test_layout_filter.py \
             backend/tests/test_image_formats.py \
             backend/tests/test_daily_limit.py \
-            backend/debug_store.py backend/tests/test_debug_store.py
+            backend/debug_store.py backend/tests/test_debug_store.py \
+            backend/report_store.py backend/tests/test_report_store.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -115,7 +116,8 @@ jobs:
             backend.tests.test_api_concurrency \
             backend.tests.test_image_formats \
             backend.tests.test_daily_limit \
-            backend.tests.test_debug_store
+            backend.tests.test_debug_store \
+            backend.tests.test_report_store
 
   e2e:
     runs-on: ubuntu-latest
