@@ -167,6 +167,8 @@ jobs:
         run: npm run test:practice
       - name: Print in Telugu and Share on WhatsApp
         run: npm run test:language
+      - name: The print popup's optional price question and the Request Pro card
+        run: npm run test:print-popup
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

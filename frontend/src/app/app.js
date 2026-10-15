@@ -1003,6 +1003,9 @@ function renderNextSteps(analysis){
     cal.dataset.url = URL.createObjectURL(new Blob([ics], { type:'text/calendar' }));
     cal.href = cal.dataset.url;
   }
+  // "See all 20 skills" only on a Free report.
+  const pro = $('#ns-pro');
+  if (pro) pro.hidden = ((analysis && analysis.access) || {}).tier === 'pro';
   box.hidden = false;
 }
 

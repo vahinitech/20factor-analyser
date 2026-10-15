@@ -515,6 +515,7 @@
           <div class="ns-card"><h3 id="ns-practice-title">1. Practise one thing</h3><p id="ns-practice-text">Start with your first priority, a few minutes a day for a week.</p><p class="ns-link"><a id="ns-practice-link" href="/practice.html">Open the practice worksheets</a></p></div>
           <div class="ns-card"><h3 id="ns-again-title">2. Check again in a week</h3><p>Same pen, same paper, the same kind of page. Then compare the two reports.</p><p class="ns-link"><a id="ns-calendar" href="#" download="handwriting-check-again.ics">Add a reminder to your calendar</a></p></div>
           <div class="ns-card"><h3>3. What a photo cannot see</h3><p>Stroke order, speed and pressure were estimated from the ink. The Vahini pen, in development, records how the page was written.</p><p class="ns-link"><a href="/product.html?from=free-check">What the pen adds</a> · <a href="/reach.html?from=free-check">Pre-order</a></p></div>
+          <div class="ns-card" id="ns-pro"><h3>4. See all 20 skills</h3><p>This free report shows five skills. Pro shows all 20, with a practice plan for each.</p><p class="ns-link"><a id="ns-pro-link" href="/reach.html?topic=pro&amp;from=report">Request Pro</a></p></div>
         </div>
       </section>
       <div class="side-card side-progress" id="side-progress" hidden></div>
@@ -761,6 +762,10 @@
         </select>
         <p class="vgate__err" id="vg-purpose-err">Please pick an option.</p>
       </div>
+      <div class="fld">
+        <label for="vg-price">A report with all 20 skills and a practice plan for each: what would it be worth to you? <span style="color:#828A93;font-weight:600;">(optional)</span></label>
+        <select id="vg-price"><option value="">Choose one…</option></select>
+      </div>
       <p class="vgate__consent">By continuing you agree we may contact you about Vahini. We never sell your data. See our <a href="../site/faq.html" style="color:#048A91;">FAQ</a>.</p>
       <div class="vgate__row">
         <button class="vgate__btn vgate__btn--ghost" id="vg-cancel" type="button">Cancel</button>
@@ -786,6 +791,22 @@
   var pending = null; // callback to run after success
 
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  // What a full report is worth (owner, 2026-10-16): asked here, with the
+  // report just seen, so Pro prices follow real answers. Rupees for a
+  // browser in India, dollars elsewhere, from the time zone. Optional.
+  // vahini-web's Friday report counts these values; keep them in step.
+  var zone = "";
+  try{ zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; }catch(e){}
+  var currency = /^Asia\/(Kolkata|Calcutta)$/.test(zone) ? "INR" : "USD";
+  var PRICES = {
+    INR: [["nothing","Nothing, the free report is enough"],["up_to_50","Up to \u20B950"],["100","\u20B9100"],["200","\u20B9200"],["more","More than \u20B9200"]],
+    USD: [["nothing","Nothing, the free report is enough"],["up_to_3","Up to $3"],["5","$5"],["10","$10"],["more","More than $10"]]
+  };
+  var priceSel = document.getElementById("vg-price");
+  PRICES[currency].forEach(function(p){
+    var o = document.createElement("option"); o.value = p[0]; o.textContent = p[1]; priceSel.appendChild(o);
+  });
 
   function saveLead(lead){
     try{ var a = JSON.parse(localStorage.getItem(LEADS) || "[]"); a.push(lead); localStorage.setItem(LEADS, JSON.stringify(a.slice(-300))); }catch(e){}
@@ -833,7 +854,9 @@
     if(!purpose){ showErr("vg-purpose"); ok=false; }
     if(!ok) return;
 
+    var price = priceSel.value;
     saveLead({ type:"report_pdf_lead", name:name, email:email, org:org, purpose:purpose,
+               price: price || undefined, currency: price ? currency : undefined,
                ts:new Date().toISOString(), url:location.href.split("#")[0],
                ua:navigator.userAgent, lang:navigator.language });
     try{ localStorage.setItem(LEAD_KEY, JSON.stringify({ name:name, email:email, ts:Date.now() })); }catch(e){}
