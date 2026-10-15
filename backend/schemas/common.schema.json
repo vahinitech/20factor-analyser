@@ -358,6 +358,7 @@
       "required": [
         "id",
         "token",
+        "read_token",
         "expires"
       ],
       "properties": {
@@ -367,7 +368,13 @@
         },
         "token": {
           "type": "string",
-          "pattern": "^[A-Za-z0-9_-]{43}$"
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "description": "Reads, renews and deletes. Stays in the family's browser."
+        },
+        "read_token": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "description": "Goes into the shared PDF. Opens the record only through POST /api/v2/compare with a Pro key; never reads alone, renews or deletes."
         },
         "expires": {
           "type": "string",

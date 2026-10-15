@@ -18,7 +18,10 @@
      PDF and opens https://wa.me/ with a note to attach it.
    - The PDF also carries, for the Pro comparison of two PDFs (owner,
      2026-10-16), data nobody sees on the printed pages: the stored
-     report's receipt (backend/report_store.py) in the PDF's XMP metadata,
+     report's read-only receipt (backend/report_store.py) in the PDF's XMP
+     metadata, which opens the record only through the Pro comparison
+     (POST /api/v2/compare) and can never renew or delete it; the full
+     token stays in this browser's saved checks (progress.js);
      and the page photo, at most 1600 px and re-encoded so no camera data
      goes with it, as an embedded file. The vendored jsPDF has XMP
      (addMetadata) but no attachments, so the file is written through the
@@ -73,7 +76,10 @@ function setCheck(c){
   if (!c){ check = null; return; }
   const r = c.receipt;
   check = {
-    receipt: r && RECEIPT_ID.test(r.id) && RECEIPT_TOKEN.test(r.token) ? { id: r.id, token: r.token } : null,
+    /* The read-only token, never the full one: whoever the PDF reaches
+       must not be able to delete the family's record. No read token, no
+       receipt in the PDF. */
+    receipt: r && RECEIPT_ID.test(r.id) && RECEIPT_TOKEN.test(r.read_token) ? { id: r.id, token: r.read_token } : null,
     photo: c.image ? photoBytes(c.image) : Promise.resolve(null),
   };
 }

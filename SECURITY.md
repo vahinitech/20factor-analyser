@@ -72,8 +72,11 @@ test for the new boundary, and the owner's agreement. Owner decisions of
   comparability counts, where each factor was measured (numbers) and the
   day. It is built from an allowlist, never by deleting fields, and holds
   no photo, cut-out, words read, caption, file name, typed passage, access
-  key, address, browser or time of day. A random receipt (id and token,
-  only the token's SHA-256 stored) is the only way back to it, and nothing
+  key, address, browser or time of day. A random receipt (id and two
+  tokens, only their SHA-256 stored) is the only way back to it: the full
+  token stays in the family's browser, and the read-only one in a shared
+  PDF opens the record only through the Pro comparison
+  (`POST /api/v2/compare`), never alone, and cannot renew or delete it, and nothing
   links a record to a person. Records expire 12 months after the family's
   last check (a later check renews the receipts its browser holds) and the
   family can delete one with its receipt. `backend/tests/test_report_store.py`
