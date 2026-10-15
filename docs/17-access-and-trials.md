@@ -280,6 +280,21 @@ connect it on the page, and look up their customer id instead.
 | The key is typed again on every visit | Tab memory only, by design, so the key never sits in browser storage | Goes away with sign-in; not planned separately |
 | No command lists every customer | `show-customer` looks up one id taken from the private register | Not planned |
 
+## Requests and what people would pay
+
+- **Request Pro.** The "See all 20 skills" card under a Free report links to
+  vahinitech.com's `reach.html?topic=pro&from=report`, a short form (email,
+  who will use Pro, an optional note). Requests are kept and mailed to the
+  team by vahini-web's persist service and listed in its Friday report. Grant
+  access with the commands above.
+- **Price.** The print popup ("Get your report PDF") asks, optionally, what a
+  report with all 20 skills would be worth: in rupees for a browser in India,
+  dollars elsewhere (from the time zone). The answer goes with that lead as
+  `price` and `currency`; the Friday report counts the answers per currency.
+  The values (`nothing`, `up_to_50`, `100`, `200`, `more`; `up_to_3`, `5`,
+  `10`, `more`) are matched in vahini-web's `tools/weekly-report.mjs`, so a
+  change here changes there in the same order of PRs. `tests/print-popup.mjs`.
+
 ## Owner decisions still open
 
 - Trial length.

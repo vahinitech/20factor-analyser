@@ -25,7 +25,8 @@
     "test:practice": "node tests/practice-report.mjs",
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
-    "test:strings": "node tests/report-strings.test.mjs"
+    "test:strings": "node tests/report-strings.test.mjs",
+    "test:print-popup": "node tests/print-popup.mjs"
   },
   "devDependencies": {
     "http-server": "^14.1.1",

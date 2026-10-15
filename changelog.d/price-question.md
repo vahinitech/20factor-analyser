@@ -1,0 +1,1 @@
+- The print popup asks, optionally, what a report with all 20 skills would be worth to the visitor (rupees in India, dollars elsewhere), right after they have seen a report, so Pro prices follow real answers. A "See all 20 skills" card under a Free report links to Request Pro on vahinitech.com. `tests/print-popup.mjs`.
