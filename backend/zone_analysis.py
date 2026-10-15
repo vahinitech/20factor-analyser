@@ -14,10 +14,12 @@
 #
 #   1. binarise the line crop (iterative midpoint threshold, numpy only)
 #   2. horizontal projection profile (ink pixels per row)
-#   3. the densest contiguous row band is the MIDDLE zone: its top edge
-#      is the midline, its bottom edge the baseline
-#   4. topmost / bottommost rows with meaningful ink give the ascender
-#      and descender extents
+#   3. a dense contiguous row band is the MIDDLE zone: its top edge is
+#      the midline, its bottom edge the baseline (of several, the one
+#      overlapping the detected line; the padded crop can hold the
+#      lines above and below)
+#   4. the median reach of the line's tall and hanging letters (ink
+#      blobs spanning the band) gives the ascender and descender extents
 #   5. ascender reach = (upper + middle) / middle   (target 2.0)
 #      descender reach = (lower + middle) / middle  (target 2.0)
 #
@@ -51,6 +53,9 @@ MIN_XHEIGHT_PX = 6
 # Row-density fractions defining the bands.
 DENSE_FRAC = 0.40
 INK_FRAC = 0.08
+# A blob is one of the line's tall (or hanging) letters when it clears
+# the x-height band by at least this share of the x-height.
+REACH_MIN_FRAC = 0.5
 
 _ASCENDER_RE = re.compile(r"[bdfhklt]")
 _DESCENDER_RE = re.compile(r"[gjpqy]")
@@ -93,6 +98,32 @@ def dense_band(profile):
     return best if best[1] >= best[0] else None
 
 
+def _own_band(profile, box_top, box_bottom):
+    """This line's middle-zone band in a padded crop: of the dense row
+    runs (as in dense_band) at least MIN_XHEIGHT_PX tall, the one
+    overlapping the detected box the most, then the longest. The longest run alone can be the x-height
+    of the line above or below, which the padding takes in on closely
+    written pages; every reach on the line was then measured from the
+    wrong line."""
+    peak = float(profile.max())
+    dense = list(profile >= (peak * DENSE_FRAC))
+    best, best_key, start = None, None, None
+    for i, d in enumerate(dense + [False]):
+        if d and start is None:
+            start = i
+        elif not d and start is not None:
+            end = i - 1
+            overlap = max(0, min(end, box_bottom) - max(start, box_top) + 1)
+            # A run too short to be an x-height (a t-bar row) only wins
+            # when there is nothing else.
+            tall_enough = end - start + 1 >= MIN_XHEIGHT_PX
+            key = (tall_enough, overlap, end - start)
+            if best_key is None or key > best_key:
+                best, best_key = (start, end), key
+            start = None
+    return best
+
+
 def line_zone_bands(gray, box):
     """Zone geometry for one detected line.
 
@@ -116,7 +147,7 @@ def line_zone_bands(gray, box):
     if float(profile.max()) < 3.0:
         return None
 
-    band = dense_band(profile)
+    band = _own_band(profile, y - y0, y - y0 + h - 1)
     if band is None:
         return None
     midline, baseline = band
@@ -127,14 +158,16 @@ def line_zone_bands(gray, box):
     meaningful = profile >= max(2.0, float(profile.max()) * INK_FRAC)
     rows = np.nonzero(meaningful)[0]
     asc_top, desc_bot = int(rows[0]), int(rows[-1])
-    own = _own_ink_extent(ink, midline, baseline)
+    h_u = max(0, midline - asc_top)
+    h_l = max(0, desc_bot - baseline)
+    own = _own_ink_reach(
+        ink, midline, baseline, _neighbour_bands(profile, midline, baseline)
+    )
     if own is not None:
         # The padded crop reaches into the lines above and below on
         # closely ruled paper; their descenders and ascenders read as
         # this line's reach (4.0x on tests' handwriting-sample.jpg).
-        asc_top, desc_bot = own
-    h_u = max(0, midline - asc_top)
-    h_l = max(0, desc_bot - baseline)
+        h_u, h_l = own
 
     return {
         "h_m": int(h_m),
@@ -145,27 +178,82 @@ def line_zone_bands(gray, box):
     }
 
 
-def _own_ink_extent(ink, midline, baseline):
-    """Top and bottom rows of the ink blobs that belong to this line:
-    those covering at least half of its x-height band. A neighbour's
-    tail can dip into the band's edge but does not span it. None when
-    cv2 is unavailable or no blob qualifies."""
+def _neighbour_bands(profile, midline, baseline):
+    """Where the x-height bands of the lines above and below start, as
+    rows of this crop: the nearest dense runs at least half an x-height
+    tall on either side of this line's band. (top limit, bottom limit),
+    either None when the crop does not reach a neighbour. A t-bar row
+    can be dense but is never that tall."""
+    peak = float(profile.max())
+    dense = list(profile >= (peak * DENSE_FRAC))
+    need = 0.5 * (baseline - midline + 1)
+    runs, start = [], None
+    for i, d in enumerate(dense + [False]):
+        if d and start is None:
+            start = i
+        elif not d and start is not None:
+            if i - start >= need:
+                runs.append((start, i - 1))
+            start = None
+    above = [b for a, b in runs if b < midline]
+    below = [a for a, b in runs if a > baseline]
+    return (max(above) if above else None, min(below) if below else None)
+
+
+def _typical_reach(reaches, h_m):
+    """The usual reach of one line's tall (or hanging) letters.
+
+    reaches: (pixels, joined) per blob, joined when the blob runs into
+    the neighbouring line's x-height band. Takes the median over the
+    blobs that clear the band by REACH_MIN_FRAC of the x-height, so one
+    letter does not set the line: a single long f is outvoted by the
+    line's other ascenders. A joined blob (a descender touching a letter
+    on the line below) has no measurable end of its own, so it counts
+    only when the line has no other tall letter, clipped at the
+    neighbour's band. With no tall blob at all the line has no reach to
+    speak of, and its largest overshoot is kept (the single-zone
+    case)."""
+    tall = [(r, joined) for r, joined in reaches if r >= REACH_MIN_FRAC * h_m]
+    free = [r for r, joined in tall if not joined]
+    if free or tall:
+        return int(round(float(np.median(free or [r for r, _ in tall]))))
+    return max([0] + [r for r, _ in reaches])
+
+
+def _own_ink_reach(ink, midline, baseline, limits=(None, None)):
+    """Ascender and descender reach (pixels above the midline, below
+    the baseline) of the ink blobs that belong to this line: those
+    covering at least half of its x-height band. A neighbour's tail can
+    dip into the band's edge but does not span it. A letter that touches
+    the line above or below joins it into one blob; such a blob is
+    marked joined and its reach stops at the neighbour's x-height band
+    (limits, from _neighbour_bands). None when cv2 is unavailable or no
+    blob qualifies."""
     if cv2 is None:
         return None
     n, _, stats, _ = cv2.connectedComponentsWithStats(
         (ink > 0).astype(np.uint8), connectivity=8
     )
-    need = 0.5 * (baseline - midline + 1)
-    tops, bottoms = [], []
+    h_m = baseline - midline + 1
+    need = 0.5 * h_m
+    top_limit, bottom_limit = limits
+    ups, downs = [], []
     for i in range(1, n):
         top = int(stats[i, cv2.CC_STAT_TOP])
         bottom = top + int(stats[i, cv2.CC_STAT_HEIGHT]) - 1
-        if min(bottom, baseline) - max(top, midline) + 1 >= need:
-            tops.append(top)
-            bottoms.append(bottom)
-    if not tops:
+        if min(bottom, baseline) - max(top, midline) + 1 < need:
+            continue
+        joined_up = top_limit is not None and top <= top_limit
+        joined_down = bottom_limit is not None and bottom >= bottom_limit
+        if joined_up:
+            top = top_limit + 1
+        if joined_down:
+            bottom = bottom_limit - 1
+        ups.append((max(0, midline - top), joined_up))
+        downs.append((max(0, bottom - baseline), joined_down))
+    if not ups:
         return None
-    return min(tops), max(bottoms)
+    return _typical_reach(ups, h_m), _typical_reach(downs, h_m)
 
 
 def _median(vals):

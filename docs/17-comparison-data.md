@@ -131,7 +131,7 @@ absolute score difference out of ten between the two pages of a pair:
 | 3 Loop Closure | 0.0 | 0.0 | 0.0 |
 | 4 Line Quality | 0.1 | 0.3 | 0.5 |
 | 5 Size Consistency | 0.2 | 0.72 | 3.5 |
-| 6 Ascender/Descender Control | 1.1 | 5.31 | 9.1 |
+| 6 Ascender/Descender Control | 0.2 (was 1.1) | 0.6 (was 5.31) | 4.6 (was 9.1) |
 | 7 Baseline Alignment | 0.2 | 0.61 | 1.7 |
 | 8 Word Spacing | 0.55 | 1.4 | 2.7 |
 | 9 Letter Spacing | 0.1 | 0.2 | 0.4 |
@@ -147,11 +147,35 @@ Factors 13 to 16 are not scored from a photo. Read this as an engine
 check, not as children's variation: factors 3 and 19 do not move because
 the text and confidence are fixed, factor 8 moves with the generator's
 own gap jitter, and adults writing single letters on a tablet are steadier
-than children writing sentences on paper. What it does show is that
-factor 6 can move by most of its scale between two pages of the same
-passage by the same writer (largest 9.1). That instability is worth
-fixing in the scorer before any band is published for it, and until then
-a comparison should not report factor 6 changes as progress.
+than children writing sentences on paper.
+
+The first run showed factor 6 moving by most of its scale between two
+pages of the same passage by the same writer (median 1.1, 90th percentile
+5.31, largest 9.1). The planted lines sit close together, as on a child's
+notebook page, and three steps in `zone_analysis.py` read the
+neighbouring lines as this line's reach:
+
+- the line crop is padded by half the line's height, which takes in the
+  line above or below; the x-height search kept the longest dense band of
+  rows in the crop, and on a page where the line above wrote bigger that
+  was the line above's. It now keeps the band that overlaps the detected
+  line the most;
+- a line's reach was its single tallest (or deepest) letter, so one long
+  `f` set the whole line. It is now the median over the line's tall (or
+  hanging) letters;
+- a descender that touches a letter on the next line joins it into one
+  blob, whose depth is the gap between the lines. Such a blob counts only
+  when the line has no other hanging letter, and then stops at the next
+  line's x-height band.
+
+With those changes factor 6 moves like the other factors (the row above;
+no other factor changed). Its largest movements now come from one writer,
+UJI_W13, whose two `y` samples differ in length by a factor of two: the
+pages really are different there. `backend/tests/test_zone_stability.py`
+holds each step and a same-writer spread on drawn letters (largest 8.0
+before, under 1.0 now). Factor 6 is then in the same position as every
+other factor: no change is reported as progress until the band from real
+pairs exists.
 
 ### How we will measure it
 
