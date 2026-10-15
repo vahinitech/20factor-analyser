@@ -65,6 +65,8 @@ Key output files must not already exist and are created with mode 0600. Do not p
 
 Active Pro requires an explicit expiry. Cancelled Pro retains access until expiry; expired or revoked subscriptions use Free. Revoked API keys are rejected. Customer creation and subscription changes are operator-only commands; there is no public upgrade or receipt-acceptance endpoint.
 
+The step-by-step procedure for trials, paid Pro, renewals, moving back to Free, lost keys and "my key stopped working", with the open owner decisions: [docs/17-access-and-trials.md](../docs/17-access-and-trials.md).
+
 ## Compatibility and rollout
 
 Set `VAHINI_ENFORCE_TIERS=1` for a paid deployment. It applies the same restrictions to `/report-python` and makes detailed `/analyze-vl` evidence Pro-only, preventing an old-route bypass. The hosted stage/prod compose configurations set this flag. A standalone open-source installation can retain the previous unrestricted legacy contract by leaving it unset; such an installation is not a protected paid service. The version-2 endpoint always applies its access policy.
