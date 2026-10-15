@@ -57,6 +57,7 @@ import report_contract
 import compact_reports
 import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
+import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 
@@ -184,6 +185,7 @@ async def _read_upload(image):
     raw = await image.read(MAX_UPLOAD_BYTES + 1)
     if len(raw) > MAX_UPLOAD_BYTES:
         raise HTTPException(413, "Upload exceeds 5 MiB")
+    debug_store.received(raw)
     return raw
 
 
@@ -274,6 +276,8 @@ def health():
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
         "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
+        # True only on stage with debug storage provisioned (debug_store.py).
+        "debug_store": debug_store.STORE.enabled,
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
@@ -444,6 +448,7 @@ async def _decode_upload(raw):
 
 
 @app.post("/ocr")
+@debug_store.keeps("/ocr")
 async def ocr(
     request: Request,
     image: UploadFile = File(...),
@@ -586,6 +591,7 @@ def _analyze_vl_process(arr, raw, lang):
 
 
 @app.post("/analyze-vl")
+@debug_store.keeps("/analyze-vl")
 async def analyze_vl(
     request: Request,
     image: UploadFile = File(...),
@@ -894,6 +900,7 @@ def _spend_if_report(charge, payload):
 
 
 @app.post("/report-python")
+@debug_store.keeps("/report-python")
 async def report_python(
     request: Request,
     image: UploadFile = File(...),
@@ -932,6 +939,7 @@ async def api_identity(authorization: str = Header(default=None)):
 
 
 @app.post("/api/v2/reports")
+@debug_store.keeps("/api/v2/reports")
 async def api_report(
     request: Request,
     image: UploadFile = File(...),
