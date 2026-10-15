@@ -28,6 +28,7 @@ NAMES = (
     "report-request",
     "report-expanded",
     "report-compact",
+    "stored-report",
     "catalog",
     "error",
     "health",

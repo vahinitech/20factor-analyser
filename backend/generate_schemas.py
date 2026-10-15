@@ -205,6 +205,26 @@ def common():
                 description="Original score. null means no score, never 0.",
             ),
             "scoreOutOfHundred": nullable("number", minimum=0, maximum=100),
+            "receipt": closed(
+                {
+                    "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+                    "token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$",
+                    },
+                    "expires": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    },
+                },
+                description=(
+                    "How the family reads this report back later "
+                    "(GET /api/v2/reports/{id} with header X-Report-Token). "
+                    "Random; only the token's SHA-256 is kept, and nothing "
+                    "links it to a person. Kept until expires, renewed by "
+                    "a later check (backend/report_store.py)."
+                ),
+            ),
             "catalogVersion": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{20}$",
@@ -1116,6 +1136,7 @@ def compact():
                 ),
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "receipt": ref("receipt"),
             "comparability": ref("comparability"),
             "sections": {
                 "type": "array",
@@ -1607,6 +1628,14 @@ def health():
                     "photos and answers are being kept (SECURITY.md)."
                 ),
             },
+            "report_store": {
+                "type": "boolean",
+                "description": (
+                    "true when report records are kept for later "
+                    "comparison: scores and counts, never a photo or the "
+                    "words read (backend/report_store.py)."
+                ),
+            },
             "layout_filter": closed(
                 {
                     "enabled": {"type": "boolean"},
@@ -1617,12 +1646,100 @@ def health():
     }
 
 
+def stored():
+    """GET /api/v2/reports/{id}: the record report_store.py keeps."""
+    section = closed(
+        {
+            "id": ref("sectionId"),
+            "s": ref("scoreOutOfTen"),
+            "w": {"type": "number", "minimum": 0, "maximum": 1},
+        }
+    )
+    mark = {
+        "$ref": COMMON
+        + "factorRegions/additionalProperties/properties/marks/items"
+    }
+    return closed(
+        {
+            "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "expires": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            },
+            "record_version": {"const": 1},
+            "day": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                "description": "The day of the check, UTC. No time.",
+            },
+            "catalog_version": {
+                "anyOf": [ref("catalogVersion"), {"type": "null"}]
+            },
+            "tier": {"type": "string", "enum": ["free", "pro"]},
+            "score": ref("scoreOutOfHundred"),
+            "factors": {
+                "type": "array",
+                "maxItems": 20,
+                "items": closed(
+                    {
+                        "n": ref("factorNumber"),
+                        "s": ref("scoreOutOfTen"),
+                        "st": ref("statusCode"),
+                    }
+                ),
+            },
+            "locked": {
+                "type": "array",
+                "items": ref("factorNumber"),
+                "uniqueItems": True,
+            },
+            "comparability": ref("comparability"),
+            "sections": {"type": "array", "maxItems": 4, "items": section},
+            "marks": closed(
+                {
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
+                    "factors": {
+                        "type": "object",
+                        "propertyNames": {"pattern": NUMBER_KEY},
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": mark,
+                        },
+                    },
+                }
+            ),
+        },
+        required=[
+            "id",
+            "expires",
+            "record_version",
+            "day",
+            "catalog_version",
+            "tier",
+            "score",
+            "factors",
+            "locked",
+            "comparability",
+        ],
+        title="GET /api/v2/reports/{id} response: a stored report",
+        description=(
+            "What is kept of a compact report so a later check can be "
+            "compared with it: scores, comparability counts and where each "
+            "factor was measured. Never the photo, a cut-out, the words "
+            "read, a caption, a file name, an access key, an address or "
+            "a time of day (backend/report_store.py)."
+        ),
+    )
+
+
 BUILDERS = {
     "common": common,
     "me": me,
     "report-request": request,
     "report-expanded": expanded,
     "report-compact": compact,
+    "stored-report": stored,
     "catalog": catalog,
     "error": error,
     "health": health,

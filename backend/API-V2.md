@@ -15,6 +15,8 @@ curl --max-time 120 https://stage.vahinitech.com/api/v2/reports \
 
 Use the same request with the customer's Bearer header for Pro. Never put credentials in query strings or bundle a shared Pro credential in the app. Each customer has their own revocable key.
 
+**Stored reports.** When the server keeps report records (`VAHINI_REPORT_STORE_DIR` set; `/health` says `report_store: true`), a successful `format=compact` report also carries `receipt: {id, token, expires}`. Keep it: it is the only way to read the record later, and it is never sent again. `GET /api/v2/reports/{id}` with header `X-Report-Token: <token>` returns the record (`schemas/stored-report.schema.json`): the day, tier, scores, sections, comparability counts and marks, never a photo or the words read. `DELETE` on the same URL with the same header deletes it. `POST /api/v2/reports/renew` with `{"receipts": [{"id", "token"}, ...]}` (at most 50) keeps each for another 12 months; send it after a new check. Unknown, expired or deleted records and a wrong token all answer 404. `format=expanded` keeps nothing. Details and the privacy rules: [docs/15-persistence.md](../docs/15-persistence.md#report-records-kept-for-every-family-no-personal-data).
+
 ## Access policy
 
 | Output | Free | Pro |

@@ -110,6 +110,10 @@
       "type": "boolean",
       "description": "true only on stage with debug storage provisioned: photos and answers are being kept (SECURITY.md)."
     },
+    "report_store": {
+      "type": "boolean",
+      "description": "true when report records are kept for later comparison: scores and counts, never a photo or the words read (backend/report_store.py)."
+    },
     "layout_filter": {
       "type": "object",
       "additionalProperties": false,

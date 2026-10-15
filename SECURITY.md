@@ -66,6 +66,19 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 - The website never sends the photo to its own store; only a family that
   ticks "Keep my pages" keeps one, encrypted, in vahini-web
   (`services/persist-api/lib/keepstore.js`).
+- Report records (`backend/report_store.py`, owner decision 2026-10-16):
+  with `VAHINI_REPORT_STORE_DIR` set, each successful compact report keeps
+  a small record so a later check can be compared with it: the scores, the
+  comparability counts, where each factor was measured (numbers) and the
+  day. It is built from an allowlist, never by deleting fields, and holds
+  no photo, cut-out, words read, caption, file name, typed passage, access
+  key, address, browser or time of day. A random receipt (id and token,
+  only the token's SHA-256 stored) is the only way back to it, and nothing
+  links a record to a person. Records expire 12 months after the family's
+  last check (a later check renews the receipts its browser holds) and the
+  family can delete one with its receipt. `backend/tests/test_report_store.py`
+  is the proof: it puts a page naming a child and a school through the real
+  route and searches every byte written.
 - One exception, for stage only: debug storage (`backend/debug_store.py`,
   owner decision 2026-10-15). With `VAHINI_DEBUG_STORE=1` and
   `VAHINI_DEBUG_STORE_DIR` both set, each answered upload keeps its photo

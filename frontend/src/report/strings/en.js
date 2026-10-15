@@ -316,7 +316,7 @@ S.en = {
   'pp.title': 'Your progress',
   'pp.saved.now': 'This check is saved on this device so you can compare next time.',
   'pp.saved.none': 'Checks are saved on this device so you can compare them.',
-  'pp.private': 'Nothing is sent to Vahini.',
+  'pp.private': 'The name stays here. Vahini keeps only the scores, for 12 months after your last check. Never the photo or the words.',
   'pp.list.score': '{date}: {score} out of 100',
   'pp.list.noscore': '{date}: no overall score',
   'pp.list.this': '(this check)',
