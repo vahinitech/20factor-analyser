@@ -56,11 +56,11 @@ The ledger (`subscriptions.sqlite`) holds three tables:
 | --- | --- |
 | `customers` | Opaque id (`cus_` + 24 hex), tier, status, expiry, last change time |
 | `api_keys` | Key id (`key_` + 24 hex), customer id, SHA-256 digest, revoked flag, creation time |
-| `audit` | Customer id, `subscription:<tier>:<status>:<expiry>`, time. Written by every `subscription` command |
+| `audit` | Customer id, action, time. `subscription:<tier>:<status>:<expiry>` for every `subscription` command, `key:issue:<key id>` and `key:revoke:<key id>` for every key issued or revoked |
 
 It holds no name, email, phone number, school, child's name, photo or
-report, and must stay that way. Issuing and revoking keys are not written
-to `audit`; the `api_keys` table shows them.
+report, and must stay that way. The audit rows for keys name the key id
+only, never the secret or its digest.
 
 The operator still needs to know which customer id belongs to which family
 or teacher, to renew or answer them later. Keep that link outside the
@@ -90,19 +90,35 @@ C=vahini-analyser-stage   # or vahini-analyser-prod
 admin() { docker exec "$C" python /app/backend/subscription_admin.py --db /data/entitlements/subscriptions.sqlite "$@"; }
 ```
 
-There is no command that lists customers or keys. To look, read the ledger
-without changing it:
+Two commands look without changing anything; both open the ledger
+read-only.
+
+`admin show-customer cus_...` prints the customer's plan (`tier`, `status`,
+`expires_at`), the access a key for this customer gets right now
+(`effective`, worked out by the same code the analyser runs on every
+request), each key id with its `revoked` flag and `created_at`, and the
+audit history in order. It never prints a key digest. Look up the customer
+id in the private register first; there is no command that lists every
+customer.
+
+`admin check-key --secret-file PATH` says which customer and key id a key
+belongs to, whether it is revoked, and the access it gets, without printing
+the key. It reads the key from a file, never from the command line, so the
+key stays out of shell history and the process list. The file must be a
+regular file owned by the user running the tool, mode 0600 or stricter. It
+exits 1 when no key matches. A key just issued to `/tmp/newkey` is already
+such a file. For a key you hold some other way (one reported as leaked, for
+example), type it without echo into a file in the container, check it and
+delete the file:
 
 ```bash
-docker exec "$C" python -c "import sqlite3,sys; c=sqlite3.connect('file:/data/entitlements/subscriptions.sqlite?mode=ro',uri=True); [print(tuple(r)) for r in c.execute(sys.argv[1], sys.argv[2:])]" \
-  "SELECT id, tier, status, expires_at FROM customers WHERE id=?" CUSTOMER_ID
+read -rs KEY && printf '%s\n' "$KEY" | docker exec -i "$C" sh -c 'umask 077; rm -f /tmp/checkkey; cat > /tmp/checkkey'; unset KEY
+admin check-key --secret-file /tmp/checkkey
+docker exec "$C" rm /tmp/checkkey
 ```
 
-Swap the query for
-`SELECT id, revoked, created_at FROM api_keys WHERE customer_id=?` to see a
-customer's keys, or
-`SELECT action, created_at FROM audit WHERE customer_id=? ORDER BY id` for
-the history.
+Use it only on a key you already hold. Never ask a customer to send their
+key so you can check it; look up their customer id instead.
 
 An expiry is a UTC Unix time. Pick the end of the last day in India time and
 convert it:
@@ -156,7 +172,9 @@ exists, every request that carries a key gets HTTP 503.
 5. Grant Pro until the trial ends:
    `admin subscription cus_... --tier pro --status active --expires-at <end>`.
    **OWNER DECISION:** trial length.
-6. Read the key once, hand it over (next section), then delete the file:
+6. Confirm the key maps to the new customer with `tier: pro`:
+   `admin check-key --secret-file /tmp/newkey`. Then read the key once,
+   hand it over (next section), and delete the file:
    `docker exec "$C" cat /tmp/newkey`, then
    `docker exec "$C" rm /tmp/newkey`. A container restart also clears `/tmp`.
 7. Write the customer id, the adult's contact, "trial" and the end date in
@@ -227,8 +245,9 @@ Free from the next request either way.
 ### A lost or leaked key
 
 1. Back up.
-2. Find the customer's key ids (the `api_keys` query above) and revoke the
-   lost one: `admin revoke-key key_...`. It is refused from the next request.
+2. Find the customer's key ids with `admin show-customer cus_...` and
+   revoke the lost one: `admin revoke-key key_...`. It is refused from the
+   next request, and the audit history records the revoke.
 3. Issue a new key for the same customer and hand it over as above. The
    subscription is on the customer, so nothing else changes.
 
@@ -243,9 +262,9 @@ Ask what the page shows; the server's answer tells you which case it is.
 | What they see | Cause | What to do |
 | --- | --- | --- |
 | The key box is empty after a reload or a new tab | The page keeps the key in the tab's memory only | Type the key again. Nothing is wrong |
-| Five factors instead of twenty, and the key is accepted | The Pro period ended (`subscription_status: expired`), or the plan was moved to Free or revoked | Read the customer row and the audit history. Renew if that is what was agreed |
+| Five factors instead of twenty, and the key is accepted | The Pro period ended (`subscription_status: expired`), or the plan was moved to Free or revoked | `admin show-customer cus_...` shows the plan, the effective access and the audit history. Renew if that is what was agreed |
 | "Today's free checks are used" | Same as above: without Pro the 3-a-day limit applies | As above |
-| The key is refused (HTTP 401, "Invalid API credential") | Revoked, mistyped, from the stage ledger, or missing the `vh_` start | Check the key ids for that customer. If it was revoked or lost, issue a new one |
+| The key is refused (HTTP 401, "Invalid API credential") | Revoked, mistyped, from the stage ledger, or missing the `vh_` start | `admin show-customer cus_...` lists the customer's key ids and which are revoked. If it was revoked or lost, issue a new one |
 | "Subscription service is not configured" or "unavailable" (HTTP 503) | The ledger is missing, unreadable or the volume is not mounted | Server problem, not the customer's: check the container and volume, and restore from a backup if the file is damaged |
 
 Never ask the person to send the key back to you to check it. Have them
@@ -259,8 +278,7 @@ connect it on the page, and look up their customer id instead.
 | No login and no key recovery | A lost key is replaced by the operator; "Website sign-in and self-service account recovery are not provided" (API-V2.md) | 20factor-analyser-pro#1, sections 5 and 7 (accounts, parent portal) |
 | No billing and no store verification | Payment is checked by hand; grants come only from the operator tool | API-V2.md, "Billing integration still required" (Google Play and App Store verification), and 20factor-analyser-pro#1 section 7 |
 | The key is typed again on every visit | Tab memory only, by design, so the key never sits in browser storage | Goes away with sign-in; not planned separately |
-| Key issue and revoke are not in the audit table | Only subscription changes are audited | Not planned; raise an issue if it is needed |
-| No list command | Read-only SQL query above | Not planned |
+| No command lists every customer | `show-customer` looks up one id taken from the private register | Not planned |
 
 ## Owner decisions still open
 

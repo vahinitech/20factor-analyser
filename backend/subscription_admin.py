@@ -4,15 +4,22 @@
 import argparse
 import json
 import os
+import stat
+import sys
 from contextlib import suppress
 
 from entitlements import (
     initialize,
     create_customer,
+    describe_customer,
+    find_key,
     issue_key,
     revoke_key,
     set_subscription,
 )
+
+# access_for refuses a header over 200 characters, "Bearer " included.
+MAX_SECRET = 193
 
 
 def write_customer_key(path, customer, secret_file):
@@ -40,6 +47,44 @@ def write_customer_key(path, customer, secret_file):
     return key_id
 
 
+def read_secret_file(secret_file):
+    """Read a key from a private file without ever echoing it.
+
+    The file must be a regular file owned by this user with no group or
+    other permissions (0600 or stricter). Errors never include the text.
+    """
+    try:
+        descriptor = os.open(secret_file, os.O_RDONLY | os.O_NOFOLLOW)
+    except OSError as error:
+        raise ValueError(
+            f"Cannot open secret file: {error.strerror}"
+        ) from error
+    with os.fdopen(descriptor, "rb") as source:
+        info = os.fstat(source.fileno())
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError("Secret file is not a regular file")
+        if info.st_uid != os.geteuid():
+            raise ValueError("Secret file is not owned by this user")
+        if info.st_mode & 0o077:
+            raise ValueError("Secret file must be mode 0600 or stricter")
+        raw = source.read(MAX_SECRET + 2)
+    try:
+        secret = raw.decode("ascii").strip()
+    except UnicodeDecodeError:
+        raise ValueError("Secret file does not hold an API key") from None
+    if not secret.startswith("vh_") or len(secret) > MAX_SECRET:
+        raise ValueError("Secret file does not hold an API key")
+    return secret
+
+
+def check_key(path, secret_file):
+    """What a key maps to, for support; the secret is never printed."""
+    found = find_key(path, read_secret_file(secret_file))
+    if found is None:
+        return {"found": False}
+    return {"found": True, **found}
+
+
 def main():
     """Manage subscriptions locally; secrets are written to private files."""
     parser = argparse.ArgumentParser(description=__doc__)
@@ -52,6 +97,10 @@ def main():
     key.add_argument("--secret-file", required=True)
     revoke = commands.add_parser("revoke-key")
     revoke.add_argument("key_id")
+    show = commands.add_parser("show-customer")
+    show.add_argument("customer")
+    check = commands.add_parser("check-key")
+    check.add_argument("--secret-file", required=True)
     grant = commands.add_parser("subscription")
     grant.add_argument("customer")
     grant.add_argument("--tier", choices=("free", "pro"), required=True)
@@ -62,6 +111,14 @@ def main():
     )
     grant.add_argument("--expires-at", type=int)
     args = parser.parse_args()
+    try:
+        run(args)
+    except ValueError as error:
+        parser.exit(1, f"subscription_admin: {error}\n")
+
+
+def run(args):
+    """Carry out one parsed command."""
     if args.command == "init":
         initialize(args.db)
     elif args.command == "create-customer":
@@ -71,6 +128,13 @@ def main():
         print(json.dumps({"key_id": key_id, "secret_file": args.secret_file}))
     elif args.command == "revoke-key":
         revoke_key(args.db, args.key_id)
+    elif args.command == "show-customer":
+        print(json.dumps(describe_customer(args.db, args.customer), indent=2))
+    elif args.command == "check-key":
+        result = check_key(args.db, args.secret_file)
+        print(json.dumps(result, indent=2))
+        if not result["found"]:
+            sys.exit(1)
     else:
         set_subscription(
             args.db, args.customer, args.tier, args.status, args.expires_at

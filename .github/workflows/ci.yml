@@ -73,6 +73,7 @@ jobs:
             backend/detector.py backend/recognizer.py \
             backend/config.py backend/cache.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py backend/daily_limit.py \
+            backend/tests/test_subscription_admin.py \
             backend/practice_catalog.py backend/tests/test_practice_catalog.py \
             backend/contract_schemas.py backend/generate_schemas.py backend/tests/test_schemas.py \
             backend/tests/test_backends_classify.py \
@@ -94,6 +95,7 @@ jobs:
           python -m unittest -v \
             backend.tests.test_review_safety \
             backend.tests.test_report_access \
+            backend.tests.test_subscription_admin \
             backend.tests.test_compact_reports \
             backend.tests.test_practice_catalog \
             backend.tests.test_schemas \
