@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from functools import lru_cache
 
+import comparison_data
 import practice_catalog
 import scoring
 from entitlements import capabilities
@@ -150,6 +151,8 @@ def build_compact(payload, access, include=()):
             )
         }
     if access["tier"] == "pro":
+        # Section means use every factor: Pro only, like the expanded form.
+        report["sections"] = comparison_data.compact_sections(analysis)
         if "inputs" in include:
             report["inputs"] = {
                 str(f["n"]): {

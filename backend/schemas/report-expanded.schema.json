@@ -422,6 +422,13 @@
         "$ref": "common.schema.json#/definitions/coachingCard"
       }
     },
+    "sections": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "$ref": "common.schema.json#/definitions/sectionScore"
+      }
+    },
     "evidence": {
       "type": "object",
       "required": [
@@ -535,6 +542,7 @@
           "coaching": false,
           "evidence": false,
           "worksheets": false,
+          "sections": false,
           "factors": {
             "maxItems": 5,
             "items": {

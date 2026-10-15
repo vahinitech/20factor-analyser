@@ -40,6 +40,7 @@ Responses contain:
 - `recognition`: recognized text; Pro also receives recognition metadata.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
+- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/17-comparison-data.md](../docs/17-comparison-data.md).
 
 Each factor score includes the original 0–10 value, normalized 0–100 value, scale boundaries and band. A missing or invalid score is null, never substituted with zero. Status is `estimated`, `proxy`, `measured` (sensor-supplied) or `unavailable`. The image endpoint does not accept sensor measurements. Pressure, speed, stroke order and pen lifts explicitly disclose what a still image cannot measure.
 

@@ -749,6 +749,54 @@
         }
       }
     },
+    "sectionScore": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "score",
+        "normalized",
+        "weight",
+        "factor_count",
+        "scored_factor_count"
+      ],
+      "properties": {
+        "id": {
+          "$ref": "common.schema.json#/definitions/sectionId"
+        },
+        "name": {
+          "type": "string"
+        },
+        "score": {
+          "$ref": "common.schema.json#/definitions/scoreOutOfTen"
+        },
+        "normalized": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "weight": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "factor_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        },
+        "scored_factor_count": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20
+        }
+      },
+      "description": "One of the four sections as the engine scored it (scoring.build_analysis): the mean of its measured factors, 0-10 with one decimal, null when none was measured. weight is what the overall score used (0 for a section with no score). Pro only, since the mean includes factors Free cannot see."
+    },
     "recognitionMetadata": {
       "type": "object",
       "properties": {

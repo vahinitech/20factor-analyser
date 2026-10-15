@@ -10,6 +10,7 @@ import copy
 import json
 from pathlib import Path
 
+import comparison_data
 from entitlements import capabilities
 
 FACTOR_IDS = (
@@ -174,6 +175,11 @@ def public_report(payload, access):
     else:
         report["coaching"] = copy.deepcopy(
             (payload.get("analysis") or {}).get("coachTips") or []
+        )
+        # Section means use every factor, so they would reveal locked
+        # scores to Free; only Pro gets them.
+        report["sections"] = comparison_data.section_scores(
+            payload.get("analysis")
         )
         report["evidence"] = {
             "image_width": payload.get("proc_w"),

@@ -371,6 +371,33 @@ def common():
                     },
                 },
             },
+            "sectionScore": closed(
+                {
+                    "id": ref("sectionId"),
+                    "name": {"type": "string"},
+                    "score": ref("scoreOutOfTen"),
+                    "normalized": nullable("integer", minimum=0, maximum=100),
+                    "weight": {"type": "number", "minimum": 0, "maximum": 1},
+                    "factor_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                    },
+                    "scored_factor_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                    },
+                },
+                description=(
+                    "One of the four sections as the engine scored it "
+                    "(scoring.build_analysis): the mean of its measured "
+                    "factors, 0-10 with one decimal, null when none was "
+                    "measured. weight is what the overall score used "
+                    "(0 for a section with no score). Pro only, since the "
+                    "mean includes factors Free cannot see."
+                ),
+            ),
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -786,6 +813,11 @@ def expanded():
             "limitations": ref("limitations"),
             "access": ref("access"),
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "sections": {
+                "type": "array",
+                "maxItems": 4,
+                "items": ref("sectionScore"),
+            },
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -854,6 +886,7 @@ def expanded():
                     "coaching": False,
                     "evidence": False,
                     "worksheets": False,
+                    "sections": False,
                     "factors": {"maxItems": len(FREE), "items": free_factor},
                     "locked_factors": {
                         "minItems": len(LOCKED),
@@ -966,6 +999,23 @@ def compact():
                 ),
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "sections": {
+                "type": "array",
+                "maxItems": 4,
+                "description": (
+                    "Pro only: the engine's section scores in short form. "
+                    "s is the score out of ten (null when the section has "
+                    "no measured factor), w the weight the overall score "
+                    "used. Names come from the catalogue's sections."
+                ),
+                "items": closed(
+                    {
+                        "id": ref("sectionId"),
+                        "s": ref("scoreOutOfTen"),
+                        "w": {"type": "number", "minimum": 0, "maximum": 1},
+                    }
+                ),
+            },
             "evidence": closed(
                 {
                     "width": nullable("integer", minimum=1),
@@ -1030,6 +1080,7 @@ def compact():
                 "properties": {
                     "inputs": False,
                     "coaching": False,
+                    "sections": False,
                     "evidence": {
                         "properties": {
                             "factor_regions": {

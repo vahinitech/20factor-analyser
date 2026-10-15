@@ -262,6 +262,33 @@
         "$ref": "common.schema.json#/definitions/coachingCard"
       }
     },
+    "sections": {
+      "type": "array",
+      "maxItems": 4,
+      "description": "Pro only: the engine's section scores in short form. s is the score out of ten (null when the section has no measured factor), w the weight the overall score used. Names come from the catalogue's sections.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "s",
+          "w"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/sectionId"
+          },
+          "s": {
+            "$ref": "common.schema.json#/definitions/scoreOutOfTen"
+          },
+          "w": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
     "evidence": {
       "type": "object",
       "additionalProperties": false,
@@ -378,6 +405,7 @@
         "properties": {
           "inputs": false,
           "coaching": false,
+          "sections": false,
           "evidence": {
             "properties": {
               "factor_regions": {
