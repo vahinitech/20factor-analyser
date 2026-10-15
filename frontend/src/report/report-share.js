@@ -16,6 +16,13 @@
      other asset. A phone that can share files (Web Share Level 2) gets the
      share sheet, where the family picks WhatsApp; anything else saves the
      PDF and opens https://wa.me/ with a note to attach it.
+   - The PDF also carries, for the Pro comparison of two PDFs (owner,
+     2026-10-16), data nobody sees on the printed pages: the stored
+     report's receipt (backend/report_store.py) in the PDF's XMP metadata,
+     and the page photo, at most 1600 px and re-encoded so no camera data
+     goes with it, as an embedded file. The vendored jsPDF has XMP
+     (addMetadata) but no attachments, so the file is written through the
+     same object hooks its metadata plugin uses. Neither names the child.
    docs/10-practice-framework.md sections 9 and 10.
    ========================================================================= */
 (function (global) {
@@ -37,6 +44,81 @@ const A4 = { w: 210, h: 297 };
 /* Pixels per CSS pixel in the PDF images: 2 gives about 190 dots per
    inch on A4, sharp for print and small enough for WhatsApp. */
 const SCALE = 2;
+
+/* What the Pro comparison reads back (20factor-analyser-pro web/compare.html).
+   A new field is a new namespace version. */
+const EMBED = { ns: 'https://vahinitech.com/ns/report-pdf/1/', photo: 'vahini-page.jpg', maxSide: 1600, quality: 0.85 };
+const RECEIPT_ID = /^[0-9a-f]{32}$/;
+const RECEIPT_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+/* The check the report on screen came from: its receipt and a promise of
+   the photo as JPEG bytes. Set by app.js after each check; never a sample. */
+let check = null;
+function photoBytes(image){
+  const w0 = image.naturalWidth || image.width, h0 = image.naturalHeight || image.height;
+  if (!(w0 > 0 && h0 > 0)) return Promise.resolve(null);
+  const s = Math.min(1, EMBED.maxSide / Math.max(w0, h0));
+  const c = doc.createElement('canvas');
+  c.width = Math.max(1, Math.round(w0 * s));
+  c.height = Math.max(1, Math.round(h0 * s));
+  const g = c.getContext('2d');
+  g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height);
+  g.drawImage(image, 0, 0, c.width, c.height);
+  return new Promise(res=>{
+    if (!c.toBlob) return res(null);
+    c.toBlob(b=>res(b || null), 'image/jpeg', EMBED.quality);
+  }).then(b=>b ? b.arrayBuffer() : null).then(buf=>buf ? new Uint8Array(buf) : null).catch(()=>null);
+}
+function setCheck(c){
+  ready = null;
+  if (!c){ check = null; return; }
+  const r = c.receipt;
+  check = {
+    receipt: r && RECEIPT_ID.test(r.id) && RECEIPT_TOKEN.test(r.token) ? { id: r.id, token: r.token } : null,
+    photo: c.image ? photoBytes(c.image) : Promise.resolve(null),
+  };
+}
+function xmlEsc(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c])); }
+/* The receipt as XMP: the id, the token and the photo's file name, nothing
+   else. */
+function receiptXMP(receipt, photo){
+  const v = (k, val)=>`<vahini:${k}>${xmlEsc(val)}</vahini:${k}>`;
+  return '<x:xmpmeta xmlns:x="adobe:ns:meta/"><rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">'
+    + `<rdf:Description rdf:about="" xmlns:vahini="${EMBED.ns}">`
+    + (receipt ? v('receiptId', receipt.id) + v('receiptToken', receipt.token) : '')
+    + (photo ? v('photo', EMBED.photo) : '')
+    + '</rdf:Description></rdf:RDF></x:xmpmeta>';
+}
+function binary(bytes){
+  let out = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) out += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return out;
+}
+/* A PDF embedded file (ISO 32000-1, 7.11.4): a stream, its file
+   specification and the catalogue's EmbeddedFiles name tree. A viewer
+   lists it as an attachment; it is not a page and never prints. */
+function attachFile(pdf, name, bytes, mime){
+  const data = binary(bytes);
+  const out = pdf.internal.write;
+  let spec = 0;
+  pdf.internal.events.subscribe('postPutResources', ()=>{
+    const file = pdf.internal.newObject();
+    out(`<< /Type /EmbeddedFile /Subtype /${mime.replace('/', '#2F')} /Params << /Size ${data.length} >> /Length ${data.length} >>`);
+    out('stream'); out(data); out('endstream'); out('endobj');
+    spec = pdf.internal.newObject();
+    out(`<< /Type /Filespec /F (${name}) /UF (${name}) /AFRelationship /Data /EF << /F ${file} 0 R >> >>`);
+    out('endobj');
+  });
+  pdf.internal.events.subscribe('putCatalog', ()=>{
+    if (spec) out(`/Names << /EmbeddedFiles << /Names [(${name}) ${spec} 0 R] >> >>`);
+  });
+}
+async function embedCheck(pdf){
+  if (!check) return;
+  const photo = await check.photo;
+  if (!check.receipt && !photo) return;
+  pdf.addMetadata(receiptXMP(check.receipt, photo), true);
+  if (photo) attachFile(pdf, EMBED.photo, photo, 'image/jpeg');
+}
 
 function tr(){
   const i18n = global.VahiniI18n;
@@ -123,6 +205,7 @@ async function makePDF(host){
     pdf.addImage(canvas.toDataURL('image/jpeg', 0.9), 'JPEG', (A4.w - w) / 2, 0, w, h, undefined, 'FAST');
   }
   } finally { doc.documentElement.classList.remove('pdf-busy'); }
+  await embedCheck(pdf);
   return pdf.output('blob');
 }
 
@@ -193,5 +276,5 @@ function init(){
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
 else init();
 
-global.VahiniReportShare = { applyLanguage, sharePDF, makePDF, loadLibs, waLink, fileName, PDF_META, SUBJECT, invalidate: ()=>{ ready = null; } };
+global.VahiniReportShare = { applyLanguage, sharePDF, makePDF, loadLibs, waLink, fileName, setCheck, PDF_META, SUBJECT, EMBED, invalidate: ()=>{ ready = null; } };
 })(window);
