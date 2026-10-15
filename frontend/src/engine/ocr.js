@@ -249,7 +249,10 @@ async function serverPythonReport(blob, expectedText){
         global.VahiniProgress.receiptFor(j && j.receipt);
         if (j && j.receipt) global.VahiniProgress.renew(requestUrl);
       }
+      const receipt = j && j.receipt;
       if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
+      // Kept on the expanded report too, for the shared PDF (report-share.js).
+      if(j && receipt) j.receipt = receipt;
       // The visitor's practice numbers from /api/v2/me (practice report, #122).
       if(j && j.analysis && account && account.practice) j.analysis.practiceLimits = account.practice;
       if (j && j.ok !== false && j.analysis && Array.isArray(j.analysis.results)){

@@ -559,6 +559,24 @@ review" ("Handwriting review" for Pro). Its pages keep the website theme
 "Keep doing this" band and "Start here" card in the PDF image and fails if
 they come out as plain paper.
 
+For the Pro comparison of two PDFs (owner, 2026-10-16) the file also carries
+two things that are not on its pages, so the comparison reads them without
+OCR. The stored report's receipt (`id` and `token`, from
+`backend/report_store.py`) is in the PDF's XMP metadata, namespace
+`https://vahinitech.com/ns/report-pdf/1/` (`vahini:receiptId`,
+`vahini:receiptToken`, `vahini:photo`). The page photo, scaled to at most
+1600 px on its long side, uncropped and re-encoded as JPEG so no camera data
+goes with it, is a PDF embedded file named `vahini-page.jpg` (ISO 32000-1
+7.11.4, `/AFRelationship /Data`). A PDF reader lists it as an attachment; it
+is not a page and never prints, so the PDF is still two A4 sheets. The
+vendored jsPDF 4.2.1 has XMP (`addMetadata`) but no attachment API, so
+`report-share.js` writes the embedded file through the same object hooks
+jsPDF's own metadata plugin uses. Neither names the child, and a sample run
+embeds nothing. The photo stays in the family's file: it is never sent to
+Vahini. Anyone the family sends the PDF to holds the receipt and can read
+the stored record (scores and marks, no name) until it expires.
+`tests/report-share-embed.mjs` checks all of it.
+
 ### The side panel
 
 On screens 1200 px and wider a sticky panel beside the report holds "Print
