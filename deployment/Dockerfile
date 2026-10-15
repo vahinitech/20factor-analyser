@@ -82,12 +82,14 @@ RUN if [ -n "${VAHINI_OCR_PRELOAD_LANGS}" ]; then \
 # a decoder exploit should land in an account that owns nothing. Production
 # also runs the container read-only, with every Linux capability dropped
 # (vahini-web deploy/docker-compose.*.yml); the only writable places are /tmp
-# (HOME, Paddle's cache) and the subscription database volume. The model and
-# database folders belong to this user, so a new volume starts with the right
+# (HOME, Paddle's cache), the subscription database volume and the report
+# records volume (backend/report_store.py). The model, database and report
+# folders belong to this user, so a new volume starts with the right
 # owner. No .pyc files are written at runtime.
 RUN useradd --system --uid 10001 --home-dir /tmp --shell /usr/sbin/nologin vahini \
- && mkdir -p /data/entitlements \
- && chown -R 10001:10001 /opt/paddle-models /data/entitlements
+ && mkdir -p /data/entitlements /data/reports \
+ && chmod 700 /data/reports \
+ && chown -R 10001:10001 /opt/paddle-models /data/entitlements /data/reports
 ENV HOME=/tmp \
     PYTHONDONTWRITEBYTECODE=1
 USER 10001:10001
