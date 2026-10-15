@@ -33,6 +33,10 @@ CARD = {
     "examples": ["aaaa", "oooo"],
 }
 REGION = {"url": "data:image/jpeg;base64,/9j/4AAQ", "caption": "evidence"}
+# Real engine sections from the synthetic case study (docs/09).
+SECTIONS = json.loads(
+    (ROOT.parent / "docs/examples/case1-baseline-before.json").read_text()
+)["sections"]
 
 
 def realistic_payload(ok=True):
@@ -67,7 +71,7 @@ def realistic_payload(ok=True):
         "analysis": {
             "results": factors,
             "overall": 60,
-            "sections": [{"id": "structure", "name": "Structure"}],
+            "sections": copy.deepcopy(SECTIONS),
             "coachTips": [CARD],
             "recognition": {
                 "backend": "paddle",

@@ -39,6 +39,7 @@ to the ones it builds on.
 | 14 | [Build](14-build.md) | How the browser bundle is made |
 | 15 | [Persistence](15-persistence.md) | What is stored, and where |
 | 16 | [Roadmap](16-roadmap.md) | What it can and cannot do yet, and what is next |
+| 17 | [Comparison data](17-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
 
 ## Elsewhere
 

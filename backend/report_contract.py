@@ -10,6 +10,7 @@ import copy
 import json
 from pathlib import Path
 
+import comparison_data
 from entitlements import capabilities
 
 FACTOR_IDS = (
@@ -175,11 +176,21 @@ def public_report(payload, access):
         report["coaching"] = copy.deepcopy(
             (payload.get("analysis") or {}).get("coachTips") or []
         )
+        # Section means use every factor, so they would reveal locked
+        # scores to Free; only Pro gets them.
+        report["sections"] = comparison_data.section_scores(
+            payload.get("analysis")
+        )
         report["evidence"] = {
             "image_width": payload.get("proc_w"),
             "image_height": payload.get("proc_h"),
-            "factor_regions": copy.deepcopy(
-                payload.get("factor_regions") or {}
+            # The uploaded photo's size; each region's marks are in its
+            # pixels, so a viewer can draw them on the family's own copy.
+            "photo_width": payload.get("photo_w"),
+            "photo_height": payload.get("photo_h"),
+            "factor_regions": comparison_data.with_marks(
+                copy.deepcopy(payload.get("factor_regions") or {}),
+                comparison_data.factor_marks(payload, allowed),
             ),
         }
         # Read the shared generated catalogue used by the browser.
@@ -221,7 +232,10 @@ def public_report(payload, access):
             if len(selected) == 3:
                 break
         report["worksheets"] = selected
-    if not payload.get("ok"):
+    if payload.get("ok"):
+        # Counts only, no text, so every tier gets them.
+        report["comparability"] = comparison_data.comparability(payload)
+    else:
         report["error"] = {
             "code": payload.get("error_code", "analysis_failed"),
             "message": "The image could not be analysed. Try a clear handwriting sample.",

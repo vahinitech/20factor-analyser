@@ -320,12 +320,13 @@ def common():
                                         "minItems": 4,
                                         "maxItems": 4,
                                     },
-                                    "kind": {"enum": ["line", "gap"]},
+                                    "kind": {"enum": ["line", "word", "gap"]},
                                     "role": {"enum": ["look", "keep"]},
                                     "region_id": {"type": "string"},
                                     "measure": {
                                         "enum": [
                                             "line_height",
+                                            "word_xheight",
                                             "line_angle",
                                             "read_confidence",
                                             "word_gap",
@@ -363,6 +364,74 @@ def common():
                             "type": "string",
                             "pattern": "^(data:image/(jpeg|png|webp);base64,|$)",
                         },
+                        "marks": {
+                            "type": "array",
+                            "description": (
+                                "Where this factor was measured, in the "
+                                "uploaded photo's pixels (evidence "
+                                "photo_width x photo_height; scale by "
+                                "your copy's width / photo_width). "
+                                "Boxes are [x, y, w, h], lines two "
+                                "[x, y] points. Roles: region (the "
+                                "evidence crop), look and keep (places), "
+                                "baseline and midline (a fitted line), "
+                                "usual_start (the usual left edge), "
+                                "hardest_line, underline and letter (the "
+                                "line and letters the reader was least "
+                                "sure of). Absent when the photo's size "
+                                "is unknown. backend/comparison_data.py."
+                            ),
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["shape", "role"],
+                                "properties": {
+                                    "shape": {"enum": ["box", "line"]},
+                                    "role": {
+                                        "enum": [
+                                            "region",
+                                            "look",
+                                            "keep",
+                                            "baseline",
+                                            "midline",
+                                            "usual_start",
+                                            "hardest_line",
+                                            "underline",
+                                            "letter",
+                                        ]
+                                    },
+                                    "measure": {"type": "string"},
+                                    "box": {
+                                        "type": "array",
+                                        "items": {"type": "number"},
+                                        "minItems": 4,
+                                        "maxItems": 4,
+                                    },
+                                    "points": {
+                                        "type": "array",
+                                        "minItems": 2,
+                                        "maxItems": 2,
+                                        "items": {
+                                            "type": "array",
+                                            "items": {"type": "number"},
+                                            "minItems": 2,
+                                            "maxItems": 2,
+                                        },
+                                    },
+                                },
+                                "allOf": [
+                                    {
+                                        "if": {
+                                            "properties": {
+                                                "shape": {"const": "box"}
+                                            }
+                                        },
+                                        "then": {"required": ["box"]},
+                                        "else": {"required": ["points"]},
+                                    }
+                                ],
+                            },
+                        },
                     },
                     "if": {"properties": {"url": {"const": ""}}},
                     "then": {
@@ -371,6 +440,75 @@ def common():
                     },
                 },
             },
+            "sectionScore": closed(
+                {
+                    "id": ref("sectionId"),
+                    "name": {"type": "string"},
+                    "score": ref("scoreOutOfTen"),
+                    "normalized": nullable("integer", minimum=0, maximum=100),
+                    "weight": {"type": "number", "minimum": 0, "maximum": 1},
+                    "factor_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                    },
+                    "scored_factor_count": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 20,
+                    },
+                },
+                description=(
+                    "One of the four sections as the engine scored it "
+                    "(scoring.build_analysis): the mean of its measured "
+                    "factors, 0-10 with one decimal, null when none was "
+                    "measured. weight is what the overall score used "
+                    "(0 for a section with no score). Pro only, since the "
+                    "mean includes factors Free cannot see."
+                ),
+            ),
+            "comparability": closed(
+                {
+                    "lines": {"type": "integer", "minimum": 0},
+                    "words": nullable("integer", minimum=0),
+                    "characters": nullable("integer", minimum=0),
+                    "script": {
+                        "type": ["string", "null"],
+                        "enum": [
+                            "latin",
+                            "telugu",
+                            "devanagari",
+                            "mixed",
+                            "other",
+                            None,
+                        ],
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1},
+                        "uniqueItems": True,
+                    },
+                    "printed_lines": {"type": "integer", "minimum": 0},
+                    "page": {
+                        "type": "string",
+                        "enum": ["handwriting", "handwriting_with_print"],
+                    },
+                    "reading": {
+                        "$ref": COMMON + "recognitionMetadata/properties/level"
+                    },
+                    "passage_aligned": {"type": "boolean"},
+                },
+                description=(
+                    "Facts that say whether two pages can be compared: "
+                    "handwriting lines scored, words and non-space "
+                    "characters read (null when nothing was read), the "
+                    "script of the letters read, the reading engine "
+                    "languages, printed lines found and left out, the "
+                    "reading level and whether a copied passage was "
+                    "matched. Counts only: no text or identifier. Every "
+                    "tier, successful reports only."
+                ),
+            ),
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -786,12 +924,20 @@ def expanded():
             "limitations": ref("limitations"),
             "access": ref("access"),
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "sections": {
+                "type": "array",
+                "maxItems": 4,
+                "items": ref("sectionScore"),
+            },
+            "comparability": ref("comparability"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
                 "properties": {
                     "image_width": nullable("integer", minimum=1),
                     "image_height": nullable("integer", minimum=1),
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
                     "factor_regions": ref("factorRegions"),
                 },
             },
@@ -840,7 +986,10 @@ def expanded():
     schema["allOf"] = [
         {
             "if": {"properties": {"ok": {"const": False}}},
-            "then": {"required": ["error"]},
+            "then": {
+                "required": ["error"],
+                "properties": {"comparability": False},
+            },
             "else": {"properties": {"error": False}},
         },
         {
@@ -854,6 +1003,7 @@ def expanded():
                     "coaching": False,
                     "evidence": False,
                     "worksheets": False,
+                    "sections": False,
                     "factors": {"maxItems": len(FREE), "items": free_factor},
                     "locked_factors": {
                         "minItems": len(LOCKED),
@@ -966,10 +1116,30 @@ def compact():
                 ),
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "comparability": ref("comparability"),
+            "sections": {
+                "type": "array",
+                "maxItems": 4,
+                "description": (
+                    "Pro only: the engine's section scores in short form. "
+                    "s is the score out of ten (null when the section has "
+                    "no measured factor), w the weight the overall score "
+                    "used. Names come from the catalogue's sections."
+                ),
+                "items": closed(
+                    {
+                        "id": ref("sectionId"),
+                        "s": ref("scoreOutOfTen"),
+                        "w": {"type": "number", "minimum": 0, "maximum": 1},
+                    }
+                ),
+            },
             "evidence": closed(
                 {
                     "width": nullable("integer", minimum=1),
                     "height": nullable("integer", minimum=1),
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
                     "factor_regions": ref("factorRegions"),
                     "measurements": {
                         "type": "object",
@@ -988,7 +1158,9 @@ def compact():
                             "reading": {"type": "object"},
                         },
                     },
-                }
+                },
+                # The photo's size arrived later; saved reports lack it.
+                required=["width", "height", "factor_regions", "measurements"],
             ),
             "error": closed({"code": {"type": "string", "minLength": 1}}),
         },
@@ -1017,7 +1189,10 @@ def compact():
     schema["allOf"] = [
         {
             "if": {"properties": {"ok": {"const": False}}},
-            "then": {"required": ["error"]},
+            "then": {
+                "required": ["error"],
+                "properties": {"comparability": False},
+            },
             "else": {"properties": {"error": False}},
         },
         {
@@ -1030,6 +1205,7 @@ def compact():
                 "properties": {
                     "inputs": False,
                     "coaching": False,
+                    "sections": False,
                     "evidence": {
                         "properties": {
                             "factor_regions": {
