@@ -60,6 +60,7 @@ python subscription_admin.py --db /data/entitlements/subscriptions.sqlite issue-
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite subscription CUSTOMER_ID --tier pro --status active --expires-at UTC_UNIX_SECONDS
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite revoke-key KEY_ID
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite show-customer CUSTOMER_ID
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite list-customers --expiring-within-days 14
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite check-key --secret-file /private/key-to-check
 ```
 

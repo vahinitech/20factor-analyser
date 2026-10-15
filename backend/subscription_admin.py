@@ -14,6 +14,7 @@ from entitlements import (
     describe_customer,
     find_key,
     issue_key,
+    list_customers,
     revoke_key,
     set_subscription,
 )
@@ -99,6 +100,9 @@ def main():
     revoke.add_argument("key_id")
     show = commands.add_parser("show-customer")
     show.add_argument("customer")
+    listing = commands.add_parser("list-customers")
+    listing.add_argument("--tier", choices=("free", "pro"))
+    listing.add_argument("--expiring-within-days", type=int)
     check = commands.add_parser("check-key")
     check.add_argument("--secret-file", required=True)
     grant = commands.add_parser("subscription")
@@ -130,6 +134,16 @@ def run(args):
         revoke_key(args.db, args.key_id)
     elif args.command == "show-customer":
         print(json.dumps(describe_customer(args.db, args.customer), indent=2))
+    elif args.command == "list-customers":
+        days = args.expiring_within_days
+        if days is not None and days < 0:
+            raise ValueError("--expiring-within-days must be 0 or more")
+        found = list_customers(
+            args.db,
+            tier=args.tier,
+            expiring_within=None if days is None else days * 86400,
+        )
+        print(json.dumps({"count": len(found), "customers": found}, indent=2))
     elif args.command == "check-key":
         result = check_key(args.db, args.secret_file)
         print(json.dumps(result, indent=2))

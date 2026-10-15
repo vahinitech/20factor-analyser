@@ -217,5 +217,90 @@ class SubscriptionAdminTests(unittest.TestCase):
             subscription_admin.main()
 
 
+class ListCustomersTests(unittest.TestCase):
+    """list-customers: every plan at a glance, read-only, no key ids."""
+
+    def setUp(self):
+        self.folder = tempfile.TemporaryDirectory()
+        self.addCleanup(self.folder.cleanup)
+        self.db = self.folder.name + "/entitlements.sqlite"
+        entitlements.initialize(self.db)
+        now = int(time.time())
+        self.soon = entitlements.create_customer(self.db)
+        entitlements.set_subscription(
+            self.db, self.soon, "pro", "active", now + 3 * 86400
+        )
+        self.later = entitlements.create_customer(self.db)
+        entitlements.set_subscription(
+            self.db, self.later, "pro", "cancelled", now + 60 * 86400
+        )
+        self.lapsed = entitlements.create_customer(self.db)
+        entitlements.set_subscription(
+            self.db, self.lapsed, "pro", "active", now - 10
+        )
+        self.free = entitlements.create_customer(self.db)
+        self.key_id, self.token = entitlements.issue_key(self.db, self.soon)
+        second, _ = entitlements.issue_key(self.db, self.soon)
+        entitlements.revoke_key(self.db, second)
+
+    def cli(self, *argv):
+        out, err = io.StringIO(), io.StringIO()
+        code = 0
+        with patch.object(
+            sys, "argv", ["subscription_admin", "--db", self.db, *argv]
+        ), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            try:
+                subscription_admin.main()
+            except SystemExit as stop:
+                code = stop.code or 0
+        return code, out.getvalue(), err.getvalue()
+
+    def test_lists_every_customer_with_effective_access(self):
+        code, out, _ = self.cli("list-customers")
+        self.assertEqual(code, 0)
+        listed = json.loads(out)
+        self.assertEqual(listed["count"], 4)
+        by_id = {c["customer_id"]: c for c in listed["customers"]}
+        self.assertEqual(by_id[self.soon]["effective_tier"], "pro")
+        self.assertEqual(
+            (
+                by_id[self.soon]["keys_active"],
+                by_id[self.soon]["keys_revoked"],
+            ),
+            (1, 1),
+        )
+        self.assertEqual(by_id[self.later]["effective_tier"], "pro")
+        self.assertEqual(by_id[self.lapsed]["effective_tier"], "free")
+        self.assertEqual(by_id[self.lapsed]["subscription_status"], "expired")
+        self.assertEqual(by_id[self.free]["effective_tier"], "free")
+        # Soonest expiry first, customers with no expiry last.
+        self.assertEqual(listed["customers"][-1]["customer_id"], self.free)
+        self.assertNotIn(self.key_id, out)
+        self.assertNotIn(self.token, out)
+        self.assertNotIn("digest", out)
+
+    def test_filters(self):
+        _, out, _ = self.cli("list-customers", "--tier", "pro")
+        self.assertEqual(
+            {c["customer_id"] for c in json.loads(out)["customers"]},
+            {self.soon, self.later},
+        )
+        _, out, _ = self.cli("list-customers", "--expiring-within-days", "7")
+        self.assertEqual(
+            [c["customer_id"] for c in json.loads(out)["customers"]],
+            [self.soon],
+        )
+        code, _, err = self.cli(
+            "list-customers", "--expiring-within-days", "-1"
+        )
+        self.assertEqual(code, 1)
+        self.assertIn("0 or more", err)
+
+    def test_listing_never_writes(self):
+        before = Path(self.db).read_bytes()
+        self.cli("list-customers")
+        self.assertEqual(Path(self.db).read_bytes(), before)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -98,8 +98,17 @@ read-only.
 (`effective`, worked out by the same code the analyser runs on every
 request), each key id with its `revoked` flag and `created_at`, and the
 audit history in order. It never prints a key digest. Look up the customer
-id in the private register first; there is no command that lists every
-customer.
+id in the private register first.
+
+`admin list-customers` prints every customer: plan (`tier`, `status`,
+`expires_at`, `updated_at`), the access a key gets right now
+(`effective_tier`, `subscription_status`, from the same code as
+`show-customer`) and how many keys are active and revoked. Soonest expiry
+first, customers with no expiry last. `--tier pro` or `--tier free` keeps
+one effective tier; `--expiring-within-days 7` keeps the Pro customers whose
+period ends within a week, which is the renewal list. It opens the ledger
+read-only and prints no key ids, digests or audit rows. Customer ids are
+opaque, so match them to people in the private register.
 
 `admin check-key --secret-file PATH` says which customer and key id a key
 belongs to, whether it is revoked, and the access it gets, without printing
@@ -278,7 +287,6 @@ connect it on the page, and look up their customer id instead.
 | No login and no key recovery | A lost key is replaced by the operator; "Website sign-in and self-service account recovery are not provided" (API-V2.md) | 20factor-analyser-pro#1, sections 5 and 7 (accounts, parent portal) |
 | No billing and no store verification | Payment is checked by hand; grants come only from the operator tool | API-V2.md, "Billing integration still required" (Google Play and App Store verification), and 20factor-analyser-pro#1 section 7 |
 | The key is typed again on every visit | Tab memory only, by design, so the key never sits in browser storage | Goes away with sign-in; not planned separately |
-| No command lists every customer | `show-customer` looks up one id taken from the private register | Not planned |
 
 ## Owner decisions still open
 
