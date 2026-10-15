@@ -59,9 +59,11 @@ python subscription_admin.py --db /data/entitlements/subscriptions.sqlite create
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite issue-key CUSTOMER_ID --secret-file /private/new-customer-key
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite subscription CUSTOMER_ID --tier pro --status active --expires-at UTC_UNIX_SECONDS
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite revoke-key KEY_ID
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite show-customer CUSTOMER_ID
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite check-key --secret-file /private/key-to-check
 ```
 
-Key output files must not already exist and are created with mode 0600. Do not publish them or send them to logs. Back up the ledger using SQLite's backup API before migrations. Staging and production compose projects use separate named volumes.
+Key output files must not already exist and are created with mode 0600. Do not publish them or send them to logs. `show-customer` and `check-key` open the ledger read-only. `show-customer` prints the plan, the effective access (computed by the same function `access_for` uses), each key id with its revoked flag and creation time, and the audit history; it never prints a key digest. `check-key` reads one key from a regular file owned by the caller with mode 0600 or stricter (never from the command line), and prints the key id, customer id, revoked flag and effective access without the secret; it exits 1 when no key matches. Issuing and revoking a key write `key:issue:<key id>` and `key:revoke:<key id>` to the audit table, never the secret or its digest. Back up the ledger using SQLite's backup API before migrations. Staging and production compose projects use separate named volumes.
 
 Active Pro requires an explicit expiry. Cancelled Pro retains access until expiry; expired or revoked subscriptions use Free. Revoked API keys are rejected. Customer creation and subscription changes are operator-only commands; there is no public upgrade or receipt-acceptance endpoint.
 

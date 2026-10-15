@@ -63,9 +63,13 @@ def create_customer(path):
 
 
 def issue_key(path, customer_id):
-    """Return the secret once; only its SHA-256 digest enters the ledger."""
+    """Return the secret once; only its SHA-256 digest enters the ledger.
+
+    The audit row names the key id only, never the secret or its digest.
+    """
     token = "vh_" + secrets.token_urlsafe(32)
     key_id = "key_" + secrets.token_hex(12)
+    now = int(time.time())
     with closing(connect(path)) as connection, connection:
         connection.execute(
             "INSERT INTO api_keys(id, customer_id, digest, created_at) VALUES (?, ?, ?, ?)",
@@ -73,8 +77,12 @@ def issue_key(path, customer_id):
                 key_id,
                 customer_id,
                 hashlib.sha256(token.encode()).hexdigest(),
-                int(time.time()),
+                now,
             ),
+        )
+        connection.execute(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            (customer_id, f"key:issue:{key_id}", now),
         )
     return key_id, token
 
@@ -82,11 +90,18 @@ def issue_key(path, customer_id):
 def revoke_key(path, key_id):
     """Revocation takes effect on the next entitlement lookup."""
     with closing(connect(path)) as connection, connection:
-        changed = connection.execute(
-            "UPDATE api_keys SET revoked=1 WHERE id=?", (key_id,)
-        ).rowcount
-        if not changed:
+        row = connection.execute(
+            "SELECT customer_id FROM api_keys WHERE id=?", (key_id,)
+        ).fetchone()
+        if not row:
             raise ValueError("Unknown API key")
+        connection.execute(
+            "UPDATE api_keys SET revoked=1 WHERE id=?", (key_id,)
+        )
+        connection.execute(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            (row["customer_id"], f"key:revoke:{key_id}", int(time.time())),
+        )
 
 
 def set_subscription(path, customer_id, tier, status, expires_at=None):
@@ -116,6 +131,105 @@ def set_subscription(path, customer_id, tier, status, expires_at=None):
             "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
             (customer_id, f"subscription:{tier}:{status}:{expires_at}", now),
         )
+
+
+def effective_access(row, now=None):
+    """The access a customer row grants now; access_for and the CLI agree."""
+    now = time.time() if now is None else now
+    active = row["status"] in ("active", "cancelled")
+    expired = row["expires_at"] is not None and row["expires_at"] <= now
+    pro = (
+        row["tier"] == "pro"
+        and active
+        and not expired
+        and row["expires_at"] is not None
+    )
+    return {
+        "customer_id": row["id"],
+        "tier": "pro" if pro else "free",
+        "plan_tier": row["tier"],
+        "subscription_status": "expired" if expired else row["status"],
+        "expires_at": row["expires_at"],
+    }
+
+
+def connect_readonly(path):
+    """Open the ledger for operator lookups that must never write."""
+    connection = sqlite3.connect(
+        Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=10
+    )
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def describe_customer(path, customer_id):
+    """Plan, effective access, keys and audit history for one customer.
+
+    Read-only. Key digests are never returned.
+    """
+    with closing(connect_readonly(path)) as connection:
+        row = connection.execute(
+            "SELECT * FROM customers WHERE id=?", (customer_id,)
+        ).fetchone()
+        if not row:
+            raise ValueError("Unknown customer")
+        keys = connection.execute(
+            "SELECT id, revoked, created_at FROM api_keys"
+            " WHERE customer_id=? ORDER BY created_at, id",
+            (customer_id,),
+        ).fetchall()
+        audit = connection.execute(
+            "SELECT action, created_at FROM audit"
+            " WHERE customer_id=? ORDER BY id",
+            (customer_id,),
+        ).fetchall()
+    return {
+        "customer_id": row["id"],
+        "tier": row["tier"],
+        "status": row["status"],
+        "expires_at": row["expires_at"],
+        "updated_at": row["updated_at"],
+        "effective": effective_access(row),
+        "keys": [
+            {
+                "key_id": key["id"],
+                "revoked": bool(key["revoked"]),
+                "created_at": key["created_at"],
+            }
+            for key in keys
+        ],
+        "audit": [
+            {"action": entry["action"], "created_at": entry["created_at"]}
+            for entry in audit
+        ],
+    }
+
+
+def find_key(path, secret):
+    """Map a secret to its key and customer by digest, read-only.
+
+    Returns None when no key has this digest. A revoked key is reported
+    with access None, since access_for refuses it.
+    """
+    digest = hashlib.sha256(secret.encode()).hexdigest()
+    with closing(connect_readonly(path)) as connection:
+        key = connection.execute(
+            "SELECT id, customer_id, revoked, created_at FROM api_keys"
+            " WHERE digest=?",
+            (digest,),
+        ).fetchone()
+        if not key:
+            return None
+        row = connection.execute(
+            "SELECT * FROM customers WHERE id=?", (key["customer_id"],)
+        ).fetchone()
+    return {
+        "key_id": key["id"],
+        "customer_id": key["customer_id"],
+        "revoked": bool(key["revoked"]),
+        "created_at": key["created_at"],
+        "access": None if key["revoked"] else effective_access(row),
+    }
 
 
 def access_for(authorization=None):
@@ -148,24 +262,7 @@ def access_for(authorization=None):
         ) from error
     if not row:
         raise HTTPException(401, "Invalid API credential")
-    active = row["status"] in ("active", "cancelled")
-    expired = (
-        row["expires_at"] is not None and row["expires_at"] <= time.time()
-    )
-    pro = (
-        row["tier"] == "pro"
-        and active
-        and not expired
-        and row["expires_at"] is not None
-    )
-    result.update(
-        customer_id=row["id"],
-        authenticated=True,
-        tier="pro" if pro else "free",
-        plan_tier=row["tier"],
-        subscription_status="expired" if expired else row["status"],
-        expires_at=row["expires_at"],
-    )
+    result.update(effective_access(row), authenticated=True)
     return result
 
 
