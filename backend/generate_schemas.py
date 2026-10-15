@@ -398,6 +398,48 @@ def common():
                     "mean includes factors Free cannot see."
                 ),
             ),
+            "comparability": closed(
+                {
+                    "lines": {"type": "integer", "minimum": 0},
+                    "words": nullable("integer", minimum=0),
+                    "characters": nullable("integer", minimum=0),
+                    "script": {
+                        "type": ["string", "null"],
+                        "enum": [
+                            "latin",
+                            "telugu",
+                            "devanagari",
+                            "mixed",
+                            "other",
+                            None,
+                        ],
+                    },
+                    "languages": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1},
+                        "uniqueItems": True,
+                    },
+                    "printed_lines": {"type": "integer", "minimum": 0},
+                    "page": {
+                        "type": "string",
+                        "enum": ["handwriting", "handwriting_with_print"],
+                    },
+                    "reading": {
+                        "$ref": COMMON + "recognitionMetadata/properties/level"
+                    },
+                    "passage_aligned": {"type": "boolean"},
+                },
+                description=(
+                    "Facts that say whether two pages can be compared: "
+                    "handwriting lines scored, words and non-space "
+                    "characters read (null when nothing was read), the "
+                    "script of the letters read, the reading engine "
+                    "languages, printed lines found and left out, the "
+                    "reading level and whether a copied passage was "
+                    "matched. Counts only: no text or identifier. Every "
+                    "tier, successful reports only."
+                ),
+            ),
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -818,6 +860,7 @@ def expanded():
                 "maxItems": 4,
                 "items": ref("sectionScore"),
             },
+            "comparability": ref("comparability"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -872,7 +915,10 @@ def expanded():
     schema["allOf"] = [
         {
             "if": {"properties": {"ok": {"const": False}}},
-            "then": {"required": ["error"]},
+            "then": {
+                "required": ["error"],
+                "properties": {"comparability": False},
+            },
             "else": {"properties": {"error": False}},
         },
         {
@@ -999,6 +1045,7 @@ def compact():
                 ),
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "comparability": ref("comparability"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,
@@ -1067,7 +1114,10 @@ def compact():
     schema["allOf"] = [
         {
             "if": {"properties": {"ok": {"const": False}}},
-            "then": {"required": ["error"]},
+            "then": {
+                "required": ["error"],
+                "properties": {"comparability": False},
+            },
             "else": {"properties": {"error": False}},
         },
         {

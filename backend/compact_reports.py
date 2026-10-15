@@ -179,7 +179,10 @@ def build_compact(payload, access, include=()):
             # gets it, so a Free report can show the whole page was read.
             "measurements": payload.get("measurements") or {},
         }
-    if not report["ok"]:
+    if report["ok"]:
+        # Counts only, no text, so every tier gets them.
+        report["comparability"] = comparison_data.comparability(payload)
+    else:
         report["error"] = {
             "code": payload.get("error_code", "analysis_failed")
         }

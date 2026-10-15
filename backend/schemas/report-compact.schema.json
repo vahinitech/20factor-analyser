@@ -262,6 +262,9 @@
         "$ref": "common.schema.json#/definitions/coachingCard"
       }
     },
+    "comparability": {
+      "$ref": "common.schema.json#/definitions/comparability"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,
@@ -381,7 +384,10 @@
       "then": {
         "required": [
           "error"
-        ]
+        ],
+        "properties": {
+          "comparability": false
+        }
       },
       "else": {
         "properties": {

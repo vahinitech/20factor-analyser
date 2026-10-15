@@ -11,6 +11,16 @@ docs/17-comparison-data.md explains each field.
 """
 
 import math
+import re
+
+# Letters by Unicode block. A page is one script when at least
+# SCRIPT_SHARE of its letters are in that block, otherwise "mixed".
+SCRIPTS = (
+    ("latin", re.compile(r"[A-Za-z\u00C0-\u024F]")),
+    ("telugu", re.compile(r"[\u0C00-\u0C7F]")),
+    ("devanagari", re.compile(r"[\u0900-\u097F]")),
+)
+SCRIPT_SHARE = 0.9
 
 
 def _number(value):
@@ -55,3 +65,47 @@ def compact_sections(analysis):
         {"id": s["id"], "s": s["score"], "w": s["weight"]}
         for s in section_scores(analysis)
     ]
+
+
+def _script(text):
+    counts = {name: len(rx.findall(text)) for name, rx in SCRIPTS}
+    total = sum(counts.values())
+    if not total:
+        return "other"
+    name, count = max(counts.items(), key=lambda item: item[1])
+    return name if count >= SCRIPT_SHARE * total else "mixed"
+
+
+def comparability(payload):
+    """Facts that say whether two pages can be compared: how much was
+    written, in which script, and whether print was found on the page
+    and left out. Counts come from the text as the report read it (a
+    copied passage's words when the page was matched to one); with
+    nothing read they are null. No text, identifier or personal data."""
+    analysis = (payload or {}).get("analysis") or {}
+    recognition = analysis.get("recognition") or {}
+    text = str(payload.get("full_text") or "")
+    read = recognition.get("level") != "unavailable" and bool(text.strip())
+    lines = recognition.get("hand_lines")
+    if not isinstance(lines, int) or isinstance(lines, bool):
+        lines = len(payload.get("hand_lines") or [])
+    printed = recognition.get("printed_lines")
+    if not isinstance(printed, int) or isinstance(printed, bool):
+        printed = 0
+    return {
+        "lines": lines,
+        "words": len(text.split()) if read else None,
+        "characters": (sum(not c.isspace() for c in text) if read else None),
+        "script": _script(text) if read else None,
+        "languages": sorted(
+            {
+                lang
+                for lang in payload.get("rec_langs") or []
+                if isinstance(lang, str) and lang
+            }
+        ),
+        "printed_lines": printed,
+        "page": "handwriting_with_print" if printed else "handwriting",
+        "reading": recognition.get("level"),
+        "passage_aligned": recognition.get("passage_aligned") is True,
+    }

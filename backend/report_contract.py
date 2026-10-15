@@ -227,7 +227,10 @@ def public_report(payload, access):
             if len(selected) == 3:
                 break
         report["worksheets"] = selected
-    if not payload.get("ok"):
+    if payload.get("ok"):
+        # Counts only, no text, so every tier gets them.
+        report["comparability"] = comparison_data.comparability(payload)
+    else:
         report["error"] = {
             "code": payload.get("error_code", "analysis_failed"),
             "message": "The image could not be analysed. Try a clear handwriting sample.",
