@@ -96,6 +96,7 @@ jobs:
             backend.tests.test_report_access \
             backend.tests.test_compact_reports \
             backend.tests.test_comparison_data \
+            backend.tests.test_variation_study \
             backend.tests.test_practice_catalog \
             backend.tests.test_schemas \
             backend.tests.test_backends_classify \

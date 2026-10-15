@@ -100,3 +100,85 @@ rather than guessed.
 The schema test that checks the marks on real evidence also found that
 `places` from the word-size measurement (#135) send `kind: "word"` and
 `measure: "word_xheight"`, which the schema did not list; both are added.
+
+## Real change or normal variation? (not published yet)
+
+Two ordinary pages by the same child never score exactly alike. A
+comparison should call a change real only when it is bigger than that
+everyday movement, so each factor needs a measured band. **There is no
+band in the catalogue yet, because we do not have the data to measure it
+honestly.** A guessed band would tell a family that practice worked, or
+did not, on no evidence.
+
+### What we have, and why none of it is the band
+
+| Data | What it shows |
+| --- | --- |
+| The same photo scanned twice | Nothing moves: scoring is deterministic and the steps before it may not depend on server state (CLAUDE.md, "Same photo, same scores"). This rules out noise from the server, not from the child or the camera |
+| The case studies (`docs/examples/case*-before/after.json`) | Pages built to show a change. They are designed differences, not variation |
+| The planted pages (`scripts/planted_pages.py`, UJI Pen Characters, 20 adult writers who wrote each letter twice on a tablet) | Two pages of the same passage from one writer's letters, below. The letters are a real writer's, but the line positions, gaps and baseline are the generator's own jitter, the reading confidence is fixed at 0.9 and no camera is involved |
+| Families' reports | None kept: photos are never stored and reports are not stored either. The stage debug store holds real families' pages for debugging and is not consented for a study |
+
+`python scripts/variation_study.py uji ujipenchars2.txt --pairs 5` (UJI
+file SHA-256 `cc56f72f...a0300d61`, as `planted_pages.py` checks; 20
+writers, 5 pairs each, fixed seeds, same output every run) gives, as the
+absolute score difference out of ten between the two pages of a pair:
+
+| Factor | Median | 90th percentile | Largest |
+| --- | ---: | ---: | ---: |
+| 1 Letter Formation | 0.1 | 0.3 | 0.4 |
+| 2 Stroke Order (proxy) | 0.0 | 0.1 | 0.2 |
+| 3 Loop Closure | 0.0 | 0.0 | 0.0 |
+| 4 Line Quality | 0.1 | 0.3 | 0.5 |
+| 5 Size Consistency | 0.2 | 0.72 | 3.5 |
+| 6 Ascender/Descender Control | 1.1 | 5.31 | 9.1 |
+| 7 Baseline Alignment | 0.2 | 0.61 | 1.7 |
+| 8 Word Spacing | 0.55 | 1.4 | 2.7 |
+| 9 Letter Spacing | 0.1 | 0.2 | 0.4 |
+| 10 Margin Discipline | 0.3 | 0.61 | 0.9 |
+| 11 Line Straightness | 0.2 | 0.6 | 1.3 |
+| 12 Vertical Alignment | 0.2 | 0.5 | 1.4 |
+| 17 Slant Consistency | 0.2 | 0.41 | 1.2 |
+| 18 Legibility | 0.2 | 0.5 | 1.1 |
+| 19 Character Distinction | 0.0 | 0.0 | 0.0 |
+| 20 Overall Neatness | 0.2 | 0.51 | 1.3 |
+
+Factors 13 to 16 are not scored from a photo. Read this as an engine
+check, not as children's variation: factors 3 and 19 do not move because
+the text and confidence are fixed, factor 8 moves with the generator's
+own gap jitter, and adults writing single letters on a tablet are steadier
+than children writing sentences on paper. What it does show is that
+factor 6 can move by most of its scale between two pages of the same
+passage by the same writer (largest 9.1). That instability is worth
+fixing in the scorer before any band is published for it, and until then
+a comparison should not report factor 6 changes as progress.
+
+### How we will measure it
+
+1. **Writers.** At least 30 children (the tool will not propose a band
+   from fewer than 30 writers or 30 pairs), across the ages the product
+   serves, with a parent's written consent for this study. Each child gets
+   a study code (`w01`); no name, age, school or photo reaches the
+   analyser's records.
+2. **Pages.** Each child copies the same short passage twice, on two days
+   a few days apart, with no practice in between, same pen and paper,
+   photographed on a phone in ordinary light the way families do. Each
+   page is also photographed a second time, which separates the camera's
+   share of the movement from the writing's.
+3. **Scans.** Every photo goes through one analyser version with the
+   response cache off (`VAHINI_OCR_CACHE_TTL_SEC=0`), with the passage as
+   `expected_text`. Only the version-2 reports are kept for the study;
+   whether the study team keeps the photos (to re-measure after a scorer
+   change) is the owner's decision under the consent wording.
+4. **Pairs.** `scripts/variation_study.py reports pairs.json` pairs each
+   child's two days, leaves out pairs whose `comparability` differs
+   (script, print on the page, word counts more than 25% apart), and gives
+   per factor the pairs, writers, median, 90th percentile and largest
+   absolute difference. The proposed band is the 90th percentile: nine in
+   ten ordinary repeats move less than that.
+5. **Publish.** The bands go into the catalogue as
+   `factors[].variation: {band, pairs, writers, method}` with a new
+   catalogue version, this page records the data and the date, and the
+   comparison then labels a change larger than the band as real. Until
+   then the comparison shows the change and says plainly that we cannot
+   yet tell it apart from everyday variation.
