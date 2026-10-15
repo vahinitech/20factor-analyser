@@ -106,6 +106,10 @@
     "adaptive_engine_speed": {
       "type": "object"
     },
+    "debug_store": {
+      "type": "boolean",
+      "description": "true only on stage with debug storage provisioned: photos and answers are being kept (SECURITY.md)."
+    },
     "layout_filter": {
       "type": "object",
       "additionalProperties": false,

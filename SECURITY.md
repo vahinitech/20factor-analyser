@@ -66,6 +66,21 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 - The website never sends the photo to its own store; only a family that
   ticks "Keep my pages" keeps one, encrypted, in vahini-web
   (`services/persist-api/lib/keepstore.js`).
+- One exception, for stage only: debug storage (`backend/debug_store.py`,
+  owner decision 2026-10-15). With `VAHINI_DEBUG_STORE=1` and
+  `VAHINI_DEBUG_STORE_DIR` both set, each answered upload keeps its photo
+  and the answer sent back, under `<dir>/analyser/<date>/`, until someone
+  deletes them by hand. It exists so the team can replay a page that scored
+  oddly on stage.vahinitech.com. Production never sets either variable;
+  vahini-web's `deploy/stage-debug.sh` sets them for the stage analyser
+  alone, and every stage page then says that pages are being kept. The
+  files are named by a random id, never the visitor's file name, and hold
+  nothing about the caller (address, browser, access key). Refused uploads
+  are not kept, and a failed write never fails the scan. `/health` (and
+  `/ocr/health`) reports `debug_store: true` while it is on, so a
+  production probe can check it is `false`. Any other value, or one
+  variable without the other, is off, and off is the code path as it was
+  before (`backend/tests/test_debug_store.py`).
 
 **Abuse limits**
 - Free tier: 3 checks a day per IP address, Pro never limited

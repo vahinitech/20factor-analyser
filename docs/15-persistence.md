@@ -65,3 +65,30 @@ itself are all deployment concerns. Build them however fits the hosting
 setup: a small Node/Python service, object storage, a queue, whatever. The
 client only needs three POST endpoints that return `{"ok": true}` on
 success; everything else is optional.
+
+## Stage debug storage (the analyser's one write)
+
+The analyser itself never keeps a photo, with one switch for stage only.
+`backend/debug_store.py` keeps each answered upload's photo and response
+when both `VAHINI_DEBUG_STORE=1` and `VAHINI_DEBUG_STORE_DIR` are set:
+
+```
+<dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.jpg    the photo, as sent
+<dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.json   route, lang, saved_at,
+                                                          photo, photo_bytes,
+                                                          response
+```
+
+Dates and times are UTC. The routes are `/ocr`, `/analyze-vl`,
+`/report-python` and `/api/v2/reports`; a cache hit is kept too, since the
+photo still arrived. Files are created mode 600 in folders of mode 700, as
+the container's user (10001).
+
+Production never sets these variables. On vahinitech.com,
+`deploy/stage-debug.sh on|off|status|export|purge` in vahini-web
+provisions them for the stage analyser, mounts a Docker volume at
+`/data/debug`, and shows a notice on every stage page while it is on.
+Nothing is deleted automatically: `purge` does it. `/health` reports
+`debug_store` so either host can be checked. The rule this is an
+exception to, and the exception's limits, are in
+[SECURITY.md](../SECURITY.md#upload-and-image-security-rules-for-every-change).

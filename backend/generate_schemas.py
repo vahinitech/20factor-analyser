@@ -1424,6 +1424,13 @@ def health():
             "det_limit_side_len": nullable("integer"),
             "printed_threshold": {"type": "number"},
             "adaptive_engine_speed": {"type": "object"},
+            "debug_store": {
+                "type": "boolean",
+                "description": (
+                    "true only on stage with debug storage provisioned: "
+                    "photos and answers are being kept (SECURITY.md)."
+                ),
+            },
             "layout_filter": closed(
                 {
                     "enabled": {"type": "boolean"},
