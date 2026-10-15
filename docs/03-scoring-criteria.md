@@ -79,12 +79,29 @@ measurement.
 Handwriting coaches teach letter size as a 1:2 proportion across three
 vertical zones: a `t` stands two x-heights tall, a `g` hangs two deep.
 When the page has enough Latin letters, factor 6 is scored from
-measured ink geometry (`zone_analysis.py`): per line, the densest
-horizontal band of ink is the middle zone (x-height); the topmost and
-bottommost ink of the blobs that cover at least half of that band give
-the ascender/descender extents, so a neighbouring line on closely ruled
-paper does not count as reach; reach =
-(zone + middle) / middle, target 2.0.
+measured ink geometry (`zone_analysis.py`), per line:
+
+- The middle zone (x-height) is a dense horizontal band of ink. The line
+  crop is padded to catch tall letters, so it can hold the line above or
+  below too; of the dense bands at least 6 px tall, the one that overlaps
+  the detected line the most is this line's.
+- The letters are the ink blobs that cover at least half of that band, so
+  a neighbouring line's tail does not count.
+- The ascender reach is the median height above the band of the letters
+  that clear it by at least half an x-height; the descender reach is the
+  same below. One long letter does not set the line. A letter joined to
+  the line above or below (a `g` touching a `k` on a tight page) counts
+  only when the line has no other tall or hanging letter, and stops at
+  that line's band. A line with no such letter keeps its largest
+  overshoot, which is how one-zone writing shows.
+- Reach = (zone + middle) / middle, target 2.0. The page value is the
+  median over lines.
+
+Before 2026-10-15 a line's reach was its single tallest and deepest
+letter, and the x-height was the longest dense band in the crop. Two
+pages of the same passage by the same writer then moved factor 6 by up
+to 9.1 points (90th percentile 5.31) on the planted UJI pages; now 4.6
+(0.6). docs/17-comparison-data.md has the run.
 
 - Full credit within ±0.35 of 2.0; zero credit at an error of 1.0 or
   more; up to 2 points off when reach varies line to line.
