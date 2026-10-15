@@ -84,6 +84,37 @@ def decode_image(raw: bytes) -> Image.Image:
         return ImageOps.exif_transpose(image).convert("RGB")
 
 
+# EXIF orientations that turn the picture a quarter turn, so the shown
+# width and height swap (ImageOps.exif_transpose applies the same).
+_QUARTER_TURNS = (5, 6, 7, 8)
+
+
+def photo_size(raw: bytes):
+    """Width and height of the upload as a viewer shows it: after its EXIF
+    rotation, before the analyser's own downscale; a PDF's first page as
+    rendered at 150 dpi. Reads the header only. None when it cannot."""
+    try:
+        if raw[:4] == b"%PDF":
+            import pypdfium2 as pdfium
+
+            pdf = pdfium.PdfDocument(raw)
+            try:
+                width, height = pdf[0].get_size()
+            finally:
+                pdf.close()
+            return (
+                max(1, round(width * 150 / 72)),
+                max(1, round(height * 150 / 72)),
+            )
+        with Image.open(io.BytesIO(raw), formats=IMAGE_FORMATS) as image:
+            width, height = image.size
+            if image.getexif().get(0x0112) in _QUARTER_TURNS:
+                width, height = height, width
+            return width, height
+    except Exception:  # pylint: disable=broad-except
+        return None
+
+
 def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:
     """Decode an upload and downscale it so its longest side is at most
     `max_side` (the caller passes the server's configured limit)."""

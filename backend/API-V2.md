@@ -116,7 +116,7 @@ Generic definitions are public educational content. They contain no customer sco
 | `text` | Free / Pro | Recognized text, line count and recognition metadata |
 | `inputs` | Pro | Actual per-factor evidence, score basis and numeric inputs |
 | `coaching` | Pro | Scan-specific coaching tips |
-| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only |
+| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only. Each region also lists `marks` (boxes and lines where the factor was measured) in the uploaded photo's pixels, with that photo's `photo_width` and `photo_height`: [docs/17-comparison-data.md](../docs/17-comparison-data.md) |
 
 Combine values with commas, for example `?format=compact&include=text,inputs,coaching`. Request image evidence only when needed; it is the largest part of an expanded response. Unauthorized paid fields return 403 before inference. Compact scans without `evidence` skip crop-preview construction and base64 encoding. Evidence and basic scan cache entries are separate, so requesting evidence later can require another processing pass. This version does not provide a stored-report detail GET endpoint.
 

@@ -170,11 +170,18 @@ def build_compact(payload, access, include=()):
         report["evidence"] = {
             "width": payload.get("proc_w"),
             "height": payload.get("proc_h"),
-            "factor_regions": {
-                str(k): v
-                for k, v in regions.items()
-                if str(k).isdigit() and int(k) in allowed
-            },
+            # The uploaded photo's size; each region's marks are in its
+            # pixels, so a viewer can draw them on the family's own copy.
+            "photo_width": payload.get("photo_w"),
+            "photo_height": payload.get("photo_h"),
+            "factor_regions": comparison_data.with_marks(
+                {
+                    str(k): v
+                    for k, v in regions.items()
+                    if str(k).isdigit() and int(k) in allowed
+                },
+                comparison_data.factor_marks(payload, allowed),
+            ),
             # Geometry of what was measured, never a score: every tier
             # gets it, so a Free report can show the whole page was read.
             "measurements": payload.get("measurements") or {},

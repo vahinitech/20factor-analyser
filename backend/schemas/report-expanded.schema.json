@@ -454,6 +454,20 @@
           ],
           "minimum": 1
         },
+        "photo_width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "photo_height": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
         "factor_regions": {
           "$ref": "common.schema.json#/definitions/factorRegions"
         }

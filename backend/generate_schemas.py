@@ -320,12 +320,13 @@ def common():
                                         "minItems": 4,
                                         "maxItems": 4,
                                     },
-                                    "kind": {"enum": ["line", "gap"]},
+                                    "kind": {"enum": ["line", "word", "gap"]},
                                     "role": {"enum": ["look", "keep"]},
                                     "region_id": {"type": "string"},
                                     "measure": {
                                         "enum": [
                                             "line_height",
+                                            "word_xheight",
                                             "line_angle",
                                             "read_confidence",
                                             "word_gap",
@@ -362,6 +363,74 @@ def common():
                         "location_url": {
                             "type": "string",
                             "pattern": "^(data:image/(jpeg|png|webp);base64,|$)",
+                        },
+                        "marks": {
+                            "type": "array",
+                            "description": (
+                                "Where this factor was measured, in the "
+                                "uploaded photo's pixels (evidence "
+                                "photo_width x photo_height; scale by "
+                                "your copy's width / photo_width). "
+                                "Boxes are [x, y, w, h], lines two "
+                                "[x, y] points. Roles: region (the "
+                                "evidence crop), look and keep (places), "
+                                "baseline and midline (a fitted line), "
+                                "usual_start (the usual left edge), "
+                                "hardest_line, underline and letter (the "
+                                "line and letters the reader was least "
+                                "sure of). Absent when the photo's size "
+                                "is unknown. backend/comparison_data.py."
+                            ),
+                            "items": {
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": ["shape", "role"],
+                                "properties": {
+                                    "shape": {"enum": ["box", "line"]},
+                                    "role": {
+                                        "enum": [
+                                            "region",
+                                            "look",
+                                            "keep",
+                                            "baseline",
+                                            "midline",
+                                            "usual_start",
+                                            "hardest_line",
+                                            "underline",
+                                            "letter",
+                                        ]
+                                    },
+                                    "measure": {"type": "string"},
+                                    "box": {
+                                        "type": "array",
+                                        "items": {"type": "number"},
+                                        "minItems": 4,
+                                        "maxItems": 4,
+                                    },
+                                    "points": {
+                                        "type": "array",
+                                        "minItems": 2,
+                                        "maxItems": 2,
+                                        "items": {
+                                            "type": "array",
+                                            "items": {"type": "number"},
+                                            "minItems": 2,
+                                            "maxItems": 2,
+                                        },
+                                    },
+                                },
+                                "allOf": [
+                                    {
+                                        "if": {
+                                            "properties": {
+                                                "shape": {"const": "box"}
+                                            }
+                                        },
+                                        "then": {"required": ["box"]},
+                                        "else": {"required": ["points"]},
+                                    }
+                                ],
+                            },
                         },
                     },
                     "if": {"properties": {"url": {"const": ""}}},
@@ -867,6 +936,8 @@ def expanded():
                 "properties": {
                     "image_width": nullable("integer", minimum=1),
                     "image_height": nullable("integer", minimum=1),
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
                     "factor_regions": ref("factorRegions"),
                 },
             },
@@ -1067,6 +1138,8 @@ def compact():
                 {
                     "width": nullable("integer", minimum=1),
                     "height": nullable("integer", minimum=1),
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
                     "factor_regions": ref("factorRegions"),
                     "measurements": {
                         "type": "object",
@@ -1085,7 +1158,9 @@ def compact():
                             "reading": {"type": "object"},
                         },
                     },
-                }
+                },
+                # The photo's size arrived later; saved reports lack it.
+                required=["width", "height", "factor_regions", "measurements"],
             ),
             "error": closed({"code": {"type": "string", "minLength": 1}}),
         },

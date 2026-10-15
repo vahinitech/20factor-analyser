@@ -109,3 +109,156 @@ def comparability(payload):
         "reading": recognition.get("level"),
         "passage_aligned": recognition.get("passage_aligned") is True,
     }
+
+
+def _photo_scale(payload):
+    """(x, y) from processed-image pixels to the uploaded photo's own
+    pixels, or None when the payload does not know the photo's size."""
+    sizes = [
+        payload.get(k) for k in ("photo_w", "photo_h", "proc_w", "proc_h")
+    ]
+    if not all(
+        isinstance(v, int) and not isinstance(v, bool) and v > 0 for v in sizes
+    ):
+        return None
+    return sizes[0] / sizes[2], sizes[1] / sizes[3]
+
+
+def _valid(values, count):
+    return (
+        isinstance(values, (list, tuple))
+        and len(values) == count
+        and all(_number(v) is not None for v in values)
+    )
+
+
+# What page_measurements drew, by the factor whose score it shows:
+# slope -> 7 Baseline Alignment, size band -> 5 Size Consistency, the
+# usual starting edge -> 10 Margin Discipline, the hardest line to read
+# -> 1 Letter Formation and 19 Character Distinction (both read from the
+# reader's confidence, scoring.py).
+def _measurement_marks(measurements, box, point):
+    out = {}
+
+    def add(numbers, mark):
+        for n in numbers:
+            out.setdefault(n, []).append(mark)
+
+    def line(numbers, role, points):
+        if isinstance(points, list) and len(points) == 2:
+            if all(_valid(p, 2) for p in points):
+                add(
+                    numbers,
+                    {
+                        "shape": "line",
+                        "role": role,
+                        "points": [point(p) for p in points],
+                    },
+                )
+
+    slope = (measurements.get("slope") or {}).get("line") or {}
+    line(("7",), "baseline", slope.get("baseline"))
+    size = (measurements.get("size") or {}).get("line") or {}
+    line(("5",), "baseline", size.get("baseline"))
+    line(("5",), "midline", size.get("midline"))
+    margin = measurements.get("margin") or {}
+    if all(
+        _number(margin.get(k)) is not None
+        for k in ("usual_x", "top", "bottom")
+    ):
+        line(
+            ("10",),
+            "usual_start",
+            [
+                [margin["usual_x"], margin["top"]],
+                [margin["usual_x"], margin["bottom"]],
+            ],
+        )
+        for item in margin.get("off") or []:
+            if _valid(item.get("bbox"), 4):
+                add(
+                    ("10",),
+                    {"shape": "box", "role": "look", "box": box(item["bbox"])},
+                )
+    reading = (measurements.get("reading") or {}).get("line") or {}
+    if _valid(reading.get("bbox"), 4):
+        add(
+            ("1", "19"),
+            {
+                "shape": "box",
+                "role": "hardest_line",
+                "box": box(reading["bbox"]),
+            },
+        )
+    line(("1", "19"), "underline", reading.get("underline"))
+    for letter in reading.get("letters") or []:
+        if _valid(letter.get("bbox"), 4):
+            add(
+                ("1", "19"),
+                {"shape": "box", "role": "letter", "box": box(letter["bbox"])},
+            )
+    return out
+
+
+def factor_marks(payload, numbers):
+    """Where each factor was measured, in the uploaded photo's pixels:
+    {"7": [{"shape": "line", "role": "baseline", "points": [[x, y],
+    [x, y]]}, {"shape": "box", "role": "region", "box": [x, y, w, h]},
+    ...]}. Built only from the evidence regions, their places and the
+    page measurements the scan already made; no image. None when the
+    photo's size is unknown (a payload cached before it was recorded)."""
+    scale = _photo_scale(payload)
+    if scale is None:
+        return None
+    sx, sy = scale
+
+    def box(b):
+        return [
+            round(b[0] * sx, 1),
+            round(b[1] * sy, 1),
+            round(b[2] * sx, 1),
+            round(b[3] * sy, 1),
+        ]
+
+    def point(p):
+        return [round(p[0] * sx, 1), round(p[1] * sy, 1)]
+
+    regions = payload.get("factor_regions") or {}
+    measured = _measurement_marks(
+        payload.get("measurements") or {}, box, point
+    )
+    out = {}
+    for n in sorted(numbers):
+        key = str(n)
+        region = regions.get(key)
+        marks = []
+        if (
+            isinstance(region, dict)
+            and region.get("status") != "unavailable"
+            and _valid(region.get("bbox"), 4)
+        ):
+            marks.append(
+                {"shape": "box", "role": "region", "box": box(region["bbox"])}
+            )
+            for place in region.get("places") or []:
+                if _valid(place.get("bbox"), 4):
+                    marks.append(
+                        {
+                            "shape": "box",
+                            "role": place.get("role"),
+                            "measure": place.get("measure"),
+                            "box": box(place["bbox"]),
+                        }
+                    )
+        out[key] = marks + measured.get(key, [])
+    return out
+
+
+def with_marks(regions, marks):
+    """Copies of the evidence regions, each with its factor's marks."""
+    out = {}
+    for key, region in regions.items():
+        if isinstance(region, dict) and marks is not None:
+            region = {**region, "marks": marks.get(str(key), [])}
+        out[key] = region
+    return out

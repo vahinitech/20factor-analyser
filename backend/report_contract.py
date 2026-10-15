@@ -184,8 +184,13 @@ def public_report(payload, access):
         report["evidence"] = {
             "image_width": payload.get("proc_w"),
             "image_height": payload.get("proc_h"),
-            "factor_regions": copy.deepcopy(
-                payload.get("factor_regions") or {}
+            # The uploaded photo's size; each region's marks are in its
+            # pixels, so a viewer can draw them on the family's own copy.
+            "photo_width": payload.get("photo_w"),
+            "photo_height": payload.get("photo_h"),
+            "factor_regions": comparison_data.with_marks(
+                copy.deepcopy(payload.get("factor_regions") or {}),
+                comparison_data.factor_marks(payload, allowed),
             ),
         }
         # Read the shared generated catalogue used by the browser.

@@ -62,3 +62,41 @@ What this does not decide: how different two pages may be before a
 comparison should warn. That is the comparison viewer's rule, and it
 should be stated there in words a parent understands (for example "the
 later page has about half as many words").
+
+## Where each factor was measured (`evidence.factor_regions[n].marks`)
+
+The comparison viewer draws the same factor from the earlier and the later
+photo, which the family drops into the page on their own device. The photos
+never come back to the analyser: they are not stored (docs/15-persistence.md)
+and the report holds no picture of them for this. What the report holds is
+where to look, as coordinates.
+
+Each evidence region (requested with `include=evidence` in compact, always
+in expanded Pro) now carries `marks`, and the evidence block carries the
+uploaded photo's size as `photo_width` and `photo_height`. Marks are in that
+photo's pixels: after its EXIF rotation, before the analyser's own downscale
+(a PDF: its first page at 150 dpi). The website sends the whole photo,
+scaled and turned upright, never cropped (`imageToBlob` in
+`frontend/src/app/app.js`), so a viewer scales a mark onto the family's own
+copy with `x * copy.width / photo_width` and `y * copy.height / photo_height`.
+
+| `role` | `shape` | Factors | What it is | From |
+| --- | --- | --- | --- | --- |
+| `region` | box | every factor with evidence | The evidence crop's box (whole page for the composite factors 18 and 20) | `computer_vision._factor_region_map` |
+| `look`, `keep` | box | 1, 5, 7, 8, 18 (and 10's lines off the usual edge) | The places that stand apart from the page, and the one closest to it, with their `measure` | `marked_places.free_skill_places` |
+| `baseline` | line | 7 | The steepest line's edge, which the slope score is measured from | `page_measurements` `slope` |
+| `baseline`, `midline` | line | 5 | One typical line's small-letter band | `page_measurements` `size` |
+| `usual_start` | line | 10 | The usual left edge of the lines, top to bottom | `page_measurements` `margin` |
+| `hardest_line`, `underline`, `letter` | box, line | 1, 19 | The line the reader was least sure of, and its least-sure letters when they could be placed | `page_measurements` `reading` |
+
+Sensor-only factors (13 to 16) have no marks: a photo cannot show them. A
+Free report gets the marks of its five factors only, like their regions.
+Boxes are `[x, y, w, h]`, lines two `[x, y]` points, rounded to 0.1 pixel.
+The marks are the positions the scan already measured, so the same photo
+gives the same marks (`test_same_page_same_marks`). When a cached answer
+predates this field, the photo's size is unknown and `marks` is left out
+rather than guessed.
+
+The schema test that checks the marks on real evidence also found that
+`places` from the word-size measurement (#135) send `kind: "word"` and
+`measure: "word_xheight"`, which the schema did not list; both are added.
