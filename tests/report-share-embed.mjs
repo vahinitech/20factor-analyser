@@ -24,7 +24,8 @@ const BASE = `http://127.0.0.1:${PORT}`;
 const server = spawn('./node_modules/.bin/http-server', ['.', '-p', String(PORT), '-a', '127.0.0.1', '-c-1', '-s'], { stdio: 'ignore' });
 const results = [];
 const add = (ok, name, detail = '') => results.push({ ok: !!ok, name, detail: typeof detail === 'string' ? detail : JSON.stringify(detail) });
-const RECEIPT = { id: '0123456789abcdef0123456789abcdef', token: 'Tk_0123456789-abcdefghijklmnopqrstuvwxyzABC', expires: '2027-10-16' };
+const RECEIPT = { id: '0123456789abcdef0123456789abcdef', token: 'Tk_0123456789-abcdefghijklmnopqrstuvwxyzABC',
+  read_token: 'Rd_9876543210-ZYXWVUTSRQPONMLKJIHGFEDcbaxyz', expires: '2027-10-16' };
 const NAME = 'Bheema Kosuri';
 
 async function waitUp() {
@@ -98,9 +99,11 @@ try {
   add(file.subarray(0, 5).toString() === '%PDF-' && pdfPages(file) === 2, 'The PDF still prints exactly two pages', { pages: pdfPages(file) });
   add(got.xmp.includes('xmlns:vahini="https://vahinitech.com/ns/report-pdf/1/"')
     && got.xmp.includes(`<vahini:receiptId>${RECEIPT.id}</vahini:receiptId>`)
-    && got.xmp.includes(`<vahini:receiptToken>${RECEIPT.token}</vahini:receiptToken>`)
+    && got.xmp.includes(`<vahini:receiptToken>${RECEIPT.read_token}</vahini:receiptToken>`)
     && got.xmp.includes('<vahini:photo>vahini-page.jpg</vahini:photo>'),
-    'The XMP metadata holds the receipt and names the embedded photo', got.xmp);
+    'The XMP metadata holds the read-only receipt and names the embedded photo', got.xmp);
+  add(!file.includes(Buffer.from(RECEIPT.token)),
+    'The full token, which can delete the record, is nowhere in the PDF');
   add(/\/Metadata \d+ 0 R/.test(got.text), 'The catalogue points at the XMP metadata');
   add(!got.xmp.includes(RECEIPT.expires) && !/expires/.test(got.xmp), 'Only the id and token go in, not the expiry date');
   const photo = got.files['vahini-page.jpg'];
@@ -132,6 +135,15 @@ try {
   const bad = embedded(badFile);
   add(!/receipt/.test(bad.xmp) && bad.files['vahini-page.jpg'] && pdfPages(badFile) === 2,
     'A malformed receipt is not embedded; the photo still is', bad.xmp);
+  // A receipt with no read-only token is left out too, never the full one.
+  await page.evaluate(receipt => {
+    const c = document.createElement('canvas'); c.width = 800; c.height = 600;
+    c.getContext('2d').fillRect(0, 0, 10, 10);
+    VahiniReportShare.setCheck({ receipt: { id: receipt.id, token: receipt.token }, image: c });
+  }, RECEIPT);
+  const fullFile = await share(page);
+  add(!/receipt/.test(embedded(fullFile).xmp) && !fullFile.includes(Buffer.from(RECEIPT.token)),
+    'Without a read-only token no receipt is embedded', embedded(fullFile).xmp);
   add(!errors.length, 'No page errors', errors);
 
   // The receipt survives expanding the compact report, so app.js can hand
@@ -149,6 +161,10 @@ try {
   const report = await app.evaluate(() => VahiniOCR.serverPythonReport(new Blob(['x']), ''));
   add(report && report.analysis && report.receipt && report.receipt.id === RECEIPT.id && report.receipt.token === RECEIPT.token,
     'The expanded report keeps its receipt for the shared PDF', report && report.receipt);
+  // The browser's saved check keeps the full token (it renews and deletes).
+  const saved = await app.evaluate(() => VahiniProgress.entryFrom('Bheema', 60, [], [], null));
+  add(saved && saved.receipt && saved.receipt.token === RECEIPT.token && !('read_token' in saved.receipt),
+    'The saved check keeps the full token, not the read-only one', saved && saved.receipt);
   await browser.close();
 } catch (e) {
   add(false, 'test run', e.stack || String(e));

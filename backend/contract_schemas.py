@@ -29,6 +29,8 @@ NAMES = (
     "report-expanded",
     "report-compact",
     "stored-report",
+    "compare-request",
+    "compare",
     "catalog",
     "error",
     "health",
