@@ -82,6 +82,7 @@ jobs:
             backend/tests/test_handwriting_only.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_image_formats.py \
+            backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
             backend/debug_store.py backend/tests/test_debug_store.py
       - name: Verify immutable report dictionary
@@ -114,6 +115,7 @@ jobs:
             backend.tests.test_letter_boxes \
             backend.tests.test_api_concurrency \
             backend.tests.test_image_formats \
+            backend.tests.test_scanner_strings \
             backend.tests.test_daily_limit \
             backend.tests.test_debug_store
 
