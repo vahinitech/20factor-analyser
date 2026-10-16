@@ -12,6 +12,8 @@ from pathlib import Path
 from fastapi import HTTPException
 
 FREE_FACTORS = (1, 5, 7, 8, 18)
+TIERS = ("free", "pro")
+STATUSES = ("active", "cancelled", "expired", "revoked")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS customers (
  id TEXT PRIMARY KEY, tier TEXT NOT NULL DEFAULT 'free',
@@ -102,6 +104,64 @@ def revoke_key(path, key_id):
             "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
             (row["customer_id"], f"key:revoke:{key_id}", int(time.time())),
         )
+    return row["customer_id"]
+
+
+def check_state(tier, status, expires_at):
+    """The one rule for a subscription row, for every writer."""
+    if tier not in TIERS or status not in STATUSES:
+        raise ValueError("Unsupported subscription state")
+    if tier == "pro" and (type(expires_at) is not int or expires_at <= 0):
+        raise ValueError("Pro requires an explicit expiry timestamp")
+    if expires_at is not None and (
+        type(expires_at) is not int or expires_at <= 0
+    ):
+        raise ValueError("Expiry must be a positive Unix time")
+
+
+def grant(path, expires_at):
+    """A new customer with Pro until `expires_at`, and its first key.
+
+    One transaction: the customer, the key and the grant exist together or
+    not at all, so a failed call never leaves a key without its Pro. The
+    secret is returned once; only its digest is stored.
+    """
+    check_state("pro", "active", expires_at)
+    now = int(time.time())
+    if expires_at <= now:
+        raise ValueError("Expiry must be in the future")
+    customer_id = "cus_" + secrets.token_hex(12)
+    key_id = "key_" + secrets.token_hex(12)
+    token = "vh_" + secrets.token_urlsafe(32)
+    with closing(connect(path)) as connection, connection:
+        connection.execute(
+            "INSERT INTO customers(id, tier, status, expires_at, updated_at)"
+            " VALUES (?, 'pro', 'active', ?, ?)",
+            (customer_id, expires_at, now),
+        )
+        connection.execute(
+            "INSERT INTO api_keys(id, customer_id, digest, created_at)"
+            " VALUES (?, ?, ?, ?)",
+            (
+                key_id,
+                customer_id,
+                hashlib.sha256(token.encode()).hexdigest(),
+                now,
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            [
+                (customer_id, f"key:issue:{key_id}", now),
+                (customer_id, f"subscription:pro:active:{expires_at}", now),
+            ],
+        )
+    return {
+        "customer_id": customer_id,
+        "key_id": key_id,
+        "key": token,
+        "expires_at": expires_at,
+    }
 
 
 def set_subscription(path, customer_id, tier, status, expires_at=None):
@@ -110,15 +170,7 @@ def set_subscription(path, customer_id, tier, status, expires_at=None):
     No public route calls this function. Active and cancelled Pro grants
     require an explicit end time; cancelled grants retain access until then.
     """
-    if tier not in ("free", "pro") or status not in (
-        "active",
-        "cancelled",
-        "expired",
-        "revoked",
-    ):
-        raise ValueError("Unsupported subscription state")
-    if tier == "pro" and (type(expires_at) is not int or expires_at <= 0):
-        raise ValueError("Pro requires an explicit expiry timestamp")
+    check_state(tier, status, expires_at)
     now = int(time.time())
     with closing(connect(path)) as connection, connection:
         changed = connection.execute(
