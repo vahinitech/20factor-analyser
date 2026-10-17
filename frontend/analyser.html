@@ -156,6 +156,14 @@
   .check-questions .cq-intro{ margin:0 0 12px; }
   .cq-cols{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 28px; align-items:start; }
   @media (max-width:900px){ .cq-cols{ grid-template-columns:minmax(0,1fr); } .cq-cols .cg-faq + .cg-faq{ border-top:0; } }
+  /* Tested on real handwriting: links to the site's how-handwriting-analysis-works page. */
+  .check-proof{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:12px 32px; align-items:center; }
+  .check-proof p{ margin:0; }
+  .cp-link{ display:inline-block; margin-top:12px; }
+  .cp-stats{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  .cp-stats li{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:baseline; gap:12px; padding:10px 14px; border-radius:var(--v-radius-md); background:var(--v-accent-soft); }
+  .cp-stats b{ min-width:3.2ch; font:var(--v-weight-semibold) var(--v-text-xl)/1 var(--v-font-serif); color:var(--v-accent-text); }
+  @media (max-width:900px){ .check-proof{ grid-template-columns:minmax(0,1fr); } }
 
   /* "what to upload" guidance: collapsed by default, opens on click */
   .upload-help{ max-width:760px; margin:16px auto 0; border:1px solid var(--rule); border-radius:14px; background:var(--v-surface); overflow:hidden; }
@@ -371,6 +379,19 @@
       </div>
     </section>
   </div>
+  <section class="v-card check-guide check-proof" aria-labelledby="cg-proof">
+    <div>
+      <div class="v-eyebrow">Tested on real handwriting</div>
+      <h2 id="cg-proof">See how a page is measured</h2>
+      <p>Watch the check work through a real handwritten photo, step by step: the slope of each line, the height of the small letters, the gaps between words, the margin and the letters it was least sure of. Then see the open handwriting data it is tested on, and the results, including the ones still to improve.</p>
+      <a class="cp-link" href="/how-handwriting-analysis-works.html">Watch it measure a real page</a>
+    </div>
+    <ul class="cp-stats">
+      <li><b>60</b><span>writers in the open handwriting data we test on</span></li>
+      <li><b>120</b><span>test pages, 15,968 real letters, one planted change each</span></li>
+      <li><b>0.1&deg;</b><span>off, at most, measuring a line planted at 4 degrees</span></li>
+    </ul>
+  </section>
   <section class="v-card check-guide check-questions" aria-labelledby="cg-ask">
     <div class="v-eyebrow">Questions people ask</div>
     <h2 id="cg-ask">About the free AI handwriting check</h2>
