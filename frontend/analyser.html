@@ -58,7 +58,7 @@
     .intake-split .dropzone--solo{ aspect-ratio:auto; min-height:280px; }
   }
   /* upload screen: one promise, three facts, then the photo */
-  .trust-ticks{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; list-style:none; padding:0; margin:12px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); }
+  .trust-ticks{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; list-style:none; padding:0; margin:8px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); }
   .trust-ticks li::before{ content:"\2713"; color:var(--v-success); font-weight:var(--v-weight-bold); margin-right:6px; }
   #dz-prompt .dz-btns{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:6px 0 4px; }
   #dz-prompt .dz-hint{ font-size:var(--v-text-sm); color:var(--v-text-2); }
@@ -90,7 +90,11 @@
   }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
-  .photo-note{ margin:10px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }
+  .photo-note{ margin:10px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:10px; }
+  /* "See pages you kept" sits on the photo line, the tick box below them. */
+  .photo-note > #photo-note-lead{ order:1; }
+  .photo-note > .keep-more{ order:2; }
+  .photo-note > .keep-opt, .photo-note > .keep-sample-note, .photo-note > .keep-email{ order:3; flex-basis:100%; }
   .photo-note b{ color:var(--v-text); }
   .photo-note a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .photo-note p{ margin:0; }
@@ -119,7 +123,7 @@
   .ns-sponsor{ font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
   .keep-email label{ display:block; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-text); margin:0 0 4px; }
   .keep-email input{ width:100%; max-width:340px; font:inherit; font-size:15px; padding:9px 11px; border:1.5px solid var(--v-border); border-radius:10px; background:var(--v-surface); color:var(--v-text); }
-  .keep-more{ margin:8px 0 0 !important; font-size:13px; }
+  .keep-more{ margin:0 !important; font-size:13px; }
   .keep-status{ margin:12px auto 0; max-width:820px; padding:12px 16px; border-radius:var(--v-radius-md); background:color-mix(in srgb, var(--v-success) 12%, var(--v-surface)); border:1px solid color-mix(in srgb, var(--v-success) 40%, transparent); color:var(--v-text); font-size:var(--v-text-sm); }
   .keep-status[hidden]{ display:none; }
   .keep-status.is-error{ background:color-mix(in srgb, var(--v-warning) 12%, var(--v-surface)); border-color:color-mix(in srgb, var(--v-warning) 45%, transparent); }
@@ -236,7 +240,7 @@
   <div class="panel cl-upload">
     <div class="intake-split">
      <div class="intake-col">
-      <div class="intake-cap"><div class="eyebrow">Step 1 · Your sample</div><h3>Add a photo of your page</h3></div>
+      <div class="intake-cap"><h3>Add a photo of your page</h3></div>
       <div class="dropzone dropzone--solo" id="dropzone">
       <button class="dz-clear" id="dz-clear" style="display:none;" aria-label="Remove this photo">✕</button>
       <img class="preview" id="dz-preview" style="display:none;" alt="Your handwriting photo">
@@ -346,7 +350,7 @@
 
      <!-- ============ HOW IT WORKS, EXPLAINER VIDEO ============ -->
      <aside class="intake-aside">
-      <div class="intake-cap"><div class="eyebrow">Watch · 60 seconds</div><h3>How the 20 factors work</h3></div>
+      <div class="intake-cap"><h3>How the 20 factors work, in 60 seconds</h3></div>
       <div class="video-frame">
         <iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe>
       </div>
