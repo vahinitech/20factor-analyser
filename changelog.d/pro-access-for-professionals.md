@@ -1,0 +1,1 @@
+- The access key box now sits beside Run instead of inside More options, with a line linking the plans and the therapists page, and the consent line names therapists. Therapists, schools and tutors with Pro could not find where to connect their key.

@@ -105,6 +105,9 @@
   .keep-err{ margin:6px 0 0; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-warning); }
   .keep-err[hidden]{ display:none; }
   .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
+  .pro-access{ margin:14px auto 0; }
+  .pro-plans{ max-width:760px; margin:10px auto 0; font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
+  .pro-plans a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .run-consent{ margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--v-text-2); text-align:right; }
   @media (max-width:560px){ .run-consent{ text-align:left; } }
   .ns-sponsor{ font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
@@ -309,20 +312,23 @@
       </div>
     </details>
 
-      <details class="upload-help" style="margin:12px 0">
-        <summary>Have a Vahini access key?</summary>
-        <form id="account-access" style="padding:16px">
-          <label for="account-key">Private access key</label>
-          <input id="account-key" type="password" autocomplete="off" spellcheck="false" placeholder="vh_…" style="width:100%;box-sizing:border-box;margin:8px 0">
-          <button class="btn" type="submit">Connect account</button>
-          <button class="btn" type="button" data-disconnect>Disconnect</button>
-          <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
-        </form>
-      </details>
         <p class="pen-option">Have the Vahini pen? <a href="#" id="use-pen">Capture live with the pen</a> · <a href="/product.html?from=free-check">What the pen adds</a></p>
       </div>
     </details>
-    <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over.</p>
+    <!-- Pro access sits beside Run, not inside More options: therapists,
+         schools and tutors with a key could not find it there. -->
+    <details class="upload-help pro-access" id="pro-access">
+      <summary>Have a Vahini access key?</summary>
+      <form id="account-access" style="padding:16px">
+        <label for="account-key">Private access key</label>
+        <input id="account-key" type="password" autocomplete="off" spellcheck="false" placeholder="vh_…" style="width:100%;box-sizing:border-box;margin:8px 0">
+        <button class="btn" type="submit">Connect account</button>
+        <button class="btn" type="button" data-disconnect>Disconnect</button>
+        <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
+      </form>
+    </details>
+    <p class="pro-plans">Checking pages for a caseload, a class or your students? <a href="/plans.html">See the plans</a> or <a href="/for-therapists.html">how therapists use Vahini</a>.</p>
+    <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian, teacher or therapist, or the writer is 18 or over.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
