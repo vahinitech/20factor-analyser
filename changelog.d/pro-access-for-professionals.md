@@ -1,1 +1,2 @@
 - The access key box now sits beside Run instead of inside More options, with a line linking the plans and the therapists page, and the consent line names therapists. Therapists, schools and tutors with Pro could not find where to connect their key.
+- The upload column is shorter so Run sits on the first screen on a laptop: the photo note loses its box and reads "we check it and do not keep it", the details of Keep my pages show once the box is ticked, More options and the access key share one row, and the plans link is one short line.

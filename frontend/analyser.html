@@ -90,13 +90,15 @@
   }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
-  .photo-note{ margin:12px 0 0; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }
+  .photo-note{ margin:10px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }
   .photo-note b{ color:var(--v-text); }
   .photo-note a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .photo-note p{ margin:0; }
-  .keep-opt{ display:flex; gap:10px; align-items:flex-start; margin:10px 0 0; cursor:pointer; color:var(--v-text); }
+  .keep-opt{ display:flex; gap:10px; align-items:flex-start; margin:6px 0 0; cursor:pointer; color:var(--v-text); }
   .keep-opt input{ margin-top:3px; width:17px; height:17px; flex:none; accent-color:var(--v-accent); }
-  .keep-opt small{ display:block; color:var(--v-text-2); font-size:13px; }
+  .keep-opt small{ display:none; color:var(--v-text-2); font-size:13px; }
+  /* The details of keeping pages show once someone ticks the box. */
+  .keep-opt:has(input:checked) small{ display:block; }
   .keep-email{ margin:8px 0 0 27px; }
   .keep-email[hidden]{ display:none; }
   .keep-opt:has(input:disabled){ cursor:not-allowed; opacity:.55; }
@@ -105,8 +107,12 @@
   .keep-err{ margin:6px 0 0; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-warning); }
   .keep-err[hidden]{ display:none; }
   .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
-  .upload-help.pro-access{ max-width:none; margin:14px 0 0; }
-  .pro-plans{ max-width:760px; margin:10px auto 0; font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
+  .upload-help.pro-access{ max-width:none; margin:0; }
+  /* More options and the access key share one row; each opens full width. */
+  .opt-row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin:12px 0 0; }
+  .opt-row > details{ flex:1 1 220px; margin:0; }
+  .opt-row > details[open]{ flex-basis:100%; }
+  .pro-plans{ max-width:760px; margin:8px auto 0; font-size:13px; line-height:1.5; color:var(--v-text-2); }
   .pro-plans a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .run-consent{ margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--v-text-2); text-align:right; }
   @media (max-width:560px){ .run-consent{ text-align:left; } }
@@ -257,7 +263,7 @@
     <!-- Photos are never stored (vahinitech.com privacy statement, 4.2), and
          the page says so where the photo is chosen. -->
     <div class="photo-note" id="photo-note" role="group" aria-labelledby="photo-note-lead">
-      <p id="photo-note-lead"><b>Your photo:</b> we analyse it and do not keep it, unless you choose to below. <a href="/privacy.html#what">What we keep</a></p>
+      <p id="photo-note-lead"><b>Your photo:</b> we check it and do not keep it. <a href="/privacy.html#what">What we keep</a></p>
       <label class="keep-opt"><input type="checkbox" id="keep-pages"><span>Keep my pages so I can see progress over time<small>Only you can see them. We email you a link, and nothing is kept until you open it. Deleted 12 months after your last check.</small></span></label>
       <p class="keep-sample-note" id="keep-sample-note" hidden>The sample page is never kept. Choose your own photo to keep your pages.</p>
       <div class="keep-email" id="keep-email-row" hidden>
@@ -267,6 +273,9 @@
       </div>
       <p class="keep-more"><a href="/progress.html">See pages you kept</a></p>
     </div>
+
+    <!-- One row for the two folded boxes, so Run stays on the first screen. -->
+    <div class="opt-row">
 
     <details class="more-options" id="more-options">
       <summary>More options</summary>
@@ -327,7 +336,8 @@
         <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
       </form>
     </details>
-    <p class="pro-plans">Checking pages for a caseload, a class or your students? <a href="/plans.html">See the plans</a> or <a href="/for-therapists.html">how therapists use Vahini</a>.</p>
+    </div>
+    <p class="pro-plans">For a caseload, a class or your students: <a href="/plans.html">plans</a> · <a href="/for-therapists.html">how therapists use Vahini</a></p>
     <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian, teacher or therapist, or the writer is 18 or over.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
