@@ -517,10 +517,13 @@ function showProcStagePreview(img){
 /* ---------- expected passage ---------- */
 function setupPassages(){
   const list = $('#passage-list');
-  list.innerHTML = PASSAGES.map((p,i)=>`<div class="passage ${i===0?'sel':''}" data-id="${p.id}">
+  list.innerHTML = PASSAGES.map(p=>`<div class="passage" data-id="${p.id}">
     <div class="pt">${p.title}</div><div class="pp">${p.text.replace(/\n/g,'<br>')}</div></div>`).join('')
     + `<div class="passage" data-id="custom"><div class="pt">Custom passage</div><textarea id="custom-text" placeholder="Type the exact text the writer copied…"></textarea></div>`;
-  state.expected = PASSAGES[0].text;
+  // No passage until the writer picks one. The server rewrites any read
+  // line that is close enough to the passage into the passage itself, so a
+  // default passage would quietly "correct" a child's own words.
+  state.expected = '';
   list.addEventListener('click', e=>{
     const card = e.target.closest('.passage'); if(!card) return;
     $$('.passage').forEach(c=>c.classList.remove('sel')); card.classList.add('sel');
