@@ -216,15 +216,14 @@ The handwriting lines are numbered top to bottom (`line_1`, `line_2`, ...).
 | 1 | The line with the lowest OCR confidence | `ocr-confidence-context` | context: "letter-shape fault not localized" |
 | 5 | The line whose height is furthest from the median line height | `height-deviation` | measurement |
 | 7 | The line with the steepest angle | `absolute-line-angle` (whole page when no polygon) | measurement |
-| 8 | The pair of line boxes on one row whose gap is furthest from the median gap | `normalized-word-gap-deviation` (whole page when there is no such pair) | measurement |
+| 8 | The line holding the word gap furthest from the median gap, measured from the ink as it is scored (section 3) | `ink-word-gap-deviation` (whole page, `spacing-context`, when no gap stands out) | measurement |
 | 18 | Every handwriting line | `aggregate-context` | context |
 
 Two gaps between what is scored and what is marked:
 
-- **Word Spacing marks only gaps between line boxes**, but most of its score
-  comes from gaps inside lines (section 3). With one box per line there is
-  usually no pair. The crop then falls back to the line with the gap that
-  stands out most (section 7), or the whole page when no gap was measured.
+- **Word Spacing used to mark the space between two line boxes**, which is
+  no longer scored (section 4). It now marks the line with the ink gap
+  that stands out most (section 7).
 - **Every mark is a whole line.** No mark today is a single letter or word.
 
 The report draws marks only for its two "Look closer" skills, both in one
@@ -674,7 +673,9 @@ because the words between its two parts are never read.
 | UPV_W57 | 6 → 4 | 54 → 91 | 8.8 → 8.9 | 3.8 → 8.3 | 2.8 → 9.4 | 4.7 → 8.1 | 5.5 → 8.7 |
 | UPV_W60 | 2 → 4 | 88 → 90 | 8.8 → 8.8 | 7.9 → 8.3 | 9.4 → 9.4 | 8.6 → 9.0 | 8.7 → 8.8 |
 
-What moved and why:
+What moved and why (the benchmark in [18-benchmark.md](18-benchmark.md)
+replays these pages on every pull request, so any later change to them
+shows in the PR):
 
 - **Word Spacing** no longer scores 0 (UPV_W27, W48, W51 and W54 were 0
   with `lang=en`): the space between two pieces of a line is not a word

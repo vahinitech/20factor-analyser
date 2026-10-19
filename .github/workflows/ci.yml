@@ -1,5 +1,6 @@
 # CI for the 20-Factor Analyser — runs on every push + PR.
 #  - python-tests   : server logic without the heavy paddle/torch install.
+#  - benchmark      : real handwriting pages replayed; scores as expected.
 #  - e2e            : headless Chrome — analyser app loads, print/handwriting
 #                     classification, bundle is in sync with src/.
 #  - e2e-recognition: full stack WITH the OCR backend; proves server recognition
@@ -85,6 +86,7 @@ jobs:
             backend/tests/test_layout_filter.py \
             backend/tests/test_line_pieces.py \
             backend/tests/test_word_spacing.py \
+            backend/tests/test_benchmark.py scripts/benchmark.py \
             backend/tests/test_image_formats.py \
             backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
@@ -118,6 +120,7 @@ jobs:
             backend.tests.test_letter_geometry \
             backend.tests.test_line_pieces \
             backend.tests.test_word_spacing \
+            backend.tests.test_benchmark \
             backend.tests.test_print_hand \
             backend.tests.test_page_measurements \
             backend.tests.test_letter_boxes \
@@ -127,6 +130,29 @@ jobs:
             backend.tests.test_daily_limit \
             backend.tests.test_debug_store \
             backend.tests.test_access_api
+
+  # Real handwriting, replayed: every page's kept reader output goes
+  # through this PR's code and must give the scores in expected.json
+  # (scripts/benchmark.py, docs/18-benchmark.md). No models needed.
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Real pages, every score as expected
+        run: python scripts/benchmark.py check
+      - name: Cache the UJI letters for the planted pages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vahini/ujipenchars2.txt
+          key: uji-cc56f72f8477e763
+      - name: Planted mistakes, no rate worse
+        run: python scripts/benchmark.py planted
 
   e2e:
     runs-on: ubuntu-latest

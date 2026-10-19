@@ -299,6 +299,27 @@ def _fits_row(piece, anchor):
     return off
 
 
+def on_same_row(a, b):
+    """Whether two lines sit on one written row (see ROW_OVERLAP)."""
+    return _fits_row(a, b) is not None
+
+
+def line_starts(lines):
+    """The lines that start a row: a line with another line wholly to its
+    left on the same row (a piece the join left apart) is not a start."""
+    out = []
+    for line in lines:
+        x = float(line["box"][0])
+        if not any(
+            o is not line
+            and float(o["box"][0]) + float(o["box"][2]) <= x
+            and on_same_row(line, o)
+            for o in lines
+        ):
+            out.append(line)
+    return out or list(lines)
+
+
 def _side_overlap(a, b):
     ax, _ay, aw, _ah = [float(v) for v in a["box"][:4]]
     bx, _by, bw, _bh = [float(v) for v in b["box"][:4]]
