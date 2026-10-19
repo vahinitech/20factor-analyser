@@ -140,6 +140,15 @@ The `docker exec` route above follows the hardened compose settings and the
 code; it has not yet been run end to end on the server. Run it once on stage
 and correct this page if a step differs.
 
+The commands keep working. A service on the private network can make the
+same changes through the analyser's internal access API instead of the
+command line or the ledger file: a grant (customer, key and Pro in one
+step), a subscription change, a new key, a revocation and the two lookups.
+It is off until the server has a token file, and it refuses any request
+that came through the public gateway. Routes and rules:
+[API-V2.md, "Internal access API"](../backend/API-V2.md#internal-access-api).
+No service other than the analyser opens the ledger.
+
 ## Back up before every change
 
 Take a copy with SQLite's backup API (not `cp`, which can catch a write half

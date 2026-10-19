@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/access-key.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "customer_id",
+    "key_id",
+    "key",
+    "expires_at"
+  ],
+  "properties": {
+    "customer_id": {
+      "$ref": "access-customer.schema.json#/definitions/customerId"
+    },
+    "key_id": {
+      "$ref": "access-customer.schema.json#/definitions/keyId"
+    },
+    "key": {
+      "$ref": "access-customer.schema.json#/definitions/secret"
+    },
+    "expires_at": {
+      "$ref": "common.schema.json#/definitions/unixSeconds"
+    }
+  },
+  "title": "Internal access API new key: POST /grants and POST /customers/{id}/keys (201)",
+  "description": "The only answer that carries a secret. Deliver it to the person and do not store or log it; it cannot be shown again. expires_at is the customer's stored expiry."
+}

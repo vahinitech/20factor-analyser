@@ -70,6 +70,38 @@ Active Pro requires an explicit expiry. Cancelled Pro retains access until expir
 
 The step-by-step procedure for trials, paid Pro, renewals, moving back to Free, lost keys and "my key stopped working", with the open owner decisions: [docs/17-access-and-trials.md](../docs/17-access-and-trials.md).
 
+## Internal access API
+
+A service on the private network that gives, changes or takes back Pro (a code redemption page, an operator page, a billing hook) calls this API instead of opening the SQLite ledger. Only the analyser opens its ledger. The code is `backend/access_api.py`; the messages are `backend/schemas/access-*.schema.json`.
+
+It is off by default. Three checks run on every request under `/internal/`, before routing or reading the body:
+
+1. `VAHINI_ACCESS_API_TOKEN_FILE` must name a readable file holding a shared token of at least 32 characters. Otherwise every path answers 404, so the API cannot be found. The file is read on each request, so replacing it rotates the token without a restart.
+2. A request with `X-Forwarded-For`, `X-Real-IP`, `Forwarded` or `CF-Connecting-IP` came through a proxy, and gets 404. The public gateway adds these headers; a service calling the container directly on the private network does not. Never route `/internal/` through a public gateway; this check is the second line of defence, not the first.
+3. `Authorization: Bearer <token>` must match the file, compared in constant time. Otherwise 401.
+
+| Route | Body | Answer |
+| --- | --- | --- |
+| `POST /internal/access/v1/grants` | `{"expires_at": UNIX}` | 201, `access-key`: a new customer with Pro until `expires_at` and its first key, written in one transaction |
+| `GET /internal/access/v1/customers/{customer_id}` | none | 200, `access-customer` |
+| `PUT /internal/access/v1/customers/{customer_id}/subscription` | `{"tier", "status", "expires_at"}` | 200, `access-customer` after the change |
+| `POST /internal/access/v1/customers/{customer_id}/keys` | none | 201, `access-key`: another key for the customer |
+| `POST /internal/access/v1/keys/{key_id}/revoke` | none | 200, `access-customer` of the key's owner |
+| `POST /internal/access/v1/keys/lookup` | `{"key": "vh_..."}` | 200, `access-key-lookup` |
+
+The rules are the operator tool's, from the same functions in `entitlements.py`: Pro needs an explicit expiry, a grant's expiry must be in the future, and `effective` is computed the way `/api/v2/me` computes access. A secret appears in one place only, the 201 answer that issues it; deliver it and do not log or store it. The lookup takes the secret in the body, never in a URL. No answer contains a key digest. Bodies are closed: an unknown field, a string where a number belongs or a `true` expiry is refused with 422. An unknown customer, key id or secret is 404, a body the ledger rules refuse is 422, and a missing or unreachable ledger is 503. Every answer carries `Cache-Control: no-store`. Error bodies use `error.schema.json`.
+
+`ANALYSER` below is the container's address on the private network, never the public host.
+
+```bash
+TOKEN=$(cat "$VAHINI_ACCESS_API_TOKEN_FILE")
+curl -s -X POST "$ANALYSER/internal/access/v1/grants" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"expires_at": 1795000000}'
+```
+
+The audit rows are the same as the command line's: `key:issue:<key id>`, `key:revoke:<key id>` and `subscription:<tier>:<status>:<expiry>`. A grant writes the key row first, then the subscription row. The command line keeps working alongside the API.
+
 ## Compatibility and rollout
 
 Set `VAHINI_ENFORCE_TIERS=1` for a paid deployment. It applies the same restrictions to `/report-python` and makes detailed `/analyze-vl` evidence Pro-only, preventing an old-route bypass. The hosted stage/prod compose configurations set this flag. A standalone open-source installation can retain the previous unrestricted legacy contract by leaving it unset; such an installation is not a protected paid service. The version-2 endpoint always applies its access policy.

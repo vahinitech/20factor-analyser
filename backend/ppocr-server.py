@@ -53,6 +53,7 @@ import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
+import access_api  # internal ledger API, off unless provisioned
 import report_contract
 import compact_reports
 import practice_catalog
@@ -96,17 +97,25 @@ app.add_middleware(UploadBodyLimit)
 async def private_api_responses(request, call_next):
     """Personal reports and subscription responses must not enter HTTP caches."""
     response = await call_next(request)
+    path = request.url.path
     if (
-        request.url.path.startswith("/api/v2/")
-        and not request.url.path.startswith("/api/v2/catalog/")
-    ) or request.url.path in (
-        "/report-python",
-        "/analyze-vl",
+        (
+            path.startswith("/api/v2/")
+            and not path.startswith("/api/v2/catalog/")
+        )
+        or path.startswith("/internal/")
+        or path
+        in (
+            "/report-python",
+            "/analyze-vl",
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Vary"] = "Authorization"
     return response
 
+
+access_api.install(app)
 
 # Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
 # names are thin aliases so the rest of this file (and the tests, which
