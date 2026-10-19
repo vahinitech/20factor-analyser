@@ -87,6 +87,7 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
 | OCR engine failed | 503 `ocr_unavailable`; the page says try again. Never a score from a broken read | `ppocr-server.py:649-652` |
 | OCR ran and found nothing | Lines are found from ink alone (`cv-fallback`) and the report is made without the skills that need reading | `computer_vision.fallback_line_regions`, `computer_vision.py:166-248`; `ppocr-server.py:653-661` |
 | Still nothing | `no_handwriting`, "No handwriting found" | `ppocr-server.py:662-676` |
+| Asked for as Telugu (`lang=te`), and fewer than three in four letters read are Telugu, or the reader's mean confidence is under 0.80 | `handwriting_not_read` screen; not counted against the daily limit. The Telugu reader returns Latin fragments on handwriting, so no report is made from them | `recognizer.telugu_not_read` |
 
 **When the family typed the passage**, each read line whose text is at least
 45% similar to a passage line takes the passage text instead
