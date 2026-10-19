@@ -1,0 +1,1 @@
+- `subscription_admin.py list-customers` prints every customer's plan, effective access and active and revoked key counts, soonest expiry first. `--tier` keeps Free or Pro, `--expiring-within-days` gives the renewal list. Read-only; no key ids or digests.

@@ -214,6 +214,57 @@ def connect_readonly(path):
     return connection
 
 
+def list_customers(path, tier=None, expiring_within=None, now=None):
+    """Every customer's plan, effective access and key counts, read-only.
+
+    `tier` keeps customers whose effective tier is "pro" or "free";
+    `expiring_within` (seconds) keeps Pro customers whose period ends
+    within that time from now. Sorted by expiry, then id. No key ids,
+    digests or audit rows: show-customer gives those for one customer.
+    """
+    now = time.time() if now is None else now
+    with closing(connect_readonly(path)) as connection:
+        rows = connection.execute("SELECT * FROM customers").fetchall()
+        counts = {
+            (row["customer_id"], row["revoked"]): row["n"]
+            for row in connection.execute(
+                "SELECT customer_id, revoked, COUNT(*) AS n FROM api_keys"
+                " GROUP BY customer_id, revoked"
+            )
+        }
+    out = []
+    for row in rows:
+        effective = effective_access(row, now)
+        if tier is not None and effective["tier"] != tier:
+            continue
+        if expiring_within is not None and not (
+            effective["tier"] == "pro"
+            and row["expires_at"] <= now + expiring_within
+        ):
+            continue
+        out.append(
+            {
+                "customer_id": row["id"],
+                "tier": row["tier"],
+                "status": row["status"],
+                "expires_at": row["expires_at"],
+                "updated_at": row["updated_at"],
+                "effective_tier": effective["tier"],
+                "subscription_status": effective["subscription_status"],
+                "keys_active": counts.get((row["id"], 0), 0),
+                "keys_revoked": counts.get((row["id"], 1), 0),
+            }
+        )
+    out.sort(
+        key=lambda c: (
+            c["expires_at"] is None,
+            c["expires_at"] or 0,
+            c["customer_id"],
+        )
+    )
+    return out
+
+
 def describe_customer(path, customer_id):
     """Plan, effective access, keys and audit history for one customer.
 

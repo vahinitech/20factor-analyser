@@ -48,7 +48,8 @@ to the ones it builds on.
 - Server set-up and engines: [backend/README.md](../backend/README.md).
 - Practice framework details: [practice-framework/](practice-framework/).
 - Worked examples and the sample report generator: [examples/](examples/).
-- Superseded notes on earlier report layouts, kept for the record:
+- Superseded notes on earlier report layouts, and dated notes such as the
+  real-photo evaluation of 19 October 2026, kept for the record:
   [history/](history/).
 - Changes: [CHANGELOG.md](../CHANGELOG.md). Contributing:
   [CONTRIBUTING.md](../CONTRIBUTING.md). Security: [SECURITY.md](../SECURITY.md).

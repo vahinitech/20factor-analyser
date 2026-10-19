@@ -58,7 +58,7 @@
     .intake-split .dropzone--solo{ aspect-ratio:auto; min-height:280px; }
   }
   /* upload screen: one promise, three facts, then the photo */
-  .trust-ticks{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; list-style:none; padding:0; margin:12px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); }
+  .trust-ticks{ display:flex; flex-wrap:wrap; justify-content:center; gap:6px 18px; list-style:none; padding:0; margin:8px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); }
   .trust-ticks li::before{ content:"\2713"; color:var(--v-success); font-weight:var(--v-weight-bold); margin-right:6px; }
   #dz-prompt .dz-btns{ display:flex; flex-wrap:wrap; justify-content:center; gap:10px; margin:6px 0 4px; }
   #dz-prompt .dz-hint{ font-size:var(--v-text-sm); color:var(--v-text-2); }
@@ -90,13 +90,19 @@
   }
   .upload-links.video-links{ text-align:left; margin-top:10px; }
   .upload-links{ text-align:center; font-size:var(--v-text-sm); color:var(--v-text-2); margin:14px 0 0; }
-  .photo-note{ margin:12px 0 0; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; }
+  .photo-note{ margin:10px 0 0; font-size:var(--v-text-sm); color:var(--v-text-2); line-height:1.5; display:flex; flex-wrap:wrap; align-items:baseline; column-gap:10px; }
+  /* "See pages you kept" sits on the photo line, the tick box below them. */
+  .photo-note > #photo-note-lead{ order:1; }
+  .photo-note > .keep-more{ order:2; }
+  .photo-note > .keep-opt, .photo-note > .keep-sample-note, .photo-note > .keep-email{ order:3; flex-basis:100%; }
   .photo-note b{ color:var(--v-text); }
   .photo-note a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .photo-note p{ margin:0; }
-  .keep-opt{ display:flex; gap:10px; align-items:flex-start; margin:10px 0 0; cursor:pointer; color:var(--v-text); }
+  .keep-opt{ display:flex; gap:10px; align-items:flex-start; margin:6px 0 0; cursor:pointer; color:var(--v-text); }
   .keep-opt input{ margin-top:3px; width:17px; height:17px; flex:none; accent-color:var(--v-accent); }
-  .keep-opt small{ display:block; color:var(--v-text-2); font-size:13px; }
+  .keep-opt small{ display:none; color:var(--v-text-2); font-size:13px; }
+  /* The details of keeping pages show once someone ticks the box. */
+  .keep-opt:has(input:checked) small{ display:block; }
   .keep-email{ margin:8px 0 0 27px; }
   .keep-email[hidden]{ display:none; }
   .keep-opt:has(input:disabled){ cursor:not-allowed; opacity:.55; }
@@ -105,12 +111,19 @@
   .keep-err{ margin:6px 0 0; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-warning); }
   .keep-err[hidden]{ display:none; }
   .keep-email input[aria-invalid="true"]{ border-color:var(--v-warning); }
+  .upload-help.pro-access{ max-width:none; margin:0; }
+  /* More options and the access key share one row; each opens full width. */
+  .opt-row{ display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin:12px 0 0; }
+  .opt-row > details{ flex:1 1 220px; margin:0; }
+  .opt-row > details[open]{ flex-basis:100%; }
+  .pro-plans{ max-width:760px; margin:8px auto 0; font-size:13px; line-height:1.5; color:var(--v-text-2); }
+  .pro-plans a{ color:var(--v-accent-text); font-weight:var(--v-weight-semibold); }
   .run-consent{ margin:14px 0 0; font-size:13px; line-height:1.5; color:var(--v-text-2); text-align:right; }
   @media (max-width:560px){ .run-consent{ text-align:left; } }
   .ns-sponsor{ font-size:13.5px; line-height:1.5; color:var(--v-text-2); }
   .keep-email label{ display:block; font-size:13px; font-weight:var(--v-weight-semibold); color:var(--v-text); margin:0 0 4px; }
   .keep-email input{ width:100%; max-width:340px; font:inherit; font-size:15px; padding:9px 11px; border:1.5px solid var(--v-border); border-radius:10px; background:var(--v-surface); color:var(--v-text); }
-  .keep-more{ margin:8px 0 0 !important; font-size:13px; }
+  .keep-more{ margin:0 !important; font-size:13px; }
   .keep-status{ margin:12px auto 0; max-width:820px; padding:12px 16px; border-radius:var(--v-radius-md); background:color-mix(in srgb, var(--v-success) 12%, var(--v-surface)); border:1px solid color-mix(in srgb, var(--v-success) 40%, transparent); color:var(--v-text); font-size:var(--v-text-sm); }
   .keep-status[hidden]{ display:none; }
   .keep-status.is-error{ background:color-mix(in srgb, var(--v-warning) 12%, var(--v-surface)); border-color:color-mix(in srgb, var(--v-warning) 45%, transparent); }
@@ -156,6 +169,14 @@
   .check-questions .cq-intro{ margin:0 0 12px; }
   .cq-cols{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 28px; align-items:start; }
   @media (max-width:900px){ .cq-cols{ grid-template-columns:minmax(0,1fr); } .cq-cols .cg-faq + .cg-faq{ border-top:0; } }
+  /* Tested on real handwriting: links to the site's how-handwriting-analysis-works page. */
+  .check-proof{ display:grid; grid-template-columns:minmax(0,1.4fr) minmax(0,1fr); gap:12px 32px; align-items:center; }
+  .check-proof p{ margin:0; }
+  .cp-link{ display:inline-block; margin-top:12px; }
+  .cp-stats{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+  .cp-stats li{ display:grid; grid-template-columns:auto minmax(0,1fr); align-items:baseline; gap:12px; padding:10px 14px; border-radius:var(--v-radius-md); background:var(--v-accent-soft); }
+  .cp-stats b{ min-width:3.2ch; font:var(--v-weight-semibold) var(--v-text-xl)/1 var(--v-font-serif); color:var(--v-accent-text); }
+  @media (max-width:900px){ .check-proof{ grid-template-columns:minmax(0,1fr); } }
 
   /* "what to upload" guidance: collapsed by default, opens on click */
   .upload-help{ max-width:760px; margin:16px auto 0; border:1px solid var(--rule); border-radius:14px; background:var(--v-surface); overflow:hidden; }
@@ -219,7 +240,7 @@
   <div class="panel cl-upload">
     <div class="intake-split">
      <div class="intake-col">
-      <div class="intake-cap"><div class="eyebrow">Step 1 · Your sample</div><h3>Add a photo of your page</h3></div>
+      <div class="intake-cap"><h3>Add a photo of your page</h3></div>
       <div class="dropzone dropzone--solo" id="dropzone">
       <button class="dz-clear" id="dz-clear" style="display:none;" aria-label="Remove this photo">✕</button>
       <img class="preview" id="dz-preview" style="display:none;" alt="Your handwriting photo">
@@ -239,14 +260,14 @@
     <!-- Outside the dropzone so its click does not bubble into the dropzone's own file picker. -->
     <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none;">
 
-    <!-- reference passage: hidden. With recognition the written text is read for
-         you; without it the engine falls back to a standard sample passage. -->
+    <!-- reference passage: hidden, so no passage is sent. The written text
+         is read as it is; a passage is sent only when one is picked. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
 
     <!-- Photos are never stored (vahinitech.com privacy statement, 4.2), and
          the page says so where the photo is chosen. -->
     <div class="photo-note" id="photo-note" role="group" aria-labelledby="photo-note-lead">
-      <p id="photo-note-lead"><b>Your photo:</b> we analyse it and do not keep it, unless you choose to below. <a href="/privacy.html#what">What we keep</a></p>
+      <p id="photo-note-lead"><b>Your photo:</b> we check it and do not keep it. <a href="/privacy.html#what">What we keep</a></p>
       <label class="keep-opt"><input type="checkbox" id="keep-pages"><span>Keep my pages so I can see progress over time<small>Only you can see them. We email you a link, and nothing is kept until you open it. Deleted 12 months after your last check.</small></span></label>
       <p class="keep-sample-note" id="keep-sample-note" hidden>The sample page is never kept. Choose your own photo to keep your pages.</p>
       <div class="keep-email" id="keep-email-row" hidden>
@@ -256,6 +277,9 @@
       </div>
       <p class="keep-more"><a href="/progress.html">See pages you kept</a></p>
     </div>
+
+    <!-- One row for the two folded boxes, so Run stays on the first screen. -->
+    <div class="opt-row">
 
     <details class="more-options" id="more-options">
       <summary>More options</summary>
@@ -301,20 +325,24 @@
       </div>
     </details>
 
-      <details class="upload-help" style="margin:12px 0">
-        <summary>Have a Vahini access key?</summary>
-        <form id="account-access" style="padding:16px">
-          <label for="account-key">Private access key</label>
-          <input id="account-key" type="password" autocomplete="off" spellcheck="false" placeholder="vh_…" style="width:100%;box-sizing:border-box;margin:8px 0">
-          <button class="btn" type="submit">Connect account</button>
-          <button class="btn" type="button" data-disconnect>Disconnect</button>
-          <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
-        </form>
-      </details>
         <p class="pen-option">Have the Vahini pen? <a href="#" id="use-pen">Capture live with the pen</a> · <a href="/product.html?from=free-check">What the pen adds</a></p>
       </div>
     </details>
-    <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over.</p>
+    <!-- Pro access sits beside Run, not inside More options: therapists,
+         schools and tutors with a key could not find it there. -->
+    <details class="upload-help pro-access" id="pro-access">
+      <summary>Have a Vahini access key?</summary>
+      <form id="account-access" style="padding:16px">
+        <label for="account-key">Private access key</label>
+        <input id="account-key" type="password" autocomplete="off" spellcheck="false" placeholder="vh_…" style="width:100%;box-sizing:border-box;margin:8px 0">
+        <button class="btn" type="submit">Connect account</button>
+        <button class="btn" type="button" data-disconnect>Disconnect</button>
+        <p role="status" aria-live="polite">Free scans need no key. Your key stays in this tab until you disconnect or reload.</p>
+      </form>
+    </details>
+    </div>
+    <p class="pro-plans">For a caseload, a class or your students: <a href="/plans.html">plans</a> · <a href="/for-therapists.html">how therapists use Vahini</a></p>
+    <p class="run-consent" id="run-consent">By running the check you confirm you are the writer's parent, guardian, teacher or therapist, or the writer is 18 or over.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Run analysis<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3l14 9-14 9V3z"/></svg></button>
     </div>
@@ -322,7 +350,7 @@
 
      <!-- ============ HOW IT WORKS, EXPLAINER VIDEO ============ -->
      <aside class="intake-aside">
-      <div class="intake-cap"><div class="eyebrow">Watch · 60 seconds</div><h3>How the 20 factors work</h3></div>
+      <div class="intake-cap"><h3>How the 20 factors work, in 60 seconds</h3></div>
       <div class="video-frame">
         <iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe>
       </div>
@@ -371,6 +399,19 @@
       </div>
     </section>
   </div>
+  <section class="v-card check-guide check-proof" aria-labelledby="cg-proof">
+    <div>
+      <div class="v-eyebrow">Tested on real handwriting</div>
+      <h2 id="cg-proof">See how a page is measured</h2>
+      <p>Watch the check work through a real handwritten photo, step by step: the slope of each line, the height of the small letters, the gaps between words, the margin and the letters it was least sure of. Then see the open handwriting data it is tested on, and the results, including the ones still to improve.</p>
+      <a class="cp-link" href="/how-handwriting-analysis-works.html">Watch it measure a real page</a>
+    </div>
+    <ul class="cp-stats">
+      <li><b>60</b><span>writers in the open handwriting data we test on</span></li>
+      <li><b>120</b><span>test pages, 15,968 real letters, one planted change each</span></li>
+      <li><b>0.1&deg;</b><span>off, at most, measuring a line planted at 4 degrees</span></li>
+    </ul>
+  </section>
   <section class="v-card check-guide check-questions" aria-labelledby="cg-ask">
     <div class="v-eyebrow">Questions people ask</div>
     <h2 id="cg-ask">About the free AI handwriting check</h2>
