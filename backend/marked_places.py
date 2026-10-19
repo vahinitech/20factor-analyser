@@ -268,23 +268,11 @@ def _reading_places(lines):
     return out
 
 
-def _gap_places(arr, lines, rows):
+def _gap_places(arr, lines, _rows):
     """Every gap the scorer counts for Word Spacing, with its place: the
-    ink gaps inside each line and the gaps between line boxes on one
-    row, each divided by the line's (or row's) height."""
+    ink gaps inside each line, each divided by the line's height. The
+    space between two boxes on one row is not a word gap (scoring.py)."""
     gaps = []
-    for row in rows:
-        items = row["items"]
-        row_h = float(np.mean([l["box"][3] for l in items]))
-        for left, right in zip(items, items[1:]):
-            x0 = left["box"][0] + left["box"][2]
-            px = max(0, right["box"][0] - x0)
-            y0 = min(left["box"][1], right["box"][1])
-            y1 = max(
-                left["box"][1] + left["box"][3],
-                right["box"][1] + right["box"][3],
-            )
-            gaps.append((px / max(1.0, row_h), left, [x0, y0, px, y1 - y0]))
     for l in lines:
         breaks = computer_vision.line_word_breaks(arr, l)
         for px, x0, x1 in breaks or []:

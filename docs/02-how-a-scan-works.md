@@ -59,9 +59,18 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
 **Keeping only handwriting**, in this order (`recognizer.extract_hand_lines`,
 `recognizer.py:332-358`):
 
-1. Duplicates removed and lines sorted top to bottom (`detector.merge_lines`).
-2. Tiny low-confidence fragments, wide header and footer strips and long
-   number strings dropped (`detector.region_filter_lines`).
+1. Repeated readings removed and lines sorted top to bottom
+   (`detector.merge_lines`). Two boxes overlapping by more than half are
+   one line whatever they say (the two image variants read "seeta" and
+   "seetha" for one line on a UJI test page, and it was scored twice); a
+   box mostly inside another is the same line when the texts agree or one
+   is part of the other, and a whole line then replaces a piece of it
+   read on its own.
+2. Tiny low-confidence fragments, wide header and footer strips that look
+   printed, and long number strings dropped
+   (`detector.region_filter_lines`). A wide line in the top 14% of the
+   photo used to go when it was read confidently, printed or not, which
+   dropped the first handwritten line of most UJI test pages.
 3. Pictures, charts, stamps and seals found by a layout model
    (PP-DocLayout-M) removed: a line goes when 60% of it lies inside one
    (`layout_filter.py:46-69, 195-209`). The scan waits for that model to load,
@@ -78,7 +87,30 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
    more characters and even strokes is treated as printed on any page
    (`classify.py:388-394`). Very neat handwriting can be removed by it.
 5. Lines shorter than two characters, or with no letters or digits, dropped.
+6. The pieces of each written line joined into one line
+   (`detector.join_row_pieces`). Rows are anchored on the widest pieces; a
+   piece joins a row when it overlaps the anchor in height by 60% of the
+   shorter one and their middles are within 35% of the taller one's height.
+   A piece over ink the row already holds is a second reading and is
+   dropped, and a row is cut where two pieces are more than four line
+   heights apart, so two columns stay apart. One UJI page gave ten pieces
+   for four lines.
 
+Between steps 3 and 4, **writing the detector missed is read again**
+(`line_recovery.py`). The detector finds no box at all for some closely
+written lines (the first or last line of several UJI pages, or a line's
+middle words). Ink outside every found line's box, joined into word-sized
+blobs at least 1.2 line heights wide, is cropped and read by the scan's
+own engine, detection and recognition, which finds the words on a crop
+around one line; when it finds none, the recogniser reads the crop as one
+line. A word is kept when it holds at least two letters, was read at 0.60
+or more, is at most 1.5 lines tall and its middle lies outside every
+found line. A reading of one letter at low confidence does not count as a
+found line, so it cannot hide the writing under it. Two rounds: the second
+reads what the first left unread. Recovered words are classified like any
+line but do not change the page's own evidence of print (step 4's
+letterhead and form rules), and step 6 joins them to their line. All of it
+depends only on the photo, so the same photo gives the same lines.
 **What the visitor sees when this fails**
 
 | Case | Result | Code |
@@ -87,6 +119,7 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
 | OCR engine failed | 503 `ocr_unavailable`; the page says try again. Never a score from a broken read | `ppocr-server.py:649-652` |
 | OCR ran and found nothing | Lines are found from ink alone (`cv-fallback`) and the report is made without the skills that need reading | `computer_vision.fallback_line_regions`, `computer_vision.py:166-248`; `ppocr-server.py:653-661` |
 | Still nothing | `no_handwriting`, "No handwriting found" | `ppocr-server.py:662-676` |
+| Asked for as Telugu (`lang=te`), and fewer than three in four letters read are Telugu, or the reader's mean confidence is under 0.80 | `handwriting_not_read` screen; not counted against the daily limit. The Telugu reader returns Latin fragments on handwriting, so no report is made from them | `recognizer.telugu_not_read` |
 
 **When the family typed the passage**, each read line whose text is at least
 45% similar to a passage line takes the passage text instead
@@ -109,10 +142,11 @@ A line under 16 pixels tall is not measured this way, because the letters
 blur together and the answer would be wrong rather than missing.
 
 Joined-up writing gives about one blob per word; print gives about one per
-letter. **Word gaps** come from this (`line_word_gaps`,
-`computer_vision.py:702-727`): blobs that overlap left to right are merged (the
-dot of an i, the bar of a t), and the widest `words - 1` spaces between them
-are the word breaks.
+letter. **Word gaps** come from this (`line_word_gaps`): only blobs whose
+middle lies between 20% and 85% of the box's height count, since a line box
+reaches into its neighbours and a tail from the line above is not a word;
+blobs that overlap left to right are merged (the dot of an i, the bar of a
+t), and the widest `words - 1` spaces between them are the word breaks.
 
 ## 4. The five free skills: what is measured and how the score is made
 
@@ -124,9 +158,9 @@ overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 | Skill | Measured from | Score | Needs reading? |
 |---|---|---|---|
 | **1 Letter Formation** | `avg_score`: the mean OCR confidence of the handwriting lines; `height_cv`: how much line heights vary | `avg_score x 7.2 + (1 - height_cv) x 2.8` | Yes |
-| **5 Size Consistency** | `size_cv`: standard deviation / mean of each **word's small-letter height**, measured along its line's own baseline (`letter_geometry.py`; since 2026-10-13, #135). Fewer than three words measured: line box heights, as before | `(1 - size_cv / 0.60) x 10` (line boxes: `/ 0.65`) | No |
+| **5 Size Consistency** | `size_cv`: standard deviation / mean of each **word's small-letter height**, measured along its line's own baseline (`letter_geometry.py`; since 2026-10-13, #135), as the median height of the word's columns (section 9). Fewer than three words measured: line box heights, as before | `(1 - size_cv / 0.60) x 10` (line boxes: `/ 0.65`) | No |
 | **7 Baseline Alignment** | `line_slope_abs`: mean of each line's angle, from the first two corners of its polygon (the top edge) | `(1 - angle / 8 degrees) x 10` | Yes |
-| **8 Word Spacing** | `word_gap_cv`: variation of every word gap, each divided by its line's height. Gaps come from section 3, plus gaps between separate line boxes on one row | `(1 - word_gap_cv / 1.4) x 10` | Yes |
+| **8 Word Spacing** | `word_gap_cv`: variation of every word gap, each divided by its line's height. Gaps come from the ink inside each line (section 3). The space between two boxes left on one row is not a gap: after step 6 of section 2 those are further apart than any word gap (a column, or words never read), and one such space scored Word Spacing 0 on four UJI pages. Fewer than three gaps: "Not measured" | `(1 - word_gap_cv / 1.4) x 10` | Yes |
 | **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
 
 Code: features at `scoring.py:422-560`, formulas at `scoring.py:571-612`,
@@ -182,15 +216,14 @@ The handwriting lines are numbered top to bottom (`line_1`, `line_2`, ...).
 | 1 | The line with the lowest OCR confidence | `ocr-confidence-context` | context: "letter-shape fault not localized" |
 | 5 | The line whose height is furthest from the median line height | `height-deviation` | measurement |
 | 7 | The line with the steepest angle | `absolute-line-angle` (whole page when no polygon) | measurement |
-| 8 | The pair of line boxes on one row whose gap is furthest from the median gap | `normalized-word-gap-deviation` (whole page when there is no such pair) | measurement |
+| 8 | The line holding the word gap furthest from the median gap, measured from the ink as it is scored (section 3) | `ink-word-gap-deviation` (whole page, `spacing-context`, when no gap stands out) | measurement |
 | 18 | Every handwriting line | `aggregate-context` | context |
 
 Two gaps between what is scored and what is marked:
 
-- **Word Spacing marks only gaps between line boxes**, but most of its score
-  comes from gaps inside lines (section 3). With one box per line there is
-  usually no pair. The crop then falls back to the line with the gap that
-  stands out most (section 7), or the whole page when no gap was measured.
+- **Word Spacing used to mark the space between two line boxes**, which is
+  no longer scored (section 4). It now marks the line with the ink gap
+  that stands out most (section 7).
 - **Every mark is a whole line.** No mark today is a single letter or word.
 
 The report draws marks only for its two "Look closer" skills, both in one
@@ -236,7 +269,7 @@ confidence of its line. The rules:
 | 5 | Lines, by height against the median line height | 20% or more away | within 10% |
 | 7 | Lines, by angle | 2 degrees or more | 1 degree or less |
 | 1 | Lines, by OCR confidence | below 0.85 | the clearest line, at 0.85 or more |
-| 8 | Word gaps, from ink inside lines and between boxes on a row, each over its line's height | 50% or more away from the median gap | within 15% |
+| 8 | Word gaps, from ink inside lines, each over its line's height | 50% or more away from the median gap | within 15% |
 | 18 | The first marked place of 1, 5, 8 and 7, then the second, by blend weight, one per box | | |
 
 A page needs at least three lines (5), two angled lines (7), two read lines
@@ -363,8 +396,15 @@ cannot see. Per line:
    (the median of the slopes between every pair), so tails and one sunken
    word cannot tilt it. Its angle is the line's slope.
 3. Shift each column so that baseline is level, smooth the row counts, and
-   take the densest band (`zone_analysis.dense_band`): the small-letter
-   height, measured along the line, so a sloping line no longer looks tall.
+   take the densest band (`zone_analysis.dense_band`): the line's
+   small-letter height, measured along the line, so a sloping line no
+   longer looks tall. A **word's** small-letter height is the median, over
+   its columns, of how high the ink reaches above the baseline, counting
+   columns that reach 0.35 to 2.0 of the line's height. Loops, stems and
+   i dots cover a few columns and tails hang below, so the median stays on
+   the letters' bodies. The densest band ran up into the loops on short
+   words written with tall letters: on joined writing "the", "day" and
+   "dog" measured up to 1.6 times their line and were marked "taller".
 4. Split into words at the widest gaps; when the number of blobs equals the
    number of letters in the text, split where the text says each word ends
    instead, which also finds words written too close.
@@ -585,3 +625,208 @@ good enough to circle the letters the reader found hardest to read (the
 lowest per-letter confidence), which is a true statement about the
 reading; they are not good enough for letter size, as measured above.
 Any report change waits for the owner.
+
+## 12. Tested on real handwriting: the UJI test pages (19 October 2026)
+
+Twenty pages, each written by one of the 20 writers in UJI Pen Characters'
+published test split (CC BY 4.0, the same letters as section 8), four
+lines of our cast's sentences per page with no planted mistake. Each was
+scored through the real pipeline: PP-OCRv5 as deployed, the layout model,
+the printed check and the scorer. The website's free check page scored
+them on 19 October 2026 and the ranking did not match the eye: a tidy
+joined hand (UPV_W57) scored 53, four pages scored 0 for Word Spacing,
+and one line was read twice. Sections 2, 3, 4 and 9 describe the fixes.
+
+**Lines.** Before, the reader scored 50 of the 80 written lines (53 when a
+request names its language, which runs both image variants): the first
+line of most pages was dropped as a header, some lines were never
+detected, one line was read twice and others came in up to four pieces.
+Now it scores 77 of 80 (78 with both variants), each once and whole. The
+lines still missing are on UPV_W21, UPV_W27 and UPV_W54, where the reader
+cannot read the line even in a crop of its own. Two runs in fresh
+processes give the same lines and scores on every page.
+
+**Scores**, with `lang=auto` as the website sends, before and after.
+"Lines" counts the lines scored: UPV_W30's first line is still two lines,
+because the words between its two parts are never read.
+
+| Writer | Lines | Overall | Letter Formation (1) | Size (5) | Baseline (7) | Word Spacing (8) | Legibility (18) |
+|---|---|---|---|---|---|---|---|
+| UJI_W12 | 4 → 4 | 76 → 90 | 8.9 → 9.3 | 8.7 → 8.1 | 8.3 → 9.4 | 7.3 → 8.6 | 8.4 → 8.9 |
+| UJI_W13 | 3 → 4 | 84 → 89 | 9.3 → 8.7 | 8.5 → 8.8 | 9.6 → 9.8 | 8.4 → 8.3 | 9.0 → 8.9 |
+| UJI_W14 | 3 → 4 | 94 → 95 | 9.5 → 9.6 | 8.4 → 8.8 | 9.5 → 9.6 | 8.0 → 9.0 | 8.9 → 9.3 |
+| UJI_W15 | 4 → 4 | 89 → 91 | 8.2 → 8.2 | 7.6 → 7.7 | 9.7 → 9.7 | 6.9 → 8.4 | 8.1 → 8.4 |
+| UJI_W16 | 6 → 4 | 69 → 91 | 9.1 → 8.8 | 6.0 → 7.9 | 7.0 → 9.3 | 7.0 → 8.6 | 7.5 → 8.7 |
+| UPV_W18 | 2 → 4 | 94 → 93 | 9.4 → 9.0 | 9.3 → 9.0 | 9.7 → 9.5 | 8.9 → 8.6 | 9.3 → 9.0 |
+| UPV_W21 | 5 → 4 | 70 → 71 | 9.0 → 8.6 | 5.6 → 6.9 | 7.9 → 7.6 | 7.1 → 8.9 | 7.6 → 8.0 |
+| UPV_W24 | 3 → 4 | 93 → 93 | 9.1 → 9.1 | 8.1 → 8.1 | 9.5 → 9.6 | 8.8 → 8.9 | 8.9 → 8.9 |
+| UPV_W27 | 4 → 3 | 74 → 92 | 9.4 → 9.1 | 8.6 → 8.2 | 9.3 → 9.7 | 0.0 → 9.1 | 7.3 → 9.0 |
+| UPV_W30 | 4 → 5 | 67 → 73 | 8.8 → 8.7 | 5.5 → 6.0 | 7.6 → 8.1 | 6.1 → 7.6 | 7.2 → 7.7 |
+| UPV_W33 | 3 → 4 | 93 → 94 | 8.9 → 8.9 | 8.9 → 9.2 | 9.4 → 9.5 | 9.4 → 9.3 | 9.1 → 9.2 |
+| UPV_W36 | 5 → 4 | 73 → 88 | 8.6 → 8.6 | 7.2 → 7.1 | 9.4 → 9.7 | 6.3 → 8.7 | 8.0 → 8.5 |
+| UPV_W39 | 5 → 4 | 74 → 93 | 9.3 → 9.2 | 8.2 → 8.7 | 7.5 → 9.6 | 6.6 → 9.1 | 8.1 → 9.1 |
+| UPV_W42 | 5 → 4 | 70 → 89 | 8.8 → 9.3 | 7.9 → 8.2 | 7.9 → 9.4 | 3.3 → 8.7 | 7.3 → 8.9 |
+| UPV_W45 | 3 → 4 | 92 → 94 | 9.2 → 9.3 | 9.0 → 8.9 | 9.6 → 9.7 | 7.5 → 8.6 | 8.9 → 9.2 |
+| UPV_W48 | 3 → 4 | 76 → 85 | 9.5 → 8.8 | 6.8 → 7.2 | 7.9 → 9.2 | 6.4 → 7.6 | 7.9 → 8.2 |
+| UPV_W51 | 4 → 4 | 68 → 89 | 8.7 → 8.8 | 6.7 → 8.7 | 7.1 → 9.8 | 7.3 → 7.8 | 7.6 → 8.8 |
+| UPV_W54 | 1 → 3 | 93 → 85 | 9.3 → 9.2 | 6.3 → 7.0 | 9.5 → 9.4 | 9.4 → 8.7 | 8.6 → 8.6 |
+| UPV_W57 | 6 → 4 | 54 → 91 | 8.8 → 8.9 | 3.8 → 8.3 | 2.8 → 9.4 | 4.7 → 8.1 | 5.5 → 8.7 |
+| UPV_W60 | 2 → 4 | 88 → 90 | 8.8 → 8.8 | 7.9 → 8.3 | 9.4 → 9.4 | 8.6 → 9.0 | 8.7 → 8.8 |
+
+What moved and why (the benchmark in [18-benchmark.md](18-benchmark.md)
+replays these pages on every pull request, so any later change to them
+shows in the PR):
+
+- **Word Spacing** no longer scores 0 (UPV_W27, W48, W51 and W54 were 0
+  with `lang=en`): the space between two pieces of a line is not a word
+  gap (section 4), the pieces are joined, and gaps come from the line's
+  own blobs (section 3).
+- **Baseline Alignment** rises where lines had been read in pieces: each
+  piece's outline had its own slope, and short pieces slope a lot.
+  UPV_W57 went from 2.8 to 9.4.
+- **Size Consistency** rises on joined writing (UPV_W57 3.8 to 8.3,
+  UPV_W51 6.7 to 8.7): words are measured column by column (section 9).
+  UPV_W30 stays at 6.0 because its writer mixes capital-sized A, E and K
+  with small letters, which the eye sees too.
+- **UPV_W54 falls from 93 to 85.** Before, only one of its four lines was
+  read, and that one was its neatest; three are scored now.
+- **UPV_W21 stays at 70 to 71**: one of its lines is still not read and
+  another only in part, so its size and slope come from fewer words than
+  the others.
+
+The same 120 planted pages as sections 8 and 9 (seed 0, photo style,
+measured from ink outlines, so without the reader):
+
+| | Before | After |
+|---|---|---|
+| False size marks per clean page | 1.25 | 0.85 |
+| False word-gap marks per clean page | 0.95 | 0.50 |
+| Wide word gap marked | 95% | 100% |
+| Word Spacing, clean page and page with one wide gap | 8.25 and 5.88 | 8.69 and 6.21 |
+| Size, clean page and page with one tall letter | 7.80 and 7.60 | 7.98 and 7.80 |
+| Size, page with one sunken word | 7.91 | 7.58 |
+
+The last row is a known cost of measuring words from the line's baseline:
+a word sitting 0.6 of a small letter below the line measures that much
+shorter. Measuring every word from its own baseline removes it but makes
+neat pages measure less even (UPV_W45 8.9 to 8.4); the plan below removes
+it only for the words the baseline check finds.
+
+### Small changes inside a line: what is found and the plan
+
+One planted mistake among about 30 words is still rarely found by the
+report's marks: one tall letter on 3 of 20 pages, one sunken word on 2 of
+20, two words written too close on 3 of 20. The letter-level measurements
+of section 9 exist and are measured; most are not yet used by the report.
+In order of cost:
+
+1. **Sunken word: ready, needs the owner.** `letter_geometry.baseline_marks`
+   finds the sunken word on 19 of 20 pages with the mark around the word
+   (0.94 of its size), and 0.5 false marks per clean page. Using it as
+   Baseline Alignment's marked places, and counting the share of words off
+   the line in its score (`page_features`' candidate), changes what the
+   report draws, so it waits for the owner's approval with before and
+   after screenshots. The same measurement then lets Size measure a
+   sunken word from its own baseline, which removes the leak above.
+2. **Words too close: the reader's word breaks.** On joined writing the
+   widest gaps are taken as the word breaks, so a word gap narrower than a
+   letter gap is never measured. The reader already returns where it put
+   each space (`ocr_backends.read_line_letters`, used today for the two
+   least-sure letters); measuring the ink gap at the reader's breaks
+   finds the narrow gap where the text says it is. Cost: one more call
+   to the recogniser per line. To be measured on the planted pages before
+   it is used.
+3. **One tall letter: against printed lines, not from a free photo.**
+   Section 11 measured the reader's letter slots: the planted letter is
+   measured on 40% of pages and 63% of pages get a false tall letter,
+   because these writers' own small letters vary about as much as the
+   planted one. Column heights (section 9) catch a whole word written
+   bigger, not one letter. A worksheet with printed guide lines gives the
+   target height, so a letter can be measured against it; that is where
+   letter size should be marked.
+
+## 13. Each factor against its own mistake (English, 20 October 2026)
+
+Every factor a photo can measure is tested against a mistake planted for
+it, on the 20 UJI test writers' own letters (`scripts/factor_tests.py`).
+Each planted page is made from the same random numbers as a clean twin,
+so the two differ only by the mistake; a factor "catches" it when the
+planted page scores at least 0.1 lower than its twin. Lines are given
+from the ink (no reader), except where the reader is named.
+`python scripts/benchmark.py factors` checks these rates on every change
+to the measuring and weekly (`.github/workflows/factor-tests.yml`).
+
+| Mistake planted | Factor | Caught before | Caught now |
+|---|---|---|---|
+| One line starts 2.5 small letters in | 10 Margin Discipline | 100% | 100% |
+| One word gap three times wider | 8 Word Spacing | 100% | 100% |
+| One word gap a quarter as wide | 8 Word Spacing | 100% | 100% |
+| Last line sinking 4 degrees | 7 Baseline, 11 Straightness, 12 Vertical Alignment | 100% | 100% |
+| One word sunk 0.6 of a small letter | 7 Baseline Alignment | 5% | **100%** |
+| One line's letters riding a wave | 11 Line Straightness | 20% | **100%** |
+| One line's letters leaning 25 degrees | 17 Slant Consistency | 0% | **100%** |
+| One word's letters three times as far apart | 9 Letter Spacing | 25% | **100%** |
+| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **85%** |
+| One word 1.5 times the size | 5 Size Consistency | 75% | 75% (falls 0.61, was 0.25) |
+| One line's tall letters and tails 1.5 times | 6 Ascender/Descender | 75% | 75% |
+| One small letter 1.7 times taller | 5 Size Consistency | 15% | 10% |
+| One line written with a tremor | 4 Line Quality | 0% | 0% |
+| One word scribbled, read by the real reader | 1 Letter Formation | 9 of 19 | unchanged |
+| | 18 Legibility | 2 of 19 | unchanged |
+| | 19 Character Distinction | 8 of 19 | unchanged |
+| | 2 Stroke Order | 9 of 19 | unchanged |
+
+What changed (`letter_geometry.py`, `scoring._stroke_features`):
+
+- **Loop Closure (3)** counted the share of loop letters in the text, so
+  an open loop could not move it. It now counts the closed bowls in each
+  line's ink (holes of letter-bowl size) against the letters read that
+  have one (a, b, d, e, g, o, p, q); full marks at 90%.
+- **Letter Spacing (9)** was the spread of line width per character. It
+  is now the spread of the gaps between the letters (or joined pieces)
+  inside words.
+- **Line Straightness (11)** was the line angle again, the same as
+  Baseline. It now also loses up to 5 points as a line's letters wander
+  off its fitted baseline (median distance, tails left out), worst line.
+- **Slant Consistency (17)** was the spread of line angles. Each word's
+  lean is now the shear that makes its strokes most upright, and the
+  score falls with the spread of the leans.
+- **Baseline Alignment (7)** also loses up to 5 points as the share of
+  words sitting off their line (0.35 of a small letter or more) reaches
+  25%: a sunken word does not turn a line, so the slope never saw it.
+- **Size Consistency (5)** loses up to 2 points as the share of words 30%
+  or more off the page's usual size reaches 10%; a word's height counts
+  only the columns reaching at least half a small letter (joins and the
+  bottoms of curves pulled it down); and a word sitting off its line is
+  measured from where it sits, so a sunken word is no longer a size
+  change.
+
+The older stand-ins remain only for a page too small to measure. On the
+20 real UJI pages (section 12) overall falls 2 to 7 points, mostly
+because Letter Spacing and Slant Consistency, which scored about 9.7 on
+any page, now measure clean writing near 7.7.
+
+What is not solved, and why:
+
+- **One letter 1.7 times taller** (10%) and **one word 1.5 times the
+  size** (75%). Without knowing which letter is which, a small letter
+  made tall looks like a tall letter, and a big word's V-shaped letters
+  (w, v) or a word split in the wrong place hide its size. Section 11 has
+  the letter-position measurements; they are not reliable enough yet.
+- **Line Quality (4)** measures how much line lengths vary, not the
+  stroke. A tremor at phone-photo resolution wobbles on the same scale as
+  the curves of the letters themselves, and an edge-roughness measure
+  caught it on 8 of 20 pages; it was not shipped. Smoothness belongs to
+  the sensor pen, like speed and pressure (13 to 16).
+- **Stroke Order (2)** cannot be seen in a finished letter; its score is
+  a blend of letter widths and reading confidence. Also a pen skill.
+- **Letter Formation (1), Legibility (18), Character Distinction (19)**
+  average the reader's confidence over whole lines, so one scribbled word
+  in 30 hardly moves them. Reading every line again letter by letter and
+  scoring the share of letters the reader was unsure of would fix this,
+  but in testing the extra readings took a scan past the analyser's 2.5 GB
+  memory limit, so it needs a load test on stage first (CLAUDE.md, scan
+  capacity) and is not in this change.
+- **Ascender/Descender Control (6)** moves a little with every other
+  mistake (0.3 to 0.9 points): its zone bands are measured per line and
+  shift with whatever else changes in the line.

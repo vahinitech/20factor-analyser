@@ -34,6 +34,7 @@ import classify
 import detector
 import computer_vision
 import layout_filter
+import line_recovery
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -334,12 +335,17 @@ def extract_hand_lines(
     raw_lines,
     raw_bytes: bytes = None,
     refine_backend: str = None,
+    read_region=None,
 ):
-    """Shared post-processing: merge → region-filter → drop non-text-ink
-    layout regions (image/figure/chart/seal) → classify printed vs
-    handwriting → keep handwriting, minus OCR noise fragments → optionally
-    refine handwriting text with a stronger engine. Returns (all_lines,
-    hand_lines).
+    """Shared post-processing: merge repeated readings → region-filter →
+    drop non-text-ink layout regions (image/figure/chart/seal) → read the
+    writing the detector missed (when read_region is given) → classify
+    printed vs handwriting → keep handwriting, minus OCR noise fragments →
+    join the pieces of each line → optionally refine handwriting text
+    with a stronger engine. Returns (all_lines, hand_lines).
+
+    read_region(crop, lang) -> lines | None is the scan's own reader
+    (ocr_backends.read_region); see line_recovery.py.
     """
     lines = detector.region_filter_lines(
         detector.merge_lines(raw_lines), arr.shape
@@ -347,15 +353,65 @@ def extract_hand_lines(
     lines = layout_filter.filter_excluded_regions(
         lines, layout_filter.excluded_regions(arr)
     )
+    if read_region is not None and lines:
+        lang = str(lines[0].get("lang") or "en")
+        lines = line_recovery.add_missed(arr, lines, read_region, lang)
     classify.classify_lines(arr, lines)
     hand_lines = detector.prefer_handwritten(lines)
     cleaned = [l for l in hand_lines if not detector.is_noise_line(l)]
     # Fail-open: never empty the set just because noise filtering was strict.
     if cleaned:
         hand_lines = cleaned
+    hand_lines = detector.join_row_pieces(hand_lines)
     if refine_backend in ("trocr", "hybrid") and raw_bytes:
         refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
     return lines, hand_lines
+
+
+# Telugu handwriting is not read yet. On 60 handwritten Telugu pages
+# (IIIT-INDIC-HW-WORDS, 2026-10-19) the Telugu reader returned 395 Latin
+# letters against 123 Telugu ones ("es aons", "aase"), and the server still
+# built a full report from them. A page asked for as Telugu (lang "te", not
+# with "en") is refused unless at least three in four of the letters read
+# are Telugu and the reader's mean confidence is 0.80 or more. The pages
+# that were mostly Telugu letters still read at 0.61 to 0.70 and lost half
+# their lines ("గవం నింబారు" for "గమనించారు సబ్జెక్టులో"); printed Telugu
+# reads at 0.96 to 1.0. The line tag cannot decide this: ocr_backends tags
+# every line the Telugu reader read as "te", Latin or not, and under "auto"
+# that reader also runs on short English pages. So only the request turns
+# the check on, and English and "auto" scans are unchanged.
+TELUGU_MIN_SHARE = 0.75
+TELUGU_MIN_CONFIDENCE = 0.80
+_TELUGU_CHAR = re.compile(r"[\u0C00-\u0C7F]")
+_LATIN_CHAR = re.compile(r"[A-Za-z]")
+
+
+def telugu_not_read(lang, hand_lines):
+    """Return the letter counts when a page asked for as Telugu was not
+    really read, or None when it passes or was not asked for as Telugu.
+    Lines with no text were not read at all (cv-fallback, or rows found
+    from the ink); a page of only those keeps its own path."""
+    asked = {x.strip() for x in str(lang or "").lower().split(",")}
+    if "te" not in asked or "en" in asked:
+        return None
+    read = [l for l in hand_lines if str(l.get("text") or "").strip()]
+    if not read:
+        return None
+    text = " ".join(str(l["text"]) for l in read)
+    telugu = len(_TELUGU_CHAR.findall(text))
+    latin = len(_LATIN_CHAR.findall(text))
+    confidence = sum(float(l.get("score") or 0.0) for l in read) / len(read)
+    if (
+        telugu
+        and telugu >= TELUGU_MIN_SHARE * (telugu + latin)
+        and confidence >= TELUGU_MIN_CONFIDENCE
+    ):
+        return None
+    return {
+        "telugu_letters": telugu,
+        "latin_letters": latin,
+        "reading_confidence": round(confidence, 3),
+    }
 
 
 def align_to_expected(hand_lines, expected_text):

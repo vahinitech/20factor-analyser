@@ -7,7 +7,7 @@ bigger than the change two ordinary pages by the same writer show. This
 tool measures that from pairs of saved version-2 reports and proposes a
 band per factor: the 90th percentile of the absolute score difference
 across pairs (method "p90-abs-delta"). It refuses to propose a band from
-too little data. docs/17-comparison-data.md has the method, the
+too little data. docs/19-comparison-data.md has the method, the
 collection plan and what the data we have today can and cannot show.
 
     # Real pairs: a JSON list of {"writer", "first", "second"}, the two

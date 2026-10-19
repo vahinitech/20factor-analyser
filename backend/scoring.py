@@ -24,6 +24,7 @@ from baseline_track import track_rows
 import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
+import ink_geometry
 
 try:
     import cv2
@@ -429,8 +430,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # margin consistency is measured, so Margin Discipline (factor 10)
     # scores the handwriting and not the photo angle.
     tilt_deg = _page_tilt_degrees(lines)
+    # One left edge per row: a piece of a line left on its own to the
+    # right (words the reader never found between) is not a line start,
+    # and counting its edge as one scored Margin Discipline 0 on two UJI
+    # test pages.
     lefts = [
-        _detilted_left_x(b, tilt_deg, w, h) / max(1.0, float(w)) for b in boxes
+        _detilted_left_x(l.get("box") or [0, 0, 0, 0], tilt_deg, w, h)
+        / max(1.0, float(w))
+        for l in computer_vision.line_starts(arr, lines)
     ]
     scores = [float(l.get("score", 0.0)) for l in lines]
     texts = [str(l.get("text", "") or "") for l in lines]
@@ -474,25 +481,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # Rows under 3 words are skipped; the poly-based estimate below
     # remains the fallback so sparse pages behave exactly as before.
     kf = track_rows(rows)
+    # Word gaps inside each line, from its ink. Gaps between two OCR
+    # boxes on one row are not measured: after detector.join_row_pieces
+    # the only boxes left side by side are further apart than any word
+    # gap (a column, or words the reader never found), and one such
+    # "gap" of seven line heights scored Word Spacing 0 on four of the
+    # UJI test pages. Without ink gaps a page read as one box per line
+    # had none at all, and _cv([]) == 0 scored a perfect 10.
     word_gaps = []
-    for r in rows:
-        items = r.get("items", [])
-        if len(items) < 2:
-            continue
-        row_h = mean(
-            [
-                float(max(1.0, (it.get("box") or [0, 0, 0, 0])[3]))
-                for it in items
-            ]
-        )
-        for i in range(len(items) - 1):
-            b1 = items[i].get("box") or [0, 0, 0, 0]
-            b2 = items[i + 1].get("box") or [0, 0, 0, 0]
-            gap = float(b2[0] - (b1[0] + b1[2]))
-            word_gaps.append(max(0.0, gap) / max(1.0, row_h))
-    # Gaps inside each OCR line, from ink. Without them a page read as
-    # one box per line had no gaps at all, and _cv([]) == 0 scored Word
-    # Spacing a perfect 10 whatever the spacing.
     for l in lines:
         line_gaps = computer_vision.line_word_gaps(arr, l)
         if line_gaps:
@@ -530,18 +526,24 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # its line's own baseline (letter_geometry.py). Line box heights grow
     # with a line's slope, so they counted tilt as size (#135); they remain
     # the fallback when fewer than three words can be measured.
+    geo = letter_geometry.measure_page(arr, lines)
     word_xh = [
-        wd["xheight"]
-        for g in letter_geometry.measure_page(arr, lines)
-        if g
-        for wd in g["words"]
-        if wd["xheight"]
+        wd["xheight"] for g in geo if g for wd in g["words"] if wd["xheight"]
     ]
     size_by_words = len(word_xh) >= 3
+    xh_med = float(np.median(word_xh)) if word_xh else 0.0
+    words_off_size = (
+        sum(1 for v in word_xh if abs(v / xh_med - 1.0) >= SIZE_OFF)
+        / len(word_xh)
+        if size_by_words and xh_med > 0
+        else None
+    )
 
-    return {
+    fx = {
+        **_stroke_features(geo, texts),
         "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
         "size_basis": "words" if size_by_words else "lines",
+        "words_off_size": words_off_size,
         "size_count": len(word_xh) if size_by_words else n_lines,
         "n_lines": n_lines,
         "n_words": n_words,
@@ -567,6 +569,10 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
         "word_gap_count": len(word_gaps),
+        # Latin letters recognised on the page. Loops (3) and letter zones
+        # (6) count Latin letters only, so a page in another script, such
+        # as Telugu, has none to measure.
+        "latin_letters": alpha_chars,
         "digits_ratio": digits_ratio,
         "loop_ratio": loop_ratio,
         "tall_ratio": tall_ratio,
@@ -575,13 +581,101 @@ def _extract_features(arr: np.ndarray, lines, layout):
             layout.get("layout_complexity", 0.0) or 0.0
         ),
     }
+    if lines and all(l.get("ink_row") for l in lines):
+        fx.update(_ink_features(arr, lines))
+    return fx
+
+
+def _ink_features(arr, lines):
+    """Size, line angle and word gaps for rows found from the ink
+    (ink_geometry.py): the reader drew no box, so angles come from each
+    row's fitted baseline and sizes from its letters."""
+    ink = ink_geometry.page_features(arr, lines)
+    out = {
+        "line_slope_abs": mean(ink["angles"]),
+        "line_slope_std": _std(ink["angles"]),
+        "line_slope_signed_med": (
+            float(np.median(ink["signed"])) if ink["signed"] else 0.0
+        ),
+        "baseline_rows_tracked": 0,
+        "baseline_wave_med": None,
+        "word_gap_cv": _cv(ink["gaps"]),
+        "word_gap_count": len(ink["gaps"]),
+        "n_words": ink["words"],
+    }
+    if len(ink["bodies"]) >= 3:
+        out.update(
+            {
+                "size_cv": _cv(ink["bodies"]),
+                "size_basis": "letter groups",
+                "size_count": len(ink["bodies"]),
+            }
+        )
+    return out
+
+
+# A word's small letters this far from the page's usual are off size
+# (marked_places.py marks the same words).
+SIZE_OFF = 0.30
+BOWL_LETTERS = set("abdegopq")
+MIN_BOWLS = 3
+# Full marks for Loop Closure when this share of the bowls read is
+# closed (a few open at small sizes are normal).
+BOWL_FULL = 0.9
+# Letter Spacing: the spread (std / mean) of the gaps between letters
+# that loses all marks; Line Straightness: the wander off the baseline,
+# in small letters, that loses its 5 points; Slant Consistency: the
+# spread of the words' lean, in degrees, that loses all marks.
+LETTER_GAP_SCALE = 2.5
+WAVE_SCALE = 0.25
+SLANT_SCALE = 40.0
+
+
+def _stroke_features(geo, texts):
+    """What the ink inside the lines shows (letter_geometry.py) for the
+    factors whose names it measures: closed bowls against the letters
+    read that have one (a, b, d, e, g, o, p, q) (3), how jagged the strokes are (4), how even the gaps
+    between letters are (9), how far words wander off their line's
+    baseline (11), and how much the words' lean varies (17). None where
+    the page gives too little to measure."""
+    lines = [g for g in geo if g]
+    expected = sum(1 for t in texts for ch in t.lower() if ch in BOWL_LETTERS)
+    bowls = sum(g["bowls"] for g in lines)
+    gaps = [x for g in lines for x in g["letter_gaps"]]
+    waves = [g["wave"] for g in lines if g.get("wave") is not None]
+    offs = [abs(wd["off"]) for g in lines for wd in g["words"]]
+    slants = [
+        wd["slant"]
+        for g in lines
+        for wd in g["words"]
+        if wd.get("slant") is not None
+    ]
+    return {
+        "bowl_share": (bowls / expected if expected >= MIN_BOWLS else None),
+        "letter_gap_cv": _cv(gaps) if len(gaps) >= 5 else None,
+        "line_wave": float(np.max(waves)) if waves else None,
+        # Share of words whose baseline sits WORD_OFF small letters or
+        # more off their line's (letter_geometry.WORD_DROP_LOOK).
+        "words_off_line": (
+            sum(1 for o in offs if o >= letter_geometry.WORD_DROP_LOOK)
+            / len(offs)
+            if len(offs) >= 3
+            else None
+        ),
+        "slant_std": _std(slants) if len(slants) >= 3 else None,
+    }
 
 
 _MIN_WORD_GAPS = 3
+# Factors whose measure counts Latin letters (scoring loop_ratio and
+# tall_ratio): loops (3) and letter zones (6, unless the zone profile
+# measured it from the ink).
+_LATIN_ONLY = (3, 6)
 _UNMEASURED_REASONS = {
     "imu": "Requires time-series data from the sensor pen.",
     "ocr": "Requires recognised text from the page.",
     "insufficient": "Needs at least three measurable word gaps.",
+    "script": "Reads English letters; not measured on this script.",
 }
 
 
@@ -593,23 +687,53 @@ def _score_factor_map(fx):
     s[2] = _clamp10(
         5.4 + (1.0 - min(1.0, fx["char_w_cv"])) * 2.6 + (fx["avg_score"] * 2.0)
     )
-    s[3] = _clamp10((min(1.0, fx["loop_ratio"] / 0.28)) * 10.0)
+    # Factors 3, 7, 9, 11 and 17 are measured from the ink inside the
+    # lines (_stroke_features); the older stand-ins below are kept only
+    # for a page too small to measure. Scales set on the planted pages
+    # (scripts/factor_tests.py, docs/02-how-a-scan-works.md section 13).
+    if fx.get("bowl_share") is not None:
+        s[3] = _clamp10(min(1.0, fx["bowl_share"] / BOWL_FULL) * 10.0)
+    else:
+        s[3] = _clamp10((min(1.0, fx["loop_ratio"] / 0.28)) * 10.0)
     s[4] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.8)) * 10.0)
     # Word x-heights vary less than line boxes did, so their full scale is
     # 0.60 (a clean planted page scores about 7.8, as line boxes did).
-    size_scale = 0.60 if fx.get("size_basis") == "words" else 0.65
+    size_scale = (
+        0.60 if fx.get("size_basis") in ("words", "letter groups") else 0.65
+    )
+    # Less up to 2 points as the share of words whose small letters are
+    # 30% or more off the page's usual reaches 10% (the same words the
+    # report marks, marked_places.py): one oversized word moved the
+    # spread of 30 words too little to see.
     s[5] = _clamp10(
         (1.0 - min(1.0, fx.get("size_cv", fx["height_cv"]) / size_scale))
         * 10.0
+        - 2.0 * min(1.0, (fx.get("words_off_size") or 0.0) / 0.10)
     )
     s[6] = _clamp10(
         (1.0 - min(1.0, abs(fx["tall_ratio"] - 0.34) / 0.34)) * 10.0
     )
-    s[7] = _clamp10((1.0 - min(1.0, fx["line_slope_abs"] / 8.0)) * 10.0)
+    # Less up to 5 points as the share of words sitting off their line
+    # reaches 25%: one sunken word does not turn a line.
+    s[7] = _clamp10(
+        (1.0 - min(1.0, fx["line_slope_abs"] / 8.0)) * 10.0
+        - 5.0 * min(1.0, (fx.get("words_off_line") or 0.0) / 0.25)
+    )
     s[8] = _clamp10((1.0 - min(1.0, fx["word_gap_cv"] / 1.4)) * 10.0)
-    s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
+    if fx.get("letter_gap_cv") is not None:
+        s[9] = _clamp10(
+            (1.0 - min(1.0, fx["letter_gap_cv"] / LETTER_GAP_SCALE)) * 10.0
+        )
+    else:
+        s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
     s[10] = _clamp10((1.0 - min(1.0, fx["left_cv"] / 0.55)) * 10.0)
-    s[11] = _clamp10((1.0 - min(1.0, fx["line_slope_abs"] / 10.0)) * 10.0)
+    # A straight line is level and does not wave: the slope, less up to 5
+    # points as the most wandering line's letters drift a quarter of a
+    # small letter off their baseline.
+    s[11] = _clamp10(
+        (1.0 - min(1.0, fx["line_slope_abs"] / 10.0)) * 10.0
+        - 5.0 * min(1.0, (fx.get("line_wave") or 0.0) / WAVE_SCALE)
+    )
     s[12] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 10.0)) * 10.0)
     s[13] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.85)) * 10.0)
     s[14] = _clamp10((1.0 - min(1.0, fx["ink_cv"] / 0.95)) * 10.0)
@@ -623,7 +747,12 @@ def _score_factor_map(fx):
         * 10.0
     )
     s[16] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.4)) * 10.0)
-    s[17] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 12.0)) * 10.0)
+    if fx.get("slant_std") is not None:
+        s[17] = _clamp10(
+            (1.0 - min(1.0, fx["slant_std"] / SLANT_SCALE)) * 10.0
+        )
+    else:
+        s[17] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 12.0)) * 10.0)
 
     # Composites leave Word Spacing out, and reweight the rest, when too
     # few word gaps were measured for it to mean anything.
@@ -646,21 +775,21 @@ def _score_factor_map(fx):
 _INPUT_FEATURES = {
     1: ("avg_score", "height_cv"),
     2: ("char_w_cv", "avg_score"),
-    3: ("loop_ratio",),
+    3: ("bowl_share", "loop_ratio"),
     4: ("width_cv",),
-    5: ("size_cv",),
+    5: ("size_cv", "words_off_size"),
     6: ("tall_ratio",),
-    7: ("line_slope_abs",),
+    7: ("line_slope_abs", "words_off_line"),
     8: ("word_gap_cv", "word_gap_count"),
-    9: ("char_w_cv",),
+    9: ("letter_gap_cv", "char_w_cv"),
     10: ("left_cv",),
-    11: ("line_slope_abs",),
+    11: ("line_slope_abs", "line_wave"),
     12: ("line_slope_std",),
     13: ("width_cv",),
     14: ("ink_cv",),
     15: ("n_chars", "n_words"),
     16: ("char_w_cv",),
-    17: ("line_slope_std",),
+    17: ("slant_std", "line_slope_std"),
     18: (),
     19: ("avg_score", "digits_ratio"),
     20: (),
@@ -675,6 +804,14 @@ _INPUT_FEATURES = {
 _NEEDS_RECOGNITION = frozenset(
     (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
 )
+
+
+# Measured from rows found in the ink (ink_geometry.py) although nothing
+# was read: line angle from each row's fitted baseline (7, 11, 12), word
+# gaps when the passage gives each row's words (8), and the blend of them
+# with size and margins (20). Slant Consistency (17) is the spread of each
+# word's lean, and ink rows have no words to lean, so it stays unmeasured.
+_INK_MEASURED = frozenset((7, 8, 11, 12, 20))
 
 
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
@@ -741,8 +878,8 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         3: f"{fx['n_chars']} letters",
         4: f"{fx['n_lines']} lines",
         5: (
-            f"{fx['size_count']} words"
-            if fx.get("size_basis") == "words"
+            f"{fx['size_count']} {fx['size_basis']}"
+            if fx.get("size_basis") in ("words", "letter groups")
             else f"{fx['n_lines']} lines"
         ),
         6: f"{fx['n_chars']} letters",
@@ -768,6 +905,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # 0.0 for letter formation and a perfect 10.0 for line angle that the
     # page never produced, so they are reported as not measured instead.
     cv_only = all(bool(l.get("cv_fallback")) for l in lines)
+    ink_only = bool(lines) and all(bool(l.get("ink_row")) for l in lines)
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -792,12 +930,27 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             and not motion_only
             and n in _NEEDS_RECOGNITION
             and not (n == 6 and zone_based)
+            and not (ink_only and n in _INK_MEASURED)
         )
         few_gaps = (
             n == 8
             and not needs_ocr
             and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
         )
+        no_latin = (
+            n in _LATIN_ONLY
+            and not motion_only
+            and not needs_ocr
+            and not (n == 6 and zone_based)
+            and fx.get("latin_letters", 0) == 0
+        )
+        if no_latin:
+            score = 0.0
+            value = "Not measured"
+            evidence = (
+                "This measure reads English letters, and none were "
+                "recognised on this page."
+            )
         if few_gaps:
             score = 0.0
             value = "Not measured"
@@ -860,12 +1013,25 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         missing_kind = (
             "imu"
             if motion_only
-            else "ocr" if needs_ocr else "insufficient" if few_gaps else None
+            else (
+                "ocr"
+                if needs_ocr
+                else (
+                    "insufficient"
+                    if few_gaps
+                    else "script" if no_latin else None
+                )
+            )
         )
         if motion_only:
             scoring_inputs = {"method": "sensor_required", "features": {}}
         elif needs_ocr:
             scoring_inputs = {"method": "recognition_required", "features": {}}
+        elif no_latin:
+            scoring_inputs = {
+                "method": "script_not_supported",
+                "features": {"latin_letters": 0},
+            }
         elif few_gaps:
             scoring_inputs = {
                 "method": "insufficient_data",

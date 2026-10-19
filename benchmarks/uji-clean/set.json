@@ -1,0 +1,28 @@
+{
+ "description": "Twenty pages of real handwriting, one per writer of the published test split of UJI Pen Characters (Version 2), four sentences each, no planted mistake. The pages scored on vahinitech.com's tested-on-real-handwriting page.",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "sentences": [
+  "vahini and bheema write letters every day",
+  "pihu sings while tara reads a story",
+  "chinnu keeps each word neat and clear",
+  "the quick brown fox jumps over the lazy dog",
+  "seetha and rama practise slowly with care",
+  "vidhya draws big round letters on the line"
+ ],
+ "lines_per_page": 4,
+ "floor_sentences_found": 77,
+ "eye_ranking": []
+}

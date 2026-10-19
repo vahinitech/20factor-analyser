@@ -49,10 +49,12 @@ from PIL import UnidentifiedImageError
 from pypdfium2 import PdfiumError
 
 import computer_vision  # image decode/crop/preview + layout/doc-context
+import ink_geometry  # lines and geometry from the ink, for unread scripts
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
+import access_api  # internal ledger API, off unless provisioned
 import report_contract
 import compact_reports
 import practice_catalog
@@ -96,17 +98,25 @@ app.add_middleware(UploadBodyLimit)
 async def private_api_responses(request, call_next):
     """Personal reports and subscription responses must not enter HTTP caches."""
     response = await call_next(request)
+    path = request.url.path
     if (
-        request.url.path.startswith("/api/v2/")
-        and not request.url.path.startswith("/api/v2/catalog/")
-    ) or request.url.path in (
-        "/report-python",
-        "/analyze-vl",
+        (
+            path.startswith("/api/v2/")
+            and not path.startswith("/api/v2/catalog/")
+        )
+        or path.startswith("/internal/")
+        or path
+        in (
+            "/report-python",
+            "/analyze-vl",
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Vary"] = "Authorization"
     return response
 
+
+access_api.install(app)
 
 # Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
 # names are thin aliases so the rest of this file (and the tests, which
@@ -246,11 +256,24 @@ _READ_LETTERS = (
     if OCR_BACKEND in ("paddle", "hybrid", "auto")
     else None
 )
+# Writing the detector missed is read by the same recogniser
+# (line_recovery.py), wherever PaddleOCR found the lines.
+_READ_REGION = (
+    ocr_backends.read_region
+    if OCR_BACKEND in ("paddle", "trocr", "hybrid", "auto")
+    else None
+)
 
 
 def _vl_analyze(arr, lines, include_evidence=True):
+    # Rows found from the ink were not read, and are not read again for
+    # their least-sure letters either.
+    unread = bool(lines) and all(l.get("ink_row") for l in lines)
     return computer_vision.vl_analyze(
-        arr, lines, include_evidence, read_letters=_READ_LETTERS
+        arr,
+        lines,
+        include_evidence,
+        read_letters=None if unread else _READ_LETTERS,
     )
 
 
@@ -364,6 +387,36 @@ def _no_handwriting_payload(engine, lang, lines, extra=None):
     return payload
 
 
+# A page asked for in Telugu that the reader did not manage: mostly Latin
+# letters, or an unsure reading (recognizer.telugu_not_read). The geometry
+# could still be measured, but a report built on lines the reader invented
+# is not a report on this child's writing, so the scan is refused. Like
+# no_handwriting it is never cached and never counts as a free check.
+HANDWRITING_NOT_READ_DETAIL = (
+    "The analyser could not read the writing on this page. It reads "
+    "English handwriting; it cannot yet read handwritten Telugu, so this "
+    "page was not scored."
+)
+
+
+def _handwriting_not_read_payload(engine, lang, counts, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "handwriting_not_read",
+        "error": HANDWRITING_NOT_READ_DETAIL,
+        **counts,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -377,12 +430,19 @@ def _ocr_process(arr, raw, lang):
             recognizer.collect_lines(arr, lang)
         )
         lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
+            arr,
+            raw_lines,
+            raw_bytes=raw,
+            refine_backend=selected_backend,
+            read_region=_READ_REGION,
         )
         if lines and not hand_lines:
             # Text was detected but every line is printed: refuse rather
             # than return machine type as "recognised handwriting".
             return _no_handwriting_payload("pp-ocrv5", lang, lines)
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload("pp-ocrv5", lang, not_read)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -493,7 +553,11 @@ def _analyze_vl_process(arr, raw, lang):
             recognizer.collect_lines(arr, lang)
         )
         lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
+            arr,
+            raw_lines,
+            raw_bytes=raw,
+            refine_backend=selected_backend,
+            read_region=_READ_REGION,
         )
         if lines and not hand_lines:
             # Every detected line is printed: refuse to analyse the page
@@ -514,6 +578,20 @@ def _analyze_vl_process(arr, raw, lang):
             # No OCR engine could read the page: refuse, never score CV
             # regions in its place (see OCR_UNAVAILABLE_DETAIL).
             return _ocr_unavailable_payload("pp-ocrv5+vl")
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload(
+                "pp-ocrv5+vl",
+                lang,
+                not_read,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The layout/context/factor-region
             # analysis is pure CV, so use OCR-free line detection; the same
@@ -633,6 +711,31 @@ async def analyze_vl(
     return _with_meta(payload, "hit" if cached is not None else "miss", t0)
 
 
+INK_LANGS = set(SETTINGS.ink_geometry_langs)
+
+
+def _ink_mode(lang):
+    """Whether a check in this language is measured from the ink
+    (VAHINI_INK_GEOMETRY_LANGS): only when the request names languages
+    and every one of them is set; "auto" cannot know the script before
+    reading, so it never is."""
+    req = [x.strip() for x in (lang or "").lower().split(",") if x.strip()]
+    if not INK_LANGS or not req or "auto" in req:
+        return False
+    return all(x in INK_LANGS for x in req)
+
+
+def _ink_lines(arr, expected_text):
+    """(all rows, handwriting rows) from the ink. The printed check still
+    runs on each row's shape, so a printed page is still refused. A
+    passage with one line per row gives each row its number of words."""
+    rows = ink_geometry.find_rows(arr)
+    classify.classify_lines(arr, rows)
+    hand = [r for r in rows if not r.get("printed_hint")]
+    ink_geometry.expect_words(hand, expected_text)
+    return rows, hand
+
+
 def _report_python_process(
     arr, raw, lang, expected_text, include_evidence=True
 ):
@@ -643,12 +746,22 @@ def _report_python_process(
     selected_backend = "paddle"
     compare_meta = {}
     try:
-        raw_lines, last_err, selected_backend, compare_meta = (
-            recognizer.collect_lines(arr, lang)
-        )
-        lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
-        )
+        if _ink_mode(lang):
+            # A language the reader cannot find the lines of: measured
+            # from the ink (ink_geometry.py), nothing read.
+            raw_lines, last_err, selected_backend = [], "", "ink-geometry"
+            lines, hand_lines = _ink_lines(arr, expected_text)
+        else:
+            raw_lines, last_err, selected_backend, compare_meta = (
+                recognizer.collect_lines(arr, lang)
+            )
+            lines, hand_lines = recognizer.extract_hand_lines(
+                arr,
+                raw_lines,
+                raw_bytes=raw,
+                refine_backend=selected_backend,
+                read_region=_READ_REGION,
+            )
         if lines and not hand_lines:
             # Every detected line is printed. Scoring machine type as
             # handwriting would fabricate a report, so refuse clearly.
@@ -669,6 +782,21 @@ def _report_python_process(
             # No OCR engine could read the page: refuse, never score CV
             # regions in its place (see OCR_UNAVAILABLE_DETAIL).
             return _ocr_unavailable_payload("pp-ocrv5+python-report")
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                not_read,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The 20 factors are measured from
             # GEOMETRY, so score OCR-free CV line regions; recognition is

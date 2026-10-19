@@ -47,7 +47,10 @@ class TestFactorEvidence(unittest.TestCase):
         result = vision._factor_region_map(arr, [], lines)
         self.assertEqual(result["5"]["bbox"], [30, 230, 100, 8])
 
-    def test_word_spacing_selects_observed_gap_pair(self):
+    def test_word_spacing_never_points_between_two_boxes(self):
+        # The space between two boxes on a row is not a word gap the
+        # scorer counts (scoring.py), so it is not the evidence either:
+        # with no ink gaps to show, the page is the context.
         arr = np.full((220, 600, 3), 255, np.uint8)
         lines = [
             line(20, 20, 50, 20),
@@ -56,9 +59,8 @@ class TestFactorEvidence(unittest.TestCase):
             line(300, 20, 50, 20),
         ]
         result = vision._factor_region_map(arr, [], lines)
-        self.assertEqual(result["8"]["bbox"], [140, 20, 210, 20])
-        self.assertEqual(result["8"]["region_ids"], ["line_3", "line_4"])
-        self.assertEqual(result["8"]["status"], "measurement")
+        self.assertEqual(result["8"]["selection_method"], "spacing-context")
+        self.assertEqual(result["8"]["status"], "context")
 
     def test_clipped_box_metadata_matches_encoded_pixels(self):
         arr = np.full((100, 100, 3), 255, np.uint8)

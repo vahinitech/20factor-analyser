@@ -13,9 +13,10 @@ and 8). This measures inside the line instead:
    spans: one per letter in print, one per word in joined writing.
 3. Split the spans into words at the widest gaps, as many as the text
    has word breaks (the same rule as computer_vision.line_word_gaps).
-4. For each word, the densest band of rows is its small-letter zone
-   (zone_analysis.dense_band): its height is the word's x-height and its
-   bottom is the word's baseline.
+4. The line's densest band of rows is its small-letter zone
+   (zone_analysis.dense_band): its height is the line's x-height. Each
+   word's x-height is the median height of its columns' ink above the
+   baseline (see COL_LOW), which loops and stems cannot stretch.
 5. A straight baseline through the words' baselines (Theil-Sen: the
    median of the slopes between every pair, so one sunken word cannot
    tilt it) gives the line's slope, and each word's distance from it.
@@ -95,13 +96,7 @@ def _xheight(mask, mx0, y0, slope, icpt):
     h, w = mask.shape
     if w == 0:
         return None
-    level = np.zeros((h * 2, w), bool)
-    for c in range(w):
-        base = slope * (mx0 + c) + icpt - y0
-        shift = int(round(h - base))
-        col = mask[:, c]
-        lo, hi = max(0, shift), min(2 * h, shift + h)
-        level[lo:hi, c] = col[lo - shift : hi - shift]
+    level = _level(mask, mx0, y0, slope, icpt)
     profile = level.sum(axis=1).astype(np.float64)
     if profile.max() <= 0:
         return None
@@ -111,6 +106,76 @@ def _xheight(mask, mx0, y0, slope, icpt):
     if band is None:
         return None
     xh = float(band[1] - band[0] + 1)
+    return xh if xh >= MIN_XHEIGHT_PX else None
+
+
+# A word's small-letter height is read column by column: the top of the
+# ink in each column, measured up from the line's baseline. Columns
+# through a loop or stem (b, d, h, k, l, t, the i dot) reach higher and
+# tails (g, j, p, q, y) hang below, but in almost every word most columns
+# hold a small letter's body or a join, so the median column is the
+# body's height. The densest band of rows, which the line's x-height
+# still uses, ran up into the loops on short words written with tall
+# letters ("the", "dog" and "day" were marked as size changes on joined
+# writing). Only columns whose top lies between COL_LOW and COL_HIGH line
+# x-heights above the baseline count (higher is the line above), and a
+# word needs MIN_COLUMNS of them.
+COL_LOW = 0.5
+COL_HIGH = 2.0
+MIN_COLUMNS = 5
+REST_REACH = 0.8
+
+
+def _level(mask, mx0, y0, slope, icpt):
+    """The mask with each column shifted so the fitted baseline is row h
+    (the mask's own height) of a 2h-row array."""
+    h, w = mask.shape
+    level = np.zeros((h * 2, w), bool)
+    for c in range(w):
+        base = slope * (mx0 + c) + icpt - y0
+        shift = int(round(h - base))
+        col = mask[:, c]
+        lo, hi = max(0, shift), min(2 * h, shift + h)
+        level[lo:hi, c] = col[lo - shift : hi - shift]
+    return level
+
+
+def _column_rest(mask, mx0, y0, slope, icpt, line_xh):
+    """How far below the line's baseline a word's columns rest, in
+    pixels: the median, over its columns, of the lowest ink within
+    REST_REACH small letters of the baseline (tails reach further)."""
+    h, w = mask.shape
+    if w == 0:
+        return 0.0
+    level = _level(mask, mx0, y0, slope, icpt)
+    reach = REST_REACH * line_xh
+    lows = []
+    for c in range(w):
+        rows = np.nonzero(level[:, c])[0]
+        near = rows[np.abs(rows - h) <= reach]
+        if near.size:
+            lows.append(int(near[-1]) - h)
+    return float(np.median(lows)) if lows else 0.0
+
+
+def _column_xheight(mask, mx0, y0, slope, icpt, line_xh):
+    """Median height of the ink's top above the line's baseline, over the
+    columns of a word (see COL_LOW), or None."""
+    h, w = mask.shape
+    if w == 0:
+        return None
+    level = _level(mask, mx0, y0, slope, icpt)
+    heights = []
+    for c in range(w):
+        rows = np.nonzero(level[:, c])[0]
+        if rows.size == 0:
+            continue
+        height = h - int(rows[0])
+        if COL_LOW * line_xh <= height <= COL_HIGH * line_xh:
+            heights.append(height)
+    if len(heights) < MIN_COLUMNS:
+        return None
+    xh = float(np.median(heights))
     return xh if xh >= MIN_XHEIGHT_PX else None
 
 
@@ -142,6 +207,71 @@ def _line_ink(gray, line):
     if not comps:
         return None
     return x0, y0, np.isin(labels, keep), comps
+
+
+# Slant: the shear, in SLANT_STEP steps up to SLANT_MAX degrees either
+# way, that makes a word's strokes most upright (its ink then piles into
+# the fewest columns: the sum of squared column counts is largest).
+SLANT_MAX = 45
+SLANT_STEP = 3
+# A closed bowl (a, b, d, g, o, p, q) is a hole in the ink at least
+# BOWL_MIN and at most BOWL_MAX small-letter heights across.
+BOWL_MIN = 0.15
+BOWL_MAX = 1.6
+WAVE_MIN = 6
+
+
+def _slant(mask):
+    """A word's lean in degrees (positive leans right), or None."""
+    h, w = mask.shape
+    ys, xs = np.nonzero(mask)
+    if xs.size < 20 or w < 3:
+        return None
+    best_peak, best_deg = -1.0, 0
+    for deg in range(-SLANT_MAX, SLANT_MAX + 1, SLANT_STEP):
+        t = math.tan(math.radians(deg))
+        # Straighten a lean of deg degrees: move each point left by its
+        # height above the bottom times tan(deg).
+        cols = np.round(xs - (h - ys) * t).astype(int)
+        counts = np.bincount(cols - cols.min())
+        peak = float((counts.astype(np.float64) ** 2).sum())
+        if peak > best_peak:
+            best_peak, best_deg = peak, deg
+    return float(best_deg)
+
+
+def _wave(spans, slope, icpt, xh):
+    """How far the letters' bottoms wander from the line's fitted
+    baseline, in small-letter heights: the median distance, leaving out
+    the bottoms more than half a small letter below it (tails of g, j,
+    p, q, y). None with fewer than WAVE_MIN letters."""
+    offs = [
+        (sp[3] - (slope * (sp[0] + sp[2]) / 2.0 + icpt)) / xh for sp in spans
+    ]
+    offs = [o for o in offs if o < 0.5]
+    if len(offs) < WAVE_MIN:
+        return None
+    return float(np.median(np.abs(offs)))
+
+
+def _bowls(mask, xh):
+    """Closed bowls in a line's ink: holes of letter-bowl size."""
+    if cv2 is None:
+        return 0
+    contours, hierarchy = cv2.findContours(
+        mask.astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
+    )
+    if hierarchy is None:
+        return 0
+    n = 0
+    for c, hrow in zip(contours, hierarchy[0]):
+        if hrow[3] < 0:  # an outer edge, not a hole
+            continue
+        _x, _y, w, h = cv2.boundingRect(c)
+        size = max(w, h)
+        if BOWL_MIN * xh <= size <= BOWL_MAX * xh:
+            n += 1
+    return n
 
 
 def measure_line(gray, line):  # pylint: disable=too-many-locals
@@ -198,12 +328,27 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
         wx1 = max(sp[2] for sp in group)
         top = min(sp[1] for sp in group)
         bottom = max(sp[3] for sp in group)
+        drop = float(np.median(drops))
+        # A word sitting off the line (WORD_DROP_LOOK) is measured from
+        # where it sits: from the line's baseline a sunken word looked
+        # small, and Size marked what Baseline Alignment is about. Where
+        # it sits is where most of its columns rest, not its lowest ink
+        # (one joined word's lowest ink is its tails).
+        rest = _column_rest(
+            mask[:, wx0 - x0 : wx1 - x0], wx0, y0, slope, icpt, line_xh
+        )
+        own = rest if abs(rest) >= WORD_DROP_LOOK * line_xh else 0.0
         words.append(
             {
                 "bbox": [wx0, top, wx1 - wx0, bottom - top],
-                "drop": float(np.median(drops)),
-                "xheight": _xheight(
-                    mask[:, wx0 - x0 : wx1 - x0], wx0, y0, slope, icpt
+                "drop": drop,
+                "xheight": _column_xheight(
+                    mask[:, wx0 - x0 : wx1 - x0],
+                    wx0,
+                    y0,
+                    slope,
+                    icpt + own,
+                    line_xh,
                 ),
                 "spans": group,
             }
@@ -225,7 +370,17 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
                         "ratio": (s[3] - s[1]) / line_xh,
                     }
                 )
+    letter_gaps = []
     for wd in words:
+        # Gaps between the letters (or joined pieces) inside the word.
+        letter_gaps.extend(
+            max(0.0, float(b[0] - a[2])) / line_xh
+            for a, b in zip(wd["spans"], wd["spans"][1:])
+        )
+        wd["slant"] = _slant(
+            mask[:, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0]
+        )
+        wd["off"] = wd["drop"] / line_xh
         del wd["spans"]
     gaps_out = []
     if counted:
@@ -258,6 +413,9 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
         "xheight": line_xh,
         "words": words,
         "letters": letters,
+        "letter_gaps": letter_gaps,
+        "wave": _wave(spans, slope, icpt, line_xh),
+        "bowls": _bowls(mask, line_xh),
     }
 
 

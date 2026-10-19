@@ -91,6 +91,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   "seamless", "leverage", filler praise). Coach tips speak plainly to
   parents/teachers. Full list and self-check: the `natural-writing` skill
   (`.claude/skills/natural-writing/SKILL.md`) plus `skills.md` at the root.
+- **Never write a malware-scanner string in one piece.** The vahinitech.com server's nightly maldet scan (home folders and `/tmp`) flagged scratch copies of `backend/tests/test_image_formats.py` on 2026-10-16 because a fake upload held a PHP open tag joined to `system(` (`php.generic.globals.503`). In code, fixtures, comments, docs and file names: build attack payloads from parts at run time (`b"<?php " + b"system(...)"`), never join a PHP open tag to `system(`, `eval(`, `exec(`, `passthru(` or `base64_decode(`, never commit the EICAR string, and never create a file named like a web shell (`shell.php`, `c99.php`); pass the name as data. `backend/tests/test_scanner_strings.py` (in CI) fails on one, using maldet's own signatures where the server has them.
 - **Conventional commits** (`feat:`, `fix:`, `docs:`, `test:`); body says why.
 - **Build and test before every commit; CI green before merge.**
 - **Resolve comments and conflicts first, then merge (owner, 2026-10-14).** Before merging a pull request: answer every review comment and code-scanning alert on it, by fixing the code or replying why not, and resolve each thread; a bot's comment (CodeQL, Copilot) counts like a person's. Bring the branch up to date with `main` and resolve any merge conflict. Then wait for CI on that final commit to pass, and only then merge. Check with `gh pr view <n> --json mergeable` (must be `MERGEABLE`) and `gh api graphql -f query='{repository(owner:"vahinitech",name:"<repo>"){pullRequest(number:<n>){reviewThreads(first:100){nodes{isResolved}}}}}'` (every `isResolved` true). #150 merged with two CodeQL threads still showing open; the code was fixed, but nobody could tell from the PR.
@@ -129,6 +130,13 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
   option.
+- **A scoring or reading change runs the real-handwriting benchmark.**
+  `python scripts/benchmark.py check` replays 20 real pages through the
+  change; any score that moves fails CI until `benchmark.py update` is run
+  and `benchmarks/uji-clean/expected.json` is committed, so the PR diff
+  shows every move. Floors on lines scored, no line scored twice and no
+  measured 0 cannot be updated away. Never add children's photos to
+  `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
 - **Run the whole test list ci.yml runs before calling a change ready.**
   A partial run missed the closed `/health` schema in `test_schemas`
   (#113). Browser tests need the Playwright image matching
