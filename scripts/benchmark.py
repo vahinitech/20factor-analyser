@@ -107,6 +107,41 @@ class MissingRead(Exception):
     does not hold: only a live run can say what the reader sees there."""
 
 
+def _ink_mode(meta):
+    """Whether the set's language is measured from the ink, as the server
+    does when VAHINI_INK_GEOMETRY_LANGS names it (ink_geometry.py)."""
+    langs = meta["settings"].get("VAHINI_INK_GEOMETRY_LANGS", "")
+    on = {x.strip() for x in langs.split(",") if x.strip()}
+    return bool(on) and meta.get("lang") in on
+
+
+def _score_ink(arr, page, meta):
+    """One page measured from the ink, as the server's ink mode does;
+    with "passage" set, the page's written text is the passage copied."""
+    import classify
+    import computer_vision
+    import ink_geometry
+    import scoring
+
+    rows = ink_geometry.find_rows(arr)
+    classify.classify_lines(arr, rows)
+    hand = [r for r in rows if not r.get("printed_hint")]
+    if meta.get("passage"):
+        text = meta.get("page_text", {}).get(page) or []
+        ink_geometry.expect_words(hand, "\n".join(text))
+    layout = computer_vision.vl_analyze(arr, hand, False)["layout"]
+    analysis = scoring.build_analysis(arr, hand, layout).to_dict()
+    results = {r["n"]: r for r in analysis["results"]}
+    return {
+        "overall": analysis["overall"],
+        "scores": {
+            str(n): None if results[n]["unmeasured"] else results[n]["score"]
+            for n in SCORED
+        },
+        "lines": ["" for _ in hand],
+    }
+
+
 def _score(arr, raw, reader, meta):
     """One page through the pipeline after the reader, from its kept
     output. Returns the result kept in expected.json."""
@@ -194,11 +229,28 @@ def run_set(name):
     _apply_settings(meta)
     results, problems = {}, []
     for page in _pages(folder):
+        raw, arr = _image(folder, page, meta)
+        if _ink_mode(meta):
+            first = _score_ink(arr, page, meta)
+            again = _score_ink(arr, page, meta)
+            if first != again:
+                problems.append(f"{page}: two runs gave different results")
+            # Rows have no text: count them against the written lines.
+            n = len(first["lines"])
+            want = meta["lines_per_page"]
+            first.update(
+                {
+                    "sentences_found": min(n, want),
+                    "repeats": max(0, n - want),
+                    "unmatched": 0,
+                }
+            )
+            results[page] = first
+            continue
         with open(
             os.path.join(folder, "reader", page + ".json"), encoding="utf-8"
         ) as f:
             reader = json.load(f)
-        raw, arr = _image(folder, page, meta)
         try:
             first = _score(arr, raw, reader, meta)
             again = _score(arr, raw, reader, meta)

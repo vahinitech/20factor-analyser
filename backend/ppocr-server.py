@@ -49,6 +49,7 @@ from PIL import UnidentifiedImageError
 from pypdfium2 import PdfiumError
 
 import computer_vision  # image decode/crop/preview + layout/doc-context
+import ink_geometry  # lines and geometry from the ink, for unread scripts
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
@@ -265,8 +266,14 @@ _READ_REGION = (
 
 
 def _vl_analyze(arr, lines, include_evidence=True):
+    # Rows found from the ink were not read, and are not read again for
+    # their least-sure letters either.
+    unread = bool(lines) and all(l.get("ink_row") for l in lines)
     return computer_vision.vl_analyze(
-        arr, lines, include_evidence, read_letters=_READ_LETTERS
+        arr,
+        lines,
+        include_evidence,
+        read_letters=None if unread else _READ_LETTERS,
     )
 
 
@@ -704,6 +711,31 @@ async def analyze_vl(
     return _with_meta(payload, "hit" if cached is not None else "miss", t0)
 
 
+INK_LANGS = set(SETTINGS.ink_geometry_langs)
+
+
+def _ink_mode(lang):
+    """Whether a check in this language is measured from the ink
+    (VAHINI_INK_GEOMETRY_LANGS): only when the request names languages
+    and every one of them is set; "auto" cannot know the script before
+    reading, so it never is."""
+    req = [x.strip() for x in (lang or "").lower().split(",") if x.strip()]
+    if not INK_LANGS or not req or "auto" in req:
+        return False
+    return all(x in INK_LANGS for x in req)
+
+
+def _ink_lines(arr, expected_text):
+    """(all rows, handwriting rows) from the ink. The printed check still
+    runs on each row's shape, so a printed page is still refused. A
+    passage with one line per row gives each row its number of words."""
+    rows = ink_geometry.find_rows(arr)
+    classify.classify_lines(arr, rows)
+    hand = [r for r in rows if not r.get("printed_hint")]
+    ink_geometry.expect_words(hand, expected_text)
+    return rows, hand
+
+
 def _report_python_process(
     arr, raw, lang, expected_text, include_evidence=True
 ):
@@ -714,16 +746,22 @@ def _report_python_process(
     selected_backend = "paddle"
     compare_meta = {}
     try:
-        raw_lines, last_err, selected_backend, compare_meta = (
-            recognizer.collect_lines(arr, lang)
-        )
-        lines, hand_lines = recognizer.extract_hand_lines(
-            arr,
-            raw_lines,
-            raw_bytes=raw,
-            refine_backend=selected_backend,
-            read_region=_READ_REGION,
-        )
+        if _ink_mode(lang):
+            # A language the reader cannot find the lines of: measured
+            # from the ink (ink_geometry.py), nothing read.
+            raw_lines, last_err, selected_backend = [], "", "ink-geometry"
+            lines, hand_lines = _ink_lines(arr, expected_text)
+        else:
+            raw_lines, last_err, selected_backend, compare_meta = (
+                recognizer.collect_lines(arr, lang)
+            )
+            lines, hand_lines = recognizer.extract_hand_lines(
+                arr,
+                raw_lines,
+                raw_bytes=raw,
+                refine_backend=selected_backend,
+                read_region=_READ_REGION,
+            )
         if lines and not hand_lines:
             # Every detected line is printed. Scoring machine type as
             # handwriting would fabricate a report, so refuse clearly.

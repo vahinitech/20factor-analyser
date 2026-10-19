@@ -270,10 +270,10 @@ def _area(box):
 # Pieces of one written line. The detector splits a line where letters
 # or words stand far apart, and a line read in three pieces was scored as
 # three short lines: three slopes, three left edges, and the gaps between
-# the pieces counted beside word gaps. Rows are anchored on the widest
-# pieces: a piece joins a row when it overlaps the row's anchor in height
-# by ROW_OVERLAP of the shorter one, their middles are within ROW_MIDDLE
-# of the taller one's height, and it overlaps no piece of the row left to
+# the pieces counted beside word gaps. Rows start from the widest pieces:
+# a piece joins a row when it overlaps the row's piece nearest it in
+# height by ROW_OVERLAP of the shorter one, their middles are within
+# ROW_MIDDLE of the taller one's height, and it overlaps no piece of the row left to
 # right by more than ROW_SIDE_OVERLAP of the narrower one. A row is then
 # cut where two neighbours are more than ROW_MAX_GAP of the page's typical
 # line height apart (two columns stay apart).
@@ -284,7 +284,7 @@ ROW_MAX_GAP = 4.0
 
 
 def _fits_row(piece, anchor):
-    """How far apart the middles of a piece and a row's anchor are, or
+    """How far apart the middles of a piece and a row's piece are, or
     None when the piece is not on that row (see ROW_OVERLAP)."""
     _ax, ay, aw, ah = [float(v) for v in anchor["box"][:4]]
     _bx, by, bw, bh = [float(v) for v in piece["box"][:4]]
@@ -404,7 +404,32 @@ def _join(pieces):
 def join_row_pieces(lines):
     """Join the pieces of each written line into one line (see
     ROW_OVERLAP), left to right; lines that need no join are returned
-    unchanged, in reading order."""
+    unchanged, in reading order. Repeated on the joined lines until
+    nothing more joins: pieces gather round the widest one first, and a
+    piece that did not fit it can start a second row of the same line,
+    which the next pass joins."""
+    out = _join_pass(lines)
+    for _ in range(3):
+        again = _join_pass(out)
+        if len(again) == len(out):
+            break
+        out = again
+    return out
+
+
+def _nearest(piece, members):
+    px0 = float(piece["box"][0])
+    px1 = px0 + float(piece["box"][2])
+
+    def gap(m):
+        mx0 = float(m["box"][0])
+        mx1 = mx0 + float(m["box"][2])
+        return max(0.0, max(mx0, px0) - min(mx1, px1))
+
+    return min(members, key=lambda m: (gap(m), float(m["box"][0])))
+
+
+def _join_pass(lines):
     rows = []  # [anchor, members]
     for piece in sorted(
         lines, key=lambda l: (-float(l["box"][2]), float(l["box"][1]))
@@ -412,7 +437,10 @@ def join_row_pieces(lines):
         best_off, best_row = 0.0, None
         reread = False
         for row in rows:
-            off = _fits_row(piece, row[0])
+            # Compared with the row's piece nearest it left to right, not
+            # its widest: the two ends of a sloping line can be a line's
+            # height apart while neighbouring pieces still overlap.
+            off = _fits_row(piece, _nearest(piece, row[1]))
             if off is None:
                 continue
             if any(_side_overlap(piece, m) for m in row[1]):

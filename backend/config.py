@@ -44,6 +44,7 @@ class Settings:
     allowed_origins: list
     refine_min_sim: float
     refine_min_conf: float
+    ink_geometry_langs: list
 
 
 def load() -> Settings:
@@ -141,6 +142,17 @@ def load() -> Settings:
         refine_min_conf=float(
             os.environ.get("VAHINI_REFINE_MIN_CONF", "0.75")
         ),
+        # Languages whose handwriting is measured from the ink alone
+        # (ink_geometry.py) when a check asks for that language, because
+        # the reader cannot find its lines: on 20 pages of real Telugu
+        # handwriting PP-OCRv5 found 7 of 80 (docs/18-benchmark.md).
+        # Empty by default: the owner turns a language on when its
+        # scores are ready to show.
+        ink_geometry_langs=[
+            s.strip().lower()
+            for s in os.environ.get("VAHINI_INK_GEOMETRY_LANGS", "").split(",")
+            if s.strip()
+        ],
     )
 
 
