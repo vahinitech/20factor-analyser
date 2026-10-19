@@ -429,8 +429,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # margin consistency is measured, so Margin Discipline (factor 10)
     # scores the handwriting and not the photo angle.
     tilt_deg = _page_tilt_degrees(lines)
+    # One left edge per row: a piece of a line left on its own to the
+    # right (words the reader never found between) is not a line start,
+    # and counting its edge as one scored Margin Discipline 0 on two UJI
+    # test pages.
     lefts = [
-        _detilted_left_x(b, tilt_deg, w, h) / max(1.0, float(w)) for b in boxes
+        _detilted_left_x(l.get("box") or [0, 0, 0, 0], tilt_deg, w, h)
+        / max(1.0, float(w))
+        for l in computer_vision.line_starts(arr, lines)
     ]
     scores = [float(l.get("score", 0.0)) for l in lines]
     texts = [str(l.get("text", "") or "") for l in lines]
