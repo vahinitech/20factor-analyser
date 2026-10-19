@@ -17,6 +17,7 @@ import base64
 import numpy as np
 from PIL import Image, ImageOps, ImageDraw
 
+import detector
 from geometry import clamp_box
 
 try:
@@ -434,9 +435,10 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             "selection_method": method,
         }
 
-    def outlier(values):
+    def outlier(values, items=None):
+        items = accepted if items is None else items
         center = float(np.median(values))
-        return accepted[
+        return items[
             max(range(len(values)), key=lambda i: abs(values[i] - center))
         ]
 
@@ -560,37 +562,24 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             )
 
     tilt = _page_tilt_degrees(accepted)
-    lefts = [_detilted_left_x(l["box"], tilt, width, height) for l in accepted]
+    # A line's start is the first piece of its row: a piece left over to
+    # the right of a line is not a margin.
+    starts = line_starts(arr, accepted)
+    lefts = [_detilted_left_x(l["box"], tilt, width, height) for l in starts]
     out["10"] = evidence(
-        [outlier(lefts)],
+        [outlier(lefts, starts)],
         "detilted-left-deviation",
         "Left edge differs most from the corrected page median.",
         "measurement",
     )
 
-    gaps = []
-    for row in _group_lines_by_rows(accepted):
-        items = row["items"]
-        row_height = float(np.mean([l["box"][3] for l in items]))
-        for left, right in zip(items, items[1:]):
-            gap = max(0, right["box"][0] - left["box"][0] - left["box"][2])
-            gaps.append((left, right, gap / max(1, row_height)))
-    if gaps:
-        median = float(np.median([gap for _, _, gap in gaps]))
-        left, right, _ = max(gaps, key=lambda g: abs(g[2] - median))
-        out["8"] = evidence(
-            [left, right],
-            "normalized-word-gap-deviation",
-            "Observed gap differs most from the page median.",
-            "measurement",
-        )
     places = marked_places.free_skill_places(
         arr, accepted, _group_lines_by_rows(accepted)
     )
+    # The gaps the scorer counts are inside lines (scoring.py), so the
+    # crop is the line holding the gap that stands out most.
     ink_gaps = [p for p in places.get("8", []) if p["role"] == "look"]
-    if not gaps and ink_gaps:
-        # One OCR box per line leaves no gap between boxes; the scorer
-        # measures the gaps inside the line, so show that line.
+    if ink_gaps:
         line = next(
             l for l in accepted if l["evidence_id"] == ink_gaps[0]["region_id"]
         )
@@ -600,11 +589,11 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             "Word gap differs most from the page median.",
             "measurement",
         )
-    elif not gaps:
+    else:
         out["8"] = evidence(
             accepted,
             "spacing-context",
-            "No between-region word gap available; fault not localized.",
+            "No word gap stands out; fault not localized.",
             page=True,
         )
     for n, found in places.items():
@@ -760,6 +749,54 @@ def _line_ink_components(arr, box):
     return comps
 
 
+# A line box reaches into its neighbours: the tails of the line above
+# and the loops of the line below cross its top and bottom. Word gaps
+# count only the blobs whose middle lies between OWN_TOP and OWN_BOTTOM
+# of the box's height; a tail from the next line counted as a word made
+# the gaps of one line in a closely written page look uneven.
+OWN_TOP = 0.20
+OWN_BOTTOM = 0.85
+
+
+def _own_ink_components(arr, line):
+    box = line.get("box") or [0, 0, 0, 0]
+    comps = _line_ink_components(arr, box)
+    if not comps:
+        return comps
+    y, h = float(box[1]), float(box[3])
+    return [
+        c
+        for c in comps
+        if y + OWN_TOP * h <= c[1] + c[3] / 2.0 <= y + OWN_BOTTOM * h
+    ]
+
+
+def line_starts(arr, lines):
+    """The lines that start a written row, for the left margin: not a
+    line with another line wholly to its left on its row
+    (detector.line_starts), and not one with ink to its left on its row,
+    where the reader read nothing (only "day" was read on one UJI row,
+    and its left edge scored Margin Discipline 0)."""
+    starts = detector.line_starts(lines)
+    if len(starts) < 2:
+        return starts
+    margin = min(float(l["box"][0]) for l in starts)
+    out = []
+    for l in starts:
+        x, y, _w, h = [float(v) for v in l["box"][:4]]
+        before = [
+            margin,
+            y + OWN_TOP * h,
+            x - margin,
+            (OWN_BOTTOM - OWN_TOP) * h,
+        ]
+        comps = _line_ink_components(arr, before) if x - margin > h else None
+        ink = sum(c[2] for c in comps or [])
+        if ink < h:
+            out.append(l)
+    return out or starts
+
+
 def line_word_gaps(arr, line):
     """Word-to-word gaps in one OCR line, in pixels, measured from ink.
 
@@ -773,7 +810,7 @@ def line_word_gaps(arr, line):
     n_words = len([w for w in re.split(r"\s+", text.strip()) if w])
     if n_words < 2:
         return None
-    comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+    comps = _own_ink_components(arr, line)
     if not comps or len(comps) < 2:
         return None
     breaks = line_word_breaks(arr, line, n_words, comps)
@@ -791,7 +828,7 @@ def line_word_breaks(arr, line, n_words=None, comps=None):
         if n_words < 2:
             return None
     if comps is None:
-        comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+        comps = _own_ink_components(arr, line)
     if not comps or len(comps) < 2:
         return None
     spans = []

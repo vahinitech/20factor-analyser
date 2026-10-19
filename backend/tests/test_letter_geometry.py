@@ -46,6 +46,67 @@ def page(kind, seed=0):
     return img, lines, truth, lg.measure_page(img, lines)
 
 
+def joined_page(sentences, xh=24, pen=3):
+    """Joined writing drawn as it looks: each small letter a round body
+    one x-height tall, each tall letter (b, d, h, k, l, t) a narrow loop
+    two x-heights tall beside its body, each tail (g, j, p, q, y) a loop
+    hanging one below, letters joined along the baseline. Returns the
+    page and one reader-shaped line per sentence."""
+    img = np.full((80 + 90 * len(sentences), 1300, 3), 245, np.uint8)
+    lines = []
+    for li, sentence in enumerate(sentences):
+        base = 80 + li * 90
+        x = 60
+        for word in sentence.split():
+            start = x
+            for ch in word:
+                if ch in "bdhklt":
+                    lg.cv2.ellipse(
+                        img,
+                        (x + 3, base - xh),
+                        (3, xh),
+                        0,
+                        0,
+                        360,
+                        (40, 40, 40),
+                        pen,
+                    )
+                if ch in "gjpqy":
+                    lg.cv2.ellipse(
+                        img,
+                        (x + 3, base),
+                        (3, xh),
+                        0,
+                        0,
+                        360,
+                        (40, 40, 40),
+                        pen,
+                    )
+                lg.cv2.ellipse(
+                    img,
+                    (x + 9, base - xh // 2),
+                    (6, xh // 2),
+                    0,
+                    0,
+                    360,
+                    (40, 40, 40),
+                    pen,
+                )
+                x += 16
+            lg.cv2.line(img, (start, base), (x - 4, base), (40, 40, 40), pen)
+            x += 26
+        top, bottom = base - 2 * xh - pen, base + xh + pen
+        lines.append(
+            {
+                "text": sentence,
+                "box": [55, top, x - 55, bottom - top],
+                "poly": [[55, top], [x, top], [x, bottom], [55, bottom]],
+                "score": 0.9,
+            }
+        )
+    return img, lines
+
+
 class TestLetterGeometry(unittest.TestCase):
     def setUp(self):
         if lg.cv2 is None:
@@ -133,6 +194,63 @@ class TestLetterGeometry(unittest.TestCase):
         _img, lines, _truth, geo = page("clean")
         self.assertEqual(lg.size_marks(lines, geo), [])
         self.assertEqual(lg.baseline_marks(lines, geo), [])
+
+    def test_tall_letters_do_not_make_a_word_look_bigger(self):
+        # "the", "dog" and "day" scored as size changes on joined writing
+        # (UPV_W57, 19 October 2026): the densest band of rows ran up into
+        # their loops. Every word here has the same small-letter body.
+        img, lines = joined_page(
+            [
+                "the little hill was on the dog",
+                "a small ball fell on her head",
+                "we use some more ink every day",
+            ]
+        )
+        geo = lg.measure_page(img, lines)
+        words = [
+            (word, wd["xheight"])
+            for line, g in zip(lines, geo)
+            for word, wd in zip(line["text"].split(), g["words"])
+        ]
+        heights = [h for _w, h in words if h]
+        self.assertEqual(len(heights), 21)
+        median = float(np.median(heights))
+        for word, h in words:
+            self.assertIsNotNone(h, word)
+            self.assertLess(abs(h - median) / median, 0.2, word)
+        cv = float(np.std(heights, ddof=1) / np.mean(heights))
+        self.assertLess(cv, 0.08)
+
+    def test_a_word_s_lean_is_measured(self):
+        for lean in (-20, 0, 25):
+            mask = np.zeros((60, 200), np.uint8)
+            t = np.tan(np.radians(lean))
+            for x in range(20, 180, 20):
+                # Upright strokes leaning by `lean` degrees.
+                lg.cv2.line(mask, (x, 59), (int(round(x + 59 * t)), 0), 1, 3)
+            got = lg._slant(mask.astype(bool))  # pylint: disable=W0212
+            self.assertAlmostEqual(got, lean, delta=lg.SLANT_STEP)
+
+    def test_closed_bowls_are_counted_and_open_ones_are_not(self):
+        closed = np.zeros((60, 200), np.uint8)
+        opened = np.zeros((60, 200), np.uint8)
+        for x in (30, 80, 130):
+            lg.cv2.circle(closed, (x, 35), 12, 1, 3)
+            lg.cv2.ellipse(opened, (x, 35), (12, 12), 0, 40, 320, 1, 3)
+        self.assertEqual(lg._bowls(closed.astype(bool), 30), 3)  # noqa
+        self.assertEqual(lg._bowls(opened.astype(bool), 30), 0)  # noqa
+
+    def test_a_wavy_line_wanders_off_its_baseline(self):
+        flat = [[x, 70, x + 15, 100] for x in range(0, 300, 25)]
+        wavy = [
+            [x, 70, x + 15, 100 + int(round(8 * np.sin(i)))]
+            for i, x in enumerate(range(0, 300, 25))
+        ]
+        tails = flat[:-2] + [[250, 70, 265, 130], [275, 70, 290, 130]]
+        self.assertEqual(lg._wave(flat, 0.0, 100.0, 30), 0.0)  # noqa
+        self.assertGreater(lg._wave(wavy, 0.0, 100.0, 30), 0.15)  # noqa
+        # Tails hanging below the line are not wander.
+        self.assertEqual(lg._wave(tails, 0.0, 100.0, 30), 0.0)  # noqa
 
     def test_same_page_same_measurements(self):
         a = page("low_word", seed=7)[3]

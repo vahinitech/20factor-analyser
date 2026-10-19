@@ -254,9 +254,9 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   server_down, too_large, invalid_file, key_problem, account_unavailable,
-   too_big, heic, unreadable, pdf_unreadable, photo_warning, pdf_pages) to an
-   image path on this site. vahinitech.com fills it from its own drawings;
+   handwriting_not_read, server_down, too_large, invalid_file, key_problem,
+   account_unavailable, too_big, heic, unreadable, pdf_unreadable,
+   photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
    paths are used. */
 function noticeArt(code){
@@ -517,10 +517,13 @@ function showProcStagePreview(img){
 /* ---------- expected passage ---------- */
 function setupPassages(){
   const list = $('#passage-list');
-  list.innerHTML = PASSAGES.map((p,i)=>`<div class="passage ${i===0?'sel':''}" data-id="${p.id}">
+  list.innerHTML = PASSAGES.map(p=>`<div class="passage" data-id="${p.id}">
     <div class="pt">${p.title}</div><div class="pp">${p.text.replace(/\n/g,'<br>')}</div></div>`).join('')
     + `<div class="passage" data-id="custom"><div class="pt">Custom passage</div><textarea id="custom-text" placeholder="Type the exact text the writer copied…"></textarea></div>`;
-  state.expected = PASSAGES[0].text;
+  // No passage until the writer picks one. The server rewrites any read
+  // line that is close enough to the passage into the passage itself, so a
+  // default passage would quietly "correct" a child's own words.
+  state.expected = '';
   list.addEventListener('click', e=>{
     const card = e.target.closest('.passage'); if(!card) return;
     $$('.passage').forEach(c=>c.classList.remove('sel')); card.classList.add('sel');
@@ -825,6 +828,20 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'handwriting_not_read'){
+    // Asked for as Telugu, but the reader returned mostly Latin letters.
+    // A report on lines it invented would not describe this writing.
+    showReject({
+      outcome: 'handwriting_not_read',
+      reason: 'We could not read the writing on this page',
+      detail: 'The check reads English handwriting. It cannot read handwritten Telugu yet, so it did not score this page. This did not use up one of your free checks.',
+      tips: [
+        'Upload a page written in English',
+        'If the page is in English, tell us with the Feedback button',
+      ],
+    });
+    return;
+  }
   if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
     showReject({
@@ -1003,6 +1020,9 @@ function renderNextSteps(analysis){
     cal.dataset.url = URL.createObjectURL(new Blob([ics], { type:'text/calendar' }));
     cal.href = cal.dataset.url;
   }
+  // "See all 20 skills" only on a Free report.
+  const pro = $('#ns-pro');
+  if (pro) pro.hidden = ((analysis && analysis.access) || {}).tier === 'pro';
   box.hidden = false;
 }
 

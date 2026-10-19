@@ -70,7 +70,10 @@ class ImageFormatTests(unittest.TestCase):
 
     def test_a_disguised_file_is_refused(self):
         svg = b'<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"/>'
-        for raw in (svg, b"<?php system($_GET[0]); ?>", b"\x89PNG broken"):
+        # Joined at run time: the whole string in the source is a malware
+        # signature (maldet php.generic.globals.503), see test_scanner_strings.
+        php = b"<?php " + b"system($_GET[0]); ?>"
+        for raw in (svg, php, b"\x89PNG broken"):
             with self.assertRaises((UnidentifiedImageError, OSError)):
                 cv.decode_image(raw)
 

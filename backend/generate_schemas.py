@@ -12,7 +12,7 @@ import json
 import sys
 from pathlib import Path
 
-from entitlements import FREE_FACTORS
+from entitlements import FREE_FACTORS, STATUSES, TIERS
 from practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
 from report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 
@@ -20,6 +20,7 @@ OUT = Path(__file__).resolve().parent / "schemas"
 BASE = "https://vahinitech.com/schemas/analyser/v2/"
 DRAFT = "http://json-schema.org/draft-07/schema#"
 COMMON = "common.schema.json#/definitions/"
+ACCESS = "access-customer.schema.json#/definitions/"
 IDS = list(FACTOR_IDS)
 FREE = sorted(FREE_FACTORS)
 LOCKED = [n for n in range(1, 21) if n not in FREE_FACTORS]
@@ -1418,7 +1419,8 @@ def error():
             }
         },
         title=(
-            "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, 503)"
+            "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, "
+            "503) and /internal/access/v1/* (401, 404, 422, 503)"
         ),
         description=(
             "FastAPI's HTTPException shape. 401 invalid or revoked "
@@ -1430,7 +1432,12 @@ def error():
             "India time), 503 "
             "subscription service not configured or unavailable. Analysis "
             "failures are not HTTP errors: they return 200 with ok:false "
-            "and an error block in the report schema."
+            "and an error block in the report schema. The internal access "
+            "API answers 404 Not Found when it is switched off or the "
+            "request came through a proxy, 401 for a wrong token, 404 for "
+            "an unknown customer, key id or secret, 422 for a body it "
+            "refuses (unknown field, wrong type, Pro without an expiry) and "
+            "503 when the ledger is not configured or unavailable."
         ),
     )
 
@@ -1617,6 +1624,199 @@ def health():
     }
 
 
+def access_ref(name):
+    return {"$ref": ACCESS + name}
+
+
+def access_definitions():
+    """Shared pieces of the internal access API messages."""
+    return {
+        "customerId": {
+            "type": "string",
+            "pattern": "^cus_[0-9a-f]{24}$",
+            "description": "Opaque ledger identity.",
+        },
+        "keyId": {
+            "type": "string",
+            "pattern": "^key_[0-9a-f]{24}$",
+            "description": "Names a key; never the secret or its digest.",
+        },
+        "secret": {
+            "type": "string",
+            "pattern": "^vh_[A-Za-z0-9_-]{16,}$",
+            "maxLength": 200,
+            "description": (
+                "Customer API key. Shown once when issued; only its "
+                "SHA-256 digest is stored."
+            ),
+        },
+        "expiry": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "UTC Unix seconds.",
+        },
+        "effective": closed(
+            {
+                "customer_id": access_ref("customerId"),
+                "tier": ref("tier"),
+                "plan_tier": ref("tier"),
+                "subscription_status": {
+                    "type": "string",
+                    "enum": list(STATUSES),
+                },
+                "expires_at": ref("unixSeconds"),
+            },
+            description=(
+                "The access the stored plan gives now, computed by the "
+                "same function /api/v2/me uses (effective_access)."
+            ),
+        ),
+        "grant": closed(
+            {"expires_at": access_ref("expiry")},
+            title="POST /internal/access/v1/grants request",
+            description=(
+                "A new customer with Pro until expires_at (in the future) "
+                "and its first key, in one transaction."
+            ),
+        ),
+        "subscription": closed(
+            {
+                "tier": {"type": "string", "enum": list(TIERS)},
+                "status": {"type": "string", "enum": list(STATUSES)},
+                "expires_at": {
+                    "oneOf": [access_ref("expiry"), {"type": "null"}]
+                },
+            },
+            required=["tier", "status"],
+            title=(
+                "PUT /internal/access/v1/customers/{id}/subscription request"
+            ),
+            description=(
+                "Pro needs an explicit expiry. cancelled keeps access until "
+                "it; expired and revoked give Free at once."
+            ),
+        ),
+        "keyLookup": closed(
+            {"key": access_ref("secret")},
+            title="POST /internal/access/v1/keys/lookup request",
+            description="The secret travels in the body, never in a URL.",
+        ),
+    }
+
+
+def access_request():
+    return {
+        "title": "Internal access API request bodies",
+        "description": (
+            "One of the three request bodies of /internal/access/v1. Validate "
+            "a body against its own definition in access-customer.schema."
+            "json (grant, subscription, keyLookup); this file accepts any of "
+            "them. Bodies are closed: an unknown field is refused with 422. "
+            "POST /customers/{id}/keys and POST /keys/{key_id}/revoke take "
+            "no body."
+        ),
+        "oneOf": [
+            access_ref("grant"),
+            access_ref("subscription"),
+            access_ref("keyLookup"),
+        ],
+    }
+
+
+def access_customer():
+    key = closed(
+        {
+            "key_id": access_ref("keyId"),
+            "revoked": {"type": "boolean"},
+            "created_at": access_ref("expiry"),
+        }
+    )
+    audit = closed(
+        {
+            "action": {
+                "type": "string",
+                "pattern": "^(subscription|key):",
+                "description": (
+                    "subscription:<tier>:<status>:<expiry>, "
+                    "key:issue:<key id> or key:revoke:<key id>."
+                ),
+            },
+            "created_at": access_ref("expiry"),
+        }
+    )
+    return {
+        **closed(
+            {
+                "customer_id": access_ref("customerId"),
+                "tier": {"type": "string", "enum": list(TIERS)},
+                "status": {"type": "string", "enum": list(STATUSES)},
+                "expires_at": ref("unixSeconds"),
+                "updated_at": access_ref("expiry"),
+                "effective": access_ref("effective"),
+                "keys": {"type": "array", "items": key},
+                "audit": {"type": "array", "items": audit},
+            },
+            title=(
+                "Internal access API customer record: GET /customers/{id}, "
+                "PUT /customers/{id}/subscription, POST /keys/{id}/revoke"
+            ),
+            description=(
+                "Stored plan, effective access, every key with its revoked "
+                "flag and the audit history. Never a key secret or digest. "
+                "Also holds the definitions the other access-* files use."
+            ),
+        ),
+        "definitions": access_definitions(),
+    }
+
+
+def access_key():
+    return closed(
+        {
+            "customer_id": access_ref("customerId"),
+            "key_id": access_ref("keyId"),
+            "key": access_ref("secret"),
+            "expires_at": ref("unixSeconds"),
+        },
+        title=(
+            "Internal access API new key: POST /grants and POST "
+            "/customers/{id}/keys (201)"
+        ),
+        description=(
+            "The only answer that carries a secret. Deliver it to the person "
+            "and do not store or log it; it cannot be shown again. "
+            "expires_at is the customer's stored expiry."
+        ),
+    )
+
+
+def access_key_lookup():
+    return closed(
+        {
+            "key_id": access_ref("keyId"),
+            "customer_id": access_ref("customerId"),
+            "revoked": {"type": "boolean"},
+            "created_at": access_ref("expiry"),
+            "access": {
+                "oneOf": [access_ref("effective"), {"type": "null"}],
+                "description": "null for a revoked key, which is refused.",
+            },
+        },
+        title="Internal access API key lookup: POST /keys/lookup",
+        description=(
+            "Which key and customer a secret belongs to. An unknown secret "
+            "is 404. Never echoes the secret."
+        ),
+        allOf=[
+            {
+                "if": {"properties": {"revoked": {"const": True}}},
+                "then": {"properties": {"access": {"type": "null"}}},
+                "else": {"properties": {"access": {"type": "object"}}},
+            }
+        ],
+    )
+
+
 BUILDERS = {
     "common": common,
     "me": me,
@@ -1626,6 +1826,10 @@ BUILDERS = {
     "catalog": catalog,
     "error": error,
     "health": health,
+    "access-request": access_request,
+    "access-customer": access_customer,
+    "access-key": access_key,
+    "access-key-lookup": access_key_lookup,
 }
 
 

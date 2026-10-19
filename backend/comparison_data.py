@@ -7,7 +7,7 @@ reports side by side. It needs more than the factor scores: the section
 scores the engine already computes, and facts that say whether two pages
 can be compared at all. This module only reads what the scorer and the
 recogniser produced; it measures nothing new and stores nothing.
-docs/17-comparison-data.md explains each field.
+docs/19-comparison-data.md explains each field.
 """
 
 import math

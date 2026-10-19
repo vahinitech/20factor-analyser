@@ -1,0 +1,86 @@
+{
+"clean": {
+"letter_marked": 0.0,
+"marked": 0.0,
+"marks_per_page": {
+"5": 0.55,
+"7": 0.3,
+"8": 0.45
+},
+"score_mean": {
+"5": 7.74,
+"7": 8.64,
+"8": 8.69
+}
+},
+"low_word": {
+"letter_marked": 0.95,
+"marked": 0.1,
+"marks_per_page": {
+"5": 0.8,
+"7": 0.25,
+"8": 0.5
+},
+"score_mean": {
+"5": 7.48,
+"7": 8.15,
+"8": 8.64
+}
+},
+"narrow_gap": {
+"letter_marked": 0.15,
+"marked": 0.15,
+"marks_per_page": {
+"5": 0.8,
+"7": 0.2,
+"8": 1.15
+},
+"score_mean": {
+"5": 7.5,
+"7": 8.76,
+"8": 8.2
+}
+},
+"tall_letter": {
+"letter_marked": 0.15,
+"marked": 0.15,
+"marks_per_page": {
+"5": 1.05,
+"7": 0.35,
+"8": 0.3
+},
+"score_mean": {
+"5": 7.24,
+"7": 8.42,
+"8": 8.61
+}
+},
+"tilted_line": {
+"letter_marked": 0.9,
+"marked": 1.0,
+"marks_per_page": {
+"5": 0.85,
+"7": 1.15,
+"8": 1.2
+},
+"score_mean": {
+"5": 7.54,
+"7": 7.7,
+"8": 8.09
+}
+},
+"wide_gap": {
+"letter_marked": 0.25,
+"marked": 1.0,
+"marks_per_page": {
+"5": 0.7,
+"7": 0.25,
+"8": 1.5
+},
+"score_mean": {
+"5": 7.66,
+"7": 8.56,
+"8": 6.21
+}
+}
+}

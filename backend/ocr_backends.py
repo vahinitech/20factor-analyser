@@ -421,6 +421,45 @@ def read_line_letters(crop, lang):
     return rec_text, seen[0]
 
 
+def read_region(crop, lang):
+    """One crop of the page read again by the scan's own engine: its lines
+    (run()'s shape, in crop pixels), or None. Used for writing the
+    detector missed on the whole page (line_recovery.py). Detection and
+    recognition first: on a crop around one line it finds the words. When
+    that finds no readable word, the recogniser reads the whole crop as
+    one line. Uses the cached engine, under its lock, so it loads no
+    second model."""
+    try:
+        engine = get_engine(lang or "en")
+    except Exception:  # pylint: disable=broad-except
+        return None
+    try:
+        found = run(engine, crop, lang or "en")
+    except Exception:  # pylint: disable=broad-except
+        found = []
+    if any(
+        len(re.findall(r"\w", str(l["text"]))) >= 2 and l["score"] >= 0.6
+        for l in found
+    ):
+        return found
+    pipeline = getattr(engine, "paddlex_pipeline", None)
+    inner = getattr(pipeline, "_pipeline", pipeline)
+    model = getattr(inner, "text_rec_model", None)
+    if model is None:
+        return found
+    with _lock_for_engine(engine):
+        try:
+            got = list(model([crop]))
+            text, score = str(got[0]["rec_text"]), float(got[0]["rec_score"])
+        except Exception:  # pylint: disable=broad-except
+            return found
+    h, w = crop.shape[:2]
+    pts = [[0.0, 0.0], [float(w), 0.0], [float(w), float(h)], [0.0, float(h)]]
+    line = make_line(text, pts, score, lang or "en")
+    line["whole_crop"] = True
+    return [line]
+
+
 def run(engine, arr: np.ndarray, lang: str):
     """Return list[line] across PaddleOCR API variants."""
     # Prefer the classic ocr() entrypoint on CPU builds to avoid PIR/oneDNN

@@ -75,7 +75,7 @@ try {
   assert.deepEqual(await sampleState(), { ticked: false, disabled: true, note: true, row: false }, 'sample loaded: box unticked and off, the note says why');
   await p.evaluate(() => window.k.keepForSample(false));
   assert.deepEqual(await sampleState(), { ticked: false, disabled: false, note: false, row: false }, 'own photo: the box is back on');
-  assert.ok(/By running the check you confirm you are the writer's parent, guardian or teacher, or the writer is 18 or over\./.test(html), 'the consent line sits above Run');
+  assert.ok(/By running the check you confirm you are the writer's parent, guardian, teacher or therapist, or the writer is 18 or over\./.test(html), 'the consent line sits above Run');
 
   let r = await run({ tick: false, email: 'parent@example.com' });
   assert.equal(calls.length, 0, 'unticked: nothing leaves for the keep store'); assert.equal(r.shown, false);

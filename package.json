@@ -19,13 +19,15 @@
     "test:keep": "node tests/keep-my-pages.mjs",
     "test:daily-limit": "node tests/daily-limit.mjs",
     "test:ocr-unavailable": "node tests/ocr-unavailable.mjs",
+    "test:handwriting-not-read": "node tests/handwriting-not-read.mjs",
     "test:notice-art": "node tests/notice-art.mjs",
     "sbom:update": "python backend/update_sbom.py",
     "sbom:check": "python backend/update_sbom.py --check",
     "test:practice": "node tests/practice-report.mjs",
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
-    "test:strings": "node tests/report-strings.test.mjs"
+    "test:strings": "node tests/report-strings.test.mjs",
+    "test:print-popup": "node tests/print-popup.mjs"
   },
   "devDependencies": {
     "http-server": "^14.1.1",

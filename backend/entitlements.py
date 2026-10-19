@@ -12,6 +12,8 @@ from pathlib import Path
 from fastapi import HTTPException
 
 FREE_FACTORS = (1, 5, 7, 8, 18)
+TIERS = ("free", "pro")
+STATUSES = ("active", "cancelled", "expired", "revoked")
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS customers (
  id TEXT PRIMARY KEY, tier TEXT NOT NULL DEFAULT 'free',
@@ -63,9 +65,13 @@ def create_customer(path):
 
 
 def issue_key(path, customer_id):
-    """Return the secret once; only its SHA-256 digest enters the ledger."""
+    """Return the secret once; only its SHA-256 digest enters the ledger.
+
+    The audit row names the key id only, never the secret or its digest.
+    """
     token = "vh_" + secrets.token_urlsafe(32)
     key_id = "key_" + secrets.token_hex(12)
+    now = int(time.time())
     with closing(connect(path)) as connection, connection:
         connection.execute(
             "INSERT INTO api_keys(id, customer_id, digest, created_at) VALUES (?, ?, ?, ?)",
@@ -73,8 +79,12 @@ def issue_key(path, customer_id):
                 key_id,
                 customer_id,
                 hashlib.sha256(token.encode()).hexdigest(),
-                int(time.time()),
+                now,
             ),
+        )
+        connection.execute(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            (customer_id, f"key:issue:{key_id}", now),
         )
     return key_id, token
 
@@ -82,11 +92,76 @@ def issue_key(path, customer_id):
 def revoke_key(path, key_id):
     """Revocation takes effect on the next entitlement lookup."""
     with closing(connect(path)) as connection, connection:
-        changed = connection.execute(
-            "UPDATE api_keys SET revoked=1 WHERE id=?", (key_id,)
-        ).rowcount
-        if not changed:
+        row = connection.execute(
+            "SELECT customer_id FROM api_keys WHERE id=?", (key_id,)
+        ).fetchone()
+        if not row:
             raise ValueError("Unknown API key")
+        connection.execute(
+            "UPDATE api_keys SET revoked=1 WHERE id=?", (key_id,)
+        )
+        connection.execute(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            (row["customer_id"], f"key:revoke:{key_id}", int(time.time())),
+        )
+    return row["customer_id"]
+
+
+def check_state(tier, status, expires_at):
+    """The one rule for a subscription row, for every writer."""
+    if tier not in TIERS or status not in STATUSES:
+        raise ValueError("Unsupported subscription state")
+    if tier == "pro" and (type(expires_at) is not int or expires_at <= 0):
+        raise ValueError("Pro requires an explicit expiry timestamp")
+    if expires_at is not None and (
+        type(expires_at) is not int or expires_at <= 0
+    ):
+        raise ValueError("Expiry must be a positive Unix time")
+
+
+def grant(path, expires_at):
+    """A new customer with Pro until `expires_at`, and its first key.
+
+    One transaction: the customer, the key and the grant exist together or
+    not at all, so a failed call never leaves a key without its Pro. The
+    secret is returned once; only its digest is stored.
+    """
+    check_state("pro", "active", expires_at)
+    now = int(time.time())
+    if expires_at <= now:
+        raise ValueError("Expiry must be in the future")
+    customer_id = "cus_" + secrets.token_hex(12)
+    key_id = "key_" + secrets.token_hex(12)
+    token = "vh_" + secrets.token_urlsafe(32)
+    with closing(connect(path)) as connection, connection:
+        connection.execute(
+            "INSERT INTO customers(id, tier, status, expires_at, updated_at)"
+            " VALUES (?, 'pro', 'active', ?, ?)",
+            (customer_id, expires_at, now),
+        )
+        connection.execute(
+            "INSERT INTO api_keys(id, customer_id, digest, created_at)"
+            " VALUES (?, ?, ?, ?)",
+            (
+                key_id,
+                customer_id,
+                hashlib.sha256(token.encode()).hexdigest(),
+                now,
+            ),
+        )
+        connection.executemany(
+            "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
+            [
+                (customer_id, f"key:issue:{key_id}", now),
+                (customer_id, f"subscription:pro:active:{expires_at}", now),
+            ],
+        )
+    return {
+        "customer_id": customer_id,
+        "key_id": key_id,
+        "key": token,
+        "expires_at": expires_at,
+    }
 
 
 def set_subscription(path, customer_id, tier, status, expires_at=None):
@@ -95,15 +170,7 @@ def set_subscription(path, customer_id, tier, status, expires_at=None):
     No public route calls this function. Active and cancelled Pro grants
     require an explicit end time; cancelled grants retain access until then.
     """
-    if tier not in ("free", "pro") or status not in (
-        "active",
-        "cancelled",
-        "expired",
-        "revoked",
-    ):
-        raise ValueError("Unsupported subscription state")
-    if tier == "pro" and (type(expires_at) is not int or expires_at <= 0):
-        raise ValueError("Pro requires an explicit expiry timestamp")
+    check_state(tier, status, expires_at)
     now = int(time.time())
     with closing(connect(path)) as connection, connection:
         changed = connection.execute(
@@ -116,6 +183,156 @@ def set_subscription(path, customer_id, tier, status, expires_at=None):
             "INSERT INTO audit(customer_id, action, created_at) VALUES (?, ?, ?)",
             (customer_id, f"subscription:{tier}:{status}:{expires_at}", now),
         )
+
+
+def effective_access(row, now=None):
+    """The access a customer row grants now; access_for and the CLI agree."""
+    now = time.time() if now is None else now
+    active = row["status"] in ("active", "cancelled")
+    expired = row["expires_at"] is not None and row["expires_at"] <= now
+    pro = (
+        row["tier"] == "pro"
+        and active
+        and not expired
+        and row["expires_at"] is not None
+    )
+    return {
+        "customer_id": row["id"],
+        "tier": "pro" if pro else "free",
+        "plan_tier": row["tier"],
+        "subscription_status": "expired" if expired else row["status"],
+        "expires_at": row["expires_at"],
+    }
+
+
+def connect_readonly(path):
+    """Open the ledger for operator lookups that must never write."""
+    connection = sqlite3.connect(
+        Path(path).resolve().as_uri() + "?mode=ro", uri=True, timeout=10
+    )
+    connection.row_factory = sqlite3.Row
+    return connection
+
+
+def list_customers(path, tier=None, expiring_within=None, now=None):
+    """Every customer's plan, effective access and key counts, read-only.
+
+    `tier` keeps customers whose effective tier is "pro" or "free";
+    `expiring_within` (seconds) keeps Pro customers whose period ends
+    within that time from now. Sorted by expiry, then id. No key ids,
+    digests or audit rows: show-customer gives those for one customer.
+    """
+    now = time.time() if now is None else now
+    with closing(connect_readonly(path)) as connection:
+        rows = connection.execute("SELECT * FROM customers").fetchall()
+        counts = {
+            (row["customer_id"], row["revoked"]): row["n"]
+            for row in connection.execute(
+                "SELECT customer_id, revoked, COUNT(*) AS n FROM api_keys"
+                " GROUP BY customer_id, revoked"
+            )
+        }
+    out = []
+    for row in rows:
+        effective = effective_access(row, now)
+        if tier is not None and effective["tier"] != tier:
+            continue
+        if expiring_within is not None and not (
+            effective["tier"] == "pro"
+            and row["expires_at"] <= now + expiring_within
+        ):
+            continue
+        out.append(
+            {
+                "customer_id": row["id"],
+                "tier": row["tier"],
+                "status": row["status"],
+                "expires_at": row["expires_at"],
+                "updated_at": row["updated_at"],
+                "effective_tier": effective["tier"],
+                "subscription_status": effective["subscription_status"],
+                "keys_active": counts.get((row["id"], 0), 0),
+                "keys_revoked": counts.get((row["id"], 1), 0),
+            }
+        )
+    out.sort(
+        key=lambda c: (
+            c["expires_at"] is None,
+            c["expires_at"] or 0,
+            c["customer_id"],
+        )
+    )
+    return out
+
+
+def describe_customer(path, customer_id):
+    """Plan, effective access, keys and audit history for one customer.
+
+    Read-only. Key digests are never returned.
+    """
+    with closing(connect_readonly(path)) as connection:
+        row = connection.execute(
+            "SELECT * FROM customers WHERE id=?", (customer_id,)
+        ).fetchone()
+        if not row:
+            raise ValueError("Unknown customer")
+        keys = connection.execute(
+            "SELECT id, revoked, created_at FROM api_keys"
+            " WHERE customer_id=? ORDER BY created_at, id",
+            (customer_id,),
+        ).fetchall()
+        audit = connection.execute(
+            "SELECT action, created_at FROM audit"
+            " WHERE customer_id=? ORDER BY id",
+            (customer_id,),
+        ).fetchall()
+    return {
+        "customer_id": row["id"],
+        "tier": row["tier"],
+        "status": row["status"],
+        "expires_at": row["expires_at"],
+        "updated_at": row["updated_at"],
+        "effective": effective_access(row),
+        "keys": [
+            {
+                "key_id": key["id"],
+                "revoked": bool(key["revoked"]),
+                "created_at": key["created_at"],
+            }
+            for key in keys
+        ],
+        "audit": [
+            {"action": entry["action"], "created_at": entry["created_at"]}
+            for entry in audit
+        ],
+    }
+
+
+def find_key(path, secret):
+    """Map a secret to its key and customer by digest, read-only.
+
+    Returns None when no key has this digest. A revoked key is reported
+    with access None, since access_for refuses it.
+    """
+    digest = hashlib.sha256(secret.encode()).hexdigest()
+    with closing(connect_readonly(path)) as connection:
+        key = connection.execute(
+            "SELECT id, customer_id, revoked, created_at FROM api_keys"
+            " WHERE digest=?",
+            (digest,),
+        ).fetchone()
+        if not key:
+            return None
+        row = connection.execute(
+            "SELECT * FROM customers WHERE id=?", (key["customer_id"],)
+        ).fetchone()
+    return {
+        "key_id": key["id"],
+        "customer_id": key["customer_id"],
+        "revoked": bool(key["revoked"]),
+        "created_at": key["created_at"],
+        "access": None if key["revoked"] else effective_access(row),
+    }
 
 
 def access_for(authorization=None):
@@ -148,24 +365,7 @@ def access_for(authorization=None):
         ) from error
     if not row:
         raise HTTPException(401, "Invalid API credential")
-    active = row["status"] in ("active", "cancelled")
-    expired = (
-        row["expires_at"] is not None and row["expires_at"] <= time.time()
-    )
-    pro = (
-        row["tier"] == "pro"
-        and active
-        and not expired
-        and row["expires_at"] is not None
-    )
-    result.update(
-        customer_id=row["id"],
-        authenticated=True,
-        tier="pro" if pro else "free",
-        plan_tier=row["tier"],
-        subscription_status="expired" if expired else row["status"],
-        expires_at=row["expires_at"],
-    )
+    result.update(effective_access(row), authenticated=True)
     return result
 
 

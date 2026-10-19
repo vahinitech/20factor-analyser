@@ -40,7 +40,7 @@ Responses contain:
 - `recognition`: recognized text; Pro also receives recognition metadata.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
-- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/17-comparison-data.md](../docs/17-comparison-data.md).
+- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
 - `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, and `passage_aligned`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
 
 Each factor score includes the original 0–10 value, normalized 0–100 value, scale boundaries and band. A missing or invalid score is null, never substituted with zero. Status is `estimated`, `proxy`, `measured` (sensor-supplied) or `unavailable`. The image endpoint does not accept sensor measurements. Pressure, speed, stroke order and pen lifts explicitly disclose what a still image cannot measure.
@@ -61,11 +61,48 @@ python subscription_admin.py --db /data/entitlements/subscriptions.sqlite create
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite issue-key CUSTOMER_ID --secret-file /private/new-customer-key
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite subscription CUSTOMER_ID --tier pro --status active --expires-at UTC_UNIX_SECONDS
 python subscription_admin.py --db /data/entitlements/subscriptions.sqlite revoke-key KEY_ID
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite show-customer CUSTOMER_ID
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite list-customers --expiring-within-days 14
+python subscription_admin.py --db /data/entitlements/subscriptions.sqlite check-key --secret-file /private/key-to-check
 ```
 
-Key output files must not already exist and are created with mode 0600. Do not publish them or send them to logs. Back up the ledger using SQLite's backup API before migrations. Staging and production compose projects use separate named volumes.
+Key output files must not already exist and are created with mode 0600. Do not publish them or send them to logs. `show-customer` and `check-key` open the ledger read-only. `show-customer` prints the plan, the effective access (computed by the same function `access_for` uses), each key id with its revoked flag and creation time, and the audit history; it never prints a key digest. `check-key` reads one key from a regular file owned by the caller with mode 0600 or stricter (never from the command line), and prints the key id, customer id, revoked flag and effective access without the secret; it exits 1 when no key matches. Issuing and revoking a key write `key:issue:<key id>` and `key:revoke:<key id>` to the audit table, never the secret or its digest. Back up the ledger using SQLite's backup API before migrations. Staging and production compose projects use separate named volumes.
 
 Active Pro requires an explicit expiry. Cancelled Pro retains access until expiry; expired or revoked subscriptions use Free. Revoked API keys are rejected. Customer creation and subscription changes are operator-only commands; there is no public upgrade or receipt-acceptance endpoint.
+
+The step-by-step procedure for trials, paid Pro, renewals, moving back to Free, lost keys and "my key stopped working", with the open owner decisions: [docs/17-access-and-trials.md](../docs/17-access-and-trials.md).
+
+## Internal access API
+
+A service on the private network that gives, changes or takes back Pro (a code redemption page, an operator page, a billing hook) calls this API instead of opening the SQLite ledger. Only the analyser opens its ledger. The code is `backend/access_api.py`; the messages are `backend/schemas/access-*.schema.json`.
+
+It is off by default. Three checks run on every request under `/internal/`, before routing or reading the body:
+
+1. `VAHINI_ACCESS_API_TOKEN_FILE` must name a readable file holding a shared token of at least 32 characters. Otherwise every path answers 404, so the API cannot be found. The file is read on each request, so replacing it rotates the token without a restart.
+2. A request with `X-Forwarded-For`, `X-Real-IP`, `Forwarded` or `CF-Connecting-IP` came through a proxy, and gets 404. The public gateway adds these headers; a service calling the container directly on the private network does not. Never route `/internal/` through a public gateway; this check is the second line of defence, not the first.
+3. `Authorization: Bearer <token>` must match the file, compared in constant time. Otherwise 401.
+
+| Route | Body | Answer |
+| --- | --- | --- |
+| `POST /internal/access/v1/grants` | `{"expires_at": UNIX}` | 201, `access-key`: a new customer with Pro until `expires_at` and its first key, written in one transaction |
+| `GET /internal/access/v1/customers/{customer_id}` | none | 200, `access-customer` |
+| `PUT /internal/access/v1/customers/{customer_id}/subscription` | `{"tier", "status", "expires_at"}` | 200, `access-customer` after the change |
+| `POST /internal/access/v1/customers/{customer_id}/keys` | none | 201, `access-key`: another key for the customer |
+| `POST /internal/access/v1/keys/{key_id}/revoke` | none | 200, `access-customer` of the key's owner |
+| `POST /internal/access/v1/keys/lookup` | `{"key": "vh_..."}` | 200, `access-key-lookup` |
+
+The rules are the operator tool's, from the same functions in `entitlements.py`: Pro needs an explicit expiry, a grant's expiry must be in the future, and `effective` is computed the way `/api/v2/me` computes access. A secret appears in one place only, the 201 answer that issues it; deliver it and do not log or store it. The lookup takes the secret in the body, never in a URL. No answer contains a key digest. Bodies are closed: an unknown field, a string where a number belongs or a `true` expiry is refused with 422. An unknown customer, key id or secret is 404, a body the ledger rules refuse is 422, and a missing or unreachable ledger is 503. Every answer carries `Cache-Control: no-store`. Error bodies use `error.schema.json`.
+
+`ANALYSER` below is the container's address on the private network, never the public host.
+
+```bash
+TOKEN=$(cat "$VAHINI_ACCESS_API_TOKEN_FILE")
+curl -s -X POST "$ANALYSER/internal/access/v1/grants" \
+  -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+  -d '{"expires_at": 1795000000}'
+```
+
+The audit rows are the same as the command line's: `key:issue:<key id>`, `key:revoke:<key id>` and `subscription:<tier>:<status>:<expiry>`. A grant writes the key row first, then the subscription row. The command line keeps working alongside the API.
 
 ## Compatibility and rollout
 
@@ -116,7 +153,7 @@ Generic definitions are public educational content. They contain no customer sco
 | `text` | Free / Pro | Recognized text, line count and recognition metadata |
 | `inputs` | Pro | Actual per-factor evidence, score basis and numeric inputs |
 | `coaching` | Pro | Scan-specific coaching tips |
-| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only. Each region also lists `marks` (boxes and lines where the factor was measured) in the uploaded photo's pixels, with that photo's `photo_width` and `photo_height`: [docs/17-comparison-data.md](../docs/17-comparison-data.md) |
+| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only. Each region also lists `marks` (boxes and lines where the factor was measured) in the uploaded photo's pixels, with that photo's `photo_width` and `photo_height`: [docs/19-comparison-data.md](../docs/19-comparison-data.md) |
 
 Combine values with commas, for example `?format=compact&include=text,inputs,coaching`. Request image evidence only when needed; it is the largest part of an expanded response. Unauthorized paid fields return 403 before inference. Compact scans without `evidence` skip crop-preview construction and base64 encoding. Evidence and basic scan cache entries are separate, so requesting evidence later can require another processing pass. This version does not provide a stored-report detail GET endpoint.
 
