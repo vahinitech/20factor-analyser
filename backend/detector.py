@@ -13,6 +13,7 @@
 import difflib
 import hashlib
 import re
+import unicodedata
 
 import numpy as np
 from PIL import Image, ImageOps, ImageFilter
@@ -155,9 +156,26 @@ def looks_printed(text: str, score: float, box=None) -> bool:
     )
 
 
+def _letters(s: str) -> str:
+    """The letters and digits of a reading, in any script: Telugu letters
+    and their vowel signs (combining marks) count as well as a to z. A to
+    z only made every Telugu reading empty, so two readings of one Telugu
+    line never matched."""
+    return "".join(
+        ch
+        for ch in (s or "").lower()
+        if ch.isalnum() or unicodedata.category(ch).startswith("M")
+    )
+
+
+def letters_of(s: str) -> str:
+    """The letters of a reading, any script, without digits or signs:
+    what makes a recovered word a word and not a smudge read as "22"."""
+    return "".join(ch for ch in _letters(s) if not ch.isdigit())
+
+
 def _text_similarity(a: str, b: str) -> float:
-    a = re.sub(r"[^a-z0-9]", "", (a or "").lower())
-    b = re.sub(r"[^a-z0-9]", "", (b or "").lower())
+    a, b = _letters(a), _letters(b)
     if not a or not b:
         return 0.0
     return difflib.SequenceMatcher(None, a, b).ratio()
@@ -166,8 +184,7 @@ def _text_similarity(a: str, b: str) -> float:
 def _text_within(a: str, b: str) -> bool:
     """One reading is a word or words of the other ("day" inside "every
     day"): a piece read again inside its whole line."""
-    a = re.sub(r"[^a-z0-9]", "", (a or "").lower())
-    b = re.sub(r"[^a-z0-9]", "", (b or "").lower())
+    a, b = _letters(a), _letters(b)
     return bool(a and b) and (a in b or b in a)
 
 
