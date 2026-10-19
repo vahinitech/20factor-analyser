@@ -743,3 +743,89 @@ In order of cost:
    bigger, not one letter. A worksheet with printed guide lines gives the
    target height, so a letter can be measured against it; that is where
    letter size should be marked.
+
+## 13. Each factor against its own mistake (English, 20 October 2026)
+
+Every factor a photo can measure is tested against a mistake planted for
+it, on the 20 UJI test writers' own letters (`scripts/factor_tests.py`).
+Each planted page is made from the same random numbers as a clean twin,
+so the two differ only by the mistake; a factor "catches" it when the
+planted page scores at least 0.1 lower than its twin. Lines are given
+from the ink (no reader), except where the reader is named.
+`python scripts/benchmark.py factors` checks these rates on every change
+to the measuring and weekly (`.github/workflows/factor-tests.yml`).
+
+| Mistake planted | Factor | Caught before | Caught now |
+|---|---|---|---|
+| One line starts 2.5 small letters in | 10 Margin Discipline | 100% | 100% |
+| One word gap three times wider | 8 Word Spacing | 100% | 100% |
+| One word gap a quarter as wide | 8 Word Spacing | 100% | 100% |
+| Last line sinking 4 degrees | 7 Baseline, 11 Straightness, 12 Vertical Alignment | 100% | 100% |
+| One word sunk 0.6 of a small letter | 7 Baseline Alignment | 5% | **100%** |
+| One line's letters riding a wave | 11 Line Straightness | 20% | **100%** |
+| One line's letters leaning 25 degrees | 17 Slant Consistency | 0% | **100%** |
+| One word's letters three times as far apart | 9 Letter Spacing | 25% | **100%** |
+| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **85%** |
+| One word 1.5 times the size | 5 Size Consistency | 75% | 75% (falls 0.61, was 0.25) |
+| One line's tall letters and tails 1.5 times | 6 Ascender/Descender | 75% | 75% |
+| One small letter 1.7 times taller | 5 Size Consistency | 15% | 10% |
+| One line written with a tremor | 4 Line Quality | 0% | 0% |
+| One word scribbled, read by the real reader | 1 Letter Formation | 9 of 19 | unchanged |
+| | 18 Legibility | 2 of 19 | unchanged |
+| | 19 Character Distinction | 8 of 19 | unchanged |
+| | 2 Stroke Order | 9 of 19 | unchanged |
+
+What changed (`letter_geometry.py`, `scoring._stroke_features`):
+
+- **Loop Closure (3)** counted the share of loop letters in the text, so
+  an open loop could not move it. It now counts the closed bowls in each
+  line's ink (holes of letter-bowl size) against the letters read that
+  have one (a, b, d, e, g, o, p, q); full marks at 90%.
+- **Letter Spacing (9)** was the spread of line width per character. It
+  is now the spread of the gaps between the letters (or joined pieces)
+  inside words.
+- **Line Straightness (11)** was the line angle again, the same as
+  Baseline. It now also loses up to 5 points as a line's letters wander
+  off its fitted baseline (median distance, tails left out), worst line.
+- **Slant Consistency (17)** was the spread of line angles. Each word's
+  lean is now the shear that makes its strokes most upright, and the
+  score falls with the spread of the leans.
+- **Baseline Alignment (7)** also loses up to 5 points as the share of
+  words sitting off their line (0.35 of a small letter or more) reaches
+  25%: a sunken word does not turn a line, so the slope never saw it.
+- **Size Consistency (5)** loses up to 2 points as the share of words 30%
+  or more off the page's usual size reaches 10%; a word's height counts
+  only the columns reaching at least half a small letter (joins and the
+  bottoms of curves pulled it down); and a word sitting off its line is
+  measured from where it sits, so a sunken word is no longer a size
+  change.
+
+The older stand-ins remain only for a page too small to measure. On the
+20 real UJI pages (section 12) overall falls 2 to 7 points, mostly
+because Letter Spacing and Slant Consistency, which scored about 9.7 on
+any page, now measure clean writing near 7.7.
+
+What is not solved, and why:
+
+- **One letter 1.7 times taller** (10%) and **one word 1.5 times the
+  size** (75%). Without knowing which letter is which, a small letter
+  made tall looks like a tall letter, and a big word's V-shaped letters
+  (w, v) or a word split in the wrong place hide its size. Section 11 has
+  the letter-position measurements; they are not reliable enough yet.
+- **Line Quality (4)** measures how much line lengths vary, not the
+  stroke. A tremor at phone-photo resolution wobbles on the same scale as
+  the curves of the letters themselves, and an edge-roughness measure
+  caught it on 8 of 20 pages; it was not shipped. Smoothness belongs to
+  the sensor pen, like speed and pressure (13 to 16).
+- **Stroke Order (2)** cannot be seen in a finished letter; its score is
+  a blend of letter widths and reading confidence. Also a pen skill.
+- **Letter Formation (1), Legibility (18), Character Distinction (19)**
+  average the reader's confidence over whole lines, so one scribbled word
+  in 30 hardly moves them. Reading every line again letter by letter and
+  scoring the share of letters the reader was unsure of would fix this,
+  but in testing the extra readings took a scan past the analyser's 2.5 GB
+  memory limit, so it needs a load test on stage first (CLAUDE.md, scan
+  capacity) and is not in this change.
+- **Ascender/Descender Control (6)** moves a little with every other
+  mistake (0.3 to 0.9 points): its zone bands are measured per line and
+  shift with whatever else changes in the line.

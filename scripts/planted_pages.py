@@ -69,6 +69,20 @@ SENTENCES = [
     "seetha and rama practise slowly with care",
     "vidhya draws big round letters on the line",
 ]
+# Mistakes for the factors KINDS does not test (scripts/factor_tests.py).
+# Each changes nothing else on the page: it draws no random numbers, so a
+# page and its clean twin made from the same seed differ only by it.
+FACTOR_KINDS = [
+    ("big_word", "5"),  # one word 1.5 times the writer's size
+    ("tall_ascenders", "6"),  # one line's tall letters and tails 1.5x
+    ("open_loops", "3"),  # every a, d, g, o, p, q left open at the top
+    ("wide_letters", "9"),  # one word's letters three times as far apart
+    ("indented_line", "10"),  # one line starts 2.5 small letters in
+    ("wavy_line", "11"),  # one line's letters ride a wave, +-0.35 x
+    ("slanted_line", "17"),  # one line's letters lean 25 degrees
+    ("shaky_line", "4"),  # one line drawn with a tremor, +-0.1 x
+    ("messy_word", "1"),  # one word scribbled: wobble +-0.4 x
+]
 KINDS = [
     ("tall_letter", "5"),
     ("low_word", "7"),
@@ -172,6 +186,8 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
         else int(rng.integers(len(lines)))
     )
     line = lines[li]
+    if kind == "indented_line":
+        line["x0"] += 2.5 * X
     nw = len(line["words"])
     wi = int(rng.integers(1, nw - 1))
     small_at = [
@@ -205,15 +221,43 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
                     and (wj, gj) == target_glyph
                     else 1.0
                 )
-                placed, width = _place(
-                    g, scale, x, line_["baseline"] + drop, grow
+                if kind == "big_word" and lj == li and wj == wi:
+                    grow = 1.5
+                if (
+                    kind == "tall_ascenders"
+                    and lj == li
+                    and g["ch"] in TALL | LOW
+                ):
+                    grow = 1.5
+                wave = (
+                    0.35 * X * np.sin(2 * np.pi * len(line_letters) / 6.0)
+                    if kind == "wavy_line" and lj == li
+                    else 0.0
                 )
-                if grow != 1.0:
+                placed, width = _place(
+                    g, scale, x, line_["baseline"] + drop + wave, grow
+                )
+                if kind == "open_loops" and g["ch"] in LOOPS:
+                    placed = _open(placed)
+                if kind == "messy_word" and lj == li and wj == wi:
+                    placed = _shake(placed, 0.4 * X, 7 + gj)
+                if kind == "shaky_line" and lj == li:
+                    placed = _shake(placed, 0.1 * X, 11 + len(line_letters))
+                if grow != 1.0 and kind == "tall_letter":
                     truth = _box(placed)
                 word_pts.extend(placed)
                 line_letters.append((g["ch"], placed))
-                x += width + LETTER_GAP * rng.uniform(0.7, 1.3)
-            if drop:
+                spread = (
+                    3.0
+                    if kind == "wide_letters" and lj == li and wj == wi
+                    else 1.0
+                )
+                x += width + spread * LETTER_GAP * rng.uniform(0.7, 1.3)
+            if drop or (
+                lj == li
+                and wj == wi
+                and kind in ("big_word", "wide_letters", "messy_word")
+            ):
                 truth = _box(word_pts)
             word_boxes.append(_box(word_pts))
             pts_line.append(word_pts)
@@ -237,6 +281,27 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
                 - min(left[1], right[1]),
             ]
         strokes = [s for w in pts_line for s in w]
+        if kind == "slanted_line" and lj == li:
+            base = line_["baseline"]
+            shear = np.tan(np.radians(25.0))
+            strokes = [
+                np.column_stack([p[:, 0] + (base - p[:, 1]) * shear, p[:, 1]])
+                for p in strokes
+            ]
+            line_letters = [
+                (
+                    ch,
+                    [
+                        np.column_stack(
+                            [p[:, 0] + (base - p[:, 1]) * shear, p[:, 1]]
+                        )
+                        for p in placed
+                    ],
+                )
+                for ch, placed in line_letters
+            ]
+        if kind in FACTOR_TRUTH_LINE and lj == li:
+            truth = _box(strokes)
         if kind == "tilted_line" and lj == li:
             box = _box(strokes)
             cx, cy = box[0], line_["baseline"]
@@ -284,6 +349,64 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
     if truth is not None:
         truth = [int(round(v)) for v in truth]
     return img, hand_lines, truth
+
+
+LOOPS = set("adgopq")
+OPEN_GAP = 0.3
+SHAKE_STEP = 0.3
+FACTOR_TRUTH_LINE = (
+    "tall_ascenders",
+    "indented_line",
+    "wavy_line",
+    "slanted_line",
+    "shaky_line",
+)
+
+
+def _open(placed):
+    """A loop letter left open: the pen does not come back to where the
+    bowl began. The ink near each stroke's start is taken away, at its
+    beginning and where the stroke returns to it, a gap OPEN_GAP small
+    letters wide."""
+    out = []
+    for p in placed:
+        start = p[0]
+        n = len(p)
+        near = np.hypot(*(p - start).T) < OPEN_GAP * X
+        ends = (np.arange(n) < n * 0.3) | (np.arange(n) > n * 0.6)
+        keep = ~(near & ends)
+        # Keep the stroke in one piece from its first kept point on.
+        idx = np.nonzero(keep)[0]
+        if idx.size >= 2:
+            out.append(p[idx[0] : idx[-1] + 1][keep[idx[0] : idx[-1] + 1]])
+        else:
+            out.append(p)
+    return out
+
+
+def _shake(placed, amount, seed):
+    """Strokes drawn with a shaking hand: along each stroke, the pen
+    wobbles up to ``amount`` pixels about its path, once every SHAKE_STEP
+    small letters of ink, from its own seed (not the page's random
+    numbers, so the clean twin stays the same)."""
+    rng = np.random.default_rng(seed)
+    out = []
+    for p in placed:
+        if len(p) < 2:
+            out.append(p)
+            continue
+        arc = np.concatenate(
+            [[0.0], np.cumsum(np.hypot(*np.diff(p, axis=0).T))]
+        )
+        knots = np.arange(0.0, arc[-1] + SHAKE_STEP * X, SHAKE_STEP * X)
+        wob = rng.uniform(-1, 1, (len(knots), 2)) * amount
+        out.append(
+            p
+            + np.column_stack(
+                [np.interp(arc, knots, wob[:, i]) for i in (0, 1)]
+            )
+        )
+    return out
 
 
 def _plain(ink, width, height, rng):
