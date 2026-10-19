@@ -37,12 +37,14 @@ import importlib.util
 import io
 import json
 import os
-import re
+import unicodedata
 import sys
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BACKEND = os.path.join(ROOT, "backend")
-SETS = os.path.join(ROOT, "benchmarks")
+# Where the sets are. A set whose pages may not be published (a licence
+# not yet confirmed) lives outside the repository: --root points at it.
+SETS = [os.path.join(ROOT, "benchmarks")]
 SCORED = tuple(range(1, 13)) + tuple(range(17, 21))  # 13-16 need the pen
 FREE = (1, 5, 7, 8, 18)
 
@@ -64,7 +66,7 @@ LIVE_TOLERANCE = 0.3
 
 
 def _load_set(name):
-    folder = os.path.join(SETS, name)
+    folder = os.path.join(SETS[0], name)
     with open(os.path.join(folder, "set.json"), encoding="utf-8") as f:
         meta = json.load(f)
     return folder, meta
@@ -148,7 +150,12 @@ def _score(arr, raw, reader, meta):
 
 
 def _norm(text):
-    return re.sub(r"[^a-z]", "", text.lower())
+    """Letters only, in any script (Telugu vowel signs included)."""
+    return "".join(
+        ch
+        for ch in text.lower()
+        if ch.isalpha() or unicodedata.category(ch).startswith("M")
+    )
 
 
 def _line_check(lines, sentences):
@@ -202,7 +209,8 @@ def run_set(name):
             continue
         if first != again:
             problems.append(f"{page}: two replays gave different results")
-        found, repeats, other = _line_check(first["lines"], meta["sentences"])
+        written = meta.get("page_text", {}).get(page, meta.get("sentences"))
+        found, repeats, other = _line_check(first["lines"], written)
         first.update(
             {"sentences_found": found, "repeats": repeats, "unmatched": other}
         )
@@ -307,7 +315,7 @@ def _report(text):
 
 def cmd_check(args):
     meta, results, problems = run_set(args.set)
-    folder = os.path.join(SETS, args.set)
+    folder = os.path.join(SETS[0], args.set)
     with open(os.path.join(folder, "expected.json"), encoding="utf-8") as f:
         expected = json.load(f)
     problems += _limits(meta, results, expected)
@@ -335,7 +343,7 @@ def cmd_check(args):
 
 def cmd_update(args):
     meta, results, problems = run_set(args.set)
-    folder = os.path.join(SETS, args.set)
+    folder = os.path.join(SETS[0], args.set)
     if problems:
         for p in problems:
             print(p)
@@ -481,8 +489,8 @@ def cmd_planted(args):
     )
     planted = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(planted)
-    path = os.path.join(SETS, "planted", "expected.json")
-    tmp = os.path.join(SETS, "planted", ".last.json")
+    path = os.path.join(SETS[0], "planted", "expected.json")
+    tmp = os.path.join(SETS[0], "planted", ".last.json")
     with contextlib.redirect_stdout(io.StringIO()):
         planted.main(["--uji", args.uji, "--json", tmp])
     with open(tmp, encoding="utf-8") as f:
@@ -538,6 +546,10 @@ def main(argv=None):
     for name in ("check", "update", "capture", "live"):
         p = sub.add_parser(name)
         p.add_argument("--set", default="uji-clean")
+        p.add_argument(
+            "--root",
+            help="a folder of sets outside the repository (default benchmarks/)",
+        )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
     p = sub.add_parser("planted")
@@ -549,6 +561,8 @@ def main(argv=None):
     )
     p.add_argument("--update", action="store_true")
     args = ap.parse_args(argv)
+    if getattr(args, "root", None):
+        SETS[0] = os.path.abspath(args.root)
     return {
         "check": cmd_check,
         "update": cmd_update,

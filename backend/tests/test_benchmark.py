@@ -55,6 +55,13 @@ class TestBenchmarkRules(unittest.TestCase):
         )
         self.assertEqual((found, repeats, other), (2, 1, 1))
 
+    def test_telugu_lines_are_matched_to_their_written_text(self):
+        written = ["వెలుతురు అబోహర్ చోరి", "పంపిన తీసామన్నారు హైపోథాల్మస్"]
+        found, repeats, other = bench._line_check(  # pylint: disable=W0212
+            ["వెలుతురు అబోహర్ చోరి", "పంపిన తీసామన్నారు", "ee"], written
+        )
+        self.assertEqual((found, repeats, other), (2, 0, 1))
+
     def test_every_moved_score_is_listed(self):
         expected = {"pages": {"A": result(90), "B": result(80)}}
         now = {"A": result(90), "B": result(82, f5=7.1)}

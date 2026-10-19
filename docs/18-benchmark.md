@@ -132,3 +132,48 @@ allows them in a public repository, and a `source.md` saying where they
 came from. Capture the reader output with `capture --set <name>` in the
 analyser image, then `update --set <name>`, and add the set to the
 `check` step in `ci.yml`.
+
+## A set kept outside the repository
+
+A set whose pages may not be published yet lives in a folder of its own;
+every command takes `--root <folder>`:
+
+```
+python scripts/benchmark.py capture --root ~/eval-data/benchmarks --set telugu-iiit-clean
+python scripts/benchmark.py update  --root ~/eval-data/benchmarks --set telugu-iiit-clean
+```
+
+`set.json` may give each page its own written text (`page_text`) instead
+of one list of sentences; text is matched in any script. Such a set runs
+by hand on a machine that holds it, never in CI.
+
+## Telugu (19 October 2026)
+
+Twenty pages of real Telugu handwriting (five writers, words from
+IIIT-INDIC-HW-WORDS-Telugu, built by `eval-tools/telugu_pages.py`) are
+kept outside the repository: the dataset is listed as CC BY 4.0 on the
+AIKOSH portal, but the project's own pages state no licence for the
+Telugu part, so the pages are not published until the authors confirm.
+Read with `lang=te` and the Telugu recogniser, as production is set up:
+
+- **7 of 80 written lines are scored.** PP-OCRv5's mobile detector finds
+  almost no Telugu handwriting lines: 518 boxes on 20 pages, nearly all
+  specks of a few pixels, at 900, 1400 or 2600 pixels wide. What is read
+  comes out as Latin fragments ("ee", "n2"), and several factors score
+  a measured 0. The server detector is killed for memory at the
+  analyser's 2.5 GB limit.
+- **With `lang=auto`** (the website's setting) English is read first and
+  the Telugu recogniser never runs once three English "lines" are found.
+- **Lines can be found without the reader.** The page's ink blobs, joined
+  into rows by `detector.join_row_pieces`, give exactly four lines on 18
+  of 20 pages. Their slope is not yet right: consonants written below the
+  line (vottulu) pull the fitted baseline, so clean lines measure up to 5
+  degrees and a line planted sinking 4 degrees stands out on 5 of 20
+  pages.
+
+The next step is Telugu geometry from the ink: rows as above, a baseline
+fitted to the letter bodies rather than to the lowest ink, and Size and
+Word Spacing measured against Telugu's own bands, each judged on these
+pages and their planted copies (`tilted_line`, `wide_gap`) before any
+Telugu score is shown.
+
