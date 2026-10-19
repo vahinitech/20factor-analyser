@@ -729,6 +729,28 @@ def _line_ink_components(arr, box):
     return comps
 
 
+# A line box reaches into its neighbours: the tails of the line above
+# and the loops of the line below cross its top and bottom. Word gaps
+# count only the blobs whose middle lies between OWN_TOP and OWN_BOTTOM
+# of the box's height; a tail from the next line counted as a word made
+# the gaps of one line in a closely written page look uneven.
+OWN_TOP = 0.20
+OWN_BOTTOM = 0.85
+
+
+def _own_ink_components(arr, line):
+    box = line.get("box") or [0, 0, 0, 0]
+    comps = _line_ink_components(arr, box)
+    if not comps:
+        return comps
+    y, h = float(box[1]), float(box[3])
+    return [
+        c
+        for c in comps
+        if y + OWN_TOP * h <= c[1] + c[3] / 2.0 <= y + OWN_BOTTOM * h
+    ]
+
+
 def line_word_gaps(arr, line):
     """Word-to-word gaps in one OCR line, in pixels, measured from ink.
 
@@ -742,7 +764,7 @@ def line_word_gaps(arr, line):
     n_words = len([w for w in re.split(r"\s+", text.strip()) if w])
     if n_words < 2:
         return None
-    comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+    comps = _own_ink_components(arr, line)
     if not comps or len(comps) < 2:
         return None
     breaks = line_word_breaks(arr, line, n_words, comps)
@@ -760,7 +782,7 @@ def line_word_breaks(arr, line, n_words=None, comps=None):
         if n_words < 2:
             return None
     if comps is None:
-        comps = _line_ink_components(arr, line.get("box") or [0, 0, 0, 0])
+        comps = _own_ink_components(arr, line)
     if not comps or len(comps) < 2:
         return None
     spans = []
