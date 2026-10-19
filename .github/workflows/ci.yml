@@ -55,7 +55,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/line_recovery.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -70,7 +70,8 @@ jobs:
             backend/marked_places.py backend/letter_geometry.py \
             backend/print_hand.py backend/letter_boxes.py \
             backend/scan_slots.py backend/capacity.py \
-            backend/detector.py backend/recognizer.py \
+            backend/detector.py backend/line_recovery.py \
+            backend/recognizer.py \
             backend/config.py backend/cache.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/upload_limits.py backend/daily_limit.py \
             backend/tests/test_subscription_admin.py \
@@ -81,6 +82,8 @@ jobs:
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
             backend/tests/test_layout_filter.py \
+            backend/tests/test_line_pieces.py \
+            backend/tests/test_word_spacing.py \
             backend/tests/test_image_formats.py \
             backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
@@ -110,6 +113,8 @@ jobs:
             backend.tests.test_marked_places \
             backend.tests.test_planted_pages \
             backend.tests.test_letter_geometry \
+            backend.tests.test_line_pieces \
+            backend.tests.test_word_spacing \
             backend.tests.test_print_hand \
             backend.tests.test_page_measurements \
             backend.tests.test_letter_boxes \
