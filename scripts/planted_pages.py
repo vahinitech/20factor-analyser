@@ -501,7 +501,10 @@ def run_page(img, hand_lines, ocr):
         # "auto", as the website and the app send (ocr.js, AnalyserApi).
         raw, _err, backend, _meta = recognizer.collect_lines(img, "auto")
         found, hand_lines = recognizer.extract_hand_lines(
-            img, raw, refine_backend=backend
+            img,
+            raw,
+            refine_backend=backend,
+            read_region=_SERVER[0]._READ_REGION,  # pylint: disable=W0212
         )
         if not hand_lines:
             printed = sum(1 for l in found if l.get("printed_hint"))

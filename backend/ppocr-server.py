@@ -246,6 +246,13 @@ _READ_LETTERS = (
     if OCR_BACKEND in ("paddle", "hybrid", "auto")
     else None
 )
+# Writing the detector missed is read by the same recogniser
+# (line_recovery.py), wherever PaddleOCR found the lines.
+_READ_REGION = (
+    ocr_backends.read_region
+    if OCR_BACKEND in ("paddle", "trocr", "hybrid", "auto")
+    else None
+)
 
 
 def _vl_analyze(arr, lines, include_evidence=True):
@@ -377,7 +384,11 @@ def _ocr_process(arr, raw, lang):
             recognizer.collect_lines(arr, lang)
         )
         lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
+            arr,
+            raw_lines,
+            raw_bytes=raw,
+            refine_backend=selected_backend,
+            read_region=_READ_REGION,
         )
         if lines and not hand_lines:
             # Text was detected but every line is printed: refuse rather
@@ -493,7 +504,11 @@ def _analyze_vl_process(arr, raw, lang):
             recognizer.collect_lines(arr, lang)
         )
         lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
+            arr,
+            raw_lines,
+            raw_bytes=raw,
+            refine_backend=selected_backend,
+            read_region=_READ_REGION,
         )
         if lines and not hand_lines:
             # Every detected line is printed: refuse to analyse the page
@@ -647,7 +662,11 @@ def _report_python_process(
             recognizer.collect_lines(arr, lang)
         )
         lines, hand_lines = recognizer.extract_hand_lines(
-            arr, raw_lines, raw_bytes=raw, refine_backend=selected_backend
+            arr,
+            raw_lines,
+            raw_bytes=raw,
+            refine_backend=selected_backend,
+            read_region=_READ_REGION,
         )
         if lines and not hand_lines:
             # Every detected line is printed. Scoring machine type as

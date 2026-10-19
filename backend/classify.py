@@ -359,15 +359,21 @@ def classify_lines(arr, lines, threshold=None):
         confident = sc >= 0.96 and len(t) >= 6 and not _reader_hand(ln)
         return p >= 0.70 or confident
 
-    strong_count = sum(
-        1 for ln, p in zip(lines, probs) if _is_strong_printed(ln, p)
-    )
-    page_has_print = strong_count >= max(1, int(0.15 * len(lines)))
+    # The page's context comes from the reader's own lines. Words read
+    # again where the detector missed writing (line_recovery.py) are judged
+    # in that context but do not change it: a run of recovered handwriting
+    # must not dilute a printed form's share of print, or move the top of
+    # the text block, and so let its letterhead through.
+    found = [
+        (ln, p) for ln, p in zip(lines, probs) if not ln.get("recovered")
+    ] or list(zip(lines, probs))
+    strong_count = sum(1 for ln, p in found if _is_strong_printed(ln, p))
+    page_has_print = strong_count >= max(1, int(0.15 * len(found)))
 
     # Position relative to the DETECTED TEXT BLOCK, not the image — a phone photo
     # often frames the page in the middle, so image-relative position is useless.
     tops, bots = [], []
-    for ln in lines:
+    for ln, _p in found:
         b = ln.get("box") or [0, 0, 0, 0]
         if len(b) >= 4:
             tops.append(float(b[1]))

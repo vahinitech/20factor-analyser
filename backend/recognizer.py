@@ -34,6 +34,7 @@ import classify
 import detector
 import computer_vision
 import layout_filter
+import line_recovery
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -334,12 +335,17 @@ def extract_hand_lines(
     raw_lines,
     raw_bytes: bytes = None,
     refine_backend: str = None,
+    read_region=None,
 ):
-    """Shared post-processing: merge → region-filter → drop non-text-ink
-    layout regions (image/figure/chart/seal) → classify printed vs
-    handwriting → keep handwriting, minus OCR noise fragments → optionally
-    refine handwriting text with a stronger engine. Returns (all_lines,
-    hand_lines).
+    """Shared post-processing: merge repeated readings → region-filter →
+    drop non-text-ink layout regions (image/figure/chart/seal) → read the
+    writing the detector missed (when read_region is given) → classify
+    printed vs handwriting → keep handwriting, minus OCR noise fragments →
+    join the pieces of each line → optionally refine handwriting text
+    with a stronger engine. Returns (all_lines, hand_lines).
+
+    read_region(crop, lang) -> lines | None is the scan's own reader
+    (ocr_backends.read_region); see line_recovery.py.
     """
     lines = detector.region_filter_lines(
         detector.merge_lines(raw_lines), arr.shape
@@ -347,12 +353,16 @@ def extract_hand_lines(
     lines = layout_filter.filter_excluded_regions(
         lines, layout_filter.excluded_regions(arr)
     )
+    if read_region is not None and lines:
+        lang = str(lines[0].get("lang") or "en")
+        lines = line_recovery.add_missed(arr, lines, read_region, lang)
     classify.classify_lines(arr, lines)
     hand_lines = detector.prefer_handwritten(lines)
     cleaned = [l for l in hand_lines if not detector.is_noise_line(l)]
     # Fail-open: never empty the set just because noise filtering was strict.
     if cleaned:
         hand_lines = cleaned
+    hand_lines = detector.join_row_pieces(hand_lines)
     if refine_backend in ("trocr", "hybrid") and raw_bytes:
         refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
     return lines, hand_lines
