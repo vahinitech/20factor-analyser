@@ -40,6 +40,7 @@ to the ones it builds on.
 | 15 | [Persistence](15-persistence.md) | What is stored, and where |
 | 16 | [Roadmap](16-roadmap.md) | What it can and cannot do yet, and what is next |
 | 17 | [Access and trials](17-access-and-trials.md) | Giving a Pro trial, turning it into paid Pro, renewing, moving back to Free, replacing a lost key, and the owner decisions still open |
+| 18 | [The real-handwriting benchmark](18-benchmark.md) | How every change is checked against real pages: the kept reader output, expected scores, what may not get worse, and the live run with the models |
 
 ## Elsewhere
 

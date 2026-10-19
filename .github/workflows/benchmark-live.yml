@@ -1,0 +1,68 @@
+# The real-handwriting benchmark with the real reader (docs/18-benchmark.md).
+#
+# ci.yml replays the reader output kept in benchmarks/<set>/reader/. This
+# reads every page again with the models in the analyser image and reports
+# how far the scores move from expected.json. It runs when the reader or
+# its models can change, every Monday, and by hand. When the reader really
+# changed, the new reading is in the "reading" artifact: copy it over
+# benchmarks/<set>/reader/, run `benchmark.py update` and commit both.
+name: Benchmark (live reader)
+
+on:
+  pull_request:
+    paths:
+      - 'backend/recognizer.py'
+      - 'backend/ocr_backends.py'
+      - 'backend/detector.py'
+      - 'backend/line_recovery.py'
+      - 'backend/layout_filter.py'
+      - 'backend/classify.py'
+      - 'backend/config.py'
+      - 'backend/requirements*.txt'
+      - 'deployment/Dockerfile'
+      - 'scripts/benchmark.py'
+      - 'benchmarks/**'
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build analyser image (cached paddle layer, shared with CI)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          tags: vahini/20factor-analyser:local
+          load: true
+          cache-from: type=gha,scope=analyser
+          cache-to: type=gha,mode=max,scope=analyser
+      - name: Read every page again and compare
+        run: |
+          mkdir -p "$RUNNER_TEMP/reading" && chmod 777 "$RUNNER_TEMP/reading"
+          docker run --rm -e GITHUB_STEP_SUMMARY=/out/summary.md \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/reading:/out" -w /repo \
+            vahini/20factor-analyser:local \
+            python scripts/benchmark.py live --out /out/uji-clean
+      - name: Summary
+        if: always()
+        run: cat "$RUNNER_TEMP/reading/summary.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Keep the reading
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reading
+          path: ${{ runner.temp }}/reading
+          retention-days: 14

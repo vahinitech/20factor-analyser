@@ -1,0 +1,605 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "UJI_W12": {
+   "lines": [
+    "pihu sings whi le Tara reads astory",
+    "vahini and bheema write letters every day",
+    "theguickbrown 8ox jump ver he eazy do",
+    "chinnu deepseach word near and clear"
+   ],
+   "overall": 90,
+   "repeats": 0,
+   "scores": {
+    "1": 9.3,
+    "10": 6.8,
+    "11": 9.5,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.9,
+    "19": 9.5,
+    "2": 9.6,
+    "20": 8.4,
+    "3": 10.0,
+    "4": 8.7,
+    "5": 8.1,
+    "6": 8.5,
+    "7": 9.4,
+    "8": 8.6,
+    "9": 9.3
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UJI_W13": {
+   "lines": [
+    "gihe sings while tara readsa story",
+    "chinnakeepseag word neat and clear",
+    "the guick brown over the lazy do",
+    "seetha and rama gractise slowey with care"
+   ],
+   "overall": 89,
+   "repeats": 0,
+   "scores": {
+    "1": 8.7,
+    "10": 7.4,
+    "11": 9.8,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.9,
+    "19": 9.2,
+    "2": 9.4,
+    "20": 8.7,
+    "3": 10.0,
+    "4": 8.8,
+    "5": 8.8,
+    "6": 6.1,
+    "7": 9.8,
+    "8": 8.3,
+    "9": 8.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UJI_W14": {
+   "lines": [
+    "seetha and rama practise slowly with care",
+    "chinna keeps each word neat and clear",
+    "vidhya draws big round letters on the line",
+    "vahini and bheema write letters every day"
+   ],
+   "overall": 95,
+   "repeats": 0,
+   "scores": {
+    "1": 9.6,
+    "10": 9.7,
+    "11": 9.7,
+    "12": 9.7,
+    "17": 9.8,
+    "18": 9.3,
+    "19": 9.8,
+    "2": 9.9,
+    "20": 9.3,
+    "3": 10.0,
+    "4": 9.5,
+    "5": 8.8,
+    "6": 8.8,
+    "7": 9.6,
+    "8": 9.0,
+    "9": 9.8
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UJI_W15": {
+   "lines": [
+    "seetha and rama pracise souly with care",
+    "vahini and bheema write letters every day",
+    "idhy draws bg round let ters on the line",
+    "pihu sings while tara reads a story"
+   ],
+   "overall": 91,
+   "repeats": 0,
+   "scores": {
+    "1": 8.2,
+    "10": 8.8,
+    "11": 9.8,
+    "12": 9.6,
+    "17": 9.7,
+    "18": 8.4,
+    "19": 8.3,
+    "2": 9.4,
+    "20": 8.7,
+    "3": 10.0,
+    "4": 9.1,
+    "5": 7.7,
+    "6": 9.4,
+    "7": 9.7,
+    "8": 8.4,
+    "9": 9.6
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UJI_W16": {
+   "lines": [
+    "vahluk and bheema wrike letkers every day",
+    "chinnu keeps each word ueak and clear",
+    "pihu sings uhile kara reads a story",
+    "the quick broun fox juups over the lary dog"
+   ],
+   "overall": 91,
+   "repeats": 0,
+   "scores": {
+    "1": 8.8,
+    "10": 8.3,
+    "11": 9.5,
+    "12": 9.6,
+    "17": 9.6,
+    "18": 8.7,
+    "19": 9.1,
+    "2": 9.7,
+    "20": 8.6,
+    "3": 10.0,
+    "4": 9.1,
+    "5": 7.9,
+    "6": 8.9,
+    "7": 9.3,
+    "8": 8.6,
+    "9": 9.7
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W18": {
+   "lines": [
+    "vidya draws bg round letters on the line",
+    "seetha and rama practise slowly with care",
+    "pihu sings while tara reads a story",
+    "the quick brown YOx jumps over the lazy dog"
+   ],
+   "overall": 93,
+   "repeats": 0,
+   "scores": {
+    "1": 9.0,
+    "10": 9.5,
+    "11": 9.6,
+    "12": 9.7,
+    "17": 9.8,
+    "18": 9.0,
+    "19": 9.3,
+    "2": 9.7,
+    "20": 9.2,
+    "3": 10.0,
+    "4": 8.7,
+    "5": 9.0,
+    "6": 8.7,
+    "7": 9.5,
+    "8": 8.6,
+    "9": 9.8
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W21": {
+   "lines": [
+    "vidhya draxs ground letters on the line",
+    "chinnn Keeps each word neat and clear",
+    "day",
+    "hu sigs whi  e a"
+   ],
+   "overall": 75,
+   "repeats": 0,
+   "scores": {
+    "1": 8.6,
+    "10": 5.1,
+    "11": 8.1,
+    "12": 6.9,
+    "17": 7.4,
+    "18": 8.0,
+    "19": 8.9,
+    "2": 8.6,
+    "20": 7.2,
+    "3": 10.0,
+    "4": 2.7,
+    "5": 6.9,
+    "6": 8.0,
+    "7": 7.6,
+    "8": 8.9,
+    "9": 6.4
+   },
+   "sentences_found": 3,
+   "unmatched": 1
+  },
+  "UPV_W24": {
+   "lines": [
+    "pihu sings while tara reads a story",
+    "chinna keeps each word neat and clear",
+    "vahini and bheema write letters every day",
+    "seetha and rama practise slowly with care"
+   ],
+   "overall": 93,
+   "repeats": 0,
+   "scores": {
+    "1": 9.1,
+    "10": 8.5,
+    "11": 9.7,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.9,
+    "19": 9.4,
+    "2": 9.8,
+    "20": 8.8,
+    "3": 10.0,
+    "4": 8.9,
+    "5": 8.1,
+    "6": 9.5,
+    "7": 9.6,
+    "8": 8.9,
+    "9": 9.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W27": {
+   "lines": [
+    "vidhyadraws round letterson the ein",
+    "seetha and rama practis seowly with care",
+    "pihn sings whiee tara reads a story"
+   ],
+   "overall": 92,
+   "repeats": 0,
+   "scores": {
+    "1": 9.1,
+    "10": 8.3,
+    "11": 9.8,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 9.0,
+    "19": 9.3,
+    "2": 9.7,
+    "20": 8.9,
+    "3": 10.0,
+    "4": 9.0,
+    "5": 8.2,
+    "6": 8.1,
+    "7": 9.7,
+    "8": 9.1,
+    "9": 9.6
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "UPV_W30": {
+   "lines": [
+    "vahini and b helma ur",
+    "day",
+    "chimnukeens cachword neatand clear",
+    "vidlga drous t iground letters onthe line",
+    "pilu sings wh tara reads a story"
+   ],
+   "overall": 79,
+   "repeats": 0,
+   "scores": {
+    "1": 8.7,
+    "10": 8.3,
+    "11": 8.5,
+    "12": 7.3,
+    "17": 7.7,
+    "18": 7.7,
+    "19": 9.1,
+    "2": 9.6,
+    "20": 7.4,
+    "3": 10.0,
+    "4": 3.2,
+    "5": 6.0,
+    "6": 8.0,
+    "7": 8.1,
+    "8": 7.6,
+    "9": 9.6
+   },
+   "sentences_found": 4,
+   "unmatched": 1
+  },
+  "UPV_W33": {
+   "lines": [
+    "chinnu keeps each word neat and clear",
+    "vahini and bheema write letters every day",
+    "ridhya draws big round letters on the line",
+    "pihusings while tara reads a story"
+   ],
+   "overall": 94,
+   "repeats": 0,
+   "scores": {
+    "1": 8.9,
+    "10": 9.4,
+    "11": 9.6,
+    "12": 9.7,
+    "17": 9.7,
+    "18": 9.2,
+    "19": 9.1,
+    "2": 9.7,
+    "20": 9.4,
+    "3": 10.0,
+    "4": 8.9,
+    "5": 9.2,
+    "6": 9.3,
+    "7": 9.5,
+    "8": 9.3,
+    "9": 9.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W36": {
+   "lines": [
+    "cahiniand bheend urite lessers ever day",
+    "seesha and rand practise slowly with care",
+    "vidhya drans big round essers on shel ine",
+    "chinnn. keepseach word neas and clear"
+   ],
+   "overall": 88,
+   "repeats": 0,
+   "scores": {
+    "1": 8.6,
+    "10": 8.7,
+    "11": 9.7,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.5,
+    "19": 8.9,
+    "2": 9.6,
+    "20": 8.5,
+    "3": 10.0,
+    "4": 9.3,
+    "5": 7.1,
+    "6": 4.1,
+    "7": 9.7,
+    "8": 8.7,
+    "9": 9.7
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W39": {
+   "lines": [
+    "chinnu keeps each word neat and clear",
+    "pihu sings while tara reads a storg",
+    "vahini and bheema write letters everg day",
+    "vidhyadrawsbig round letters on the line"
+   ],
+   "overall": 93,
+   "repeats": 0,
+   "scores": {
+    "1": 9.2,
+    "10": 9.5,
+    "11": 9.7,
+    "12": 9.7,
+    "17": 9.7,
+    "18": 9.1,
+    "19": 9.4,
+    "2": 9.8,
+    "20": 9.2,
+    "3": 10.0,
+    "4": 8.9,
+    "5": 8.7,
+    "6": 7.3,
+    "7": 9.6,
+    "8": 9.1,
+    "9": 9.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W42": {
+   "lines": [
+    "piho sing whil tara reads story",
+    "vahini and bheema write lettersevery day",
+    "vidhya drawsbig roundlettersonthe line",
+    "seetha and rama practise slowly withcare"
+   ],
+   "overall": 89,
+   "repeats": 0,
+   "scores": {
+    "1": 9.3,
+    "10": 8.9,
+    "11": 9.5,
+    "12": 9.7,
+    "17": 9.7,
+    "18": 8.9,
+    "19": 9.8,
+    "2": 9.8,
+    "20": 8.9,
+    "3": 10.0,
+    "4": 8.8,
+    "5": 8.2,
+    "6": 3.5,
+    "7": 9.4,
+    "8": 8.7,
+    "9": 9.5
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W45": {
+   "lines": [
+    "seetha and rama practise slowly with care",
+    "vidhya draws big round let ters on the line",
+    "pihu sings while tara reads a story",
+    "chinnu keeps each word neat and clear"
+   ],
+   "overall": 94,
+   "repeats": 0,
+   "scores": {
+    "1": 9.3,
+    "10": 8.6,
+    "11": 9.8,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 9.2,
+    "19": 9.3,
+    "2": 9.8,
+    "20": 9.1,
+    "3": 10.0,
+    "4": 8.8,
+    "5": 8.9,
+    "6": 9.2,
+    "7": 9.7,
+    "8": 8.6,
+    "9": 9.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W48": {
+   "lines": [
+    "pihu sings while fara reads a story",
+    "the suick browM OX um over the laty dog",
+    "chohMu se word meat and lear",
+    "seet and rana tise sl ow wit care"
+   ],
+   "overall": 85,
+   "repeats": 0,
+   "scores": {
+    "1": 8.8,
+    "10": 7.7,
+    "11": 9.4,
+    "12": 9.3,
+    "17": 9.4,
+    "18": 8.2,
+    "19": 9.4,
+    "2": 9.5,
+    "20": 8.0,
+    "3": 10.0,
+    "4": 8.8,
+    "5": 7.2,
+    "6": 5.0,
+    "7": 9.2,
+    "8": 7.6,
+    "9": 8.8
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W51": {
+   "lines": [
+    "uid ya draws round etterson the ine",
+    "vahini and writ le ters every day",
+    "seetha and rama practise slowle with cave",
+    "pihu Sings while tara reads story"
+   ],
+   "overall": 89,
+   "repeats": 0,
+   "scores": {
+    "1": 8.8,
+    "10": 8.2,
+    "11": 9.8,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.8,
+    "19": 9.6,
+    "2": 9.6,
+    "20": 8.8,
+    "3": 10.0,
+    "4": 8.5,
+    "5": 8.7,
+    "6": 6.9,
+    "7": 9.8,
+    "8": 7.8,
+    "9": 8.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W54": {
+   "lines": [
+    "ridhya draws big round letters on the line",
+    "the quick browm tox; umps oven the lazy dog",
+    "ahini and bheema write lettersevery"
+   ],
+   "overall": 85,
+   "repeats": 0,
+   "scores": {
+    "1": 9.2,
+    "10": 5.7,
+    "11": 9.5,
+    "12": 9.8,
+    "17": 9.8,
+    "18": 8.6,
+    "19": 9.2,
+    "2": 9.7,
+    "20": 7.9,
+    "3": 10.0,
+    "4": 9.1,
+    "5": 7.0,
+    "6": 3.3,
+    "7": 9.4,
+    "8": 8.7,
+    "9": 9.8
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "UPV_W57": {
+   "lines": [
+    "vahini and bheema write letters every. day",
+    "vidhya drawsbig round letters on the line",
+    "the quick braun to jumps over the lazy Nog",
+    "chinnu keey ns each word neat and lear"
+   ],
+   "overall": 91,
+   "repeats": 0,
+   "scores": {
+    "1": 8.9,
+    "10": 8.0,
+    "11": 9.5,
+    "12": 9.6,
+    "17": 9.6,
+    "18": 8.7,
+    "19": 9.6,
+    "2": 9.8,
+    "20": 8.6,
+    "3": 10.0,
+    "4": 9.4,
+    "5": 8.3,
+    "6": 7.6,
+    "7": 9.4,
+    "8": 8.1,
+    "9": 9.9
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "UPV_W60": {
+   "lines": [
+    "vidhya drawr big round letters on the line",
+    "pihn rings while tara reads a story",
+    "the quick brown tosc ps over he vazy do",
+    "vahintand ma betters"
+   ],
+   "overall": 90,
+   "repeats": 0,
+   "scores": {
+    "1": 8.8,
+    "10": 9.2,
+    "11": 9.5,
+    "12": 9.3,
+    "17": 9.4,
+    "18": 8.8,
+    "19": 9.2,
+    "2": 9.3,
+    "20": 9.0,
+    "3": 10.0,
+    "4": 8.4,
+    "5": 8.3,
+    "6": 7.7,
+    "7": 9.4,
+    "8": 9.0,
+    "9": 8.4
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  }
+ },
+ "set": "uji-clean"
+}

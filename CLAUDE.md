@@ -130,6 +130,13 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
   option.
+- **A scoring or reading change runs the real-handwriting benchmark.**
+  `python scripts/benchmark.py check` replays 20 real pages through the
+  change; any score that moves fails CI until `benchmark.py update` is run
+  and `benchmarks/uji-clean/expected.json` is committed, so the PR diff
+  shows every move. Floors on lines scored, no line scored twice and no
+  measured 0 cannot be updated away. Never add children's photos to
+  `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
 - **Run the whole test list ci.yml runs before calling a change ready.**
   A partial run missed the closed `/health` schema in `test_schemas`
   (#113). Browser tests need the Playwright image matching
