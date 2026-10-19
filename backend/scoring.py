@@ -562,6 +562,10 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
         "word_gap_count": len(word_gaps),
+        # Latin letters recognised on the page. Loops (3) and letter zones
+        # (6) count Latin letters only, so a page in another script, such
+        # as Telugu, has none to measure.
+        "latin_letters": alpha_chars,
         "digits_ratio": digits_ratio,
         "loop_ratio": loop_ratio,
         "tall_ratio": tall_ratio,
@@ -573,10 +577,15 @@ def _extract_features(arr: np.ndarray, lines, layout):
 
 
 _MIN_WORD_GAPS = 3
+# Factors whose measure counts Latin letters (scoring loop_ratio and
+# tall_ratio): loops (3) and letter zones (6, unless the zone profile
+# measured it from the ink).
+_LATIN_ONLY = (3, 6)
 _UNMEASURED_REASONS = {
     "imu": "Requires time-series data from the sensor pen.",
     "ocr": "Requires recognised text from the page.",
     "insufficient": "Needs at least three measurable word gaps.",
+    "script": "Reads English letters; not measured on this script.",
 }
 
 
@@ -793,6 +802,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             and not needs_ocr
             and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
         )
+        no_latin = (
+            n in _LATIN_ONLY
+            and not motion_only
+            and not needs_ocr
+            and not (n == 6 and zone_based)
+            and fx.get("latin_letters", 0) == 0
+        )
+        if no_latin:
+            score = 0.0
+            value = "Not measured"
+            evidence = (
+                "This measure reads English letters, and none were "
+                "recognised on this page."
+            )
         if few_gaps:
             score = 0.0
             value = "Not measured"
@@ -855,12 +878,25 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         missing_kind = (
             "imu"
             if motion_only
-            else "ocr" if needs_ocr else "insufficient" if few_gaps else None
+            else (
+                "ocr"
+                if needs_ocr
+                else (
+                    "insufficient"
+                    if few_gaps
+                    else "script" if no_latin else None
+                )
+            )
         )
         if motion_only:
             scoring_inputs = {"method": "sensor_required", "features": {}}
         elif needs_ocr:
             scoring_inputs = {"method": "recognition_required", "features": {}}
+        elif no_latin:
+            scoring_inputs = {
+                "method": "script_not_supported",
+                "features": {"latin_letters": 0},
+            }
         elif few_gaps:
             scoring_inputs = {
                 "method": "insufficient_data",

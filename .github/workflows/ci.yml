@@ -56,7 +56,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/line_recovery.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/line_recovery.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -82,6 +82,7 @@ jobs:
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
+            backend/tests/test_telugu_not_read.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_line_pieces.py \
             backend/tests/test_word_spacing.py \
@@ -89,7 +90,8 @@ jobs:
             backend/tests/test_image_formats.py \
             backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
-            backend/debug_store.py backend/tests/test_debug_store.py
+            backend/debug_store.py backend/tests/test_debug_store.py \
+            backend/access_api.py backend/tests/test_access_api.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -109,6 +111,7 @@ jobs:
             backend.tests.test_server_pipeline \
             backend.tests.test_regression_functional \
             backend.tests.test_handwriting_only \
+            backend.tests.test_telugu_not_read \
             backend.tests.test_layout_filter \
             backend.tests.test_photo_validity \
             backend.tests.test_factor_evidence \
@@ -125,7 +128,8 @@ jobs:
             backend.tests.test_image_formats \
             backend.tests.test_scanner_strings \
             backend.tests.test_daily_limit \
-            backend.tests.test_debug_store
+            backend.tests.test_debug_store \
+            backend.tests.test_access_api
 
   # Real handwriting, replayed: every page's kept reader output goes
   # through this PR's code and must give the scores in expected.json
@@ -168,7 +172,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && node tests/expected-text.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -192,6 +196,8 @@ jobs:
         run: npm run test:daily-limit
       - name: A page the server could not read asks for a retry, never a score
         run: npm run test:ocr-unavailable
+      - name: A Telugu page the reader could not read is refused, never scored
+        run: npm run test:handwriting-not-read
       - name: File and key errors have their own screens; notice pictures come only from the host
         run: npm run test:notice-art
       - name: Headless print/handwriting checks

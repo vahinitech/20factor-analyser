@@ -136,7 +136,9 @@
 #site-footer .foot a{color:rgba(238,238,238,.7); text-decoration:none; transition:color .15s;}
 #site-footer .foot a:hover{color:#fff;}
 #site-footer .wrap{max-width:var(--nv-maxw); margin:0 auto; padding:0 28px;}
-#site-footer .foot__grid{display:grid; grid-template-columns:1.6fr 1fr 1fr 1fr; gap:36px;}
+/* As many link columns as site.js sends (four, or five with "Who it's
+   for"): a fixed four-column grid pushed the fifth onto its own row. */
+#site-footer .foot__grid{display:grid; grid-template-columns:minmax(220px, 1.4fr) repeat(auto-fit, minmax(130px, 1fr)); gap:28px;}
 #site-footer .foot__brand b{font-family:var(--nv-serif); color:#fff; font-size:24px; display:flex; align-items:center; gap:10px;}
 #site-footer .foot__brand img{width:30px; height:30px; border-radius:50%;}
 #site-footer .foot__brand p{font-size:14px; line-height:1.6; margin-top:14px; max-width:280px; color:rgba(238,238,238,.55);}
