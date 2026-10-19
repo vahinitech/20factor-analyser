@@ -422,6 +422,16 @@
         "$ref": "common.schema.json#/definitions/coachingCard"
       }
     },
+    "sections": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "$ref": "common.schema.json#/definitions/sectionScore"
+      }
+    },
+    "comparability": {
+      "$ref": "common.schema.json#/definitions/comparability"
+    },
     "evidence": {
       "type": "object",
       "required": [
@@ -438,6 +448,20 @@
           "minimum": 1
         },
         "image_height": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "photo_width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "photo_height": {
           "type": [
             "integer",
             "null"
@@ -510,7 +534,10 @@
       "then": {
         "required": [
           "error"
-        ]
+        ],
+        "properties": {
+          "comparability": false
+        }
       },
       "else": {
         "properties": {
@@ -535,6 +562,7 @@
           "coaching": false,
           "evidence": false,
           "worksheets": false,
+          "sections": false,
           "factors": {
             "maxItems": 5,
             "items": {

@@ -945,6 +945,7 @@ def _report_python_process(
             ),
         }
 
+    photo = computer_vision.photo_size(raw)
     return {
         "ok": True,
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
@@ -968,6 +969,9 @@ def _report_python_process(
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
+        # The uploaded photo's own size, so version-2 reports can give
+        # factor marks in its pixels (comparison_data.factor_marks).
+        **dict(zip(("photo_w", "photo_h"), photo or ())),
         "document_context": vl.get("document_context", {}),
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),

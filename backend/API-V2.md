@@ -40,6 +40,8 @@ Responses contain:
 - `recognition`: recognized text; Pro also receives recognition metadata.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
+- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
+- `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, and `passage_aligned`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
 
 Each factor score includes the original 0–10 value, normalized 0–100 value, scale boundaries and band. A missing or invalid score is null, never substituted with zero. Status is `estimated`, `proxy`, `measured` (sensor-supplied) or `unavailable`. The image endpoint does not accept sensor measurements. Pressure, speed, stroke order and pen lifts explicitly disclose what a still image cannot measure.
 
@@ -151,7 +153,7 @@ Generic definitions are public educational content. They contain no customer sco
 | `text` | Free / Pro | Recognized text, line count and recognition metadata |
 | `inputs` | Pro | Actual per-factor evidence, score basis and numeric inputs |
 | `coaching` | Pro | Scan-specific coaching tips |
-| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only |
+| `evidence` | Free / Pro | Image dimensions and factor evidence regions, including previews cropped from the uploaded image. Free receives the regions of its five factors only. Each region also lists `marks` (boxes and lines where the factor was measured) in the uploaded photo's pixels, with that photo's `photo_width` and `photo_height`: [docs/19-comparison-data.md](../docs/19-comparison-data.md) |
 
 Combine values with commas, for example `?format=compact&include=text,inputs,coaching`. Request image evidence only when needed; it is the largest part of an expanded response. Unauthorized paid fields return 403 before inference. Compact scans without `evidence` skip crop-preview construction and base64 encoding. Evidence and basic scan cache entries are separate, so requesting evidence later can require another processing pass. This version does not provide a stored-report detail GET endpoint.
 
