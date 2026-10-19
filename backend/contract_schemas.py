@@ -31,6 +31,10 @@ NAMES = (
     "catalog",
     "error",
     "health",
+    "access-request",
+    "access-customer",
+    "access-key",
+    "access-key-lookup",
 )
 
 
