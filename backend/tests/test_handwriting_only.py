@@ -152,6 +152,11 @@ class TestHandwritingOnlyRule(unittest.TestCase):
         from fastapi.testclient import TestClient
 
         cls.client = TestClient(cls.mod.app)
+        # The stubbed collect_lines below is the whole reader's output, so
+        # nothing is read again where it found no line (line_recovery.py).
+        # Without this the recovery step would use whatever paddleocr
+        # module another test left loaded.
+        cls.mod._READ_REGION = None
         # recognizer is a sys.modules singleton shared across test modules:
         # restore the real collect_lines when this class finishes.
         cls.addClassCleanup(

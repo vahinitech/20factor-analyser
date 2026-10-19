@@ -474,25 +474,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # Rows under 3 words are skipped; the poly-based estimate below
     # remains the fallback so sparse pages behave exactly as before.
     kf = track_rows(rows)
+    # Word gaps inside each line, from its ink. Gaps between two OCR
+    # boxes on one row are not measured: after detector.join_row_pieces
+    # the only boxes left side by side are further apart than any word
+    # gap (a column, or words the reader never found), and one such
+    # "gap" of seven line heights scored Word Spacing 0 on four of the
+    # UJI test pages. Without ink gaps a page read as one box per line
+    # had none at all, and _cv([]) == 0 scored a perfect 10.
     word_gaps = []
-    for r in rows:
-        items = r.get("items", [])
-        if len(items) < 2:
-            continue
-        row_h = mean(
-            [
-                float(max(1.0, (it.get("box") or [0, 0, 0, 0])[3]))
-                for it in items
-            ]
-        )
-        for i in range(len(items) - 1):
-            b1 = items[i].get("box") or [0, 0, 0, 0]
-            b2 = items[i + 1].get("box") or [0, 0, 0, 0]
-            gap = float(b2[0] - (b1[0] + b1[2]))
-            word_gaps.append(max(0.0, gap) / max(1.0, row_h))
-    # Gaps inside each OCR line, from ink. Without them a page read as
-    # one box per line had no gaps at all, and _cv([]) == 0 scored Word
-    # Spacing a perfect 10 whatever the spacing.
     for l in lines:
         line_gaps = computer_vision.line_word_gaps(arr, l)
         if line_gaps:

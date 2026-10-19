@@ -10,8 +10,10 @@
 # computed; it only decides which regions are worth keeping and whether a
 # region looks like printed text versus handwriting.
 
+import difflib
 import hashlib
 import re
+import unicodedata
 
 import numpy as np
 from PIL import Image, ImageOps, ImageFilter
@@ -154,7 +156,72 @@ def looks_printed(text: str, score: float, box=None) -> bool:
     )
 
 
+def _letters(s: str) -> str:
+    """The letters and digits of a reading, in any script: Telugu letters
+    and their vowel signs (combining marks) count as well as a to z. A to
+    z only made every Telugu reading empty, so two readings of one Telugu
+    line never matched."""
+    return "".join(
+        ch
+        for ch in (s or "").lower()
+        if ch.isalnum() or unicodedata.category(ch).startswith("M")
+    )
+
+
+def letters_of(s: str) -> str:
+    """The letters of a reading, any script, without digits or signs:
+    what makes a recovered word a word and not a smudge read as "22"."""
+    return "".join(ch for ch in _letters(s) if not ch.isdigit())
+
+
+def _text_similarity(a: str, b: str) -> float:
+    a, b = _letters(a), _letters(b)
+    if not a or not b:
+        return 0.0
+    return difflib.SequenceMatcher(None, a, b).ratio()
+
+
+def _text_within(a: str, b: str) -> bool:
+    """One reading is a word or words of the other ("day" inside "every
+    day"): a piece read again inside its whole line."""
+    a, b = _letters(a), _letters(b)
+    return bool(a and b) and (a in b or b in a)
+
+
+def _containment(box1, box2):
+    """Share of the smaller box that lies inside the other."""
+    x1, y1, w1, h1 = box1
+    x2, y2, w2, h2 = box2
+    ix = max(0.0, min(x1 + w1, x2 + w2) - max(x1, x2))
+    iy = max(0.0, min(y1 + h1, y2 + h2) - max(y1, y2))
+    small = min(w1 * h1, w2 * h2)
+    return (ix * iy) / small if small > 0 else 0.0
+
+
+def overlap_share(box, other):
+    """Share of box's area that lies inside other."""
+    x1, y1, w1, h1 = box
+    x2, y2, w2, h2 = other
+    ix = max(0.0, min(x1 + w1, x2 + w2) - max(x1, x2))
+    iy = max(0.0, min(y1 + h1, y2 + h2) - max(y1, y2))
+    return (ix * iy) / (w1 * h1) if w1 * h1 > 0 else 0.0
+
+
+# Two readings of one place on the page. The image variants each read the
+# page, and a line read twice used to survive whenever the two readings
+# differed by a letter ("seeta" and "seetha"), so it was scored twice.
+# Boxes overlapping by more than half are one line whatever they say;
+# a box mostly inside another is the same line when the texts agree or
+# one text is part of the other.
+DUP_IOU = 0.50
+DUP_CONTAINED = 0.80
+DUP_TEXT = 0.60
+
+
 def merge_lines(lines):
+    """Drop repeated readings of the same line, keeping the most confident
+    one (see DUP_IOU). A whole line replaces a piece of it read on its own
+    (the piece's box inside the line's, its text part of the line's)."""
     kept = []
     for line in sorted(
         lines, key=lambda l: float(l.get("score", 0.0)), reverse=True
@@ -163,15 +230,200 @@ def merge_lines(lines):
         if not text:
             continue
         is_dup = False
-        for k in kept:
-            if _iou(line["box"], k["box"]) > 0.50:
-                if text == _normalize_text(k.get("text", "")):
-                    is_dup = True
-                    break
+        for i, k in enumerate(kept):
+            k_text = k.get("text", "")
+            same = _iou(line["box"], k["box"]) > DUP_IOU
+            inside = _containment(line["box"], k["box"]) >= DUP_CONTAINED
+            within = _text_within(text, k_text)
+            if not (
+                same
+                or inside
+                and (within or _text_similarity(text, k_text) >= DUP_TEXT)
+            ):
+                continue
+            if within and _area(line["box"]) > _area(k["box"]):
+                kept[i] = line
+            is_dup = True
+            break
         if not is_dup:
             kept.append(line)
-    kept.sort(key=lambda l: (l["box"][1], l["box"][0]))
-    return kept
+    # A line that replaced a piece can hold other pieces kept before it.
+    out = []
+    for line in kept:
+        if any(
+            other is not line
+            and _area(other["box"]) > _area(line["box"])
+            and _containment(line["box"], other["box"]) >= DUP_CONTAINED
+            and _text_within(line.get("text", ""), other.get("text", ""))
+            for other in kept
+        ):
+            continue
+        out.append(line)
+    out.sort(key=lambda l: (l["box"][1], l["box"][0]))
+    return out
+
+
+def _area(box):
+    return float(box[2]) * float(box[3])
+
+
+# Pieces of one written line. The detector splits a line where letters
+# or words stand far apart, and a line read in three pieces was scored as
+# three short lines: three slopes, three left edges, and the gaps between
+# the pieces counted beside word gaps. Rows are anchored on the widest
+# pieces: a piece joins a row when it overlaps the row's anchor in height
+# by ROW_OVERLAP of the shorter one, their middles are within ROW_MIDDLE
+# of the taller one's height, and it overlaps no piece of the row left to
+# right by more than ROW_SIDE_OVERLAP of the narrower one. A row is then
+# cut where two neighbours are more than ROW_MAX_GAP of the page's typical
+# line height apart (two columns stay apart).
+ROW_OVERLAP = 0.60
+ROW_MIDDLE = 0.35
+ROW_SIDE_OVERLAP = 0.50
+ROW_MAX_GAP = 4.0
+
+
+def _fits_row(piece, anchor):
+    """How far apart the middles of a piece and a row's anchor are, or
+    None when the piece is not on that row (see ROW_OVERLAP)."""
+    _ax, ay, aw, ah = [float(v) for v in anchor["box"][:4]]
+    _bx, by, bw, bh = [float(v) for v in piece["box"][:4]]
+    if min(ah, bh) <= 0 or min(aw, bw) <= 0:
+        return None
+    over_y = min(ay + ah, by + bh) - max(ay, by)
+    if over_y < ROW_OVERLAP * min(ah, bh):
+        return None
+    off = abs((ay + ah / 2) - (by + bh / 2))
+    if off > ROW_MIDDLE * max(ah, bh):
+        return None
+    return off
+
+
+def _side_overlap(a, b):
+    ax, _ay, aw, _ah = [float(v) for v in a["box"][:4]]
+    bx, _by, bw, _bh = [float(v) for v in b["box"][:4]]
+    over_x = min(ax + aw, bx + bw) - max(ax, bx)
+    return over_x > ROW_SIDE_OVERLAP * min(aw, bw)
+
+
+def outline(points):
+    """Four corners, top-left, top-right, bottom-right, bottom-left, of
+    the smallest rotated rectangle around the points (the shape the
+    reader gives a line)."""
+    pts = np.ascontiguousarray(points, dtype=np.float32).reshape(-1, 2)
+    if cv2 is not None and len(pts) >= 3:
+        corners = cv2.boxPoints(cv2.minAreaRect(pts))
+    else:
+        x0, y0 = pts.min(axis=0)
+        x1, y1 = pts.max(axis=0)
+        corners = np.array([[x0, y0], [x1, y0], [x1, y1], [x0, y1]])
+    by_x = sorted(corners.tolist(), key=lambda p: (p[0], p[1]))
+    left = sorted(by_x[:2], key=lambda p: p[1])
+    right = sorted(by_x[2:], key=lambda p: p[1])
+    return [
+        [float(v) for v in left[0]],
+        [float(v) for v in right[0]],
+        [float(v) for v in right[1]],
+        [float(v) for v in left[1]],
+    ]
+
+
+# A joined line keeps to its widest piece's height, give or take this
+# share of it: one piece whose box reaches into the next line (a long
+# tail, a second line caught in a crop) must not make the line two lines
+# tall.
+JOIN_REACH = 0.25
+
+
+def _join(pieces):
+    pieces = sorted(pieces, key=lambda l: float(l["box"][0]))
+    anchor = max(pieces, key=lambda l: float(l["box"][2]))
+    ay, ah = float(anchor["box"][1]), float(anchor["box"][3])
+    top = min(float(p["box"][1]) for p in pieces)
+    bottom = max(float(p["box"][1]) + float(p["box"][3]) for p in pieces)
+    y0 = max(top, ay - JOIN_REACH * ah)
+    y1 = min(bottom, ay + ah + JOIN_REACH * ah)
+    texts = [str(p.get("text", "") or "").strip() for p in pieces]
+    weights = [max(1, len(t)) for t in texts]
+    points = []
+    for p in pieces:
+        poly = p.get("poly") or []
+        if len(poly) < 3:
+            x, y, w, h = [float(v) for v in p["box"][:4]]
+            poly = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]]
+        points.extend(
+            [[float(px), min(y1, max(y0, float(py)))] for px, py in poly]
+        )
+    x0 = min(float(p["box"][0]) for p in pieces)
+    x1 = max(float(p["box"][0]) + float(p["box"][2]) for p in pieces)
+    line = dict(anchor)
+    line.update(
+        {
+            "text": " ".join(t for t in texts if t),
+            "box": [x0, y0, x1 - x0, y1 - y0],
+            "poly": outline(points),
+            "score": float(
+                sum(
+                    float(p.get("score", 0.0) or 0.0) * w
+                    for p, w in zip(pieces, weights)
+                )
+                / sum(weights)
+            ),
+            "joined_pieces": len(pieces),
+        }
+    )
+    if any("text_as_read" in p for p in pieces):
+        line["text_as_read"] = " ".join(
+            str(p.get("text_as_read", p.get("text", "")) or "").strip()
+            for p in pieces
+        )
+    return line
+
+
+def join_row_pieces(lines):
+    """Join the pieces of each written line into one line (see
+    ROW_OVERLAP), left to right; lines that need no join are returned
+    unchanged, in reading order."""
+    rows = []  # [anchor, members]
+    for piece in sorted(
+        lines, key=lambda l: (-float(l["box"][2]), float(l["box"][1]))
+    ):
+        best_off, best_row = 0.0, None
+        reread = False
+        for row in rows:
+            off = _fits_row(piece, row[0])
+            if off is None:
+                continue
+            if any(_side_overlap(piece, m) for m in row[1]):
+                # Over ink the row already holds: a second reading of it
+                # (another image variant, or line_recovery.py), not a
+                # piece of the line. Pieces come widest first, so the
+                # fuller reading stays.
+                reread = True
+                continue
+            if best_row is None or off < best_off:
+                best_off, best_row = off, row
+        if best_row is not None:
+            best_row[1].append(piece)
+        elif not reread:
+            rows.append([piece, [piece]])
+    line_h = float(np.median([float(r[0]["box"][3]) for r in rows] or [0]))
+    out = []
+    for _anchor, members in rows:
+        members.sort(key=lambda l: float(l["box"][0]))
+        run = [members[0]]
+        for m in members[1:]:
+            prev_end = max(
+                float(p["box"][0]) + float(p["box"][2]) for p in run
+            )
+            if float(m["box"][0]) - prev_end > ROW_MAX_GAP * line_h:
+                out.append(run)
+                run = []
+            run.append(m)
+        out.append(run)
+    out = [r[0] if len(r) == 1 else _join(r) for r in out]
+    out.sort(key=lambda l: (float(l["box"][1]), float(l["box"][0])))
+    return out
 
 
 def region_filter_lines(lines, arr_shape):
@@ -201,11 +453,15 @@ def region_filter_lines(lines, arr_shape):
         if len(t) <= 3 and sc < 0.65 and area_ratio < 0.0015:
             continue
 
-        # Drop extreme-width header/footer lines that are likely printed metadata.
+        # Drop extreme-width header/footer lines that look printed. A
+        # confident reading alone is not enough: the first handwritten
+        # line of a page photographed close sits in the top 14% too, and
+        # was dropped on most pages of the UJI test set. classify.py
+        # still removes printed lines the text check misses.
         if (
             (y_ratio < 0.14 or y_ratio > 0.90)
             and aspect > 8.0
-            and (bool(l.get("printed_hint")) or sc > 0.75)
+            and bool(l.get("printed_hint"))
         ):
             continue
 
