@@ -210,7 +210,7 @@ def recover_lines(arr, lines, read, lang="en"):
             text = str(word.get("text") or "").strip()
             score = float(word.get("score") or 0.0)
             poly = [[px + x0, py + y0] for px, py in word.get("poly") or []]
-            letters = sum(1 for ch in text if ch.isalpha())
+            letters = len(detector.letters_of(text))
             if score < MIN_SCORE or letters < MIN_LETTERS:
                 continue
             if word.get("whole_crop"):

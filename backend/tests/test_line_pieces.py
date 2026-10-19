@@ -102,6 +102,33 @@ class TestRepeatedReadings(unittest.TestCase):
         self.assertEqual(len(out), 2)
 
 
+class TestTeluguReadings(unittest.TestCase):
+    """The same rules for Telugu: the text checks used to keep a to z
+    only, so every Telugu reading compared as empty."""
+
+    def test_a_telugu_word_read_alone_gives_way_to_its_line(self):
+        whole = line(
+            "పంపిన తీసామన్నారు హైపోథాల్మస్", [70, 300, 1100, 110], 0.8
+        )
+        piece = line("హైపోథాల్మస్", [800, 310, 360, 95], 0.9)
+        out = detector.merge_lines([piece, whole])
+        self.assertEqual([l["text"] for l in out], [whole["text"]])
+
+    def test_two_readings_differing_by_a_vowel_sign_are_one_line(self):
+        # The second box lies inside the first but overlaps it by less
+        # than half, so only the text says they are the same line.
+        a = line("వెలుతురు అబోహర్ చోరి", [60, 100, 1300, 160], 0.81)
+        b = line("వెలుతురు అబొహర్ చోరి", [70, 130, 700, 110], 0.86)
+        out = detector.merge_lines([a, b])
+        self.assertEqual(len(out), 1)
+
+    def test_letters_of_any_script(self):
+        self.assertEqual(detector.letters_of("22"), "")
+        self.assertEqual(detector.letters_of("-."), "")
+        self.assertEqual(len(detector.letters_of("కి")), 2)
+        self.assertEqual(detector.letters_of("Day 2"), "day")
+
+
 class TestFirstLine(unittest.TestCase):
     def test_a_handwritten_first_line_near_the_top_is_kept(self):
         # A wide, confident line in the top 14% was dropped as a header on
