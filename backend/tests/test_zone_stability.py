@@ -119,7 +119,7 @@ class SameWriterSpreadTests(unittest.TestCase):
         # order, one writer's two versions of each letter picked at
         # random. Before the fix this writer's factor 6 moved by 8.0
         # points between such pages (8.3 against 0.0); the UJI run moved
-        # by up to 9.1 (docs/17-comparison-data.md).
+        # by up to 9.1 (docs/19-comparison-data.md).
         chars = set("".join(planted.SENTENCES).replace(" ", ""))
         letters = {
             ch: [_zigzag(ch, 0.0, 2.4), _zigzag(ch, 0.15, 2.4)] for ch in chars

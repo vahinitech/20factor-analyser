@@ -101,7 +101,7 @@ Before 2026-10-15 a line's reach was its single tallest and deepest
 letter, and the x-height was the longest dense band in the crop. Two
 pages of the same passage by the same writer then moved factor 6 by up
 to 9.1 points (90th percentile 5.31) on the planted UJI pages; now 4.6
-(0.6). docs/17-comparison-data.md has the run.
+(0.6). docs/19-comparison-data.md has the run.
 
 - Full credit within ±0.35 of 2.0; zero credit at an error of 1.0 or
   more; up to 2 points off when reach varies line to line.
