@@ -73,6 +73,6 @@
       ]
     }
   },
-  "title": "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, 503)",
-  "description": "FastAPI's HTTPException shape. 401 invalid or revoked credential, 403 paid include= fields requested by Free, 404 unknown catalogue version, 413 upload too large, 422 unsupported include field or invalid form/query, 429 the free tier's daily checks for this connection are used (a Pro key is never limited; Retry-After gives the seconds to midnight, India time), 503 subscription service not configured or unavailable. Analysis failures are not HTTP errors: they return 200 with ok:false and an error block in the report schema."
+  "title": "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, 503) and /internal/access/v1/* (401, 404, 422, 503)",
+  "description": "FastAPI's HTTPException shape. 401 invalid or revoked credential, 403 paid include= fields requested by Free, 404 unknown catalogue version, 413 upload too large, 422 unsupported include field or invalid form/query, 429 the free tier's daily checks for this connection are used (a Pro key is never limited; Retry-After gives the seconds to midnight, India time), 503 subscription service not configured or unavailable. Analysis failures are not HTTP errors: they return 200 with ok:false and an error block in the report schema. The internal access API answers 404 Not Found when it is switched off or the request came through a proxy, 401 for a wrong token, 404 for an unknown customer, key id or secret, 422 for a body it refuses (unknown field, wrong type, Pro without an expiry) and 503 when the ledger is not configured or unavailable."
 }

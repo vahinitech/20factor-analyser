@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/access-key-lookup.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "key_id",
+    "customer_id",
+    "revoked",
+    "created_at",
+    "access"
+  ],
+  "properties": {
+    "key_id": {
+      "$ref": "access-customer.schema.json#/definitions/keyId"
+    },
+    "customer_id": {
+      "$ref": "access-customer.schema.json#/definitions/customerId"
+    },
+    "revoked": {
+      "type": "boolean"
+    },
+    "created_at": {
+      "$ref": "access-customer.schema.json#/definitions/expiry"
+    },
+    "access": {
+      "oneOf": [
+        {
+          "$ref": "access-customer.schema.json#/definitions/effective"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "null for a revoked key, which is refused."
+    }
+  },
+  "title": "Internal access API key lookup: POST /keys/lookup",
+  "description": "Which key and customer a secret belongs to. An unknown secret is 404. Never echoes the secret.",
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "revoked": {
+            "const": true
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "access": {
+            "type": "null"
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "access": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  ]
+}
