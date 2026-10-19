@@ -53,6 +53,7 @@ import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
+import access_api  # internal ledger API, off unless provisioned
 import report_contract
 import compact_reports
 import practice_catalog
@@ -96,17 +97,25 @@ app.add_middleware(UploadBodyLimit)
 async def private_api_responses(request, call_next):
     """Personal reports and subscription responses must not enter HTTP caches."""
     response = await call_next(request)
+    path = request.url.path
     if (
-        request.url.path.startswith("/api/v2/")
-        and not request.url.path.startswith("/api/v2/catalog/")
-    ) or request.url.path in (
-        "/report-python",
-        "/analyze-vl",
+        (
+            path.startswith("/api/v2/")
+            and not path.startswith("/api/v2/catalog/")
+        )
+        or path.startswith("/internal/")
+        or path
+        in (
+            "/report-python",
+            "/analyze-vl",
+        )
     ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Vary"] = "Authorization"
     return response
 
+
+access_api.install(app)
 
 # Every VAHINI_OCR_* env var is parsed once in config.py; these module-level
 # names are thin aliases so the rest of this file (and the tests, which
@@ -371,6 +380,36 @@ def _no_handwriting_payload(engine, lang, lines, extra=None):
     return payload
 
 
+# A page asked for in Telugu that the reader did not manage: mostly Latin
+# letters, or an unsure reading (recognizer.telugu_not_read). The geometry
+# could still be measured, but a report built on lines the reader invented
+# is not a report on this child's writing, so the scan is refused. Like
+# no_handwriting it is never cached and never counts as a free check.
+HANDWRITING_NOT_READ_DETAIL = (
+    "The analyser could not read the writing on this page. It reads "
+    "English handwriting; it cannot yet read handwritten Telugu, so this "
+    "page was not scored."
+)
+
+
+def _handwriting_not_read_payload(engine, lang, counts, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "handwriting_not_read",
+        "error": HANDWRITING_NOT_READ_DETAIL,
+        **counts,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -394,6 +433,9 @@ def _ocr_process(arr, raw, lang):
             # Text was detected but every line is printed: refuse rather
             # than return machine type as "recognised handwriting".
             return _no_handwriting_payload("pp-ocrv5", lang, lines)
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload("pp-ocrv5", lang, not_read)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -529,6 +571,20 @@ def _analyze_vl_process(arr, raw, lang):
             # No OCR engine could read the page: refuse, never score CV
             # regions in its place (see OCR_UNAVAILABLE_DETAIL).
             return _ocr_unavailable_payload("pp-ocrv5+vl")
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload(
+                "pp-ocrv5+vl",
+                lang,
+                not_read,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The layout/context/factor-region
             # analysis is pure CV, so use OCR-free line detection; the same
@@ -688,6 +744,21 @@ def _report_python_process(
             # No OCR engine could read the page: refuse, never score CV
             # regions in its place (see OCR_UNAVAILABLE_DETAIL).
             return _ocr_unavailable_payload("pp-ocrv5+python-report")
+        not_read = recognizer.telugu_not_read(lang, hand_lines)
+        if not_read:
+            return _handwriting_not_read_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                not_read,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The 20 factors are measured from
             # GEOMETRY, so score OCR-free CV line regions; recognition is

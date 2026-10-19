@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/access-request.schema.json",
+  "title": "Internal access API request bodies",
+  "description": "One of the three request bodies of /internal/access/v1. Validate a body against its own definition in access-customer.schema.json (grant, subscription, keyLookup); this file accepts any of them. Bodies are closed: an unknown field is refused with 422. POST /customers/{id}/keys and POST /keys/{key_id}/revoke take no body.",
+  "oneOf": [
+    {
+      "$ref": "access-customer.schema.json#/definitions/grant"
+    },
+    {
+      "$ref": "access-customer.schema.json#/definitions/subscription"
+    },
+    {
+      "$ref": "access-customer.schema.json#/definitions/keyLookup"
+    }
+  ]
+}
