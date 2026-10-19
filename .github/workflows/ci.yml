@@ -80,8 +80,10 @@ jobs:
             backend/tests/test_server_pipeline.py \
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
+            backend/tests/test_telugu_not_read.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_image_formats.py \
+            backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
             backend/debug_store.py backend/tests/test_debug_store.py
       - name: Verify immutable report dictionary
@@ -103,6 +105,7 @@ jobs:
             backend.tests.test_server_pipeline \
             backend.tests.test_regression_functional \
             backend.tests.test_handwriting_only \
+            backend.tests.test_telugu_not_read \
             backend.tests.test_layout_filter \
             backend.tests.test_photo_validity \
             backend.tests.test_factor_evidence \
@@ -114,6 +117,7 @@ jobs:
             backend.tests.test_letter_boxes \
             backend.tests.test_api_concurrency \
             backend.tests.test_image_formats \
+            backend.tests.test_scanner_strings \
             backend.tests.test_daily_limit \
             backend.tests.test_debug_store
 
@@ -135,7 +139,7 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && python3 scripts/changelog.py --check
+        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && node tests/expected-text.test.mjs && python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -159,6 +163,8 @@ jobs:
         run: npm run test:daily-limit
       - name: A page the server could not read asks for a retry, never a score
         run: npm run test:ocr-unavailable
+      - name: A Telugu page the reader could not read is refused, never scored
+        run: npm run test:handwriting-not-read
       - name: File and key errors have their own screens; notice pictures come only from the host
         run: npm run test:notice-art
       - name: Headless print/handwriting checks
@@ -167,6 +173,8 @@ jobs:
         run: npm run test:practice
       - name: Print in Telugu and Share on WhatsApp
         run: npm run test:language
+      - name: The print popup's optional price question and the Request Pro card
+        run: npm run test:print-popup
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.
