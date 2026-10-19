@@ -7,6 +7,12 @@ fake upload held a PHP open tag joined to a shell call (signature
 php.generic.globals.503). Test payloads are built from parts at run time;
 this test keeps it that way.
 
+Python folds "a" + "b" into one constant when it compiles a file, so on
+2026-10-19 the scan found the joined payload in a cached .pyc although the
+source held only the parts. Payloads are joined with b"".join(...), which the
+compiler leaves alone, and every tracked .py is compiled here and its
+constants checked the same way.
+
 Built-in patterns run everywhere. Where maldet's signature file is readable,
 every literal hex signature in it is checked too, so the test sees what the
 scanner sees. VAHINI_MALDET_SIGS points at another hex.dat; "none" skips it.
@@ -14,13 +20,15 @@ scanner sees. VAHINI_MALDET_SIGS points at another hex.dat; "none" skips it.
 
 import os
 import re
+import types
 import subprocess
 import unittest
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
-# Every pattern is assembled from parts, so this file passes itself.
-OPEN = b"<" + b"?php"
+# Every pattern is assembled from parts at run time, so this file and its
+# compiled form pass themselves.
+OPEN = b"".join((b"<", b"?php"))
 CALLS = (
     b"system|eval|exec|passthru|shell_exec|popen|proc_open|assert"
     b"|base64_decode"
@@ -32,7 +40,9 @@ BUILT_IN = (
     ),
     (
         "EICAR test string",
-        re.compile(b"EICAR-" + b"STANDARD-ANTIVIRUS-" + b"TEST-FILE"),
+        re.compile(
+            b"".join((b"EICAR-", b"STANDARD-ANTIVIRUS-", b"TEST-FILE"))
+        ),
     ),
 )
 SHELL_NAMES = re.compile(
@@ -79,6 +89,33 @@ def find_hits(rel, data, maldet):
     return hits
 
 
+def constants(code):
+    """Every str and bytes constant in a code object, nested ones included."""
+    for value in code.co_consts:
+        if isinstance(value, types.CodeType):
+            yield from constants(value)
+        elif isinstance(value, (tuple, frozenset)):
+            for item in value:
+                if isinstance(item, (str, bytes)):
+                    yield item
+        elif isinstance(value, (str, bytes)):
+            yield value
+
+
+def compiled_hits(rel, source, maldet):
+    """Reasons a scanner would flag this file's .pyc, or an empty list."""
+    try:
+        code = compile(source, rel, "exec", dont_inherit=True)
+    except SyntaxError:
+        return []
+    hits = []
+    for value in constants(code):
+        if isinstance(value, str):
+            value = value.encode("utf-8", "surrogatepass")
+        hits += [h for h in find_hits("a.py", value, maldet) if h not in hits]
+    return hits
+
+
 class ScannerStringsTest(unittest.TestCase):
     """Tracked files and names stay clear of malware signatures."""
 
@@ -90,6 +127,31 @@ class ScannerStringsTest(unittest.TestCase):
         self.assertEqual(find_hits("a.py", split, []), [])
         self.assertTrue(find_hits("frontend/shell.php", b"ok", []))
         self.assertEqual(find_hits("backend/shell_check.py", b"ok", []), [])
+
+    def test_the_checker_catches_a_folded_literal(self):
+        quote = b'"'
+        folded = b"".join(
+            (
+                b"x = b",
+                quote,
+                OPEN,
+                b" ",
+                quote,
+                b" + b",
+                quote,
+                b"system($_GET[0]); ?>",
+                quote,
+                b"\n",
+            )
+        )
+        self.assertEqual(find_hits("a.py", folded, []), [])
+        self.assertTrue(compiled_hits("a.py", folded, []))
+        unfolded = (
+            folded.replace(b"x = b", b"x = b''.join((b")
+            .replace(b" + b", b", b")
+            .replace(b"\n", b"))\n")
+        )
+        self.assertEqual(compiled_hits("a.py", unfolded, []), [])
 
     def test_maldet_signatures_load_when_present(self):
         maldet = load_maldet()
@@ -113,14 +175,19 @@ class ScannerStringsTest(unittest.TestCase):
             if os.path.islink(path) or not os.path.isfile(path):
                 continue
             with open(path, "rb") as handle:
-                hits = find_hits(rel, handle.read(), maldet)
+                data = handle.read()
+            hits = find_hits(rel, data, maldet)
+            if rel.endswith(".py"):
+                hits += [
+                    "compiled " + h for h in compiled_hits(rel, data, maldet)
+                ]
             if hits:
                 bad.append(f"{rel}: {', '.join(hits)}")
         self.assertEqual(
             bad,
             [],
             "these files would be flagged as malware; build the payload "
-            "from parts at run time (CLAUDE.md)",
+            'from parts at run time with b"".join, not + (CLAUDE.md)',
         )
 
 
