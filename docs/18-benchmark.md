@@ -171,9 +171,45 @@ Read with `lang=te` and the Telugu recogniser, as production is set up:
   degrees and a line planted sinking 4 degrees stands out on 5 of 20
   pages.
 
-The next step is Telugu geometry from the ink: rows as above, a baseline
-fitted to the letter bodies rather than to the lowest ink, and Size and
-Word Spacing measured against Telugu's own bands, each judged on these
-pages and their planted copies (`tilted_line`, `wide_gap`) before any
-Telugu score is shown.
+### Measured from the ink (`ink_geometry.py`)
 
+Telugu geometry no longer depends on the reader. When a check asks for a
+language named in `VAHINI_INK_GEOMETRY_LANGS` (empty by default; the
+website says Telugu scoring is in development), the server finds the
+rows from the ink, still refuses printed pages, reads nothing, and
+measures from the ink:
+
+- **Rows.** The page's letter-sized ink blobs, counted row by row, give
+  the row middles; every blob goes to the nearest one, so a consonant
+  written below the line stays with its row and a sinking line stays one
+  row. Rows found: **59 of 59 pages, every line** (20 clean, 20 with a
+  sinking last line, 19 with a wide gap), against 7 of 80 lines read by
+  PP-OCRv5.
+- **Baseline**, through the bottoms of the row's letters, leaving out
+  the strokes that sit wholly below the row's middle (vottulu, written
+  apart in Telugu). On clean pages the median row slope is 0.8 degrees,
+  with 0.6 rows a page at 2 degrees or more (English letter level: 0.5);
+  part of that is real, as these pages place each word from its own
+  scan. A last line sinking 4 degrees measures 3.3 and is the steepest
+  row, over 2 degrees, on **14 of 20** pages (English: 18 of 20).
+- **Size** compares the median height of every five letters: one letter
+  alone varies with its shape (a top mark joined or not), so groups of
+  five. Clean pages: median spread 0.16, a Size score near 7.4. The set
+  has no planted size mistake, so how well this catches one is not yet
+  measured.
+- **Word Spacing** needs to know where words end. Some writers space the
+  letters of a word as widely as their words (gaps of 30 to 57 pixels
+  inside words, 44 to 60 between them, on one page), and the ink cannot
+  tell them apart. With the passage the child copied (one line per row),
+  the widest gaps of each row are its word gaps, as for English: the
+  planted wide gap is the widest on **6 of 6** pages where it is real
+  (13 planted gaps fell at a line's end, with no word after). Without a
+  passage, word gaps are set only when the page's gaps fall into two
+  clear groups, and Word Spacing is "Not measured" otherwise.
+- Factors that need the words read (Letter Formation, Legibility,
+  Character Distinction, loops and letter zones) stay "Not measured".
+
+`scripts/ink_geometry_eval.py <pages folder>` gives these numbers from
+the page maker's folder (`--known-words` for the passage case), and the
+private sets `telugu-ink` and `telugu-ink-passage` keep every page's
+scores for `benchmark.py check --root`.

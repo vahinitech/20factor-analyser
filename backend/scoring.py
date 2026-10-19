@@ -24,6 +24,7 @@ from baseline_track import track_rows
 import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
+import ink_geometry
 
 try:
     import cv2
@@ -534,7 +535,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
     ]
     size_by_words = len(word_xh) >= 3
 
-    return {
+    fx = {
         "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
         "size_basis": "words" if size_by_words else "lines",
         "size_count": len(word_xh) if size_by_words else n_lines,
@@ -570,6 +571,37 @@ def _extract_features(arr: np.ndarray, lines, layout):
             layout.get("layout_complexity", 0.0) or 0.0
         ),
     }
+    if lines and all(l.get("ink_row") for l in lines):
+        fx.update(_ink_features(arr, lines))
+    return fx
+
+
+def _ink_features(arr, lines):
+    """Size, line angle and word gaps for rows found from the ink
+    (ink_geometry.py): the reader drew no box, so angles come from each
+    row's fitted baseline and sizes from its letters."""
+    ink = ink_geometry.page_features(arr, lines)
+    out = {
+        "line_slope_abs": mean(ink["angles"]),
+        "line_slope_std": _std(ink["angles"]),
+        "line_slope_signed_med": (
+            float(np.median(ink["signed"])) if ink["signed"] else 0.0
+        ),
+        "baseline_rows_tracked": 0,
+        "baseline_wave_med": None,
+        "word_gap_cv": _cv(ink["gaps"]),
+        "word_gap_count": len(ink["gaps"]),
+        "n_words": ink["words"],
+    }
+    if len(ink["bodies"]) >= 3:
+        out.update(
+            {
+                "size_cv": _cv(ink["bodies"]),
+                "size_basis": "letter groups",
+                "size_count": len(ink["bodies"]),
+            }
+        )
+    return out
 
 
 _MIN_WORD_GAPS = 3
@@ -592,7 +624,9 @@ def _score_factor_map(fx):
     s[4] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.8)) * 10.0)
     # Word x-heights vary less than line boxes did, so their full scale is
     # 0.60 (a clean planted page scores about 7.8, as line boxes did).
-    size_scale = 0.60 if fx.get("size_basis") == "words" else 0.65
+    size_scale = (
+        0.60 if fx.get("size_basis") in ("words", "letter groups") else 0.65
+    )
     s[5] = _clamp10(
         (1.0 - min(1.0, fx.get("size_cv", fx["height_cv"]) / size_scale))
         * 10.0
@@ -672,6 +706,13 @@ _NEEDS_RECOGNITION = frozenset(
 )
 
 
+# Measured from rows found in the ink (ink_geometry.py) although nothing
+# was read: line angle from each row's fitted baseline (7, 11, 12, 17),
+# word gaps when the passage gives each row's words (8), and the blend of
+# them with size and margins (20).
+_INK_MEASURED = frozenset((7, 8, 11, 12, 17, 20))
+
+
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
@@ -736,8 +777,8 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         3: f"{fx['n_chars']} letters",
         4: f"{fx['n_lines']} lines",
         5: (
-            f"{fx['size_count']} words"
-            if fx.get("size_basis") == "words"
+            f"{fx['size_count']} {fx['size_basis']}"
+            if fx.get("size_basis") in ("words", "letter groups")
             else f"{fx['n_lines']} lines"
         ),
         6: f"{fx['n_chars']} letters",
@@ -763,6 +804,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # 0.0 for letter formation and a perfect 10.0 for line angle that the
     # page never produced, so they are reported as not measured instead.
     cv_only = all(bool(l.get("cv_fallback")) for l in lines)
+    ink_only = bool(lines) and all(bool(l.get("ink_row")) for l in lines)
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -787,6 +829,7 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             and not motion_only
             and n in _NEEDS_RECOGNITION
             and not (n == 6 and zone_based)
+            and not (ink_only and n in _INK_MEASURED)
         )
         few_gaps = (
             n == 8
