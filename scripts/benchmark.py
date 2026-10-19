@@ -14,6 +14,7 @@ it through the current code:
     python scripts/benchmark.py capture          # analyser image: read again
     python scripts/benchmark.py live             # analyser image: compare
     python scripts/benchmark.py planted [--update]  # planted mistakes
+    python scripts/benchmark.py factors [--update]  # each factor's own
 
 check fails when any score, line or text differs from expected.json, and
 prints a table of what moved. Accepting a change is running update and
@@ -590,6 +591,50 @@ def cmd_planted(args):
     return 1 if (problems or changed) else 0
 
 
+def cmd_factors(args):
+    """Every factor against a mistake planted for it (scripts/
+    factor_tests.py): how often each catches its mistake may not fall
+    below benchmarks/factors/expected.json."""
+    spec = importlib.util.spec_from_file_location(
+        "factor_tests", os.path.join(ROOT, "scripts", "factor_tests.py")
+    )
+    ft = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ft)
+    kinds = list(ft.TARGETS)
+    with contextlib.redirect_stderr(io.StringIO()):
+        rows = ft.run(args.uji, kinds, False)
+    now = {
+        kind: {n: t.get("caught") for n, t in v["targets"].items()}
+        for kind, v in ft.summarise(rows).items()
+    }
+    path = os.path.join(SETS[0], "factors", "expected.json")
+    if args.update:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        _dump(path, now)
+        return 0
+    with open(path, encoding="utf-8") as f:
+        old = json.load(f)
+    problems, lines = [], []
+    for kind, targets in sorted(now.items()):
+        for n, caught in sorted(targets.items()):
+            was = old.get(kind, {}).get(n)
+            lines.append(f"| {kind} | {n} | {was} | {caught} |")
+            if was is not None and (caught or 0) < was:
+                problems.append(
+                    f"{kind}: factor {n} caught {caught}, was {was}"
+                )
+    _report(
+        "## Each factor against its planted mistake\n\n"
+        "| Mistake | Factor | Expected | Now |\n|---|---|---|---|\n"
+        + "\n".join(lines)
+    )
+    for p in problems:
+        _report(f"- {p}")
+    if not problems and now != old:
+        _report("Rates moved without falling; `factors --update` keeps them.")
+    return 1 if problems or now != old else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n", maxsplit=1)[0]
@@ -604,14 +649,15 @@ def main(argv=None):
         )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
-    p = sub.add_parser("planted")
-    p.add_argument(
-        "--uji",
-        default=os.path.join(
-            os.path.expanduser("~"), ".cache", "vahini", "ujipenchars2.txt"
-        ),
-    )
-    p.add_argument("--update", action="store_true")
+    for name in ("planted", "factors"):
+        p = sub.add_parser(name)
+        p.add_argument(
+            "--uji",
+            default=os.path.join(
+                os.path.expanduser("~"), ".cache", "vahini", "ujipenchars2.txt"
+            ),
+        )
+        p.add_argument("--update", action="store_true")
     args = ap.parse_args(argv)
     if getattr(args, "root", None):
         SETS[0] = os.path.abspath(args.root)
@@ -621,6 +667,7 @@ def main(argv=None):
         "capture": cmd_capture,
         "live": cmd_live,
         "planted": cmd_planted,
+        "factors": cmd_factors,
     }[args.cmd](args)
 
 

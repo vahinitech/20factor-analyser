@@ -221,6 +221,37 @@ class TestLetterGeometry(unittest.TestCase):
         cv = float(np.std(heights, ddof=1) / np.mean(heights))
         self.assertLess(cv, 0.08)
 
+    def test_a_word_s_lean_is_measured(self):
+        for lean in (-20, 0, 25):
+            mask = np.zeros((60, 200), np.uint8)
+            t = np.tan(np.radians(lean))
+            for x in range(20, 180, 20):
+                # Upright strokes leaning by `lean` degrees.
+                lg.cv2.line(mask, (x, 59), (int(round(x + 59 * t)), 0), 1, 3)
+            got = lg._slant(mask.astype(bool))  # pylint: disable=W0212
+            self.assertAlmostEqual(got, lean, delta=lg.SLANT_STEP)
+
+    def test_closed_bowls_are_counted_and_open_ones_are_not(self):
+        closed = np.zeros((60, 200), np.uint8)
+        opened = np.zeros((60, 200), np.uint8)
+        for x in (30, 80, 130):
+            lg.cv2.circle(closed, (x, 35), 12, 1, 3)
+            lg.cv2.ellipse(opened, (x, 35), (12, 12), 0, 40, 320, 1, 3)
+        self.assertEqual(lg._bowls(closed.astype(bool), 30), 3)  # noqa
+        self.assertEqual(lg._bowls(opened.astype(bool), 30), 0)  # noqa
+
+    def test_a_wavy_line_wanders_off_its_baseline(self):
+        flat = [[x, 70, x + 15, 100] for x in range(0, 300, 25)]
+        wavy = [
+            [x, 70, x + 15, 100 + int(round(8 * np.sin(i)))]
+            for i, x in enumerate(range(0, 300, 25))
+        ]
+        tails = flat[:-2] + [[250, 70, 265, 130], [275, 70, 290, 130]]
+        self.assertEqual(lg._wave(flat, 0.0, 100.0, 30), 0.0)  # noqa
+        self.assertGreater(lg._wave(wavy, 0.0, 100.0, 30), 0.15)  # noqa
+        # Tails hanging below the line are not wander.
+        self.assertEqual(lg._wave(tails, 0.0, 100.0, 30), 0.0)  # noqa
+
     def test_same_page_same_measurements(self):
         a = page("low_word", seed=7)[3]
         b = page("low_word", seed=7)[3]

@@ -23,6 +23,8 @@ trust. The geometry of the writing does not need the words read:
    the widest gaps are the word gaps, as for English. Otherwise word
    gaps are set only when the page's gaps fall into two clear groups
    (word_gap_split); some writers space letters as widely as words.
+   Scoring (page_features) uses word gaps only when every row's words
+   are known, so Word Spacing is not measured without a passage.
 
 Everything is in processed-image pixels and deterministic. The server
 uses it for the languages named in VAHINI_INK_GEOMETRY_LANGS.

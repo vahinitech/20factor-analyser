@@ -132,9 +132,9 @@ class TestInkScores(unittest.TestCase):
     def test_geometry_is_measured_and_reading_is_not(self):
         arr = draw_page([SENTENCE] * 4)
         f = self.factors(arr, ig.find_rows(arr))
-        for n in (5, 7, 11, 12, 17, 20):
+        for n in (5, 7, 11, 12, 20):
             self.assertFalse(f[n].unmeasured, n)
-        for n in (1, 2, 3, 9, 18, 19):
+        for n in (1, 2, 3, 9, 17, 18, 19):
             self.assertTrue(f[n].unmeasured, n)
         self.assertGreater(f[7].score, 9.0)
         self.assertTrue(f[5].based_on.endswith("letter groups"))

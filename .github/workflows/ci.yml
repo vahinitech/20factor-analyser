@@ -89,6 +89,7 @@ jobs:
             backend/tests/test_word_spacing.py \
             backend/tests/test_benchmark.py scripts/benchmark.py \
             backend/tests/test_ink_geometry.py \
+            backend/tests/test_factor_scores.py scripts/factor_tests.py \
             backend/tests/test_image_formats.py \
             backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
@@ -124,6 +125,7 @@ jobs:
             backend.tests.test_word_spacing \
             backend.tests.test_benchmark \
             backend.tests.test_ink_geometry \
+            backend.tests.test_factor_scores \
             backend.tests.test_print_hand \
             backend.tests.test_page_measurements \
             backend.tests.test_letter_boxes \

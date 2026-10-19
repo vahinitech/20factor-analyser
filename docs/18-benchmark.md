@@ -125,6 +125,16 @@ marked may not fall, and false marks on clean pages may not rise by more
 than 0.1 a page. When the numbers move without getting worse, `planted
 --update` keeps them. CI caches the UJI file the pages are made from.
 
+## Each factor against its own mistake
+
+`python scripts/benchmark.py factors` plants one mistake per factor on
+the UJI writers' letters, beside a clean twin that differs only by the
+mistake, and fails when a factor catches its mistake less often than
+`benchmarks/factors/expected.json` records
+([02-how-a-scan-works.md](02-how-a-scan-works.md), section 13). It takes
+about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
+it when the measuring code changes, weekly and by hand.
+
 ## Adding a set
 
 A new set is a folder with the same files. Pages need a licence that
