@@ -247,8 +247,8 @@
     <!-- Outside the dropzone so its click does not bubble into the dropzone's own file picker. -->
     <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none;">
 
-    <!-- reference passage: hidden. With recognition the written text is read for
-         you; without it the engine falls back to a standard sample passage. -->
+    <!-- reference passage: hidden, so no passage is sent. The written text
+         is read as it is; a passage is sent only when one is picked. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
 
     <!-- Photos are never stored (vahinitech.com privacy statement, 4.2), and

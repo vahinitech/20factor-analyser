@@ -81,6 +81,43 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertFalse(spacing["unmeasured"])
         self.assertLess(spacing["score"], 10.0)
 
+    def _one_line(self, text):
+        arr = np.full((160, 300, 3), 255, dtype=np.uint8)
+        lines = [
+            {
+                "text": text,
+                "score": 0.9,
+                "box": [20, 30, 200, 30],
+                "poly": [[20, 30], [220, 30], [220, 60], [20, 60]],
+            }
+        ]
+        result = scoring.build_analysis(arr, lines, {}).to_dict()
+        return {f["n"]: f for f in result["results"]}, result
+
+    def test_non_latin_page_does_not_score_latin_letter_factors(self):
+        # Loops (3) and letter zones (6) count English letters. A Telugu
+        # page has none, so both must read "not measured", not a 0 that
+        # pulls the overall score down.
+        telugu = "\u0c05\u0c2e\u0c4d\u0c2e \u0c28\u0c3e\u0c28\u0c4d\u0c28"
+        by_n, result = self._one_line(telugu)
+        for n in (3, 6):
+            self.assertTrue(by_n[n]["unmeasured"], n)
+            self.assertEqual(by_n[n]["unmeasuredKind"], "script")
+            self.assertEqual(by_n[n]["value"], "Not measured")
+            self.assertTrue(by_n[n]["unmeasuredReason"])
+        # Factors measured from the ink are still scored.
+        self.assertFalse(by_n[1]["unmeasured"])
+        self.assertFalse(by_n[5]["unmeasured"])
+        ranked = {f["n"] for f in result["topWeak"]}
+        self.assertNotIn(3, ranked)
+        self.assertNotIn(6, ranked)
+
+    def test_english_page_still_scores_latin_letter_factors(self):
+        by_n, _ = self._one_line("hello world")
+        for n in (3, 6):
+            self.assertFalse(by_n[n]["unmeasured"], n)
+            self.assertIsNone(by_n[n]["unmeasuredKind"])
+
     def test_photo_excludes_motion_from_scores_and_rankings(self):
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
         lines = [
