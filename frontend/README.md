@@ -60,6 +60,7 @@ the object every screen keeps its icon. The codes:
 | `ocr_unavailable` | the server could not read the page (503, `error_code: "ocr_unavailable"`; from #116) |
 | `daily_limit` | the free checks for today are used (429) |
 | `no_handwriting` | the page is blank or fully printed |
+| `handwriting_not_read` | a page asked for as Telugu was not read (mostly Latin letters, or an unsure reading) |
 | `server_down` | the server did not answer |
 | `too_large` | the server refused the file's size (413) |
 | `invalid_file` | the server could not open the file (422) |

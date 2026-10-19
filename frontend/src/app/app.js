@@ -254,9 +254,9 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   server_down, too_large, invalid_file, key_problem, account_unavailable,
-   too_big, heic, unreadable, pdf_unreadable, photo_warning, pdf_pages) to an
-   image path on this site. vahinitech.com fills it from its own drawings;
+   handwriting_not_read, server_down, too_large, invalid_file, key_problem,
+   account_unavailable, too_big, heic, unreadable, pdf_unreadable,
+   photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
    paths are used. */
 function noticeArt(code){
@@ -821,6 +821,20 @@ async function runPipeline(){
         'Upload a page written by hand with a pen or pencil',
         'Mixed pages are fine: printed parts are detected and ignored, only the handwriting is scored',
         'For best results photograph the page straight-on in good light',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'handwriting_not_read'){
+    // Asked for as Telugu, but the reader returned mostly Latin letters.
+    // A report on lines it invented would not describe this writing.
+    showReject({
+      outcome: 'handwriting_not_read',
+      reason: 'We could not read the writing on this page',
+      detail: 'The check reads English handwriting. It cannot read handwritten Telugu yet, so it did not score this page. This did not use up one of your free checks.',
+      tips: [
+        'Upload a page written in English',
+        'If the page is in English, tell us with the Feedback button',
       ],
     });
     return;
