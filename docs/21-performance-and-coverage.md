@@ -120,6 +120,22 @@ where a loop that calls a reader once per word instead of once per line
 shows up. In production a breach is counted in `/health` and the weekly
 report, never refused: the page was already admitted and paid for.
 
+### Work counts per page (#250)
+
+A budget catches a page that costs several times too much; a count
+catches one extra call. The same replay turns each page's stage summary
+into flat counts: every stage's runs, sizes and call counts
+(`recovery.reader_calls`, `decode.pixels`, `features.lines`,
+`scoring.words` and the rest). The same code on the same page gives the
+same counts on every run, whatever the runner's speed, so they are
+committed as `benchmarks/<set>/work.json` and `check` fails when any
+count on any page rises, naming the page, the count and both numbers. A
+fall passes and asks for an update. When a rise is meant (a fix that
+reads more lines), run `python scripts/perf_budgets.py update-work`,
+commit `work.json` and say why in the pull request. Where the replay
+cannot run, the `work-counts` artifact of the `benchmark` job holds
+what `update-work` would write (`check --results <dir>`).
+
 ## 4. Recording growth: big O per function (#230)
 
 Built in #230: `backend/perf/complexity.json`, `scripts/complexity.py` and

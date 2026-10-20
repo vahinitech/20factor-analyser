@@ -116,7 +116,7 @@ jobs:
             scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
             scripts/complexity.py backend/tests/test_complexity.py \
             backend/perf.py backend/tests/test_perf.py \
-            scripts/perf_budgets.py
+            scripts/perf_budgets.py backend/tests/test_work_counts.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -172,13 +172,25 @@ jobs:
             python scripts/benchmark.py check --set "$set"
           done
       # Each page through the server's own scan with perf.py recording:
-      # a page over a budget in backend/perf/budgets.json fails (#229).
-      - name: Every page within its call and CPU budgets
+      # a page over a budget in backend/perf/budgets.json fails (#229),
+      # and so does any work count above benchmarks/<set>/work.json
+      # (#250). The counts this run found are kept as an artifact.
+      - name: Every page within its call and CPU budgets, no more work
         run: |
           sets=$(python backend/languages/registry.py --benchmark-sets)
+          status=0
           for set in $sets; do
-            python scripts/perf_budgets.py check --set "$set"
+            python scripts/perf_budgets.py check --set "$set" \
+              --results "$RUNNER_TEMP/work-counts" || status=1
           done
+          exit $status
+      - name: Keep the work counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-counts
+          path: ${{ runner.temp }}/work-counts
+          if-no-files-found: ignore
       - name: Cache the UJI letters for the planted pages
         uses: actions/cache@v4
         with:
