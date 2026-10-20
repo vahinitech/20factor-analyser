@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-3104022ce83387c3703c",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-50c9abfb693c12d0b809",
   "creationInfo": {
-    "created": "2026-10-11T16:41:35Z",
+    "created": "2026-10-20T12:02:05Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/update_sbom.py"
@@ -474,6 +474,17 @@
       "comment": "Declared in backend/requirements-core.txt: black==26.5.1. Resolved container versions require a build SBOM."
     },
     {
+      "SPDXID": "SPDXRef-Package-coverage",
+      "name": "coverage",
+      "downloadLocation": "https://pypi.org/project/coverage/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "versionInfo": "7.16.2",
+      "comment": "Declared in backend/requirements-core.txt: coverage==7.16.2. Resolved container versions require a build SBOM."
+    },
+    {
       "SPDXID": "SPDXRef-Package-goQR",
       "name": "goqr-api",
       "versionInfo": "v1",
@@ -596,6 +607,174 @@
       "comment": "Vendored unchanged as frontend/scripts/vendor/qrcode.js (package/dist/qrcode.js). Draws the QR code on report page 1. The MIT licence notice is in the file's header (the package ships no separate licence file)."
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules--bcoe-v8-coverage",
+      "name": "@bcoe/v8-coverage",
+      "versionInfo": "1.0.2",
+      "downloadLocation": "https://registry.npmjs.org/@bcoe/v8-coverage/-/v8-coverage-1.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40bcoe/v8-coverage@1.0.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@bcoe/v8-coverage. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "eb300193f10203f418482435346895c306d07ab50267e4d06e9eb843702099f36fbab1c7d23f13b576b5a9b4a15c0eaaaa4a408f85795bca4fea62ded6670ca8"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--istanbuljs-schema",
+      "name": "@istanbuljs/schema",
+      "versionInfo": "0.1.6",
+      "downloadLocation": "https://registry.npmjs.org/@istanbuljs/schema/-/schema-0.1.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40istanbuljs/schema@0.1.6"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@istanbuljs/schema. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f9283a18247fc32d684a640316ae0b4030219b71132a7a2bc4dfb2e676cb50b391dcfd1cd787f65aeaf38f7ff1a8f5ed6ac2c57c7779891150ec026de0a1f673"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--jridgewell-resolve-uri",
+      "name": "@jridgewell/resolve-uri",
+      "versionInfo": "3.1.2",
+      "downloadLocation": "https://registry.npmjs.org/@jridgewell/resolve-uri/-/resolve-uri-3.1.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40jridgewell/resolve-uri@3.1.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@jridgewell/resolve-uri. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6d12128022233f6d3fb5b5923d63048b9e1054f45913192e0fd9492fe508c542adc15240f305b54eb6f58ccb354455e8d42053359ff98690bd42f98a59da292b"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--jridgewell-sourcemap-codec",
+      "name": "@jridgewell/sourcemap-codec",
+      "versionInfo": "1.6.0",
+      "downloadLocation": "https://registry.npmjs.org/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.6.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40jridgewell/sourcemap-codec@1.6.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@jridgewell/sourcemap-codec. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4fb8dffb9ce0b191f0349e25bd0eff69ecdbca4d27357fb32555a998703b558b04c7b6bbaabe5183921bb4916a920cdee58dacaeeab545463c43cdfb39dee217"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--jridgewell-trace-mapping",
+      "name": "@jridgewell/trace-mapping",
+      "versionInfo": "0.3.31",
+      "downloadLocation": "https://registry.npmjs.org/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40jridgewell/trace-mapping@0.3.31"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@jridgewell/trace-mapping. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "cf3351f9275048327373c8e869e3fc410a0242bf0db98c76748232b65d507811191c9f6e5ba85e6ecad881bcfc849c1441aa374d608cb667d5f0dbb5b7038b03"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--types-istanbul-lib-coverage",
+      "name": "@types/istanbul-lib-coverage",
+      "versionInfo": "2.0.6",
+      "downloadLocation": "https://registry.npmjs.org/@types/istanbul-lib-coverage/-/istanbul-lib-coverage-2.0.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40types/istanbul-lib-coverage@2.0.6"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@types/istanbul-lib-coverage. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "d9017fb7f6ae5a6d25b32f17b4a54f1b5f6fdec48e42525efd81d981f8dbfca0411ce19257e276abf4baef5adcabdb9306b2c05e6669a8989a41b313fb3354d7"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-ansi-regex",
+      "name": "ansi-regex",
+      "versionInfo": "6.4.0",
+      "downloadLocation": "https://registry.npmjs.org/ansi-regex/-/ansi-regex-6.4.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ansi-regex@6.4.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/ansi-regex. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2b34d5936b425801ed62bbefbda3fc6c9289ab6a558a784b70611076d2c860f6e634637261ef10c0d693518429d89effbc8b142ade500aa01f5246321bd0e43b"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-ansi-styles",
       "name": "ansi-styles",
       "versionInfo": "4.3.0",
@@ -644,6 +823,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-balanced-match",
+      "name": "balanced-match",
+      "versionInfo": "4.0.4",
+      "downloadLocation": "https://registry.npmjs.org/balanced-match/-/balanced-match-4.0.4.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/balanced-match@4.0.4"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/balanced-match. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04bae011c453c17da8ea01b118e08dc8cbc64a9df96287ee633c3d87520c4d198aaadb40659554ebb6dd6fd3ebdaf50703cfa3de2dad25f8cee82ebee26c864c"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-basic-auth",
       "name": "basic-auth",
       "versionInfo": "2.0.1",
@@ -664,6 +867,54 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "345f9ea6e11d9d4615946ba16b16dbabe76f26db702e7198f988b195794c1392a94395b70a75c0e5c5539de63748f6cf0d191c8cc6e27ebc261587029603997a"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-brace-expansion",
+      "name": "brace-expansion",
+      "versionInfo": "5.0.12",
+      "downloadLocation": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.12.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/brace-expansion@5.0.12"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/brace-expansion. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "628bd0debce168b308ac38cd0cc90d4b4d6d79af77aa11211b9c72f1febe47497e770dca8bee6c0a822823de368ae2d94c75a881692d830543854d3d88d12299"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-c8",
+      "name": "c8",
+      "versionInfo": "12.0.0",
+      "downloadLocation": "https://registry.npmjs.org/c8/-/c8-12.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/c8@12.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/c8. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e33a49beb7759ca5aeb679ca0b6a5790599bea233597e7df37ffe8d42ce54cdc16ec648eb3d6b5c6b2ea902e3c9d4f281248e63d92cf8b032c21a3afa05e0faa"
         }
       ]
     },
@@ -740,6 +991,54 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-cliui",
+      "name": "cliui",
+      "versionInfo": "9.0.1",
+      "downloadLocation": "https://registry.npmjs.org/cliui/-/cliui-9.0.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/cliui@9.0.1"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/cliui. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "93b9dd80a870a10bde04bfbfd6da86258373d3dec8ed63afc1b9a6536011e7e99a82d6e33d64134b50b9bf31a4042f189bc5164737ca533514a852f2a58e10fb"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-cliui-node-modules-string-width",
+      "name": "string-width",
+      "versionInfo": "7.2.0",
+      "downloadLocation": "https://registry.npmjs.org/string-width/-/string-width-7.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/string-width@7.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/cliui/node_modules/string-width. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b6c693224296f5be0df80123f92540f96849cd5effccc85c4aeefc98b2964a4edc5cc3921ec04a15652cd1f5b0abc4322b73202414115fa19b8b89186ddbc691"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-color-convert",
       "name": "color-convert",
       "versionInfo": "2.0.1",
@@ -788,6 +1087,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-convert-source-map",
+      "name": "convert-source-map",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/convert-source-map/-/convert-source-map-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/convert-source-map@2.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/convert-source-map. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2afa78e7d1eb576144275080b22d4abbe318de46ac1f5f53172913cf6c5698c7aae9b936354dd75ef7c9f90eb59b4c64b56c2dfb51d261fdc966c4e6b3769126"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-corser",
       "name": "corser",
       "versionInfo": "2.0.1",
@@ -808,6 +1131,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "bad09837345240864d3c870665d41cf76515258021b4602d782160d3245a166f1fd0ff823edc86c875c97065e77df8c2c9b502131dc54361bb537fe8f5e22455"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-cross-spawn",
+      "name": "cross-spawn",
+      "versionInfo": "7.0.6",
+      "downloadLocation": "https://registry.npmjs.org/cross-spawn/-/cross-spawn-7.0.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/cross-spawn@7.0.6"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/cross-spawn. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b95d903963f69d6ceccb668ca7c69189b862f5d9731791e0879487681f4e893184c834e2249cb1d2ecb9d505ddc966ed00736e6b85c9cd429c6b73b3294777bc"
         }
       ]
     },
@@ -856,6 +1203,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "28837f9c3241411717c3430b561644f62407986ebca80548060f42aa65188e64088608a3f54e4c16faea9142f915bb72cb366e39e3add3375e45ee1463b72df8"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-emoji-regex",
+      "name": "emoji-regex",
+      "versionInfo": "10.6.0",
+      "downloadLocation": "https://registry.npmjs.org/emoji-regex/-/emoji-regex-10.6.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/emoji-regex@10.6.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/emoji-regex. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b68508f38612e589b15b6d7d7ab9e2583d022153a8e3ac46282a2578d41180ecc3a2b8018b5bf80fbd7f385ce00fd18ed9418a22fd42dd2a7c0c09f4fa3e70ec"
         }
       ]
     },
@@ -932,6 +1303,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-escalade",
+      "name": "escalade",
+      "versionInfo": "3.2.0",
+      "downloadLocation": "https://registry.npmjs.org/escalade/-/escalade-3.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/escalade@3.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/escalade. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5948f6aa5c5a42d3b883a3eae5cdbd193716183c9df22b4bf334e58a98040b3dc97ac02288e2a8b5df0953aa2d0773c00a01bac64254c9585ba0c4be6e37bf8c"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-eventemitter3",
       "name": "eventemitter3",
       "versionInfo": "4.0.7",
@@ -952,6 +1347,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "f20b870590b02a716161d1ebdb2b2e45612b4f08683765fc5c42d196b470a667de6368e3b94378b5a40cb142ca515a352b80ef665fb4a607f2a32b07c6f9af13"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-find-up",
+      "name": "find-up",
+      "versionInfo": "5.0.0",
+      "downloadLocation": "https://registry.npmjs.org/find-up/-/find-up-5.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/find-up@5.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/find-up. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "efcfcf5d3d7094b2c3813cc3b3bb23abd873cf4bd70fece7fbbc32a447b87d74310a6766a9f1ac10f4319a2092408dda8c557dd5b552b2f36dac94625ba9c69e"
         }
       ]
     },
@@ -980,6 +1399,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-foreground-child",
+      "name": "foreground-child",
+      "versionInfo": "3.3.1",
+      "downloadLocation": "https://registry.npmjs.org/foreground-child/-/foreground-child-3.3.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/foreground-child@3.3.1"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/foreground-child. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8085e32aab45b96120cc544903d58241e4892d90e380950e302333c6dbc5abfdfb2a88ccd41146b9faac0b2d2be2a4909982ec65831ec91ab321638cba9d37b3"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-function-bind",
       "name": "function-bind",
       "versionInfo": "1.1.2",
@@ -1000,6 +1443,54 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "ed71cdc47eea5fdc46e66230c6486e993a31fcc21135c3a00ebc56b0cb76a40af6dd61e9e8cad194dec50521690a9afea153b417be38894811f369c931f1b648"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-get-caller-file",
+      "name": "get-caller-file",
+      "versionInfo": "2.0.5",
+      "downloadLocation": "https://registry.npmjs.org/get-caller-file/-/get-caller-file-2.0.5.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/get-caller-file@2.0.5"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/get-caller-file. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "0f214fdc133fdd81d340e0942ffc343991d1d25a4a786af1a2d70759ca8d11d9e5b6a1705d57e110143de1e228df801f429a34ac6922e1cc8889fb58d3a87616"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-get-east-asian-width",
+      "name": "get-east-asian-width",
+      "versionInfo": "1.7.0",
+      "downloadLocation": "https://registry.npmjs.org/get-east-asian-width/-/get-east-asian-width-1.7.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/get-east-asian-width@1.7.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/get-east-asian-width. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5e31f50040b17f48222f6575694f2f2b2451da9a5151be5cd04bd3ef3b894e8910ef86cda39db33ad821a9d588aab8540fbf5fa37c7459f29974eab117a2c6d5"
         }
       ]
     },
@@ -1048,6 +1539,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "b1349f063a17069f3d26f20a21e7eac3b53608279bb1cef892263a6b0886a202ada1219b823604fc6ffe97db05dcc5853cd73d21ca0e0b83837ca1dfc459a9d2"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-glob",
+      "name": "glob",
+      "versionInfo": "13.0.6",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-13.0.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/glob@13.0.6"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/glob. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "5a3972ae89669bcb83a66fe8806c976576f567e09ad81f0d6c9c2a0558346b12bd19b05ea12ef2195eaf8d79d87469ba5f9de27a112ec716f288aa7c42637857"
         }
       ]
     },
@@ -1196,6 +1711,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-html-escaper",
+      "name": "html-escaper",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/html-escaper/-/html-escaper-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/html-escaper@2.0.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/html-escaper. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1f688cb5dd08e0cb7979889aa517480e3a7e5f37a55d0d2d144e094bb605c057af5d73263a9f66c8dad4bc28340fac2cf22aa444f05f28781bc228354a694b7e"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-http-proxy",
       "name": "http-proxy",
       "versionInfo": "1.18.1",
@@ -1268,6 +1807,174 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-isexe",
+      "name": "isexe",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/isexe/-/isexe-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/isexe@2.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/isexe. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "447c4c2e9f659ca1c61d19e0f5016144231b600715a67ebdb2648672addfdfac638155564e18f8aaa2db4cb96aed2b23f01f9f210d44b8210623694ab3241e23"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-istanbul-lib-coverage",
+      "name": "istanbul-lib-coverage",
+      "versionInfo": "3.2.2",
+      "downloadLocation": "https://registry.npmjs.org/istanbul-lib-coverage/-/istanbul-lib-coverage-3.2.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/istanbul-lib-coverage@3.2.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/istanbul-lib-coverage. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "3bc769b05fabd1657ff0c35129f9e6aed09686e2a3c6bab6c3e8e9cc12f95192938b62de5569d63a6591c4595eb0938d99cfb02c01af29064439a9e4a342c54e"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-istanbul-lib-report",
+      "name": "istanbul-lib-report",
+      "versionInfo": "3.0.1",
+      "downloadLocation": "https://registry.npmjs.org/istanbul-lib-report/-/istanbul-lib-report-3.0.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/istanbul-lib-report@3.0.1"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/istanbul-lib-report. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1827c4d66b6c1c63842c253c7bf67b616ce99b26ebc7ff9d4937cbaef63ca9199a63acd74ca5a7e964088da005c34ebd89c9ba19530d920bb437323888f65437"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-istanbul-reports",
+      "name": "istanbul-reports",
+      "versionInfo": "3.2.0",
+      "downloadLocation": "https://registry.npmjs.org/istanbul-reports/-/istanbul-reports-3.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BSD-3-Clause",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/istanbul-reports@3.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/istanbul-reports. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "1c6616592fde86a4d5df1375d22db7b643e4a47e3a30b08830534269a28d6af0174c5d5192ac5ac043ed9e39c667a5ca4889c12a488e03904a4be699898dc0bc"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-locate-path",
+      "name": "locate-path",
+      "versionInfo": "6.0.0",
+      "downloadLocation": "https://registry.npmjs.org/locate-path/-/locate-path-6.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/locate-path@6.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/locate-path. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "88f64ae9e6236f146edee078fd667712c10830914ca80a28a65dd1fb3baad148dc026fcc3ba282c1e0e03df3f77a54f3b6828fdcab67547c539f63470520d553"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-lru-cache",
+      "name": "lru-cache",
+      "versionInfo": "11.5.3",
+      "downloadLocation": "https://registry.npmjs.org/lru-cache/-/lru-cache-11.5.3.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/lru-cache@11.5.3"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/lru-cache. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "53837c160ce65b173c935547f0aafa950835f14ec58ef6f2eb05c75515ff659ec8c166d1320ad16cfd16adbe6ae4d5629ebca9e1241a9a91ca76fb5e708b7152"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-make-dir",
+      "name": "make-dir",
+      "versionInfo": "4.0.0",
+      "downloadLocation": "https://registry.npmjs.org/make-dir/-/make-dir-4.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/make-dir@4.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/make-dir. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "8577544d960854eb75131fff8c0422fb04d9669529c018ffd10b0ecea7a06f7ac630c78989212ee712c79d87c1ad1578447dbe38248e3bde48b3fef1d562786f"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-math-intrinsics",
       "name": "math-intrinsics",
       "versionInfo": "1.1.0",
@@ -1316,6 +2023,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-minimatch",
+      "name": "minimatch",
+      "versionInfo": "10.2.6",
+      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/minimatch@10.2.6"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/minimatch. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "be92d012cf952c2af59d4d015d2d3b99a628170943007d209e042ebadb71230bad0c510c1ead9b957fbcbe98310dd2b72753f08c22627a9efb3a2b536782e5d4"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-minimist",
       "name": "minimist",
       "versionInfo": "1.2.8",
@@ -1336,6 +2067,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "db2c8047ca8190ddd8ba17896a7529582e54ddb6f9a2c0f2c0d07c4730d5943c031dba1c009bdeaaa8f5bbcf92543ee39164f8cafb070a95aaa96a80c5bd3308"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-minipass",
+      "name": "minipass",
+      "versionInfo": "7.1.3",
+      "downloadLocation": "https://registry.npmjs.org/minipass/-/minipass-7.1.3.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/minipass@7.1.3"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/minipass. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b44047a839c8a0cff5ad7304d738246bd83a43695ca029311cbb9cece0c9e41c5b3f977873667970682d5c092ee7ddb4d02c7b762b874ce61f4810fc9fa9a6f0"
         }
       ]
     },
@@ -1408,6 +2163,126 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "babe5421dcb0e58ef2123f702f386a5e2cba199dccc31d32188fb9b0c9f6af4374bf770a26f526147e723cff965e1f5ed317f2cf2257f790fc974f3c0cd163ec"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-p-limit",
+      "name": "p-limit",
+      "versionInfo": "3.1.0",
+      "downloadLocation": "https://registry.npmjs.org/p-limit/-/p-limit-3.1.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/p-limit@3.1.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/p-limit. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "4d839a9ccdf01b0346b193767154d83c0af0e39e319d78f9aa6585d5b12801ce3e714fe897b19587ba1d7af8e9d4534776e1dcdca64c70576ec54e5773ab8945"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-p-locate",
+      "name": "p-locate",
+      "versionInfo": "5.0.0",
+      "downloadLocation": "https://registry.npmjs.org/p-locate/-/p-locate-5.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/p-locate@5.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/p-locate. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "2da363b51594058fbecc1e6713f37071aa0cca548f93e4be647341d53cdd6cc24c9f2e9dca7a401aded7fed97f418ab74c8784ea7c47a696e8d8b1b29ab1b93f"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-path-exists",
+      "name": "path-exists",
+      "versionInfo": "4.0.0",
+      "downloadLocation": "https://registry.npmjs.org/path-exists/-/path-exists-4.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-exists@4.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/path-exists. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6a4f50cb943b8d86f65b071ecb9169be0d8aa0073f64884b48b392066466ca03ec1b091556dd1f65ad2aaed333fa6ead2530077d943c167981e0c1b82d6cbbff"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-path-key",
+      "name": "path-key",
+      "versionInfo": "3.1.1",
+      "downloadLocation": "https://registry.npmjs.org/path-key/-/path-key-3.1.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-key@3.1.1"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/path-key. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "a2399e374a9dfb2d23b3312da18e3caf43deab97703049089423aee90e5fe3595f92cc17b8ab58ae18284e92e7c887079b6e1486ac7ee53aa6d889d2c0b844e9"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-path-scurry",
+      "name": "path-scurry",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/path-scurry@2.0.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/path-scurry. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "dcefe2555b0900fb0e9e9c1621e0fe77acffecf9aa029c9078f52d0a77636ad8fff48e4bca51efb79aa5b856814f7239877af57a37d1d39e9cf850aff8d9cd5e"
         }
       ]
     },
@@ -1604,6 +2479,78 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-semver",
+      "name": "semver",
+      "versionInfo": "7.8.5",
+      "downloadLocation": "https://registry.npmjs.org/semver/-/semver-7.8.5.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/semver@7.8.5"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/semver. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "63bfca0ec6fc2e3a28669c1aa86cae94ee8342592c8029dc7211c693eb19218e1206f52870c044147e54af57c8e1d57e26f974c3a723bee71a222e34a6e462a0"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-shebang-command",
+      "name": "shebang-command",
+      "versionInfo": "2.0.0",
+      "downloadLocation": "https://registry.npmjs.org/shebang-command/-/shebang-command-2.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/shebang-command@2.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/shebang-command. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "907c6bdb366962d766acdd6a0e3aeb5ff675ad1d641bc0f1fa09292b51b87979af5ecc26704d614d6056614ce5ada630d7fc99a7a62e0d8efb62dbdb3747660c"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-shebang-regex",
+      "name": "shebang-regex",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://registry.npmjs.org/shebang-regex/-/shebang-regex-3.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/shebang-regex@3.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/shebang-regex. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "efef9d161b5cc77df9dee05aabc0c347836ec417ad0730bb6503a19934089c711de9b4ab5dd884cb30af1b4ed9e3851874b4a1594c97b7933fca1cfc7a471bd4"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-side-channel",
       "name": "side-channel",
       "versionInfo": "1.1.1",
@@ -1700,6 +2647,78 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-signal-exit",
+      "name": "signal-exit",
+      "versionInfo": "4.1.0",
+      "downloadLocation": "https://registry.npmjs.org/signal-exit/-/signal-exit-4.1.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/signal-exit@4.1.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/signal-exit. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "6f3c99d5ef3cc3d3b588d25b2a73a5bd84eb58f0e5e3a3b56c6d03dd7227bfef6d90faf1acdf235144e21650e4926296827d4ce827c8035dd2b86a8e6bd2a8af"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-string-width",
+      "name": "string-width",
+      "versionInfo": "8.3.0",
+      "downloadLocation": "https://registry.npmjs.org/string-width/-/string-width-8.3.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/string-width@8.3.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/string-width. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "65b9993342428a140df757569f1a22a53d8a384c87a84c9f4575328ee4615bc6ffc67a8f0e8ab88161150294d56bd75bdb037c9a6a229201416e387bd7e70679"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-strip-ansi",
+      "name": "strip-ansi",
+      "versionInfo": "7.2.0",
+      "downloadLocation": "https://registry.npmjs.org/strip-ansi/-/strip-ansi-7.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/strip-ansi@7.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/strip-ansi. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "c833cc363a785b27d80641e78c844b7dc6b58ba28cc860adb1582829eff3d7eeafba481a10d76018166df9998a3dce206afbc46793a01df1ddadace180dc86ef"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-supports-color",
       "name": "supports-color",
       "versionInfo": "7.2.0",
@@ -1720,6 +2739,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "aa9080bd197db2db8e1ef78ab27ec79dc251befe74d6a21a70acd094effe2f0c5cf7ed2adb02f2bf80dfbedf34fc33e7da9a8e06c25d0e2a205c647df8ebf047"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-test-exclude",
+      "name": "test-exclude",
+      "versionInfo": "8.0.0",
+      "downloadLocation": "https://registry.npmjs.org/test-exclude/-/test-exclude-8.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/test-exclude@8.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/test-exclude. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "64e7dfb0dad762082f535983187939e08f7aaf6e8ff12c8c8cee6c94c29273bf885a6b41fcc40a9c40b67cfe758a6077fe94fa60ae5c4f913c7fe0ddf4a77239"
         }
       ]
     },
@@ -1772,6 +2815,30 @@
       ]
     },
     {
+      "SPDXID": "SPDXRef-npm-node-modules-v8-to-istanbul",
+      "name": "v8-to-istanbul",
+      "versionInfo": "9.3.0",
+      "downloadLocation": "https://registry.npmjs.org/v8-to-istanbul/-/v8-to-istanbul-9.3.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/v8-to-istanbul@9.3.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/v8-to-istanbul. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "9221946a558dfab80127fd4e1d9b01b54e2b5d939f8ffeeb290c542ca948cf0cd04af3095143603f0244121ee053ac445710b46a1a0e06f376608f061fa14d80"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-npm-node-modules-whatwg-encoding",
       "name": "whatwg-encoding",
       "versionInfo": "2.0.0",
@@ -1792,6 +2859,222 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "a78d6883278c52bc378d67251d64d0835934e434955cf2dc57145362c5d493e668a0e0992dca1880f67f1cbfc3fcdfae40f3ad729d667b55a1044697d369a15a"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-which",
+      "name": "which",
+      "versionInfo": "2.0.2",
+      "downloadLocation": "https://registry.npmjs.org/which/-/which-2.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/which@2.0.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/which. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "04b2374e5d535b73ef97bd25df2ab763ae22f9ac29c17aac181616924a8cb676d782b303fb28fbae15b492e103c7325a6171a3116e6881aa4a34c10a34c8e26c"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-wrap-ansi",
+      "name": "wrap-ansi",
+      "versionInfo": "9.0.2",
+      "downloadLocation": "https://registry.npmjs.org/wrap-ansi/-/wrap-ansi-9.0.2.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/wrap-ansi@9.0.2"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/wrap-ansi. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e3602d9a0aa357e5f556974e7f24c6398462d3fceca0baad5d07244e6a937b26d3f810c86ccfc6bb1a3bc77a44dafb69af5a24eb146a33d3a905ef89ca8ab2c3"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-wrap-ansi-node-modules-ansi-styles",
+      "name": "ansi-styles",
+      "versionInfo": "6.2.3",
+      "downloadLocation": "https://registry.npmjs.org/ansi-styles/-/ansi-styles-6.2.3.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/ansi-styles@6.2.3"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/wrap-ansi/node_modules/ansi-styles. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "e038fa336f0907ea001fc9059132d4a3e6b68f038592ea9bdf2b9c53408035c45151bc52d1c3f49d96021a371cdc1357c1122c5159831a0cdac267bbcef247be"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-wrap-ansi-node-modules-string-width",
+      "name": "string-width",
+      "versionInfo": "7.2.0",
+      "downloadLocation": "https://registry.npmjs.org/string-width/-/string-width-7.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/string-width@7.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/wrap-ansi/node_modules/string-width. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b6c693224296f5be0df80123f92540f96849cd5effccc85c4aeefc98b2964a4edc5cc3921ec04a15652cd1f5b0abc4322b73202414115fa19b8b89186ddbc691"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-y18n",
+      "name": "y18n",
+      "versionInfo": "5.0.8",
+      "downloadLocation": "https://registry.npmjs.org/y18n/-/y18n-5.0.8.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/y18n@5.0.8"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/y18n. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "d297c5cde81e0d62472480264cb44fd83c078dd179b3b8e8f6dbb3b5d43102120d09dbd2fb79c620da8f774d00a61a8947fd0b8403544baffeed209bf7c60e7c"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-yargs",
+      "name": "yargs",
+      "versionInfo": "18.2.0",
+      "downloadLocation": "https://registry.npmjs.org/yargs/-/yargs-18.2.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yargs@18.2.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/yargs. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "f4ea4a38b79aa0d15e704a7b3fa8986f3cdeff90aa5a81fb37748cb3feb2d571789ccbc532ca44199cc9eae162f4c990c17872cea62848428ededbc0dd9fe8db"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-yargs-node-modules-yargs-parser",
+      "name": "yargs-parser",
+      "versionInfo": "22.0.0",
+      "downloadLocation": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-22.0.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yargs-parser@22.0.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/yargs/node_modules/yargs-parser. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "af0bbf0a535d48ca644ab51bf9de8146c4a42d4ab57e67ec63a4cea58cd3c2fc24835fcd446f39281cb792afbe03c2ca4305fa96cbbe69669dfb6921bee5ebab"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-yargs-parser",
+      "name": "yargs-parser",
+      "versionInfo": "21.1.1",
+      "downloadLocation": "https://registry.npmjs.org/yargs-parser/-/yargs-parser-21.1.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "ISC",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yargs-parser@21.1.1"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/yargs-parser. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "b55a6c256ec376379c0221696c80757b7ab1210b04e8da0f739fde4ddadb6c80b88742d5b16867a1ade0fa6d87725048ba31f3b31678549540f8652e736fcb07"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules-yocto-queue",
+      "name": "yocto-queue",
+      "versionInfo": "0.1.0",
+      "downloadLocation": "https://registry.npmjs.org/yocto-queue/-/yocto-queue-0.1.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/yocto-queue@0.1.0"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/yocto-queue. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "ad592cbec9cd09d27fa2119ceb180fc3237c7a1782c6c88b33c9b1b84fedfe6395a897b03ee3b59a22e94c74224604ca08b7b12f831e00555a82db3b1e6359d9"
         }
       ]
     }
@@ -1923,6 +3206,11 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-Package-coverage",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-goQR",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -1958,6 +3246,41 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules--bcoe-v8-coverage",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--istanbuljs-schema",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--jridgewell-resolve-uri",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--jridgewell-sourcemap-codec",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--jridgewell-trace-mapping",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--types-istanbul-lib-coverage",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-ansi-regex",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-ansi-styles",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -1968,7 +3291,22 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-balanced-match",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-basic-auth",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-brace-expansion",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-c8",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -1988,6 +3326,16 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-cliui",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-cliui-node-modules-string-width",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-color-convert",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -1998,7 +3346,17 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-convert-source-map",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-corser",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-cross-spawn",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2009,6 +3367,11 @@
     },
     {
       "spdxElementId": "SPDXRef-npm-node-modules-dunder-proto",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-emoji-regex",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2028,7 +3391,17 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-escalade",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-eventemitter3",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-find-up",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2038,7 +3411,22 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-foreground-child",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-function-bind",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-get-caller-file",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-get-east-asian-width",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2049,6 +3437,11 @@
     },
     {
       "spdxElementId": "SPDXRef-npm-node-modules-get-proto",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-glob",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2083,6 +3476,11 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-html-escaper",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-http-proxy",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -2098,6 +3496,41 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-isexe",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-istanbul-lib-coverage",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-istanbul-lib-report",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-istanbul-reports",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-locate-path",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-lru-cache",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-make-dir",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-math-intrinsics",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -2108,7 +3541,17 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-minimatch",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-minimist",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-minipass",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2124,6 +3567,31 @@
     },
     {
       "spdxElementId": "SPDXRef-npm-node-modules-opener",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-p-limit",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-p-locate",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-path-exists",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-path-key",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-path-scurry",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2168,6 +3636,21 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-semver",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-shebang-command",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-shebang-regex",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-side-channel",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -2188,7 +3671,27 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-signal-exit",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-string-width",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-strip-ansi",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-supports-color",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-test-exclude",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -2203,7 +3706,57 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-npm-node-modules-v8-to-istanbul",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-npm-node-modules-whatwg-encoding",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-which",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-wrap-ansi",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-wrap-ansi-node-modules-ansi-styles",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-wrap-ansi-node-modules-string-width",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-y18n",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-yargs",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-yargs-node-modules-yargs-parser",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-yargs-parser",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules-yocto-queue",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     }

@@ -6,10 +6,11 @@
 // printed entry's highest-weight factor being a skill the report flags.
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import assert from 'node:assert/strict';
 
 const window = {};
-vm.runInContext(fs.readFileSync('frontend/src/report/practice-select.js', 'utf8'), vm.createContext({ window }));
+runSource('frontend/src/report/practice-select.js', vm.createContext({ window }));
 const S = window.VahiniPracticeSelect;
 
 // The catalogue version that serves the practice catalogue today: the one

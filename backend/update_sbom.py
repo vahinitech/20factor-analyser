@@ -195,7 +195,7 @@ def synchronize(document):
                     "spdxElementId": identifier,
                     "relationshipType": (
                         "DEV_DEPENDENCY_OF"
-                        if name in ("black", "pylint", "httpx")
+                        if name in ("black", "pylint", "httpx", "coverage")
                         else "RUNTIME_DEPENDENCY_OF"
                     ),
                     "relatedSpdxElement": APP,
