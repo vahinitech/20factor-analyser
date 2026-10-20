@@ -63,6 +63,7 @@ import scan_slots  # caps simultaneous scans so memory cannot run out
 import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
+from languages import stages  # which engine reads each script (#208)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -316,6 +317,13 @@ def health():
         # first relevant call has actually run. The layout filter's model is
         # fixed by configuration, so it records nothing here (#112).
         "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # The committed stage table every route comes from, and the device
+        # each engine resolved to (None until it is built). Recorded so the
+        # ladders, where the device is part of the stage (#219), have data.
+        "recognition": {
+            "stages_sha256": stages.table().hash,
+            "devices": ocr_backends.engine_devices(),
+        },
         # Which layout model is loaded (see layout_filter.py). A scan waits
         # for the load, never skips it, so this is the model every scan uses.
         "layout_filter": {

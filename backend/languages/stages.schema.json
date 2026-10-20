@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vahinitech.com/schemas/recognition-stages.schema.json",
+  "title": "Recognition stages",
+  "description": "Which engine reads each script, and the facts about every engine (docs/20-languages.md, sections 6, 17.1 and 17.8). A fact nobody has measured yet is the string \"unmeasured\", never a guess.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "default_script", "scripts", "stages"],
+  "properties": {
+    "$comment": {"type": "string"},
+    "version": {"const": 1},
+    "default_script": {"$ref": "#/$defs/script"},
+    "scripts": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/script"},
+      "additionalProperties": {"$ref": "#/$defs/route"}
+    },
+    "stages": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/stage"}
+    }
+  },
+  "$defs": {
+    "script": {"type": "string", "pattern": "^[A-Z][a-z]{3}$"},
+    "language": {"type": "string", "pattern": "^[a-z]{2,3}$"},
+    "engine": {"enum": ["paddle", "trocr", "surya", "paddleocr-vl"]},
+    "unmeasured": {"const": "unmeasured"},
+    "amount": {
+      "oneOf": [
+        {"$ref": "#/$defs/unmeasured"},
+        {"type": "number", "minimum": 0}
+      ]
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["languages", "refine"],
+      "properties": {
+        "$comment": {"type": "string"},
+        "languages": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/language"}
+        },
+        "refine": {
+          "description": "The engine that re-reads a handwriting line of this script in hybrid mode. A list so the ladders (#219) can add rungs; until then it holds one engine.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 1,
+          "items": {"$ref": "#/$defs/engine"}
+        }
+      }
+    },
+    "perScript": {
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": {"$ref": "#/$defs/script"},
+      "additionalProperties": true
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "engine",
+        "task",
+        "scripts",
+        "device",
+        "where",
+        "version",
+        "fixed",
+        "quality",
+        "level",
+        "cost",
+        "load_mb",
+        "work_mb",
+        "vram_mb",
+        "threads"
+      ],
+      "properties": {
+        "$comment": {"type": "string"},
+        "id": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
+        "engine": {"$ref": "#/$defs/engine"},
+        "task": {"enum": ["script", "language", "read"]},
+        "scripts": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/script"}
+        },
+        "device": {"enum": ["cpu", "gpu", "remote"]},
+        "where": {"enum": ["server", "leaves"]},
+        "version": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["package", "model", "weights_sha256"],
+          "properties": {
+            "package": {"type": "string", "minLength": 1},
+            "model": {
+              "oneOf": [
+                {"$ref": "#/$defs/unmeasured"},
+                {"type": "string", "minLength": 1, "not": {"const": "unmeasured"}}
+              ]
+            },
+            "weights_sha256": {
+              "oneOf": [
+                {"$ref": "#/$defs/unmeasured"},
+                {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              ]
+            }
+          }
+        },
+        "fixed": {
+          "oneOf": [{"$ref": "#/$defs/unmeasured"}, {"type": "boolean"}]
+        },
+        "quality": {
+          "allOf": [{"$ref": "#/$defs/perScript"}],
+          "additionalProperties": {
+            "oneOf": [{"$ref": "#/$defs/unmeasured"}, {"enum": ["A", "B", "C", "D"]}]
+          }
+        },
+        "level": {
+          "allOf": [{"$ref": "#/$defs/perScript"}],
+          "additionalProperties": {
+            "oneOf": [{"$ref": "#/$defs/unmeasured"}, {"enum": [0, 1, 2, 3]}]
+          }
+        },
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["p95_ms_per_line", "money_per_call"],
+          "properties": {
+            "p95_ms_per_line": {"$ref": "#/$defs/amount"},
+            "money_per_call": {"$ref": "#/$defs/amount"}
+          }
+        },
+        "load_mb": {"$ref": "#/$defs/amount"},
+        "work_mb": {"$ref": "#/$defs/amount"},
+        "vram_mb": {"$ref": "#/$defs/amount"},
+        "threads": {
+          "oneOf": [
+            {"$ref": "#/$defs/unmeasured"},
+            {"type": "integer", "minimum": 1}
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"where": {"const": "server"}}},
+          "then": {
+            "properties": {"cost": {"properties": {"money_per_call": {"const": 0}}}}
+          }
+        },
+        {
+          "if": {"properties": {"device": {"const": "cpu"}}},
+          "then": {"properties": {"vram_mb": {"const": 0}}}
+        }
+      ]
+    }
+  }
+}

@@ -106,6 +106,31 @@
     "adaptive_engine_speed": {
       "type": "object"
     },
+    "recognition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages_sha256",
+        "devices"
+      ],
+      "properties": {
+        "stages_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 of backend/languages/stages.json, the table every recognition route comes from."
+        },
+        "devices": {
+          "type": "object",
+          "description": "The device each registered engine resolved to; null until the engine is built.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
     "debug_store": {
       "type": "boolean",
       "description": "true only on stage with debug storage provisioned: photos and answers are being kept (SECURITY.md)."

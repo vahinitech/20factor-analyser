@@ -25,6 +25,7 @@ import cache  # noqa: E402
 import contract_schemas  # noqa: E402
 import lang_tags  # noqa: E402
 import recognizer  # noqa: E402
+from languages import stages  # noqa: E402
 
 from backend.tests.test_server_pipeline import _hand_strip  # noqa: E402
 from backend.tests.test_telugu_not_read import (  # noqa: E402
@@ -159,6 +160,15 @@ class TestResolveLangs(unittest.TestCase):
         self.assertIsNone(
             recognizer.telugu_not_read("en-Latn-IN,te-Telu-IN", LATIN_ONLY)
         )
+
+
+class TestStageTable(unittest.TestCase):
+    # The stage table (#208) matches engine codes exactly; the endpoints
+    # hand it the mapped code, so a tag routes like its short code.
+    def test_a_tag_routes_like_its_short_code(self):
+        route = stages.table().refine_engine
+        for tag, code in (("te-Telu-IN", "te"), ("en-Latn-GB", "en")):
+            self.assertEqual(route(lang_tags.engine_lang(tag)), route(code))
 
 
 def _load_server():
