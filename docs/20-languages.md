@@ -709,6 +709,18 @@ there, and later stages may only confirm or refuse (section 5).
 The ladder file is committed (`backend/languages/ladders.json`) and the
 server reads it as is. Rebuilding it is a reviewed change.
 
+As built (#219): the first rung is always the Paddle stage that found
+the line, since Paddle detects every line and its reading comes with the
+detection. Paddle mode has that rung alone and trocr mode adds TrOCR for
+every script, as before. Only hybrid mode is ranked. While a stage's
+quality or cost is `unmeasured`, which today is all of them, rule 3
+cannot be applied, so a hybrid ladder is the route `stages.json` names
+for the script, marked `basis: route`, and lists the stages that were
+not measured. A hard rule that fails on a measured fact refuses the
+route rather than follow it. The ranking itself is tested on made-up
+facts, including the judgement table above, which gives the ladders in
+this section.
+
 ### 17.3 Escalation: climbing on doubt
 
 The server runs each line up its ladder and stops at the first rung

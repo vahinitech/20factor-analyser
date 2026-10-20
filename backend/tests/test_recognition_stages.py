@@ -161,7 +161,7 @@ class TestModelsAsBefore(unittest.TestCase):
         self.assertEqual(
             table.model("paddle", "Telu"), "te_PP-OCRv5_mobile_rec"
         )
-        # Paddle has no read stage for Hindi: PaddleOCR picks its own.
+        # PaddleOCR picks its own model for Hindi; the table records none.
         self.assertIsNone(table.model("paddle", "Deva"))
         # Surya's checkpoint is not recorded yet.
         self.assertIsNone(table.model("surya"))
