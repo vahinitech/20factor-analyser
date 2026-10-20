@@ -289,6 +289,43 @@ section 17: cheapest first, a step up only for lines the cheaper engine
 was unsure of, and a refusal rather than a quiet substitute when a needed
 engine is down.
 
+### 6.1 A reader for handwritten Telugu (2026-10-20)
+
+PP-OCRv5's Telugu model reads print; on handwriting it returned Latin
+fragments. `backend/telugu_reader.py` is a reader trained on handwriting:
+a small convolutional network with two bidirectional LSTM layers and CTC,
+about 1.3 million weights stored as 8-bit integers, run in numpy like
+`print_hand.py`, so the same crop gives the same text and the image needs
+no torch. It reads a word or a whole row.
+
+`scripts/train_telugu_reader.py` trains it on IIIT-INDIC-HW-WORDS-Telugu
+(CC BY 4.0, https://ilocr.iiit.ac.in/dataset/23; the owner is asking the
+authors to confirm in writing). The splits are by writer: training has
+writers 1, 2, 3, 5, 7 and 8, validation 4 and 10, test 9, 12 and 13, so
+the test score is on hands the reader never saw. Half the samples are
+lines of two to four words; each is turned, slanted, blurred and lit
+unevenly to look like a phone photo. The score is the character error
+rate in graphemes and the share of words read exactly, of the exported
+weights through `telugu_reader.py`.
+
+Where it trains (`scripts/train_guard.py`): a CUDA GPU, Apple's GPU, else
+the CPU. On the CPU it uses half the cores, runs niced, and before every
+batch checks the memory the machine has free and its own size: below
+`--floor-mb` it saves a checkpoint and waits, above `--max-rss-mb` it
+saves and exits with code 75, and `--resume` carries on. On the
+vahinitech.com server (4 cores, production beside it) one epoch takes
+about three hours; the Mac Studio is the planned machine.
+
+```
+python scripts/train_telugu_reader.py --train train.zip --val val.zip \
+    --test test.zip --work runs/te1 --out runs/te1/results.json
+```
+
+The reader is not used by a scan yet. It joins the Telugu ladder
+(section 17) when its test score passes the bar the owner sets for
+level 2 (section 11), measured on real children's pages from the pilot
+schools as well as the IIIT test writers.
+
 ## 7. Graphemes and copy tasks
 
 Counting characters is wrong for Indic scripts: one written akshara can be
