@@ -128,6 +128,26 @@ had a line more with `en` (the sample photo 18 against 15), and factor
 scores moved by up to 4 points on the rest, since with `en` both image
 variants are read and the merged lines have other boxes.
 
+### Speed and memory of the live reader
+
+The same workflow times the reader (#252, `scripts/live_timing.py`). On
+a pull request it builds main's analyser image next to the pull
+request's and runs each as a container held to the production limit
+(`--memory 2500m --memory-swap 2500m`). Each container reads and scores
+every page with its own checkout's code, recording the page's wall time
+and the container's memory peak after it (cgroup v2 `memory.peak`, the
+number the limit is held to). One page is read first and not timed, so
+loading the models is not charged to a page. There are two passes a
+side, in the order main, PR, PR, main, and each page keeps its fastest
+time and its highest peak.
+
+It fails when the pull request's 95th percentile page time is more than
+15% above main's, its memory peak more than 10% above main's, or any page
+passes 2500 MiB. The summary has both numbers for each side and a row
+per page; the `timing` artifact keeps every pass. The weekly run has no
+main to compare with, so it compares with the last weekly run on `main`
+and only reports.
+
 ## Planted mistakes
 
 `python scripts/benchmark.py planted` runs `scripts/planted_pages.py`
