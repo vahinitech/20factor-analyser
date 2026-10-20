@@ -97,8 +97,12 @@ class CompactHTTPTests(unittest.TestCase):
             )
             data = response.json()
             self.assertEqual(len(data["factors"]), 5)
+            # No profile: the packs' ruleset (languages/profile.py).
+            kwargs = scorer.call_args.kwargs
+            self.assertEqual(set(kwargs), {"include_evidence", "ruleset"})
+            self.assertIs(kwargs["include_evidence"], False)
             self.assertEqual(
-                scorer.call_args.kwargs, {"include_evidence": False}
+                kwargs["ruleset"].hash, server.profiles.resolve().hash
             )
             self.assertEqual(response.headers["cache-control"], "no-store")
             url = "/api/v2/catalog/" + data["catalog_version"]

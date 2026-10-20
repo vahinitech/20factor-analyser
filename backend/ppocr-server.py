@@ -52,6 +52,7 @@ from pypdfium2 import PdfiumError
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import ink_geometry  # lines and geometry from the ink, for unread scripts
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
+import factor_needs  # what each factor needs; a profile's emptied classes
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
@@ -64,6 +65,7 @@ import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 from languages import stages  # which engine reads each script (#208)
+from languages import profile as profiles  # school/class/child rules (#220)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -750,11 +752,12 @@ def _ink_lines(arr, expected_text):
 
 
 def _report_python_process(
-    arr, raw, lang, expected_text, include_evidence=True
+    arr, raw, lang, expected_text, include_evidence=True, ruleset=None
 ):
     """Synchronous body of /report-python: OCR plus the full 20-factor
     analysis, the heaviest of the three endpoints (see _ocr_process for why
-    this runs off the event loop)."""
+    this runs off the event loop). ruleset: the packs plus the request's
+    profile (languages/profile.py); None is the packs alone."""
     last_err = ""
     selected_backend = "paddle"
     compare_meta = {}
@@ -853,9 +856,13 @@ def _report_python_process(
             if include_evidence
             else _vl_analyze(arr, hand_lines, include_evidence=False)
         )
-        analysis = scoring.build_analysis(
-            arr, hand_lines, vl.get("layout", {})
-        ).to_dict()
+        # The profile reaches the scorer through factor_needs, for this
+        # call only: a class it emptied leaves its factors Not measured.
+        with profiles.applied(ruleset):
+            analysis = scoring.build_analysis(
+                arr, hand_lines, vl.get("layout", {})
+            ).to_dict()
+        factor_needs.explain(analysis, ruleset)
     except Exception as e:
         return {
             "ok": False,
@@ -994,16 +1001,32 @@ def _report_python_process(
     }
 
 
-async def _report_payload(image, lang, expected_text, include_evidence=True):
+def _ruleset(profile):
+    """The packs plus the request's profile field, or HTTP 413/422 with
+    the profile's error code. Called before the upload is read or a free
+    check is counted. The profile is never logged or stored; only its
+    hash leaves this request."""
+    try:
+        return profiles.from_request(profile)
+    except profiles.ProfileError as exc:
+        raise HTTPException(exc.status, exc.detail()) from None
+
+
+async def _report_payload(
+    image, lang, expected_text, include_evidence=True, ruleset=None
+):
     t0 = time.perf_counter()
+    ruleset = ruleset or profiles.resolve()
     # te-Telu-IN reads, caches and answers as te (lang_tags.py).
     lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
+    # The ruleset hash keys the cache: a changed profile is a new scan.
     ckey = _cache_key(
         "report-python",
         raw,
         lang,
         f"{expected_text or ''}|backend={OCR_BACKEND}|evidence={include_evidence}",
+        ruleset=ruleset.hash,
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -1011,14 +1034,16 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
 
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
-        if include_evidence:
-            payload = await scan_slots.run(
-                _report_python_process, arr, raw, lang, expected_text
-            )
-        else:
-            payload = await scan_slots.run(
-                _report_python_process, arr, raw, lang, expected_text, False
-            )
+        payload = await scan_slots.run(
+            _report_python_process,
+            arr,
+            raw,
+            lang,
+            expected_text,
+            include_evidence,
+            ruleset,
+        )
+    payload["ruleset"] = ruleset.hash
     _raise_if_ocr_unavailable(payload)
     if not payload.get("ok"):
         return payload
@@ -1053,13 +1078,15 @@ async def report_python(
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
+    profile: str = Form(""),
     authorization: str = Header(default=None),
 ):
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
+    ruleset = _ruleset(profile)
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
-    payload = await _report_payload(image, lang, expected_text)
+    payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
@@ -1092,6 +1119,7 @@ async def api_report(
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
+    profile: str = Form(""),
     authorization: str = Header(default=None),
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
@@ -1104,17 +1132,22 @@ async def api_report(
     # factors; scoring inputs and coaching stay Pro.
     if fields - {"text", "evidence"} and access["tier"] != "pro":
         raise HTTPException(403, "Requested report details require Pro")
+    ruleset = _ruleset(profile)
     charge = DAILY.check(request, exempt=access["tier"] == "pro")
     if format == "compact":
         payload = await _report_payload(
-            image, lang, expected_text, include_evidence="evidence" in fields
+            image,
+            lang,
+            expected_text,
+            include_evidence="evidence" in fields,
+            ruleset=ruleset,
         )
         _spend_if_report(charge, payload)
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
         return compact_reports.build_compact(payload, access, fields)
-    payload = await _report_payload(image, lang, expected_text)
+    payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     return report_contract.public_report(
         payload,

@@ -186,6 +186,10 @@ def build_compact(payload, access, include=()):
             # gets it, so a Free report can show the whole page was read.
             "measurements": payload.get("measurements") or {},
         }
+    if payload.get("ruleset"):
+        # The hash of the packs and the request's profile, never the
+        # profile itself (languages/profile.py).
+        report["ruleset"] = payload["ruleset"]
     if report["ok"]:
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)

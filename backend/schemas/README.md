@@ -22,12 +22,17 @@ does that) or prove semantic compatibility between schema versions.
 | `report-expanded.schema.json` | `POST /api/v2/reports` default response, schema 2.0 |
 | `report-compact.schema.json` | `POST /api/v2/reports?format=compact` response, schema 2.1 |
 | `catalog.schema.json` | `GET /api/v2/catalog/{version}`, with each factor's exercises and tips, its `why`, `win` and website `page`, and the `practice` block (optional only so archived versions still validate) |
-| `error.schema.json` | HTTP 401, 403, 404, 413, 422, 429 and 503 bodies, for both APIs |
+| `error.schema.json` | HTTP 401, 403, 404, 413, 422, 429 and 503 bodies, for both APIs, including a refused `profile` |
 | `health.schema.json` | `GET /health` |
 | `access-request.schema.json` | Internal access API request bodies; `access-customer.schema.json#/definitions/` holds each one (`grant`, `subscription`, `keyLookup`) |
 | `access-customer.schema.json` | Internal access API customer record (plan, effective access, keys, audit), and the definitions the other `access-*` files share |
 | `access-key.schema.json` | Internal access API new key, the only answer with a secret (201) |
 | `access-key-lookup.schema.json` | Internal access API key lookup by secret |
+
+The request's `profile` field is JSON text checked against
+`backend/languages/profile.schema.json` (draft 2020-12, `$defs/layers`),
+which sits beside the language packs it layers on and is written by hand,
+not generated. A contracts copy should take it with these files.
 
 ## What the schemas enforce
 

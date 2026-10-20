@@ -1,7 +1,7 @@
 {
   "id": "Latn",
   "kind": "script",
-  "$comment": "Today's constants exactly (#206). classes.letter is the ASCII letters the scorer counts; accented letters join it in a later step, since that moves scores.",
+  "$comment": "Today's constants exactly (#206). classes.letter is the ASCII letters the scorer counts; accented letters join it in a later step, since that moves scores. letter_models and variants are the reviewed lists a school or class profile picks from (profile.schema.json); both stay empty until a teacher of the script reviews them, so a profile cannot name a letter model or a form for Latin yet.",
   "set": {
     "name": "Latin",
     "unicode": ["0041-005A", "0061-007A", "00C0-024F"],
@@ -20,6 +20,8 @@
       "c_family": "adgqo",
       "loop_shapes": "abdegopqABDGOPQR0689"
     },
+    "letter_models": [],
+    "variants": {},
     "tbar_pairs": {
       "double": ["tt"],
       "beside_stem": ["tl", "th", "tk", "tb", "lt", "ht", "kt", "bt"]

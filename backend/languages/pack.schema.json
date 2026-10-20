@@ -48,6 +48,7 @@
       }
     },
     "letters": {"type": "string"},
+    "name": {"type": "string", "pattern": "^[a-z][a-z0-9-]{0,39}$"},
     "words": {"type": "array", "items": {"type": "string", "minLength": 1}},
     "resolved": {
       "type": "object",
@@ -93,6 +94,21 @@
         "tbar_pairs": {
           "type": "object",
           "additionalProperties": {"$ref": "#/$defs/words"}
+        },
+        "letter_models": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"$ref": "#/$defs/name"}
+        },
+        "variants": {
+          "type": "object",
+          "propertyNames": {"type": "string", "minLength": 1, "maxLength": 1},
+          "additionalProperties": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {"$ref": "#/$defs/name"}
+          }
         },
         "level": {"type": "integer", "minimum": 0, "maximum": 3},
         "benchmark": {"type": "string", "pattern": "^[a-z0-9-]+$"},

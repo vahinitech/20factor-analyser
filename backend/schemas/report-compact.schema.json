@@ -265,6 +265,9 @@
     "comparability": {
       "$ref": "common.schema.json#/definitions/comparability"
     },
+    "ruleset": {
+      "$ref": "common.schema.json#/definitions/ruleset"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,

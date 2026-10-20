@@ -12,6 +12,8 @@
 # (_LATIN_ONLY, _NEEDS_RECOGNITION and _INK_MEASURED); the reasons and the
 # scoring_inputs methods are the same words as before.
 
+from languages import profile
+
 # The vocabulary of section 8, in the order a missing need is reported:
 # a factor missing pen data says so even when nothing was read either.
 VOCABULARY = (
@@ -60,6 +62,16 @@ NEEDS = {
     20: (("rows",),),
 }
 
+# The letter classes each factor counts letters of: loops and closed
+# bowls for 3; tall letters for 6, by share and in the zone fit
+# (zone_analysis.py). A school or class profile that empties one of these
+# classes (languages/profile.py) leaves the factor "Not measured", never
+# a higher score.
+CLASSES = {
+    3: ("bowl", "loop"),
+    6: ("ascender", "descender"),
+}
+
 # The unmeasured kind (scoring._UNMEASURED_REASONS) a missing need gives.
 KIND = {
     "sensor": "imu",
@@ -86,6 +98,15 @@ def _check():
                 raise ValueError(
                     f"factor needs: factor {n} needs {sorted(unknown)}"
                 )
+    for n in CLASSES:
+        if not any("classes" in alt for alt in NEEDS[n]):
+            raise ValueError(f"factor needs: factor {n} counts no class")
+    counted = {name for names in CLASSES.values() for name in names}
+    if counted & set(profile.MUST_KEEP):
+        raise ValueError(
+            "factor needs: a class a profile must keep cannot leave a "
+            "factor unmeasured"
+        )
 
 
 _check()
@@ -110,13 +131,23 @@ def page_supplies(lines, latin_letters, zone_based):
     return frozenset(got)
 
 
+def emptied(n):
+    """The classes factor n counts that the scan's profile emptied
+    (profile.applied(); none without a profile)."""
+    ruleset = profile.active()
+    if ruleset is None:
+        return ()
+    return tuple(c for c in CLASSES.get(n, ()) if c in ruleset.emptied_classes)
+
+
 def missing_need(n, supplied):
     """None when factor n can be measured from what was supplied, else the
     need to report: the first in VOCABULARY order missing from any of the
-    factor's alternatives."""
+    factor's alternatives. A factor whose counted class the profile
+    emptied lacks "classes" even when the page has letters."""
     alternatives = NEEDS[n]
     if any(set(alt) <= supplied for alt in alternatives):
-        return None
+        return "classes" if emptied(n) else None
     lacking = {need for alt in alternatives for need in alt} - supplied
     return next(need for need in VOCABULARY if need in lacking)
 
@@ -125,3 +156,40 @@ def missing_kind(n, supplied):
     """The unmeasured kind for factor n on this page, or None."""
     need = missing_need(n, supplied)
     return KIND[need] if need else None
+
+
+# What the report says for a factor a profile left unmeasured; it
+# replaces the script reason the scorer gives a missing "classes".
+PROFILE_REASON = "The class profile says these letters are not taught yet."
+PROFILE_EVIDENCE = (
+    "The class profile says the letters this measure counts are not "
+    "taught yet, so it waits until they are."
+)
+
+
+def explain(analysis, ruleset):
+    """The scorer's output (AnalysisResult.to_dict()) with the profile's
+    reason on each factor it left unmeasured. Words only: no score,
+    section or overall changes here."""
+    if ruleset is None or not ruleset.emptied_classes or not analysis:
+        return analysis
+    factors = list(analysis.get("results") or [])
+    for section in analysis.get("sections") or []:
+        factors.extend(section.get("factors") or [])
+    for factor in factors:
+        names = [
+            c
+            for c in CLASSES.get(factor.get("n"), ())
+            if c in ruleset.emptied_classes
+        ]
+        if not names or not factor.get("unmeasured"):
+            continue
+        if factor.get("unmeasuredKind") != KIND["classes"]:
+            continue
+        factor["unmeasuredReason"] = PROFILE_REASON
+        factor["evidence"] = PROFILE_EVIDENCE
+        factor["scoringInputs"] = {
+            "method": "profile_not_taught",
+            "features": {"classes": names},
+        }
+    return analysis

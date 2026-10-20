@@ -470,10 +470,12 @@ Proposed pattern, which keeps every value valid today:
 ^(auto|[a-z]{2,3}(-[A-Z][a-z]{3})?(-[A-Z]{2})?(,[a-z]{2,3}(-[A-Z][a-z]{3})?(-[A-Z]{2})?)*)$
 ```
 
-The request gains two optional fields: `profile` (an id and version,
-section 18.1) and `age_band` (for example `6-7`; never a birth date), so
-age norms (section 9) have something to key on. Today the request has no
-age at all.
+The request gains two optional fields: `profile` (section 18.1) and
+`age_band` (for example `6-7`; never a birth date), so age norms (section
+9) have something to key on. Today the request has no age at all. Until
+the owner decides who may keep profiles (open question 8), `profile`
+carries the profile itself as JSON, at most 16384 bytes, and nothing is
+stored (#220); an id and version can replace it once profiles are kept.
 
 The response gains, additively: a `language` object (resolved tag, source
 of the decision, pack level), a `script` per line and per token, and
@@ -990,6 +992,15 @@ section 11). Today factor 1 uses reader confidence and letter heights, not
 shape templates, so a variant list changes nothing until then. That is
 deliberate: the field exists so that schools can say it before it is
 used.
+
+What is built (#220): `backend/languages/profile.schema.json` and
+`profile.py` resolve and hash the layers, the request carries them inline,
+and an emptied letter class leaves factor 3 or 6 "Not measured"
+(`factor_needs.CLASSES`). A profile may not empty every letter or every
+small letter. The Latin pack's reviewed letter models and forms are empty
+lists until a teacher reviews them. Exception words, skip rules, word
+lists and checks are checked and hashed only, until the script decision
+(#211) and the language skills (#221) read them.
 
 **Privacy.** A profile holds teaching choices, never health, diagnosis or
 ability notes, and the schema has no field for them. Exception lists can
