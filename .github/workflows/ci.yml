@@ -1,6 +1,7 @@
 # CI for the 20-Factor Analyser — runs on every push + PR.
 #  - python-tests   : server logic without the heavy paddle/torch install.
 #  - benchmark      : real handwriting pages replayed; scores as expected.
+#  - complexity     : each per-page function grows no faster than declared.
 #  - e2e            : headless Chrome — analyser app loads, print/handwriting
 #                     classification, bundle is in sync with src/.
 #  - e2e-recognition: full stack WITH the OCR backend; proves server recognition
@@ -110,7 +111,8 @@ jobs:
             backend/languages/profile.py backend/tests/test_profiles.py \
             backend/languages/graphemes.py backend/tests/test_graphemes.py \
             backend/tests/test_passage_alignment.py \
-            scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py
+            scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
+            scripts/complexity.py backend/tests/test_complexity.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -172,6 +174,30 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Planted mistakes, no rate worse
         run: python scripts/benchmark.py planted
+
+  # Each per-page function's growth against backend/perf/complexity.json
+  # (#230, docs/21-performance-and-coverage.md section 4): synthetic
+  # inputs at n, 2n, 4n and 8n, the slope of log CPU time against log n.
+  # Slopes only, never times, so runner noise does not fail it.
+  complexity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Every per-page function grows no faster than declared
+        run: python scripts/complexity.py check --summary "$GITHUB_STEP_SUMMARY" --out complexity.md
+      - name: Upload the growth table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity
+          path: complexity.md
+          if-no-files-found: warn
 
   e2e:
     runs-on: ubuntu-latest

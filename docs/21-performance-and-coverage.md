@@ -102,6 +102,15 @@ report, never refused: the page was already admitted and paid for.
 
 ## 4. Recording growth: big O per function (#230)
 
+Built in #230: `backend/perf/complexity.json`, `scripts/complexity.py` and
+the `complexity` job in `ci.yml`, which writes the table to the job
+summary and uploads it as the `complexity` artifact. The inputs are
+synthetic pages of handwriting-like strokes, reader lines and passage
+text, the same at every run. Lines past the ladder's 40 are held, so
+`escalation.climb` is measured up to 40 lines. A test plants a quadratic
+function declared O(n) and checks the job would fail
+(`backend/tests/test_complexity.py`); it is never in the real table.
+
 `backend/perf/complexity.json` lists every function that runs once per
 page, what its n is, and how fast it should grow:
 
@@ -221,4 +230,4 @@ number is in the diff for review.
 | Profiling job | #231 | now (a workflow and a script, no pipeline change) |
 | Coverage | #232 | done (#247) |
 | Stage timings and budgets | #229 | now; it wraps the steps in `backend/scoring_parts/` from the split (#227) |
-| Big O per function | #230 | now, on the split's functions |
+| Big O per function | #230 | built (#230) |
