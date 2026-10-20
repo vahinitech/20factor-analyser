@@ -540,5 +540,6 @@ class CacheAndComparability(unittest.TestCase):
             contract_schemas.errors("error", {"detail": error.detail()}), []
         )
 
+
 if __name__ == "__main__":
     unittest.main()
