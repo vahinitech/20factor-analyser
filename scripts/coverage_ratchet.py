@@ -181,16 +181,18 @@ def summary(part, total, files, baseline, found, counts):
     head = f"### {part.capitalize()} coverage: {total:.2f}%"
     if was is not None:
         head += f" (baseline {was:.2f}%)"
-    lines = [
-        head,
-        "",
+    rule = (
         "Covered lines and branches over all lines and branches, per"
         f" file. A file or the total may not drop more than {TOLERANCE}"
-        f" points under coverage-baseline.json; {' and '.join(FLOOR_PATHS)}"
-        f" stay at {FLOOR:.0f}% or more"
-        " (docs/21-performance-and-coverage.md section 6).",
-        "",
-    ]
+        " points under coverage-baseline.json"
+    )
+    if part == "backend":
+        rule += (
+            f"; {' and '.join(FLOOR_PATHS)} stay at {FLOOR:.0f}% or more,"
+            " apart from the exceptions listed there"
+        )
+    rule += " (docs/21-performance-and-coverage.md section 6)."
+    lines = [head, "", rule, ""]
     if found:
         lines += ["**Fails the ratchet:**", ""]
         lines += [f"- {line}" for line in found]
