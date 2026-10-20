@@ -831,10 +831,16 @@ def line_word_breaks(arr, line, n_words=None, comps=None):
     """The word breaks line_word_gaps measures, with their place: a list of
     (gap, x_left, x_right) in processed-image pixels, widest first (ties
     left to right). x_left is where the ink of one word ends and x_right
-    where the next begins. None when the line cannot be measured."""
+    where the next begins. None when the line cannot be measured.
+
+    When every letter stands apart (as many ink spans as the text has
+    letters and digits), the text says where each word ends, as in
+    letter_geometry.measure_line, so a word gap narrower than the gaps
+    between letters is still found (#142). Otherwise the widest gaps are
+    the word breaks."""
+    words = [w for w in re.split(r"\s+", str(line.get("text", "") or "")) if w]
     if n_words is None:
-        text = str(line.get("text", "") or "")
-        n_words = len([w for w in re.split(r"\s+", text.strip()) if w])
+        n_words = len(words)
         if n_words < 2:
             return None
     if comps is None:
@@ -853,6 +859,10 @@ def line_word_breaks(arr, line, n_words=None, comps=None):
     ]
     if len(gaps) < n_words - 1:
         return None
+    counts = [sum(1 for c in w if c.isalnum()) for w in words]
+    if len(words) == n_words and all(counts) and sum(counts) == len(spans):
+        ends = np.cumsum(counts)[:-1] - 1
+        gaps = [gaps[int(i)] for i in ends]
     return sorted(gaps, key=lambda g: (-g[0], g[1]))[: n_words - 1]
 
 
