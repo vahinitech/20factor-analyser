@@ -4,8 +4,9 @@
 #
 # cache.py — response cache for the /ocr, /analyze-vl and /report-python
 # endpoints: TTL + max-item eviction, keyed by endpoint + language + extra
-# context + a hash of the raw upload. Configure once at startup via
-# configure(); ttl_sec=0 disables caching entirely.
+# context + the ruleset hash (packs plus profile, languages/profile.py) +
+# a hash of the raw upload. Configure once at startup via configure();
+# ttl_sec=0 disables caching entirely.
 
 import copy
 import hashlib
@@ -31,10 +32,16 @@ def configure(**kwargs):
             _CFG[k] = v
 
 
-def cache_key(endpoint: str, raw: bytes, lang: str, extra: str = "") -> str:
+def cache_key(
+    endpoint: str, raw: bytes, lang: str, extra: str = "", ruleset: str = ""
+) -> str:
     # Keyed by the engine form of `lang`, so `te` and `te-Telu-IN` share
-    # an entry; every short code keys exactly as it did before.
+    # an entry; every short code keys exactly as it did before. A scored
+    # report also keys on its ruleset hash: the same photo with another
+    # profile is another report.
     h = hashlib.sha1(raw).hexdigest()
+    if ruleset:
+        extra = f"{extra}|ruleset={ruleset}"
     return f"{endpoint}|{lang_tags.engine_langs(lang)}|{extra}|{h}"
 
 
