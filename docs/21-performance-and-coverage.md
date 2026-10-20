@@ -141,6 +141,8 @@ top 30 functions by cumulative time and the top 20 allocation sites,
 each compared with the last run on `main`. A function that entered the
 top 10 or grew by more than a quarter is marked. It never fails a PR;
 the raw profiles are kept as artifacts for anyone who wants to dig.
+The script is `scripts/profile_benchmark.py`; how to run it and read the
+tables is in [18-benchmark.md](18-benchmark.md#where-the-replay-spends-its-time-and-memory).
 
 ## 6. Coverage (#232)
 
