@@ -27,11 +27,11 @@ Checked on `main` at d24cf63 (20 October 2026):
 | Engine time per line | `recognizer.py:306-315`, `engine_speed_snapshot` in `/health` | hybrid engines only, information only since #112 |
 | Memory plan | `capacity.py`, [13-api-and-capacity.md](13-api-and-capacity.md) | scan slots from the container limit |
 | Peak memory under load | `backend/load_test.py` on stage | by hand |
-| Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` | 38 of 46 test files |
+| Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` (replaced by discovery in #228) | 38 of 46 test files |
 | Coverage | none | |
 | Profiler | none | |
 
-Eight test files run in no workflow at all: `test_baseline_track`,
+(Since fixed by #228: every test file now runs.) Eight test files ran in no workflow at all: `test_baseline_track`,
 `test_capacity`, `test_coach_tips`, `test_plain_groups`, `test_scan_slots`,
 `test_style_finishing`, `test_tbar_analysis` and `test_zone_analysis`.
 Two of them guard the memory protections. A change that breaks them passes
@@ -160,8 +160,8 @@ Coverage waits for #228, so it counts every test.
 
 | Step | Issue | Can start |
 |---|---|---|
-| Every test runs | #228 | now |
+| Every test runs | #228 | done (#236) |
 | Profiling job | #231 | now (a workflow and a script, no pipeline change) |
-| Coverage | #232 | after #228 |
+| Coverage | #232 | now |
 | Stage timings and budgets | #229 | now; it wraps the steps in `backend/scoring_parts/` from the split (#227) |
 | Big O per function | #230 | now, on the split's functions |
