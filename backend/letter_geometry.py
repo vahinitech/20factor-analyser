@@ -37,10 +37,12 @@ try:
 except ImportError:  # pragma: no cover - cv2 ships in core
     cv2 = None
 
+import languages
 from geometry import clamp_box
 from zone_analysis import binarise, dense_band
 
-SMALL_LETTERS = set("acemnorsuvwxz")
+# Letters that stay within the small-letter band (the language pack).
+SMALL_LETTERS = languages.language().letter_set("body_only")
 MIN_XHEIGHT_PX = 4
 
 
