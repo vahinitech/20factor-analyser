@@ -100,9 +100,7 @@ class Refusals(unittest.TestCase):
         ruleset = profile.from_request(
             json.dumps({"class": {"exceptions": {"add": {"words": words}}}})
         )
-        self.assertEqual(
-            ruleset.rules()["exceptions"]["words"], sorted(words)
-        )
+        self.assertEqual(ruleset.rules()["exceptions"]["words"], sorted(words))
         other = profile.from_request(
             json.dumps({"class": {"exceptions": {"add": {"words": ["a"]}}}})
         )
