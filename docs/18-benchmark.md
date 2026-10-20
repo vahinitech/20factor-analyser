@@ -116,6 +116,13 @@ the PR shows what the new reader did to every page.
 container, writing straight into `reader/`. The kept output was captured
 on the stage server's image on 19 October 2026.
 
+The same run reads every page, and the sample photo
+(`tests/fixtures/handwriting-sample.jpg`), twice more: with `lang=auto`,
+as the website sends, and with `lang=en` (`benchmark.py langs`). Both
+must give the same number of lines and every score within the same 0.3
+(#145). A named language once read both image variants and kept most
+lines twice, so the same photo scored 74 with `auto` and 71 with `en`.
+
 ## Planted mistakes
 
 `python scripts/benchmark.py planted` runs `scripts/planted_pages.py`
