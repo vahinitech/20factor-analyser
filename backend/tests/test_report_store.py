@@ -15,7 +15,10 @@ what is kept is scores, counts and coordinates only:
 - a hostile report (wrong types, NaN, huge numbers, extra text fields)
   leaves nothing but checked values;
 - a receipt is the only way back in, it expires, a later check renews
-  it, and the family can delete it.
+  it, and the family can delete it;
+- the read-only token a shared PDF carries opens a record only through
+  the Pro comparison: it never reads alone, renews or deletes;
+- POST /api/v2/compare refuses anything but Pro before opening a record.
 
 Planted pages only: drawn letters, cast names, no real handwriting.
 """
@@ -385,8 +388,10 @@ class StoreTests(unittest.TestCase):
         with open(path, "rb") as fh:
             body = fh.read()
         self.assertNotIn(receipt["token"].encode(), body)
+        self.assertNotIn(receipt["read_token"].encode(), body)
         self.assertEqual(
-            set(json.loads(body)), {"id", "token_sha256", "expires", "report"}
+            set(json.loads(body)),
+            {"id", "token_sha256", "read_token_sha256", "expires", "report"},
         )
         self.assertEqual(stat.S_IMODE(os.stat(path).st_mode), 0o600)
         folder = os.path.dirname(path)
@@ -428,6 +433,75 @@ class StoreTests(unittest.TestCase):
         self.day += timedelta(days=400)
         self.store.save(self.report)
         self.assertEqual(len(files_under(self.tmp.name)), 1)
+
+    def test_the_read_only_token_cannot_read_alone_renew_or_delete(self):
+        receipt = self.store.save(self.report)
+        self.assertRegex(receipt["read_token"], r"^[A-Za-z0-9_-]{43}$")
+        self.assertNotEqual(receipt["read_token"], receipt["token"])
+        ident, shared = receipt["id"], receipt["read_token"]
+        self.assertIsNone(self.store.read(ident, shared))
+        self.assertEqual(
+            self.store.read(ident, shared, read_only=True)["score"], 80
+        )
+        self.assertEqual(self.store.renew([{"id": ident, "token": shared}]), 0)
+        self.assertFalse(self.store.delete(ident, shared))
+        self.assertEqual(len(files_under(self.tmp.name)), 1)
+        # The full token still does everything, the comparison included.
+        self.assertEqual(
+            self.store.read(ident, receipt["token"], read_only=True)["score"],
+            80,
+        )
+
+    def test_comparison_notes(self):
+        def rec(day, script="latin", words=30, page="handwriting"):
+            return {
+                "day": day,
+                "comparability": {
+                    "script": script,
+                    "words": words,
+                    "page": page,
+                },
+            }
+
+        notes = report_store.comparison_notes
+        self.assertEqual(notes(rec("2026-10-03"), rec("2026-11-03")), [])
+        codes = [
+            n["code"]
+            for n in notes(
+                rec("2026-11-03", words=30),
+                rec("2026-10-03", "telugu", 20, "handwriting_with_print"),
+            )
+        ]
+        self.assertEqual(
+            codes,
+            [
+                "dates_reversed",
+                "different_script",
+                "different_length",
+                "print_on_one_page",
+            ],
+        )
+        self.assertEqual(
+            notes(rec("2026-10-03"), rec("2026-10-03")),
+            [
+                {
+                    "code": "same_day",
+                    "before": "2026-10-03",
+                    "after": "2026-10-03",
+                }
+            ],
+        )
+        # 25% apart is still comparable; more is not.
+        self.assertEqual(
+            notes(rec("2026-10-03", words=40), rec("2026-11-03", words=30)),
+            [],
+        )
+        self.assertEqual(
+            notes(rec("2026-10-03", words=40), rec("2026-11-03", words=29)),
+            [{"code": "different_length", "before": 40, "after": 29}],
+        )
+        # Unknown counts say nothing.
+        self.assertEqual(notes({"day": None}, {}), [])
 
     def test_the_family_can_delete(self):
         receipt = self.store.save(self.report)
@@ -535,6 +609,99 @@ class EndpointTests(unittest.TestCase):
             self.client.delete(url, headers=token).status_code, 204
         )
         self.assertEqual(self.client.get(url, headers=token).status_code, 404)
+
+    def test_the_read_only_token_is_refused_by_get_delete_and_renew(self):
+        receipt = self.check().json()["receipt"]
+        url = "/api/v2/reports/" + receipt["id"]
+        shared = {"X-Report-Token": receipt["read_token"]}
+        self.assertEqual(self.client.get(url, headers=shared).status_code, 404)
+        self.assertEqual(
+            self.client.delete(url, headers=shared).status_code, 404
+        )
+        renewed = self.client.post(
+            "/api/v2/reports/renew",
+            json={
+                "receipts": [
+                    {"id": receipt["id"], "token": receipt["read_token"]}
+                ]
+            },
+        )
+        self.assertEqual(renewed.json(), {"renewed": 0})
+        full = {"X-Report-Token": receipt["token"]}
+        self.assertEqual(self.client.get(url, headers=full).status_code, 200)
+
+    def compare(self, receipts, key="Bearer vh_pro_bheema_key"):
+        headers = {"Authorization": key} if key else {}
+        return self.client.post(
+            "/api/v2/compare", json={"receipts": receipts}, headers=headers
+        )
+
+    def access(self, tier):
+        self.mod.entitlements.access_for = lambda _auth=None: {
+            "tier": tier,
+            "authenticated": tier == "pro",
+        }
+
+    def test_compare_refuses_anything_but_pro(self):
+        saved = self.mod.entitlements.access_for
+        self.addCleanup(setattr, self.mod.entitlements, "access_for", saved)
+        a, b = (self.check().json()["receipt"] for _ in range(2))
+        pair = [
+            {"id": a["id"], "token": a["read_token"]},
+            {"id": b["id"], "token": b["read_token"]},
+        ]
+        # No key: the real entitlements answer Free.
+        res = self.compare(pair, key=None)
+        self.assertEqual(res.status_code, 403)
+        contract_schemas.validate("error", res.json())
+        self.assertNotIn(a["id"], res.text)
+        self.access("free")
+        self.assertEqual(self.compare(pair).status_code, 403)
+        # A free caller learns nothing about a receipt: a bad one is
+        # still 403, not 404.
+        bogus = [{"id": "0" * 32, "token": "A" * 43}] * 2
+        self.assertEqual(self.compare(bogus).status_code, 403)
+
+    def test_compare_returns_both_records_and_notes_for_pro(self):
+        saved = self.mod.entitlements.access_for
+        self.addCleanup(setattr, self.mod.entitlements, "access_for", saved)
+        self.access("pro")
+        a, b = (self.check().json()["receipt"] for _ in range(2))
+        before_files = files_under(self.tmp.name)
+        pair = [
+            {"id": a["id"], "token": a["read_token"]},
+            {"id": b["id"], "token": b["token"]},
+        ]
+        contract_schemas.validate("compare-request", {"receipts": pair})
+        res = self.compare(pair)
+        self.assertEqual(res.status_code, 200, res.text)
+        body = contract_schemas.validate("compare", res.json())
+        self.assertEqual(body["before"]["id"], a["id"])
+        self.assertEqual(body["after"]["id"], b["id"])
+        self.assertEqual(
+            body["before"], report_store.STORE.read(a["id"], a["token"])
+        )
+        # Two checks of one page on one day.
+        self.assertEqual([n["code"] for n in body["notes"]], ["same_day"])
+        self.assertNotIn("Bheema", res.text)
+        # Nothing new is kept.
+        self.assertEqual(files_under(self.tmp.name), before_files)
+
+    def test_compare_names_the_missing_side_and_refuses_bad_bodies(self):
+        saved = self.mod.entitlements.access_for
+        self.addCleanup(setattr, self.mod.entitlements, "access_for", saved)
+        self.access("pro")
+        a = self.check().json()["receipt"]
+        good = {"id": a["id"], "token": a["read_token"]}
+        res = self.compare([good, {"id": "0" * 32, "token": "A" * 43}])
+        self.assertEqual(res.status_code, 404)
+        self.assertEqual(res.json()["detail"]["side"], "after")
+        contract_schemas.validate("error", res.json())
+        self.assertEqual(self.compare([good]).status_code, 400)
+        self.assertEqual(self.compare([good, good]).status_code, 400)
+        self.assertEqual(self.compare([good, good, good]).status_code, 400)
+        # Not a list of objects: FastAPI's own validation answers.
+        self.assertEqual(self.compare([good, "junk"]).status_code, 422)
 
     def test_same_photo_same_scores_in_every_record(self):
         first = self.check().json()["receipt"]

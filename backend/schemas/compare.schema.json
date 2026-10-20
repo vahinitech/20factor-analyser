@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/compare.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "before",
+    "after",
+    "notes"
+  ],
+  "properties": {
+    "before": {
+      "$ref": "stored-report.schema.json"
+    },
+    "after": {
+      "$ref": "stored-report.schema.json"
+    },
+    "notes": {
+      "type": "array",
+      "maxItems": 5,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "before",
+          "after"
+        ],
+        "properties": {
+          "code": {
+            "enum": [
+              "dates_reversed",
+              "same_day",
+              "different_script",
+              "different_length",
+              "print_on_one_page"
+            ]
+          },
+          "before": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ]
+          },
+          "after": {
+            "type": [
+              "string",
+              "integer",
+              "null"
+            ]
+          }
+        },
+        "description": "dates_reversed and same_day carry the two days, different_script the two scripts, different_length the two word counts (more than 25% apart), print_on_one_page the two page kinds."
+      }
+    }
+  },
+  "title": "POST /api/v2/compare response: two stored reports",
+  "description": "The two stored records, in the order sent, and what makes them hard to compare. Pro only; nothing new is stored (backend/report_store.py comparison_notes)."
+}

@@ -1014,7 +1014,9 @@ class _Receipts(BaseModel):
 def _stored(report_id, token):
     record = report_store.STORE.read(report_id, token or "")
     if record is None:
-        # Unknown, expired, deleted or a wrong token: all the same.
+        # Unknown, expired, deleted or a wrong token: all the same. The
+        # read-only token from a shared PDF counts as wrong here; it
+        # opens a record only through the Pro comparison below.
         raise HTTPException(404, "No such report")
     return record
 
@@ -1040,6 +1042,46 @@ def api_renew_reports(body: _Receipts):
     """The family checked again: keep their earlier reports another
     12 months. Unknown receipts are skipped silently."""
     return {"renewed": report_store.STORE.renew(body.receipts)}
+
+
+@app.post("/api/v2/compare")
+async def api_compare(
+    body: _Receipts, authorization: str = Header(default=None)
+):
+    """Two stored reports side by side, for Pro only (owner decision,
+    2026-10-16). The key is checked before any record is opened, so a
+    free caller learns nothing about a receipt. Receipts are the
+    earlier check first; either token reads, the read-only one from a
+    shared PDF included. Nothing is stored."""
+    access = await run_in_threadpool(entitlements.access_for, authorization)
+    if access["tier"] != "pro":
+        raise HTTPException(403, "Comparing two checks requires Pro")
+    receipts = body.receipts
+    if len(receipts) != 2 or not all(isinstance(r, dict) for r in receipts):
+        raise HTTPException(400, "Send exactly two receipts")
+    if receipts[0].get("id") == receipts[1].get("id"):
+        raise HTTPException(400, "Send two different reports")
+    records = []
+    for side, receipt in zip(("before", "after"), receipts):
+        record = report_store.STORE.read(
+            receipt.get("id"), receipt.get("token"), read_only=True
+        )
+        if record is None:
+            raise HTTPException(
+                404,
+                {
+                    "error_code": "no_such_report",
+                    "error": "No such report",
+                    "side": side,
+                },
+            )
+        records.append(record)
+    before, after = records
+    return {
+        "before": before,
+        "after": after,
+        "notes": report_store.comparison_notes(before, after),
+    }
 
 
 @app.get("/api/v2/catalog/{version}")
