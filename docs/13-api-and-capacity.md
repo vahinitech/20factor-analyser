@@ -5,7 +5,7 @@ Reviewed on 2026-09-11. The combined service is `backend/analyser-ocr-server.py`
 | Endpoint | Method and input | Behavior |
 |---|---|---|
 | `/health` | GET | Service and model availability metadata. HTTP 200 alone does not prove an OCR model is ready; inspect `backends`. |
-| `/ocr/health` | GET | Combined-server compatibility alias for `/health`. |
+| `/ocr/health` | GET | The same as `/health`, under the `/ocr` prefix a proxy routes to the server; the browser probes this one. |
 | `/ocr` | POST multipart `image`, optional `lang`, `det`, `rec` | Recognized handwriting. `det` and `rec` are accepted compatibility fields; currently they do not disable detection or recognition. |
 | `/analyze-vl` | POST multipart `image`, optional `lang` | Handwriting regions, context and factor evidence. |
 | `/report-python` | POST multipart `image`, optional `lang`, `expected_text` | Factor scores, evidence and recognition metadata. |
