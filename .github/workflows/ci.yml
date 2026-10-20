@@ -91,6 +91,7 @@ jobs:
             backend/tests/test_line_pieces.py \
             backend/tests/test_word_spacing.py \
             backend/tests/test_benchmark.py scripts/benchmark.py \
+            backend/tests/test_reading_accuracy.py \
             scripts/profile_benchmark.py backend/tests/test_profile_benchmark.py \
             backend/tests/test_ink_geometry.py \
             backend/tests/test_factor_scores.py scripts/factor_tests.py \
