@@ -143,16 +143,36 @@ const KINDS = {
   mixed:{ label:'a form / printed page with handwriting', title:'The craft of your handwritten notes',
     intro:'This page mixes printed text with handwriting (like a form or prescription). We only assess the handwritten notes, with light writing-craft guidance.',
     runGrammar:true, runCompleteness:false, guide:'prose' },
-  nonlatin:{ label:'non-English script', title:'Writing-craft (English) not applied',
-    intro:'The writing appears to be in a non-English script. Our shape and quality factors still apply, but the language-craft checks below currently support English (Latin script) only: so they were not run on this sample.',
+  nonlatin:{ label:'not English', title:'Writing-craft (English) not applied',
+    intro:'The writing appears not to be in English. Our shape and quality factors still apply, but the language-craft checks below currently support English only: so they were not run on this sample.',
     runGrammar:false, runCompleteness:false, guide:null },
 };
 
-function kindOf(text, docKey){
+/* Is the page English? The server's reading decides (#221): the report's
+   `comparability` says which script the letters read are in and which
+   reading-engine languages read the lines. English means Latin letters
+   and every line read as English (`en`, or `en-` with a region). German,
+   or Telugu written in Latin letters and read as `te`, is not English,
+   though its letters are mostly ASCII. Returns null when the response
+   carries no script or no reading languages (older cached responses, or
+   nothing read). */
+function readsEnglish(reading){
+  if (!reading || typeof reading!=='object') return null;
+  const langs = Array.isArray(reading.languages) ? reading.languages : [];
+  if (!reading.script || !langs.length) return null;
+  return reading.script==='latin' && langs.every(l=>/^en(-|$)/i.test(String(l)));
+}
+
+function kindOf(text, docKey, reading){
   const t=(text||'').trim();
+  const english = readsEnglish(reading);
+  if (english===false) return 'nonlatin';
+  // No language information: fall back to counting non-ASCII characters.
+  // This misses German and Telugu in Latin letters, so it is used only when
+  // the server said nothing about the language.
   const latin = (t.match(/[A-Za-z]/g)||[]).length;
   const nonlatin = (t.match(/[^\x00-\x7F]/g)||[]).length;
-  if (t.length>3 && nonlatin > Math.max(3, latin)) return 'nonlatin';
+  if (english===null && t.length>3 && nonlatin > Math.max(3, latin)) return 'nonlatin';
   if (docKey==='symbolic') return 'math';
   if (docKey==='figures')  return 'science';
   if (docKey==='mixed')    return 'mixed';
@@ -160,9 +180,9 @@ function kindOf(text, docKey){
   return 'prose';
 }
 
-function analyze(text, docKey){
+function analyze(text, docKey, reading){
   const t = (text||'').trim();
-  const kind = kindOf(t, docKey);
+  const kind = kindOf(t, docKey, reading);
   const K = KINDS[kind];
 
   // grammar / homophone findings
@@ -216,7 +236,10 @@ const SPELLING = {
   tommorow:'tomorrow', tommorrow:'tomorrow', untill:'until',
   usefull:'useful', usualy:'usually', wierd:'weird', writting:'writing',
 };
-function checkSpelling(text){
+function checkSpelling(text, reading){
+  // English words only: a page the server read as another language is not
+  // checked. With no language information it runs as before.
+  if (readsEnglish(reading)===false) return [];
   const source=String(text||'');
   const findings=[];
   for(const match of source.matchAll(/\b[A-Za-z]+(?:['’][A-Za-z]+)?\b/g)){
@@ -229,5 +252,5 @@ function checkSpelling(text){
   return findings;
 }
 
-global.VahiniCraft = { analyze, kindOf, GUIDES, checkSpelling };
+global.VahiniCraft = { analyze, kindOf, readsEnglish, GUIDES, checkSpelling };
 })(window);
