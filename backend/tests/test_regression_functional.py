@@ -69,6 +69,15 @@ class _FakePaddleOCR:  # pylint: disable=too-few-public-methods
         return _FakePaddleEngine(*args, **kwargs)
 
 
+def _forget_engines(backends):
+    """Drop every built engine and failure memo, so the next scan builds
+    from whatever paddleocr module is installed now."""
+    backends._build_engine_cached.cache_clear()
+    backends._build_engine_replica.cache_clear()
+    backends._build_engine_safe_cached.cache_clear()
+    backends._ENGINE_FAIL_CACHE.clear()
+
+
 def _load_server_module():
     fake = types.ModuleType("paddleocr")
     fake.PaddleOCR = _FakePaddleOCR
@@ -112,9 +121,26 @@ class RegressionFunctionalTests(unittest.TestCase):
             raise unittest.SkipTest(
                 "Pillow not available; install server requirements first"
             )
+        cls.real_paddleocr = sys.modules.get("paddleocr")
         cls.mod = _load_server_module()
+        # These tests read with the fake engine. An earlier test file may
+        # have left a failure memo (no paddle in CI) or an engine built
+        # from something else; either would decide what they measure.
+        _forget_engines(cls.mod.ocr_backends)
         cls.client = TestClient(cls.mod.app)
         cls.image_bytes = _sample_image_bytes()
+
+    @classmethod
+    def tearDownClass(cls):
+        # The fake paddleocr and the engine built from it used to stay for
+        # the rest of the run: a later file's scans then recovered lines
+        # with the fake reader (test_server_pipeline counted two refined
+        # lines for one, once discovery ran it after this file, #228).
+        if cls.real_paddleocr is None:
+            sys.modules.pop("paddleocr", None)
+        else:
+            sys.modules["paddleocr"] = cls.real_paddleocr
+        _forget_engines(cls.mod.ocr_backends)
 
     def test_health_endpoint(self):
         r = self.client.get("/health")
@@ -256,7 +282,12 @@ class RegressionFunctionalTests(unittest.TestCase):
             calls["n"] += 1
             return orig_run(engine, arr, lang)
 
+        # This counts the language and variant passes only. Line recovery
+        # (line_recovery.py, added later) reads missed ink with run() too
+        # whenever the fake engine builds, which is not what this checks.
+        orig_read_region = self.mod._READ_REGION
         try:
+            self.mod._READ_REGION = None
             self.mod.recognizer.configure(
                 ocr_langs=["en", "te", "hi"],
                 auto_min_lines=1,
@@ -275,6 +306,7 @@ class RegressionFunctionalTests(unittest.TestCase):
             # One run is enough to satisfy both variant and language thresholds.
             self.assertLessEqual(calls["n"], 1)
         finally:
+            self.mod._READ_REGION = orig_read_region
             self.mod.ocr_backends.run = orig_run
             self.mod.recognizer._CFG.update(old_cfg)
 
