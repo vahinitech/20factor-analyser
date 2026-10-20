@@ -848,6 +848,9 @@ measure whether the rung below it is still worth running.
 
 ### 17.8 CPU, GPU and memory
 
+How each step's time, memory and calls are measured, and how CI catches a
+step that grows too fast, is [21-performance-and-coverage.md](21-performance-and-coverage.md).
+
 What the analyser does today ([13-api-and-capacity.md](13-api-and-capacity.md),
 `backend/capacity.py`): at start-up it works out how many scans can run at
 once as the smallest of three limits, memory, cores and GPUs, capped at
