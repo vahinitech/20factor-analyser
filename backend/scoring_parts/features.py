@@ -116,10 +116,19 @@ def _extract_features(arr: np.ndarray, lines, layout):
     digits_ratio = (
         len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
     )
-    loop_chars = len(_LOOP_RE.findall(full))
-    alpha_chars = len(_LETTER_RE.findall(full))
+    # Loop, tall and letter totals come from what the reader saw in the
+    # ink. With a copied passage the line's text is the passage, and
+    # counting its letters gave loops and tall letters the ink never
+    # showed (#209, #200's fallback). The expected bowl count below
+    # (_stroke_features) stays on the passage: it says what should be
+    # there, the ink says what is.
+    seen = " ".join(
+        str(l.get("text_as_read", l.get("text", "")) or "") for l in lines
+    )
+    loop_chars = len(_LOOP_RE.findall(seen))
+    alpha_chars = len(_LETTER_RE.findall(seen))
     loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-    tall_chars = len(_TALL_RE.findall(full))
+    tall_chars = len(_TALL_RE.findall(seen))
     tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
 
     ink_cv = 0.0
