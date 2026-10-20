@@ -39,6 +39,10 @@ letter lists and `[A-Za-z]` tests. Each module decided for itself what
 | `backend/ocr_backends.py:55` | a line is Telugu if any character is in U+0C00 to U+0C7F |
 | `backend/ocr_backends.py:661` | TrOCR model fixed to `microsoft/trocr-base-handwritten` (English) |
 
+The line numbers are from when this design was written. The letter facts
+have since moved to the language packs (#223), and `scoring.py` is split
+into `backend/scoring_parts/` (#227).
+
 Telugu today is a set of exceptions on top of that. The script is known
 only from the characters the reader returned (`ocr_backends.py:55`);
 nothing looks at the ink to decide it. `recognizer.telugu_not_read`
@@ -46,9 +50,10 @@ nothing looks at the ink to decide it. `recognizer.telugu_not_read`
 at least 75% of the letters read and the mean confidence is at least 0.80.
 `VAHINI_INK_GEOMETRY_LANGS` (`config.py:153`, empty by default) measures a
 Telugu page from rows found in the ink without reading it, and then only
-factors 7, 8, 11, 12 and 20 are measured that way (`scoring.py:814`).
+factors 7, 8, 11, 12 and 20 are measured that way (`NEEDS` in
+`factor_needs.py`, #225).
 Factors 3 and 6 report "script_not_supported" when no Latin letters were
-read (`scoring.py:941-945`, `1029-1033`).
+read (`scoring_parts/availability.py:67-80`).
 
 One more gap shows how deep the assumption goes. The passage alignment
 normalises text with `re.sub(r"[^\w ]", "", ...)` (`recognizer.py:441`).
@@ -304,9 +309,10 @@ One rule keeps the passage honest. When a line matches its passage, the
 known text replaces the reading (`recognizer.py:417-430`). How many loop
 letters or tall letters should be on the line may come from that text;
 evidence that they were written comes only from the ink. Factor 3 already
-works this way (`scoring.py:642`: the expected bowls from the text, the
-found bowls from the ink). Every factor that counts letters gets a test
-that a passage cannot raise its score on a page whose ink did not change.
+works this way (`scoring_parts/features.py:249-261`: the expected bowls
+from the text, the found bowls from the ink). Every factor that counts
+letters gets a test that a passage cannot raise its score on a page whose
+ink did not change.
 
 ## 8. Measurements and what each factor needs
 
@@ -1047,7 +1053,7 @@ Each gap is fixed in the section named, and tracked in the issue.
 | 5 | A cheap reader that is sure and wrong never sends a line up the ladder | Calibrate each stage's confidence per script against measured accuracy in `rank_stages.py`, and set the acceptance limits from that; check sure-and-wrong rates on the benchmark sets and consented pages, never on families' photos | 17.3, #219 |
 | 6 | A pack, profile or ladder change moves scores, and the paid comparison would read it as progress | `ruleset` hash and ladder version in the response and in `comparability` | 13, #212 |
 | 7 | A language model reading a page can be steered by what is written on it ("ignore the instructions above") | Its answer is data only: transcription or a pick from listed scripts in a fixed schema; nothing it returns becomes part of another prompt or a rule; text in the wrong script is rejected | 16, #218 |
-| 8 | When the known passage replaces the reading, a factor could count what should have been written as if it had been | Rule: how many letters were expected may come from the passage; evidence that they were written comes only from the ink (factor 3 already works this way, `scoring.py:642`); a test per factor | 7, #209 |
+| 8 | When the known passage replaces the reading, a factor could count what should have been written as if it had been | Rule: how many letters were expected may come from the passage; evidence that they were written comes only from the ink (factor 3 already works this way, `scoring_parts/features.py:249-261`); a test per factor | 7, #209 |
 | 9 | Right-to-left scripts (Urdu) would break margins and slant | `direction` in the script pack; factor 10 measures the starting edge; slant sign per direction; until then such scripts stay at level 0 | 4, #206 |
 | 10 | Age norms are planned, but the request has no age | Optional `age_band` in the request, never a birth date; without it, bands are provisional | 9, 13, #212, #216 |
 | 11 | Pack inheritance had no merge rules | `set`, `add`, `remove` on every field; the resolved pack is hashed and validated; CI resolves every pack in the repository | 4, 18.1, #206 |

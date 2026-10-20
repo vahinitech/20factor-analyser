@@ -9,6 +9,7 @@ on:
   pull_request:
     paths:
       - 'backend/scoring.py'
+      - 'backend/scoring_parts/**'
       - 'backend/letter_geometry.py'
       - 'backend/computer_vision.py'
       - 'backend/zone_analysis.py'

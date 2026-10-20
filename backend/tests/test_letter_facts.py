@@ -21,6 +21,16 @@ import unittest
 BACKEND = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SCORING_MODULES = (
     "scoring.py",
+    "scoring_parts/advisory.py",
+    "scoring_parts/availability.py",
+    "scoring_parts/dynamics.py",
+    "scoring_parts/features.py",
+    "scoring_parts/page.py",
+    "scoring_parts/results.py",
+    "scoring_parts/spatial.py",
+    "scoring_parts/stats.py",
+    "scoring_parts/structure.py",
+    "scoring_parts/style.py",
     "factor_needs.py",
     "zone_analysis.py",
     "letter_geometry.py",

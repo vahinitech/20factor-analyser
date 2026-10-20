@@ -8,7 +8,7 @@
 
    need[f]   = max(0, 8.5 - score) x reliability (measured 1.0, else 0.6);
                a composite (18, 20) passes its need to the factors it is
-               made of, by their weights in backend/scoring.py.
+               made of, by their weights in backend/scoring_parts/style.py.
    value(e)  = sum of helps[f] x need[f], minus REPEAT_PENALTY when the
                entry was printed last time (rotation through the history
                saved in this browser), minus LEVEL_COST for each level
@@ -29,7 +29,7 @@
 const TARGET = 8.5;
 const REPEAT_PENALTY = 100;
 const LEVEL_COST = 0.75;
-/* Must track backend/scoring.py (s[18], s[20] _blend weights);
+/* Must track backend/scoring_parts/style.py (s[18], s[20] _blend weights);
    backend/tests/test_practice_catalog.py checks it. */
 const COMPOSITES = {
   18: { 1:0.35, 5:0.25, 8:0.20, 7:0.20 },

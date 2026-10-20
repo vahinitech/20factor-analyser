@@ -508,7 +508,8 @@ practice truly helps them (the two-line ladder helps even letter sizes at
 1. **Need** for each measured skill: `max(0, 8.5 - score) x reliability`
    (measured 1.0, estimated 0.6). A composite (18 legibility, 20 neatness)
    passes its need to the skills it is made of, by the weights
-   `backend/scoring.py` blends them with (a test keeps the two in step).
+   `backend/scoring_parts/style.py` blends them with (a test keeps the two
+   in step).
 2. **Rows** are the flagged skills, as before (the lowest measured
    non-composite skills below 8.5, up to the tier's `areas_max`).
 3. **Value** of a candidate: the sum of `helps[f] x need[f]`, minus 100
