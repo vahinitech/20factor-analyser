@@ -25,6 +25,7 @@ import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
 import ink_geometry
+import factor_needs
 import languages
 
 try:
@@ -680,10 +681,8 @@ def _stroke_features(geo, texts):
 
 
 _MIN_WORD_GAPS = 3
-# Factors whose measure counts Latin letters (scoring loop_ratio and
-# tall_ratio): loops (3) and letter zones (6, unless the zone profile
-# measured it from the ink).
-_LATIN_ONLY = (3, 6)
+# Why a factor is not measured, by the kind its missing need gives
+# (factor_needs.py).
 _UNMEASURED_REASONS = {
     "imu": "Requires time-series data from the sensor pen.",
     "ocr": "Requires recognised text from the page.",
@@ -804,24 +803,6 @@ _INPUT_FEATURES = {
 }
 
 
-# Factors whose inputs come from OCR output: recognition confidence
-# (1, 19), recognised characters (2, 3, 6, 9, 15, 16), line polygon angles
-# (7, 11, 12, 17), word boxes within a row (8), and the composites built on
-# them (18, 20). Line-band height, width and left edge (4, 5, 10, 13) are
-# still measured from the ink when recognition is unavailable.
-_NEEDS_RECOGNITION = frozenset(
-    (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
-)
-
-
-# Measured from rows found in the ink (ink_geometry.py) although nothing
-# was read: line angle from each row's fitted baseline (7, 11, 12), word
-# gaps when the passage gives each row's words (8), and the blend of them
-# with size and margins (20). Slant Consistency (17) is the spread of each
-# word's lean, and ink rows have no words to lean, so it stays unmeasured.
-_INK_MEASURED = frozenset((7, 8, 11, 12, 20))
-
-
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
@@ -912,8 +893,9 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # and level rectangles. Factors that read those inputs would publish
     # 0.0 for letter formation and a perfect 10.0 for line angle that the
     # page never produced, so they are reported as not measured instead.
-    cv_only = all(bool(l.get("cv_fallback")) for l in lines)
-    ink_only = bool(lines) and all(bool(l.get("ink_row")) for l in lines)
+    supplied = factor_needs.page_supplies(
+        lines, fx.get("latin_letters", 0), zone_based
+    )
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -928,29 +910,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
-        motion_only = sec == "dynamics"
+        # The one check (factor_needs.py): which need, if any, this page
+        # did not supply for this factor.
+        lacking = factor_needs.missing_kind(n, supplied)
+        motion_only = lacking == "imu"
+        needs_ocr = lacking == "ocr"
+        no_latin = lacking == "script"
         if motion_only:
             score = 0.0
             value = "Not measured"
             evidence = "A still photo cannot measure pen motion or pressure."
-        needs_ocr = (
-            cv_only
-            and not motion_only
-            and n in _NEEDS_RECOGNITION
-            and not (n == 6 and zone_based)
-            and not (ink_only and n in _INK_MEASURED)
-        )
         few_gaps = (
             n == 8
-            and not needs_ocr
+            and lacking is None
             and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
-        )
-        no_latin = (
-            n in _LATIN_ONLY
-            and not motion_only
-            and not needs_ocr
-            and not (n == 6 and zone_based)
-            and fx.get("latin_letters", 0) == 0
         )
         if no_latin:
             score = 0.0
