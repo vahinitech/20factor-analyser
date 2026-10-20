@@ -41,6 +41,7 @@ benchmarks/
     pages/*.jpg     the pages, committed so their pixels never change
     reader/*.json   the reader's output per page
     expected.json   every page's result
+    reading.json    how well the reader read each page (character error rate)
   planted/
     expected.json   how often planted mistakes are marked (scripts/planted_pages.py)
 ```
@@ -135,6 +136,35 @@ passes 2500 MiB. The summary has both numbers for each side and a row
 per page; the `timing` artifact keeps every pass. The weekly run has no
 main to compare with, so it compares with the last weekly run on `main`
 and only reports.
+
+## How well the reader reads
+
+The set knows what was written, so every check also measures how well
+the lines were read (#253). Each scored line is matched to the written
+sentence it reads best, as for `sentences_found`, and compared with it in
+graphemes (`backend/languages/graphemes.py`): what a reader sees as one
+letter, so a Telugu letter with its vowel sign is one unit and a dropped
+vowel sign is one wrong letter. Both sides are put in NFC, lower case
+(the sentences carry no capitals) and one space between words; spaces
+count, since a word read as two or two words read as one is a reading
+mistake. The character error rate is the number of graphemes to insert,
+delete or change, over the graphemes of the matched sentences. Lines that
+match no sentence, or repeat one, are left out: `unmatched` and `repeats`
+count them already, as `sentences_found` counts lines never read.
+
+`check` adds a table to the summary: the rate per script, and per page
+with its baseline from `benchmarks/<set>/reading.json`. It fails when a
+page's rate rises by more than 0.5 points or the set's by more than 0.2.
+`live` does the same for the reading the real models just made, so a
+reader change that reads worse fails even when every score stays within
+0.3. On 20 October 2026 the UJI set read at 9.54% (290 of 3040
+graphemes), from 0.62% on UJI_W14 to 27.1% on UPV_W30.
+
+`update` writes `reading.json` too, but only ever lowers it: a page that
+reads better keeps its new rate, one that reads worse keeps the old one.
+When a change is meant to read worse (a faster reader that reads a little
+less well, say), edit `reading.json` by hand and say why in the pull
+request, so the higher number is in the diff for review.
 
 ## Planted mistakes
 
