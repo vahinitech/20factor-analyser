@@ -61,6 +61,17 @@ runs; one that finds a real bug gets its own issue.
 
 ## 2. Stage timings on every scan (#229)
 
+Built in #229: `backend/perf.py`, and `stage_timings` in `/health`. The
+stages are `decode`, `detect` (and `detect.ink` when rows are found from
+the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
+one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
+`passage`, `evidence`, `features`, `scoring` and `practice`. CPU time is
+the time of the thread the stage ran on; work a library does on its own
+threads (Paddle's) shows in the wall time only. A scan's work keeps the
+request's context on the scan thread (`scan_slots.run`), so concurrent
+scans never mix their numbers, except the container's memory, which is
+shared.
+
 A small module, `backend/perf.py`, standard library only:
 
 ```python
@@ -85,6 +96,15 @@ Where the numbers go:
 | weekly report, later | p95 per stage and budget breaches, anonymous, read by vahini-web from `/health` (no service reads another's files) | the team |
 
 ## 3. Large-call budgets (#229)
+
+Built in #229. `scripts/perf_budgets.py check` (the `benchmark` job in
+`ci.yml`) replays each benchmark page through the server's own scan, the
+`/report-python` body with the page's written text as the passage, then
+the Pro report, and fails when a page breaks a budget. It prints each
+stage's median and slowest CPU time to the job summary; a stage's cap is
+five times the slowest page on GitHub's runners, at least 100 ms, so a
+stage that becomes several times slower fails while runner noise does
+not.
 
 `backend/perf/budgets.json` says how much one page may cost:
 
@@ -312,7 +332,7 @@ so a Telugu change is judged on Telugu pages.
 | Every test runs | #228 | done (#236) |
 | Profiling job | #231 | done (#246) |
 | Coverage | #232 | done (#247) |
-| Stage timings and budgets | #229 | now; it wraps the steps in `backend/scoring_parts/` from the split (#227) |
+| Stage timings and budgets | #229 | built (#229) |
 | Big O per function | #230 | now, on the split's functions |
 | Work counts per page | #250 | after #248 merges (it uses #229's counters) |
 | Paired timing against main | #251 | now |

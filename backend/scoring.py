@@ -17,6 +17,7 @@
 
 import numpy as np
 
+import perf
 from plain_groups import build_coach_view, build_plain_groups
 from scoring_parts import (
     advisory,
@@ -292,7 +293,15 @@ _INPUT_FEATURES = {
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
-    fx = _extract_features(arr, lines, layout)
+    with perf.stage("features", lines=len(lines)) as step:
+        fx = _extract_features(arr, lines, layout)
+        step.size(words=fx.get("n_words"), letters=fx.get("n_chars"))
+    with perf.stage("scoring", lines=len(lines)):
+        return _analysis(arr, lines, fx)
+
+
+def _analysis(arr, lines, fx) -> AnalysisResult:
+    """The 20 factors, sections and advice from the page's features."""
     scores = _score_factor_map(fx)
     checks = advisory.run_checks(arr, lines)
     zone_based = advisory.apply_zone_score(checks["zones"], scores)
