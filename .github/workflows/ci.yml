@@ -238,6 +238,8 @@ jobs:
         run: npm run test:ocr-unavailable
       - name: A Telugu page the reader could not read is refused, never scored
         run: npm run test:handwriting-not-read
+      - name: Picking Telugu sends lang=te and says it is not scored yet
+        run: npm run test:telugu-choice
       - name: File and key errors have their own screens; notice pictures come only from the host
         run: npm run test:notice-art
       - name: Headless print/handwriting checks
