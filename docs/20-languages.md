@@ -70,6 +70,33 @@ script and language, and have the code ask for them.
 | 5 | 20-factor scoring | Through pack data only | 20 results, each scored or "Not measured" with a reason |
 | 6 | Report and practice | Yes | words, tips and worksheets in the family's language |
 
+The whole path, with every place a page can stop:
+
+```mermaid
+flowchart TD
+  U["Photo and request<br/>lang, worksheet id, expected text"] --> AD{"Page admitted?<br/>scan slot, budget for its top rung"}
+  AD -- no --> XB["503 busy, Retry-After"]
+  AD -- yes --> P1["1. Photo and ink<br/>decode, rows, baselines, ink blobs"]
+  P1 --> P2{"2. Script and language<br/>per line, up its ladder"}
+  P2 -- "sources disagree" --> XS["Refused: writing does not<br/>match the chosen language"]
+  P2 -- "needed rung down" --> XU["503 ocr_unavailable, Retry-After<br/>not cached, no free check used"]
+  P2 --> P3{"3. Reading<br/>per line, up its ladder"}
+  P3 -- "needed rung down" --> XU
+  P3 -- "too many lines unread" --> XN["Refused: handwriting_not_read"]
+  P3 --> P4["4. Measurements<br/>OpenCV, facts from the pack"]
+  P4 --> P5{"5. 20-factor scoring<br/>each factor's needs met?"}
+  P5 -- no --> NM["That factor: Not measured,<br/>with the reason"]
+  P5 -- yes --> SC["Scored"]
+  NM --> P6["6. Report and practice<br/>in the family's language"]
+  SC --> P6
+  LP[("Language packs<br/>script, language, locale")] -.-> P2
+  LP -.-> P3
+  LP -.-> P4
+  LP -.-> P5
+  LD[("stages.json, ladders.json<br/>committed, built offline")] -.-> P2
+  LD -.-> P3
+```
+
 Layers 1, 4 and 5 hold no language names. They receive a resolved
 language pack and read facts from it ("which letters close a loop", "where
 are the zones"). A test enforces this (section 12, step 1).
@@ -183,7 +210,29 @@ model over the line's words, with a language model as the tie-breaker
 only when that is unsure (section 16).
 
 The decision goes into the response with its source, so a report can be
-traced back to why it was scored as Telugu.
+traced back to why it was scored as Telugu. Each way it can end:
+
+```mermaid
+flowchart TD
+  Q["Line crop"] --> W{"Worksheet or the<br/>family's choice given?"}
+  W -- yes --> CF{"Image classifier and the<br/>reader's letters agree?"}
+  CF -- yes --> DONE["Decided<br/>source recorded"]
+  CF -- unsure --> J{"LLM judge agrees?"}
+  CF -- "no, clearly another script" --> XS["Refused: writing does not<br/>match the chosen language"]
+  J -- yes --> DONE
+  J -- no --> XS
+  W -- "no, auto" --> IC{"Image classifier sure?<br/>probability and margin"}
+  IC -- yes --> LANG
+  IC -- no --> J2{"LLM judge sure?"}
+  J2 -- yes --> LANG
+  J2 -- no --> XN["Refused: cannot tell<br/>the script"]
+  LANG{"Script has one language<br/>in our packs?"} -- yes --> DONE
+  LANG -- no --> LID{"Language-ID model sure<br/>on the recognised words?"}
+  LID -- yes --> DONE
+  LID -- no --> J3{"LLM judge sure?"}
+  J3 -- yes --> DONE
+  J3 -- no --> XL["Refused: cannot tell<br/>the language"]
+```
 
 ## 6. Recognition registry
 
@@ -569,6 +618,21 @@ improvement. With the judgement table above:
 | Script | worksheet, family's choice, image classifier, local LLM |
 | Language within a script | worksheet, family's choice, language-ID model, local LLM |
 
+The same ladders, with where each one goes when a rung is unsure or down:
+
+```mermaid
+flowchart LR
+  subgraph EN["Read English"]
+    direction LR
+    E1["Paddle"] -- unsure --> E2["TrOCR"] -- unsure --> E3["Local LLM<br/>or API LLM if allowed"] -- unsure --> EU["Unread"]
+  end
+  subgraph IN["Read Telugu or Hindi"]
+    direction LR
+    T1["Paddle"] -- unsure --> T2["Surya"] -- unsure --> T3["Local LLM<br/>or API LLM if allowed"] -- unsure --> TU["Unread"]
+  end
+  DOWN["A rung a line needs is down"] --> R["Refuse, retry later<br/>never skip to the next rung"]
+```
+
 The worksheet and the family's choice are not stages to escalate past.
 They are fixed facts: when they settle the question the ladder stops
 there, and later stages may only confirm or refuse (section 5).
@@ -641,6 +705,28 @@ its whole ladder.
 
 ### 17.6 The algorithm
 
+One line's way up its ladder, with each fallback:
+
+```mermaid
+flowchart TD
+  L["One line, its decided script"] --> N["Next rung on the ladder<br/>cheapest first"]
+  N --> AV{"Rung available?"}
+  AV -- "no" --> XU["Refuse the page<br/>503 ocr_unavailable, Retry-After"]
+  AV -- yes --> CA{"Answer cached?<br/>crop hash, stage and prompt version"}
+  CA -- yes --> ANS["Answer"]
+  CA -- no --> RUN["Run the rung<br/>this page's lines in one call"]
+  RUN --> ANS
+  ANS --> G{"Trusted over the lower rung?<br/>0.70 similar or very sure;<br/>first rung: yes"}
+  G -- yes --> T{"Passes the acceptance test?<br/>confidence, script, fits the ink,<br/>matches the worksheet"}
+  G -- no --> MORE
+  T -- yes --> OK["Accepted<br/>trail recorded"]
+  T -- no --> MORE{"Another rung?"}
+  MORE -- yes --> N
+  MORE -- no --> UN["Unread line<br/>grapheme factors Not measured"]
+```
+
+The same in code:
+
 ```python
 def read_page(lines, ctx):
     ladder = LADDERS["read"][ctx.script]       # committed, cheapest first
@@ -683,6 +769,87 @@ the API cost) go to the weekly report as anonymous numbers. When those
 counts show a rung answering most lines on its own, that is the signal to
 measure whether the rung below it is still worth running.
 
+### 17.8 CPU, GPU and memory
+
+What the analyser does today ([13-api-and-capacity.md](13-api-and-capacity.md),
+`backend/capacity.py`): at start-up it works out how many scans can run at
+once as the smallest of three limits, memory, cores and GPUs, capped at
+16. It counts 1100 MB for the loaded process, 600 MB of working memory per
+running scan and 200 MB for each extra engine copy, all overridable. The
+container has a 2.5 GB limit with no swap. Each running scan has its own
+engine copy using `cores / slots` threads; four more wait per slot; beyond
+that the answer is 503 with `Retry-After: 20`.
+
+```mermaid
+flowchart TB
+  P["Page admitted"] --> AN
+  subgraph HOST["Shared CPU host: 4 cores, 7.9 GB, other sites on it"]
+    subgraph AN["Analyser container: 2.5 GB limit, no swap"]
+      direction TB
+      CAP["capacity.py at start-up<br/>slots = smallest of memory, cores, GPUs, 16"]
+      BASE["Loaded once at start-up, counted in BASE<br/>Paddle for every pack language, layout model,<br/>script classifier, language-ID"]
+      SL["scan_slots.py<br/>N running, 4 queued per slot"]
+      SLOT["One slot: own engine copy,<br/>cores / slots threads, about 0.6 GB working"]
+      CPU["CPU rungs<br/>Paddle, TrOCR, Surya"]
+      CAP --> SL
+      BASE --> SLOT
+      SL --> SLOT --> CPU
+    end
+  end
+  SL -- "queue full" --> XB["503 busy, Retry-After 20"]
+  subgraph GPUBOX["GPU service, planned, own machine"]
+    direction TB
+    GQ["Own slots from VRAM,<br/>own queue, batched lines"]
+    GR["GPU rungs<br/>local LLM; Surya or Paddle GPU builds"]
+    GQ --> GR
+  end
+  CPU -- "a line needs a GPU rung" --> GQ
+  CPU -- "a line needs the API rung,<br/>only if the owner allows" --> API["API LLM<br/>line crops only"]
+  GQ -- "full past the page's wait,<br/>or down" --> XU["Page refused, retry later<br/>circuit breaker opens"]
+  API -- "down or over budget" --> XU
+```
+
+What changes when ladders arrive:
+
+1. **Every stage declares what it uses.** `stages.json` gains `device`
+   (`cpu`, `gpu` or `remote`), `load_mb` (resident once loaded),
+   `work_mb` (extra while it runs), `vram_mb` and `threads`, measured with
+   `backend/load_test.py` on stage, never guessed.
+2. **Everything a CPU ladder can reach is loaded at start-up.** Today a
+   Paddle language can be built the first time a request uses it
+   (`recognizer.py:75-84`), which adds memory in the middle of a scan,
+   exactly when the server is busiest. With packs, the set of languages is
+   known before the first request, so `warmup_models.py` loads every one
+   and it is counted in the start-up figure.
+3. **The capacity sum includes the ladders.** The start-up figure becomes
+   the sum of `load_mb` for every CPU stage on an enabled ladder, and the
+   working memory per scan the largest `work_mb` among them plus the
+   measuring. If not even one scan fits, the server refuses to start with
+   that ladder and names the stage that did not fit, instead of being
+   killed by the kernel later.
+4. **The device is part of the stage.** Paddle on CPU and Paddle on GPU are
+   two stages with two versions, because their numbers can differ in the
+   last digits, and so can a score. `ladders.json` picks one per ladder.
+   `gpu_detect.resolve_use_gpu`'s automatic choice becomes a start-up check
+   that the configured device is really there, so a page cannot be read on
+   a GPU one day and a CPU the next because a driver changed.
+5. **GPU work is a separate service on its own machine.** Today's host has
+   no GPU, and 2.5 GB is less than a vision language model needs. The GPU
+   service sizes its own slots the way `capacity.py` does, from video
+   memory: what is left after the model's weights, divided by the memory
+   one batch needs. Lines from one page go in one batch, capped by the
+   stage's batch size.
+6. **The GPU service has its own queue.** A line that needs it waits, up
+   to the page's wait limit. Past that, or if the service is down, the page
+   is refused with a retry and the circuit breaker opens. Waiting changes
+   when the answer comes, never what it is.
+7. **An API rung uses no local memory beyond the crops.** Its limit is the
+   money budget, checked per page before the page starts (17.5).
+8. **What stays.** The container memory limit, equal memory and swap
+   limits, `MALLOC_ARENA_MAX=2`, and the scan admission limit. A new stage
+   is load-tested on stage before its numbers go into `stages.json`; the
+   kernel's `oom` event on stage is the test failing.
+
 ## Open questions for the owner
 
 1. The bar for each maturity step per language: how many real pages, and
@@ -691,11 +858,12 @@ measure whether the rung below it is still worth running.
 3. Whether factor 6 is renamed for non-Latin scripts, and to what.
 4. For German, whether to ask the family which school script the child
    learned, or detect it.
-5. The share of unread lines at which a page is refused, per script, and
+5. Whether there is a budget for a GPU machine for the local model and
+   GPU builds of the readers, and where it would run.
+6. The share of unread lines at which a page is refused, per script, and
    the daily money limit for an API rung if one is ever allowed.
-6. Whether a language-model API may ever see a child's handwriting, and
+7. Whether a language-model API may ever see a child's handwriting, and
    on what terms, or whether only a local model on our own GPU is allowed.
-   Whether there is a GPU budget for that local model.
 
 Sources for section 14: [Census 2011 mother-tongue shares](https://www.thenewsminute.com/news/what-india-speaks-south-indian-languages-are-growing-not-fast-hindi-83823);
 [2024 board-exam medium](https://www.legacyias.com/hindi-english-top-choice-as-medium-of-instruction-for-class-10-12-exams/);
