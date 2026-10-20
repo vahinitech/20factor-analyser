@@ -54,7 +54,7 @@ def _quiet(line, flush=False):  # pylint: disable=unused-argument
     return None
 
 
-class _Batch(_Fake):
+class _Batch(_Fake):  # pylint: disable=too-few-public-methods
     """An engine that reads a page's lines in one call."""
 
     def recognize_crops(self, crops):
