@@ -82,6 +82,25 @@ class TestInkGeometry(unittest.TestCase):
         for g in geo[:-1]:
             self.assertLess(g["angle"], 0.5)
 
+    def test_the_low_end_of_a_steep_line_is_still_letters(self):
+        # Sinking 6 degrees, the last letters sit wholly below the row's
+        # middle, like a vattu; they are full height, so they stay.
+        arr = draw_page([SENTENCE] * 2, tilt_last=6.0)
+        rows = ig.find_rows(arr)
+        page = ig._page_ink(arr)  # pylint: disable=protected-access
+        g = ig.measure_row(page, rows[-1])
+        self.assertEqual(len(g["letters"]), sum(SENTENCE))
+        self.assertAlmostEqual(g["angle"], 6.0, delta=0.6)
+
+    def test_a_row_of_a_few_letters_has_no_slope(self):
+        arr = draw_page([[3, 4], [2, 2]], tilt_last=4.0)
+        geo = ig.measure_page(arr, ig.find_rows(arr))
+        self.assertIsNotNone(geo[0]["angle"])
+        self.assertIsNone(geo[1]["angle"])
+        self.assertIsNone(geo[1]["signed_angle"])
+        feats = ig.page_features(arr, ig.find_rows(arr))
+        self.assertEqual(len(feats["angles"]), 1)
+
     def test_strokes_below_the_line_do_not_move_the_baseline(self):
         arr = draw_page([SENTENCE] * 3)
         geo = ig.measure_page(arr, ig.find_rows(arr))
