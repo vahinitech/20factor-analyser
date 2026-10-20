@@ -465,6 +465,36 @@ def _handwriting_not_read_payload(engine, lang, counts, extra=None):
     return payload
 
 
+# A page that is mostly numbers and sums (recognizer.not_writing_page):
+# a maths or science notebook page. The factors measure letters, words
+# and the gaps between them, so a report on sums would describe nothing
+# it measured. Like no_handwriting it is never cached and never counts as
+# a free check, and it tells the child what to write instead.
+NOT_WRITING_PAGE_DETAIL = (
+    "This page is mostly numbers and sums, so the 20 handwriting factors "
+    "cannot be measured on it. Write four lines of English in sentences "
+    "and check that page."
+)
+
+
+def _not_writing_page_payload(engine, lang, counts, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "not_writing_page",
+        "error": NOT_WRITING_PAGE_DETAIL,
+        **counts,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -491,6 +521,9 @@ def _ocr_process(arr, raw, lang):
         not_read = recognizer.telugu_not_read(lang, hand_lines)
         if not_read:
             return _handwriting_not_read_payload("pp-ocrv5", lang, not_read)
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload("pp-ocrv5", lang, numbers)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -641,6 +674,20 @@ def _analyze_vl_process(arr, raw, lang):
                 "pp-ocrv5+vl",
                 lang,
                 not_read,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+vl",
+                lang,
+                numbers,
                 extra={
                     "document_context": {},
                     "layout": {},
@@ -856,6 +903,21 @@ def _report_python_process(
                 "pp-ocrv5+python-report",
                 lang,
                 not_read,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                numbers,
                 extra={
                     "analysis": None,
                     "document_context": {},

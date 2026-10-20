@@ -431,6 +431,49 @@ def telugu_not_read(lang, hand_lines):
     }
 
 
+# A maths, accounts or number page is not a writing page. Children scan
+# their maths and science notebooks, and the check used to score sums and
+# formulas as if they were sentences: the factors count letters, words and
+# word gaps, so a page of "3x4=12" gave a report about nothing it could
+# measure. A page is refused when digits and maths signs make up at least
+# 35% of what was read. On the 200 GNHK pages (2026-10-19 readings, lang
+# auto and en) the four pages at or above that were a shopping list with
+# prices, an accounting journal, an address and an unreadable scrap; no
+# page written in sentences reached it (below them: a three-letter scrap
+# at 0.33, then mixed notes and a measurement list at 0.25 and less,
+# all still scored). A page with
+# fewer than 12 such characters read is too short to judge and keeps its
+# own path. Letters include combining marks, so Telugu vowel signs count
+# as letters, not as symbols.
+NUMBERS_MAX_SHARE = 0.35
+NUMBERS_MIN_CHARS = 12
+_MATHS_SIGNS = frozenset("+=×÷*/^<>√π∑∫%")
+
+
+def not_writing_page(hand_lines):
+    """Return the counts when the page read is mostly numbers and sums,
+    or None when it is a writing page or too short to judge. Lines with
+    no text (cv-fallback, rows found from the ink) carry no reading and
+    are not judged."""
+    letters = numbers = 0
+    for line in hand_lines:
+        for ch in str(line.get("text") or ""):
+            if unicodedata.category(ch)[0] in "LM":
+                letters += 1
+            elif ch.isdigit() or ch in _MATHS_SIGNS:
+                numbers += 1
+    counted = letters + numbers
+    if counted < NUMBERS_MIN_CHARS:
+        return None
+    if numbers < NUMBERS_MAX_SHARE * counted:
+        return None
+    return {
+        "page_kind": "maths",
+        "letters_read": letters,
+        "numbers_read": numbers,
+    }
+
+
 _WORD = re.compile(r"\w")
 
 
