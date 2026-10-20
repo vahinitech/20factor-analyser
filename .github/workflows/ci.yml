@@ -241,6 +241,8 @@ jobs:
         run: npm run test:handwriting-not-read
       - name: File and key errors have their own screens; notice pictures come only from the host
         run: npm run test:notice-art
+      - name: A maths or science page asks for four lines of English, never a score
+        run: npm run test:not-writing-page
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)
