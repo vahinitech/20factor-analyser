@@ -43,6 +43,7 @@ to the ones it builds on.
 | 18 | [The real-handwriting benchmark](18-benchmark.md) | How every change is checked against real pages: the kept reader output, expected scores, what may not get worse, and the live run with the models |
 | 19 | [Comparison data](19-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
 | 20 | [Languages](20-languages.md) | The design for more scripts and languages: language packs, the per-line script decision, what each factor needs, maturity levels, and the build order |
+| 21 | [Performance, complexity and coverage](21-performance-and-coverage.md) | The design for timing every scan step, budgets on large calls, recording each function's growth (big O) in CI, a profiling job, and coverage with a ratchet |
 
 ## Elsewhere
 
