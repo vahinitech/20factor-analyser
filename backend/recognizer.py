@@ -48,6 +48,7 @@ _CFG = {
     "refine_min_conf": 0.75,
 }
 
+
 def configure(**kwargs):
     """Set the recognizer's dispatch config once at startup. Unknown keys
     are ignored so callers can pass a superset of _CFG."""
