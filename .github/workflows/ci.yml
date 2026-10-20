@@ -1,6 +1,7 @@
 # CI for the 20-Factor Analyser — runs on every push + PR.
 #  - python-tests   : server logic without the heavy paddle/torch install.
 #  - benchmark      : real handwriting pages replayed; scores as expected.
+#  - complexity     : each per-page function grows no faster than declared.
 #  - e2e            : headless Chrome — analyser app loads, print/handwriting
 #                     classification, bundle is in sync with src/.
 #  - e2e-recognition: full stack WITH the OCR backend; proves server recognition
@@ -58,7 +59,7 @@ jobs:
       - name: Syntax-check server modules
         run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/escalation.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/perf.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py
+        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/live_timing.py
       - name: Lint (pylint, min score 9.0)
         run: |
           pylint --fail-under=9.0 frontend/build_bundle.py \
@@ -92,6 +93,7 @@ jobs:
             backend/tests/test_word_spacing.py \
             backend/tests/test_benchmark.py scripts/benchmark.py \
             scripts/profile_benchmark.py backend/tests/test_profile_benchmark.py \
+            scripts/live_timing.py backend/tests/test_live_timing.py \
             backend/tests/test_ink_geometry.py \
             backend/tests/test_factor_scores.py scripts/factor_tests.py \
             backend/tests/test_image_formats.py \
@@ -111,6 +113,7 @@ jobs:
             backend/languages/graphemes.py backend/tests/test_graphemes.py \
             backend/tests/test_passage_alignment.py \
             scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
+            scripts/complexity.py backend/tests/test_complexity.py \
             backend/perf.py backend/tests/test_perf.py \
             scripts/perf_budgets.py
       - name: Verify immutable report dictionary
@@ -182,6 +185,30 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Planted mistakes, no rate worse
         run: python scripts/benchmark.py planted
+
+  # Each per-page function's growth against backend/perf/complexity.json
+  # (#230, docs/21-performance-and-coverage.md section 4): synthetic
+  # inputs at n, 2n, 4n and 8n, the slope of log CPU time against log n.
+  # Slopes only, never times, so runner noise does not fail it.
+  complexity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Every per-page function grows no faster than declared
+        run: python scripts/complexity.py check --summary "$GITHUB_STEP_SUMMARY" --out complexity.md
+      - name: Upload the growth table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity
+          path: complexity.md
+          if-no-files-found: warn
 
   e2e:
     runs-on: ubuntu-latest

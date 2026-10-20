@@ -122,6 +122,15 @@ report, never refused: the page was already admitted and paid for.
 
 ## 4. Recording growth: big O per function (#230)
 
+Built in #230: `backend/perf/complexity.json`, `scripts/complexity.py` and
+the `complexity` job in `ci.yml`, which writes the table to the job
+summary and uploads it as the `complexity` artifact. The inputs are
+synthetic pages of handwriting-like strokes, reader lines and passage
+text, the same at every run. Lines past the ladder's 40 are held, so
+`escalation.climb` is measured up to 40 lines. A test plants a quadratic
+function declared O(n) and checks the job would fail
+(`backend/tests/test_complexity.py`); it is never in the real table.
+
 `backend/perf/complexity.json` lists every function that runs once per
 page, what its n is, and how fast it should grow:
 
@@ -249,7 +258,7 @@ or score less well? Part of this exists; the rest is below.
 | Live reader (Layer B) | weekly, and PRs touching the reader | a score moves by more than 0.3 | `benchmark-live.yml` |
 | Planted mistakes per factor | weekly, and PRs touching scoring | a factor catches its mistake on fewer writers than `benchmarks/factors/expected.json` says | `factor-tests.yml`, `scripts/factor_tests.py` |
 | Stage timings and call budgets | every PR (#248) | a benchmark page breaks a budget | #229 |
-| Growth per function | every PR, once #249 merges | a function grows faster than declared | #230 |
+| Growth per function | every PR (#249) | a function grows faster than declared | #230 |
 
 So accuracy has a strong guard against *any* change (Layer A fails on
 every moved number) and a floor for each factor. What is missing: no check
@@ -333,9 +342,9 @@ so a Telugu change is judged on Telugu pages.
 | Profiling job | #231 | done (#246) |
 | Coverage | #232 | done (#247) |
 | Stage timings and budgets | #229 | built (#229) |
-| Big O per function | #230 | now, on the split's functions |
+| Big O per function | #230 | done (#249) |
 | Work counts per page | #250 | now (#248 merged) |
-| Paired timing against main | #251 | now |
-| Live latency and memory | #252 | now |
-| Reading accuracy | #253 | now |
+| Paired timing against main | #251 | in review (#256) |
+| Live latency and memory | #252 | done (#258) |
+| Reading accuracy | #253 | in review (#257) |
 | History and slow drift | #254 | after #250 to #253, which give it numbers to keep |
