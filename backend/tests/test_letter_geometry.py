@@ -252,6 +252,22 @@ class TestLetterGeometry(unittest.TestCase):
         # Tails hanging below the line are not wander.
         self.assertEqual(lg._wave(tails, 0.0, 100.0, 30), 0.0)  # noqa
 
+    def test_steep_fit_does_not_crash(self):
+        # #199: a fitted baseline steep across a wide word shifted the far
+        # columns out of the levelled array and numpy refused to copy
+        # ("could not broadcast input array from shape (0,)").
+        mask = np.ones((40, 100), bool)
+        for slope in (1.5, -1.5, 6.0, -6.0):
+            level = lg._level(mask, 0, 0, slope, 20.0)  # noqa
+            self.assertEqual(level.shape, (80, 100))
+            lg._xheight(mask, 0, 0, slope, 20.0)  # noqa
+            lg._column_rest(mask, 0, 0, slope, 20.0, 12.0)  # noqa
+            lg._column_xheight(mask, 0, 0, slope, 20.0, 12.0)  # noqa
+        # A level fit keeps every column, shifted by the same amount.
+        level = lg._level(mask, 0, 0, 0.0, 20.0)  # noqa
+        self.assertEqual(int(level.sum()), mask.size)
+        self.assertTrue(level[20:60].all())
+
     def test_same_page_same_measurements(self):
         a = page("low_word", seed=7)[3]
         b = page("low_word", seed=7)[3]
