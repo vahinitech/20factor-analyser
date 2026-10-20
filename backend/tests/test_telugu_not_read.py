@@ -67,11 +67,15 @@ MOSTLY_TELUGU = [
     _line("గవం నింబారు", 40, 0.61),
     _line("స బ్దై )0wరు", 140, 0.61),
 ]
-# zz_printed_control: printed Telugu, read at 0.96 to 1.0.
-READ_TELUGU = [
+# zz_printed_control: printed Telugu, read at 0.96 to 1.0. Since #171 the
+# printed check sets these lines aside as print.
+PRINTED_TELUGU = [
     _line("క్రీస్తుశకం ఉదర బస్సుల", 40, 0.985),
     _line("గోకవరం తపన ఔచిత్యవంతమైన", 140, 0.999),
 ]
+# The same words read as sure handwriting: above the 0.80 this rule
+# needs, below the 0.93 at which a clean line counts as print.
+READ_TELUGU = [dict(line, score=0.88) for line in PRINTED_TELUGU]
 
 
 class TestTeluguRule(unittest.TestCase):
@@ -173,6 +177,15 @@ class TestTeluguRefusalEndpoints(unittest.TestCase):
         self._stub(READ_TELUGU)
         j = self._post("/report-python", "te", 4).json()
         self.assertTrue(j.get("ok"), j.get("error"))
+
+    def test_printed_telugu_is_not_scored(self):
+        # #171: all Telugu letters at 0.96 and above pass this rule, and
+        # the printed check now sets the lines aside as print.
+        self.assertIsNone(recognizer.telugu_not_read("te", PRINTED_TELUGU))
+        self._stub(PRINTED_TELUGU)
+        j = self._post("/report-python", "te", 5).json()
+        self.assertIs(j.get("ok"), False)
+        self.assertEqual(j.get("error_code"), "no_handwriting")
 
 
 if __name__ == "__main__":

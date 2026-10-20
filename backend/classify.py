@@ -33,6 +33,7 @@ except Exception:  # pragma: no cover - cv2 optional
 
 from geometry import clamp_box  # noqa: E402 (after the optional cv2 import)
 import languages  # noqa: E402
+from languages import graphemes  # noqa: E402
 import print_hand  # noqa: E402
 
 
@@ -319,8 +320,28 @@ def _reader_says_print(crop):
 
 
 def _reader_hand(ln):
+    """True when the line reader calls the line handwriting. The reader
+    learned from Latin print and handwriting only, and gives printed
+    Telugu 0.001 to 0.01 (#171), so on a line whose letters are mostly
+    outside the pack's Latin letter class it has no say."""
     p = ln.get("_model")
-    return p is not None and p < READER_HAND_BELOW
+    if p is None or p >= READER_HAND_BELOW:
+        return False
+    text = str(ln.get("text") or "")
+    if any(c.isalpha() for c in text) and _PACK.share(text) < 0.5:
+        return False
+    return True
+
+
+def _clean_share(text):
+    """Share of the line's characters that are letters or digits, with
+    the marks written on them: a grapheme that starts with a word
+    character counts whole. re's \\w leaves out vowel signs and the
+    virama, which put clean printed Telugu at 0.54 to 0.65 (#171)."""
+    if not text:
+        return 0.0
+    kept = sum(len(g) for g in graphemes.split(text) if re.match(r"\w", g))
+    return kept / len(text)
 
 
 def classify_lines(arr, lines, threshold=None):
@@ -387,7 +408,7 @@ def classify_lines(arr, lines, threshold=None):
         sw = feat.get("sw_cv", 1.0)
         text = str(ln.get("text", "") or "").strip()
         sc = float(ln.get("score", 0.0) or 0.0)
-        clean = len(re.sub(r"[^\w]", "", text)) / max(1, len(text))
+        clean = _clean_share(text)
         box = ln.get("box") or [0, 0, 0, 0]
         y_center = (
             (float(box[1]) + float(box[3]) / 2.0) if len(box) >= 4 else 0.0
