@@ -70,12 +70,6 @@ def analyser_root():
     return RedirectResponse(url="/analyser/analyser.html", status_code=302)
 
 
-@app.get("/ocr/health", include_in_schema=False)
-def ocr_health_alias():
-    # Keep backward compatibility with existing gateway health probes.
-    return module.health()
-
-
 if __name__ == "__main__":
     import os
 

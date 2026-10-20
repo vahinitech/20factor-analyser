@@ -287,7 +287,10 @@ def _vl_analyze(arr, lines, include_evidence=True):
 # SectionScore/AnalysisResult dataclasses + build_analysis().
 
 
+# /ocr/health is the same probe under the /ocr prefix a proxy routes to
+# this server; the browser asks for it (#34).
 @app.get("/health")
+@app.get("/ocr/health", include_in_schema=False)
 def health():
     # Probe every registered engine without crashing if its deps are missing.
     backends = {}
