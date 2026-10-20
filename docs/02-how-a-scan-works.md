@@ -27,7 +27,7 @@ The shrunk, upright picture is the **processed image**. Every box in a report
 pixels, not the original photo's.
 
 There is no deskew. The page's tilt is estimated only to correct left edges
-for Margins, factor 10 (`_page_tilt_degrees`, `scoring.py:340-376`).
+for Margins, factor 10 (`_page_tilt_degrees`, `scoring_parts/page.py:15-32`).
 
 ## 2. Reading the page: lines, then handwriting only
 
@@ -151,8 +151,9 @@ t), and the widest `words - 1` spaces between them are the word breaks.
 ## 4. The five free skills: what is measured and how the score is made
 
 All scores are 0 to 10, rounded to one decimal (`scoring._score_factor_map`,
-`scoring.py:571-620`). Bands: 8.5 and above Strong, 7.0 Good, 4.5 Developing,
-below that Focus (`_band`, `scoring.py:379-386`). Section weights and the
+which runs `scoring_parts/structure.py`, `spatial.py`, `dynamics.py` and
+`style.py` in turn). Bands: 8.5 and above Strong, 7.0 Good, 4.5 Developing,
+below that Focus (`_band`, `scoring_parts/stats.py:39-46`). Section weights and the
 overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 
 | Skill | Measured from | Score | Needs reading? |
@@ -163,8 +164,9 @@ overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 | **8 Word Spacing** | `word_gap_cv`: variation of every word gap, each divided by its line's height. Gaps come from the ink inside each line (section 3). The space between two boxes left on one row is not a gap: after step 6 of section 2 those are further apart than any word gap (a column, or words never read), and one such space scored Word Spacing 0 on four UJI pages. Fewer than three gaps: "Not measured" | `(1 - word_gap_cv / 1.4) x 10` | Yes |
 | **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
 
-Code: features at `scoring.py:422-560`, formulas at `scoring.py:571-612`,
-what each factor needs from the page in `factor_needs.py`.
+Code: features at `scoring_parts/features.py:41-203`, formulas in
+`scoring_parts/structure.py` (1, 5), `spatial.py` (7, 8) and `style.py`
+(18), what each factor needs from the page in `factor_needs.py`.
 
 Three things a reader of a report should know:
 
@@ -194,7 +196,7 @@ There is **no calibrated probability** anywhere in a report. The API field
 |---|---|---|
 | OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 2, 19; the printed check; dropping fragments |
 | Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`ppocr-server.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
-| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring.py:743-846`) | The report says "Not measured" and leaves the skill out of every average |
+| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
 | Printed probability | Section 2, step 4 | Which lines are scored. The code says it is "a heuristic, not a calibrated confidence" (`classify.py:439-444`) |
 | Photo quality | Sharpness (Laplacian variance) and size, measured in the browser only (`app.js:629-658`) | A warning; the visitor may still go on |
 
@@ -776,7 +778,7 @@ to the measuring and weekly (`.github/workflows/factor-tests.yml`).
 | | 19 Character Distinction | 8 of 19 | unchanged |
 | | 2 Stroke Order | 9 of 19 | unchanged |
 
-What changed (`letter_geometry.py`, `scoring._stroke_features`):
+What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/features.py`):
 
 - **Loop Closure (3)** counted the share of loop letters in the text, so
   an open loop could not move it. It now counts the closed bowls in each

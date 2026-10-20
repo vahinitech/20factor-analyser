@@ -58,7 +58,8 @@ words were not read.
 | `classify.py` | Printed vs handwriting classifier |
 | `layout_filter.py` | Negative pre-filter dropping photos/seals/charts before classification |
 | `computer_vision.py` | Image decode, evidence crops, layout signals, OCR-free fallback |
-| `scoring.py` | The 20-factor model and reference values |
+| `scoring.py` | The 20-factor model: factor catalogue and `build_analysis` |
+| `scoring_parts/` | Its measurements, per-section formulas, "Not measured" rules and advisory checks |
 | `cache.py`, `geometry.py`, `model_map.py`, `gpu_detect.py` | Small shared helpers |
 
 ## OCR engines
