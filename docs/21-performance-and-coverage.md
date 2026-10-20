@@ -61,6 +61,17 @@ runs; one that finds a real bug gets its own issue.
 
 ## 2. Stage timings on every scan (#229)
 
+Built in #229: `backend/perf.py`, and `stage_timings` in `/health`. The
+stages are `decode`, `detect` (and `detect.ink` when rows are found from
+the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
+one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
+`passage`, `evidence`, `features`, `scoring` and `practice`. CPU time is
+the time of the thread the stage ran on; work a library does on its own
+threads (Paddle's) shows in the wall time only. A scan's work keeps the
+request's context on the scan thread (`scan_slots.run`), so concurrent
+scans never mix their numbers, except the container's memory, which is
+shared.
+
 A small module, `backend/perf.py`, standard library only:
 
 ```python
@@ -86,6 +97,15 @@ Where the numbers go:
 
 ## 3. Large-call budgets (#229)
 
+Built in #229. `scripts/perf_budgets.py check` (the `benchmark` job in
+`ci.yml`) replays each benchmark page through the server's own scan, the
+`/report-python` body with the page's written text as the passage, then
+the Pro report, and fails when a page breaks a budget. It prints each
+stage's median and slowest CPU time to the job summary; a stage's cap is
+five times the slowest page on GitHub's runners, at least 100 ms, so a
+stage that becomes several times slower fails while runner noise does
+not.
+
 `backend/perf/budgets.json` says how much one page may cost:
 
 | Budget | Limit |
@@ -101,6 +121,15 @@ shows up. In production a breach is counted in `/health` and the weekly
 report, never refused: the page was already admitted and paid for.
 
 ## 4. Recording growth: big O per function (#230)
+
+Built in #230: `backend/perf/complexity.json`, `scripts/complexity.py` and
+the `complexity` job in `ci.yml`, which writes the table to the job
+summary and uploads it as the `complexity` artifact. The inputs are
+synthetic pages of handwriting-like strokes, reader lines and passage
+text, the same at every run. Lines past the ladder's 40 are held, so
+`escalation.climb` is measured up to 40 lines. A test plants a quadratic
+function declared O(n) and checks the job would fail
+(`backend/tests/test_complexity.py`); it is never in the real table.
 
 `backend/perf/complexity.json` lists every function that runs once per
 page, what its n is, and how fast it should grow:
@@ -213,12 +242,109 @@ change has to lower one (a file split in two, tests moved elsewhere),
 edit `coverage-baseline.json` by hand and say why in the PR, so the lower
 number is in the diff for review.
 
+## 7. Regression gate: is this commit slower or less accurate?
+
+Every commit should answer two questions before it merges: does a scan
+take longer or use more memory than on `main`, and does the analyser read
+or score less well? Part of this exists; the rest is below.
+
+### What already guards each commit
+
+| Check | When | Fails when | Source |
+|---|---|---|---|
+| Replay of the 20 benchmark pages (Layer A) | every PR and push to main | any score, line or reading differs from `expected.json` | `scripts/benchmark.py`, [18-benchmark.md](18-benchmark.md) |
+| Limits on the replay | same | fewer written lines found than the set's floor, a line scored twice, a measured score of exactly 0, or a replay that differs from itself | `LIMITS` in `scripts/benchmark.py` |
+| Agreement with the owner's ranking by eye | same | it falls by more than 0.05 | `eye_drop`; **inert today: the ranking is empty (#198)** |
+| Live reader (Layer B) | weekly, and PRs touching the reader | a score moves by more than 0.3 | `benchmark-live.yml` |
+| Planted mistakes per factor | weekly, and PRs touching scoring | a factor catches its mistake on fewer writers than `benchmarks/factors/expected.json` says | `factor-tests.yml`, `scripts/factor_tests.py` |
+| Stage timings and call budgets | every PR (#248) | a benchmark page breaks a budget | #229 |
+| Growth per function | every PR (#249) | a function grows faster than declared | #230 |
+
+So accuracy has a strong guard against *any* change (Layer A fails on
+every moved number) and a floor for each factor. What is missing: no check
+says whether the reader reads the words right, no check compares scores
+with people's judgement while #198 is empty, and nothing fails a commit
+because a scan got slower or heavier, apart from #248's coarse budgets.
+
+### Why speed is hard to test, and the answer
+
+GitHub's shared runners give the same code different times from one run
+to the next, often by tens of percent. A gate on absolute seconds either
+fails at random or is set so loose that it catches nothing. Three things
+do not have that problem:
+
+- **Counts.** How many reader calls, rungs climbed, pixels decoded and
+  model calls one page needed. The same code gives the same counts every
+  time, so any rise is real.
+- **Paired timing.** Main's code and the PR's code on the same runner in
+  the same job, alternating. The runner's speed cancels out of the ratio.
+- **Growth.** The slope of time against input size (#230), which noise
+  barely moves.
+
+### The five new gates
+
+| Gate | Catches | Runs | Fails when | Issue |
+|---|---|---|---|---|
+| 1. Work counts per page | an extra reader call, a rung climbed that was not before, an image decoded twice | every PR, Layer A replay | any count rises without `work.json` updated in the same PR | #250 |
+| 2. Paired timing against main | slower Python in measuring and scoring | PRs touching `backend/` | median CPU time over 7 alternating rounds is more than 10% above main's, and the last three rounds agree | #251 |
+| 3. Live latency and memory | a slower or hungrier reader or model | Layer B: weekly, reader PRs | p95 page time more than 15% above main's, memory peak more than 10% above, or any page over 2.5 GB | #252 |
+| 4. Reading accuracy | the reader reading worse while scores stay inside 0.3 | Layer A (code after the reader) and Layer B (the reader) | character error rate, in graphemes, rises by more than 0.5 points on a page or 0.2 overall | #253 |
+| 5. History and slow drift | many small slowdowns that each pass | every push to main | a PR is more than 15% slower or heavier than the median of the last 10 main runs, or any accuracy measure falls | #254 |
+
+How they fit together on one PR:
+
+```mermaid
+flowchart LR
+  PR["Pull request"] --> A["Layer A replay<br/>20 pages, no models"]
+  A --> S1{"Scores, lines,<br/>readings equal<br/>expected.json?"}
+  A --> S2{"Work counts<br/>equal work.json?"}
+  A --> S3{"Reading error<br/>within baseline?"}
+  PR --> T["Paired timing<br/>main and PR, same runner"]
+  T --> S4{"Within 10%?"}
+  PR --> F["Planted mistakes"]
+  F --> S5{"Each factor still<br/>catches its mistake?"}
+  PR --> H["History of main"]
+  H --> S6{"Within 15% of<br/>last 10 main runs?"}
+  S1 & S2 & S3 & S4 & S5 & S6 --> OK["Merge allowed"]
+```
+
+A change that is meant to move a number (a scoring fix, a faster reader
+that reads slightly differently) is not blocked forever: the PR updates
+`expected.json`, `work.json` or `reading.json` and says in its body which
+pages moved, by how much and why, as [18-benchmark.md](18-benchmark.md)
+already asks for scores. The point is that nothing moves silently.
+
+### Accuracy against people, not only against ourselves
+
+Every gate above compares the analyser with its own past. That catches
+regressions but cannot say whether a score is right. Two sources can:
+
+- **The owner's ranking by eye** of the 20 benchmark pages (#198). The
+  check exists (`eye_drop`, 0.05); it starts working the day the ranking
+  is filled in.
+- **People's ratings of real photos**, such as the 200 GNHK pages
+  scored on stage on 19 October 2026, where the overall score agreed with
+  how good a person thought the page was at a rank correlation of only
+  0.12 on 37 pages ([history/real-photos-gnhk-2026-10-19.md](history/real-photos-gnhk-2026-10-19.md)). Rated sets live outside the repository when their licence does
+  not allow publishing (`--root`, [18-benchmark.md](18-benchmark.md)),
+  and run weekly rather than on every PR. Their agreement becomes a
+  ratchet like the eye ranking.
+
+Each language pack brings its own set (section 19 of
+[20-languages.md](20-languages.md), gap 12), and every gate runs per set,
+so a Telugu change is judged on Telugu pages.
+
 ## Order
 
 | Step | Issue | Can start |
 |---|---|---|
 | Every test runs | #228 | done (#236) |
-| Profiling job | #231 | now (a workflow and a script, no pipeline change) |
+| Profiling job | #231 | done (#246) |
 | Coverage | #232 | done (#247) |
-| Stage timings and budgets | #229 | now; it wraps the steps in `backend/scoring_parts/` from the split (#227) |
-| Big O per function | #230 | now, on the split's functions |
+| Stage timings and budgets | #229 | built (#229) |
+| Big O per function | #230 | done (#249) |
+| Work counts per page | #250 | now (#248 merged) |
+| Paired timing against main | #251 | in review (#256) |
+| Live latency and memory | #252 | done (#258) |
+| Reading accuracy | #253 | in review (#257) |
+| History and slow drift | #254 | after #250 to #253, which give it numbers to keep |

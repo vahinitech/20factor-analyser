@@ -62,6 +62,7 @@ import report_contract
 import compact_reports
 import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
+import perf  # stage timings and call budgets, numbers only (#229)
 import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
@@ -122,6 +123,26 @@ async def private_api_responses(request, call_next):
     ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Vary"] = "Authorization"
+    return response
+
+
+# The routes that scan a page. Each answer carries a Server-Timing header
+# (stage names and milliseconds); /health keeps each stage's p50 and p95.
+_TIMED_PATHS = ("/ocr", "/analyze-vl", "/report-python", "/api/v2/reports")
+
+
+@app.middleware("http")
+async def stage_timings(request, call_next):
+    """Time each stage of a scan (perf.py). Measuring never decides: no
+    number here changes what is read or scored (#112)."""
+    if request.url.path not in _TIMED_PATHS:
+        return await call_next(request)
+    t0 = time.perf_counter()
+    with perf.scan() as record:
+        response = await call_next(request)
+    header = perf.finish(record, (time.perf_counter() - t0) * 1000.0)
+    if header:
+        response.headers["Server-Timing"] = header
     return response
 
 
@@ -282,12 +303,13 @@ def _vl_analyze(arr, lines, include_evidence=True):
     # Rows found from the ink were not read, and are not read again for
     # their least-sure letters either.
     unread = bool(lines) and all(l.get("ink_row") for l in lines)
-    return computer_vision.vl_analyze(
-        arr,
-        lines,
-        include_evidence,
-        read_letters=None if unread else _READ_LETTERS,
-    )
+    with perf.stage("evidence", lines=len(lines)):
+        return computer_vision.vl_analyze(
+            arr,
+            lines,
+            include_evidence,
+            read_letters=None if unread else _READ_LETTERS,
+        )
 
 
 # _SECTIONS/_FACTOR_META/_FACTOR_EXTRAS/_mean/_std/_cv/_clamp10/_band/
@@ -315,6 +337,9 @@ def health():
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
         "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
+        # Each stage's p50 and p95 over the last scans, and how often a
+        # page broke a budget (perf.py). Numbers only; reset on restart.
+        "stage_timings": perf.ROLLING.snapshot(),
         # True only on stage with debug storage provisioned (debug_store.py).
         "debug_store": debug_store.STORE.enabled,
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
@@ -440,6 +465,36 @@ def _handwriting_not_read_payload(engine, lang, counts, extra=None):
     return payload
 
 
+# A page that is mostly numbers and sums (recognizer.not_writing_page):
+# a maths or science notebook page. The factors measure letters, words
+# and the gaps between them, so a report on sums would describe nothing
+# it measured. Like no_handwriting it is never cached and never counts as
+# a free check, and it tells the child what to write instead.
+NOT_WRITING_PAGE_DETAIL = (
+    "This page is mostly numbers and sums, so the 20 handwriting factors "
+    "cannot be measured on it. Write four lines of English in sentences "
+    "and check that page."
+)
+
+
+def _not_writing_page_payload(engine, lang, counts, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "not_writing_page",
+        "error": NOT_WRITING_PAGE_DETAIL,
+        **counts,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -466,6 +521,9 @@ def _ocr_process(arr, raw, lang):
         not_read = recognizer.telugu_not_read(lang, hand_lines)
         if not_read:
             return _handwriting_not_read_payload("pp-ocrv5", lang, not_read)
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload("pp-ocrv5", lang, numbers)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -624,6 +682,20 @@ def _analyze_vl_process(arr, raw, lang):
                     "ambiguous_word_gaps": [],
                 },
             )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+vl",
+                lang,
+                numbers,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The layout/context/factor-region
             # analysis is pure CV, so use OCR-free line detection; the same
@@ -769,8 +841,10 @@ def _ink_lines(arr, expected_text):
     """(all rows, handwriting rows) from the ink. The printed check still
     runs on each row's shape, so a printed page is still refused. A
     passage with one line per row gives each row its number of words."""
-    rows = ink_geometry.find_rows(arr)
-    classify.classify_lines(arr, rows)
+    with perf.stage("detect.ink", pixels=int(arr.shape[0] * arr.shape[1])):
+        rows = ink_geometry.find_rows(arr)
+    with perf.stage("printed", lines=len(rows)):
+        classify.classify_lines(arr, rows)
     hand = [r for r in rows if not r.get("printed_hint")]
     ink_geometry.expect_words(hand, expected_text)
     return rows, hand
@@ -838,6 +912,21 @@ def _report_python_process(
                     "ambiguous_word_gaps": [],
                 },
             )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                numbers,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The 20 factors are measured from
             # GEOMETRY, so score OCR-free CV line regions; recognition is
@@ -869,7 +958,14 @@ def _report_python_process(
             line.setdefault("text_as_read", str(line.get("text") or ""))
         # Reference-passage alignment: if the writer copied a known passage,
         # correct the recognised text against it (consistent, dependable reading).
-        align_info = recognizer.align_to_expected(hand_lines, expected_text)
+        with perf.stage(
+            "passage",
+            lines=len(hand_lines),
+            characters=len(expected_text or ""),
+        ):
+            align_info = recognizer.align_to_expected(
+                hand_lines, expected_text
+            )
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -1124,10 +1220,11 @@ async def report_python(
     _spend_if_report(charge, payload)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
-        return report_contract.legacy_report(
-            payload,
-            await run_in_threadpool(entitlements.access_for, authorization),
+        access = await run_in_threadpool(
+            entitlements.access_for, authorization
         )
+        with perf.stage("practice"):
+            return report_contract.legacy_report(payload, access)
     return payload
 
 
@@ -1180,13 +1277,13 @@ async def api_report(
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
-        return compact_reports.build_compact(payload, access, fields)
+        with perf.stage("practice"):
+            return compact_reports.build_compact(payload, access, fields)
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
-    return report_contract.public_report(
-        payload,
-        await run_in_threadpool(entitlements.access_for, authorization),
-    )
+    access = await run_in_threadpool(entitlements.access_for, authorization)
+    with perf.stage("practice"):
+        return report_contract.public_report(payload, access)
 
 
 @app.get("/api/v2/catalog/{version}")

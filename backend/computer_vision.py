@@ -19,6 +19,7 @@ from PIL import Image, ImageOps, ImageDraw
 
 import detector
 import languages
+import perf
 from geometry import clamp_box
 
 try:
@@ -126,16 +127,20 @@ def photo_size(raw: bytes):
 def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:
     """Decode an upload and downscale it so its longest side is at most
     `max_side` (the caller passes the server's configured limit)."""
-    img = decode_image(raw)
-    w, h = img.size
-    m = max(w, h)
-    if m > max_side:
-        scale = max_side / float(m)
-        img = img.resize(
-            (max(1, int(w * scale)), max(1, int(h * scale))),
-            Image.Resampling.LANCZOS,
-        )
-    return np.array(img)
+    with perf.stage("decode", bytes=len(raw)) as step:
+        img = decode_image(raw)
+        w, h = img.size
+        step.size(pixels=w * h)
+        m = max(w, h)
+        if m > max_side:
+            scale = max_side / float(m)
+            img = img.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                Image.Resampling.LANCZOS,
+            )
+        arr = np.array(img)
+        step.size(working_pixels=arr.shape[0] * arr.shape[1])
+    return arr
 
 
 # --------------------------------------------------------------------------- #
