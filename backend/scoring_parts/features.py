@@ -38,6 +38,30 @@ _TALL_RE = re.compile(
 )
 
 
+# Margin Discipline (factor 10): a row that starts more than this share
+# of the page width right of the other rows' median start is a centred
+# title, a date or a signature, not a line that missed the margin (#201).
+MARGIN_OUTLIER = 0.15
+
+
+def _margin_spread(lefts):
+    """How far the rows' starts stray from the margin: the mean distance
+    from the median start, as a share of the page width, leaving out
+    starts far right of the median (MARGIN_OUTLIER).
+
+    The coefficient of variation it replaces divides by the mean start,
+    so the same spread scored worse the nearer the writing sat to the
+    page's edge, and one date at the right took a page to 0 (#201). The
+    median of the distances would ignore one indented line among four,
+    so their mean is taken around the median instead."""
+    if not lefts:
+        return 0.0
+    mid = float(np.median(lefts))
+    kept = [x for x in lefts if x - mid <= MARGIN_OUTLIER]
+    mid = float(np.median(kept))
+    return mean([abs(x - mid) for x in kept])
+
+
 def _extract_features(arr: np.ndarray, lines, layout):
     h, w = arr.shape[:2]
     boxes = [l.get("box") or [0, 0, 0, 0] for l in lines]
@@ -170,6 +194,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "width_cv": _cv(widths),
         "char_w_cv": _cv(char_w),
         "left_cv": _cv(lefts),
+        "left_spread": _margin_spread(lefts),
         "line_slope_abs": mean(slopes),
         "line_slope_std": _std(slopes),
         # median SIGNED line angle: >0 means lines descend left-to-right

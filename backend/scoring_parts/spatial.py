@@ -11,6 +11,9 @@ from scoring_parts.stats import _clamp10
 # in small letters, that loses its 5 points.
 LETTER_GAP_SCALE = 2.5
 WAVE_SCALE = 0.25
+# Margin Discipline: how far, as a share of the page width, the rows'
+# starts stray from the margin on average before every mark is lost.
+MARGIN_SCALE = 0.05
 
 
 def add_scores(fx, s):
@@ -28,7 +31,9 @@ def add_scores(fx, s):
         )
     else:
         s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
-    s[10] = _clamp10((1.0 - min(1.0, fx["left_cv"] / 0.55)) * 10.0)
+    s[10] = _clamp10(
+        (1.0 - min(1.0, fx["left_spread"] / MARGIN_SCALE)) * 10.0
+    )
     # A straight line is level and does not wave: the slope, less up to 5
     # points as the most wandering line's letters drift a quarter of a
     # small letter off their baseline.

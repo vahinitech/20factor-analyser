@@ -276,7 +276,7 @@ _INPUT_FEATURES = {
     7: ("line_slope_abs", "words_off_line"),
     8: ("word_gap_cv", "word_gap_count"),
     9: ("letter_gap_cv", "char_w_cv"),
-    10: ("left_cv",),
+    10: ("left_spread",),
     11: ("line_slope_abs", "line_wave"),
     12: ("line_slope_std",),
     13: ("width_cv",),
