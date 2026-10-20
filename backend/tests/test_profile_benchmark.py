@@ -80,6 +80,12 @@ class TestProfileMarks(unittest.TestCase):
             ),
             "numpy/core/numeric.py",
         )
+        self.assertEqual(
+            prof._short(  # pylint: disable=W0212
+                os.path.join("backend", "scoring.py")
+            ),
+            os.path.join("backend", "scoring.py"),
+        )
 
     def test_both_tables_are_written_with_and_without_a_baseline(self):
         result = {

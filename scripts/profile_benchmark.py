@@ -66,6 +66,7 @@ OURS = (
     os.path.join(ROOT, "scripts") + os.sep,
 )
 MIB = 1024 * 1024
+HERE = os.path.abspath(__file__)
 
 
 def _bench():
@@ -105,6 +106,8 @@ def _replay(bench, sets):
 def _short(path):
     """A path as a reader wants it: repository-relative, the part after
     site-packages for a library, the file name for the standard library."""
+    if os.sep in path and not os.path.isabs(path):
+        path = os.path.abspath(path)
     if path.startswith(ROOT + os.sep):
         return os.path.relpath(path, ROOT)
     for marker in ("site-packages" + os.sep, "dist-packages" + os.sep):
@@ -128,7 +131,8 @@ def time_table(stats, total):
     rows = []
     for key, (_cc, calls, own, cum, _callers) in stats.stats.items():
         label, ident = _function(key)
-        if "_lsprof.Profiler" in label:
+        # The profiler and this script's own frames say nothing.
+        if "_lsprof.Profiler" in label or _short(key[0]) == _short(HERE):
             continue
         rows.append(
             {
@@ -198,7 +202,7 @@ def memory_table(snapshot):
     snapshot = snapshot.filter_traces(
         [
             tracemalloc.Filter(False, tracemalloc.__file__),
-            tracemalloc.Filter(False, os.path.abspath(__file__)),
+            tracemalloc.Filter(False, "*" + os.path.basename(HERE)),
         ]
     )
     sites = {}
