@@ -13,6 +13,8 @@ import sys
 
 import numpy as np
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from finishing_letters import analyze_finishing_letters  # noqa: E402
@@ -165,3 +167,7 @@ def test_build_analysis_reports_style_and_tips():
         assert "one-style-only" in ids
         f15 = [r for r in d["results"] if r["n"] == 15][0]
         assert "Style check" in f15["evidence"]
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())

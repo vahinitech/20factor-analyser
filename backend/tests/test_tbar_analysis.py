@@ -13,6 +13,8 @@ import sys
 
 import numpy as np
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from tbar_analysis import analyze_tbars, line_tbar_events  # noqa: E402
@@ -212,3 +214,7 @@ def test_build_analysis_reports_tbar_profile():
     if tp["available"]:
         f16 = [r for r in d["results"] if r["n"] == 16][0]
         assert "Cross-bar check" in f16["evidence"]
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())
