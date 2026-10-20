@@ -27,9 +27,12 @@
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
-    "test:print-popup": "node tests/print-popup.mjs"
+    "test:print-popup": "node tests/print-popup.mjs",
+    "test:unit": "for t in tests/*.test.mjs; do echo \"== $t\"; node \"$t\" || exit 1; done",
+    "coverage:frontend": "c8 npm run -s test:unit"
   },
   "devDependencies": {
+    "c8": "12.0.0",
     "http-server": "^14.1.1",
     "playwright": "^1.63.0"
   }

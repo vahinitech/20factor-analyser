@@ -4,7 +4,8 @@
 
     python scripts/check_tests_run.py --check
 
-ci.yml runs `python -m unittest discover -v -s backend/tests -t .`, so every
+ci.yml runs `python -m coverage run --branch -m unittest discover -v -s
+backend/tests -t .` (discovery under coverage.py, #232), so every
 backend/tests/test_*.py runs without being listed anywhere. Before #228 the
 job ran a hand-written list of modules and eight test files (the scan-slot
 and capacity tests among them) ran nowhere, so a change that broke them
@@ -34,7 +35,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS = os.path.join("backend", "tests")
 WORKFLOWS = os.path.join(".github", "workflows")
-DISCOVER = "python -m unittest discover -v -s backend/tests -t ."
+DISCOVER = "-m unittest discover -v -s backend/tests -t ."
 SKIP_DIRS = {".git", "node_modules", "__pycache__", ".venv", "venv"}
 
 

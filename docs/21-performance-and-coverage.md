@@ -28,7 +28,7 @@ Checked on `main` at d24cf63 (20 October 2026):
 | Memory plan | `capacity.py`, [13-api-and-capacity.md](13-api-and-capacity.md) | scan slots from the container limit |
 | Peak memory under load | `backend/load_test.py` on stage | by hand |
 | Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` (replaced by discovery in #228) | 38 of 46 test files |
-| Coverage | none | |
+| Coverage | none (since #232: section 6) | |
 | Profiler | none | |
 
 (Since fixed by #228: every test file now runs.) Eight test files ran in no workflow at all: `test_baseline_track`,
@@ -161,6 +161,8 @@ top 30 functions by cumulative time and the top 20 allocation sites,
 each compared with the last run on `main`. A function that entered the
 top 10 or grew by more than a quarter is marked. It never fails a PR;
 the raw profiles are kept as artifacts for anyone who wants to dig.
+The script is `scripts/profile_benchmark.py`; how to run it and read the
+tables is in [18-benchmark.md](18-benchmark.md#where-the-replay-spends-its-time-and-memory).
 
 ## 6. Coverage (#232)
 
@@ -176,12 +178,67 @@ numbers stay in GitHub.
 
 Coverage waits for #228, so it counts every test.
 
+### Reading the report (built in #232)
+
+Both CI jobs measure on every PR. `python-tests` runs the unittest
+discovery under `python -m coverage run --branch` (settings in
+`.coveragerc`), and `e2e` runs every `tests/*.test.mjs` under c8
+(`npm run coverage:frontend`, settings in `.c8rc.json`). A file's number
+is its covered lines and branches over all its lines and branches. Every
+file under `backend/` and `frontend/src/` is listed, including files no
+test loads, which show 0%.
+
+- **Job summary.** Open the run, then the job. The summary starts with
+  the total against the baseline, any rule the run breaks, and the ten
+  least covered files, followed by one row per file: its number, lines
+  and branches covered, the baseline and the change.
+- **HTML report.** The run's artifacts `coverage-backend` and
+  `coverage-frontend` hold the full report. Download, unzip, open
+  `index.html`; red lines never ran, yellow ones took only one way
+  through a branch.
+
+The node tests load frontend files with `vm`. They go through
+`tests/run-source.mjs`, which gives V8 each file's real path; code run
+without one is named "evalmachine" and c8 cannot count it.
+
+### The ratchet and updating the baseline
+
+`scripts/coverage_ratchet.py --check` fails the job when the total or any
+file is more than 0.5 points under `coverage-baseline.json`, when a file
+in `backend/languages/` or `backend/scoring_parts/` is under 90%, or when
+a file the baseline lists still exists but is no longer measured. A file
+in those two packages that was under 90% when the rule came in has a
+dated entry under `exceptions`: its number then is its floor, which can
+only go up, and the entry goes away once the file reaches 90%. When the
+ratchet came in (20 October 2026) the backend stood at 82.96% and the
+frontend at 31.27%, and one file needed an exception:
+`backend/scoring_parts/advisory.py` at 84.73%. The frontend number is low
+because most browser code runs only in the Playwright tests, which c8
+does not measure.
+
+When a PR raises coverage, raise the baseline in the same PR. Download
+the run's report artifact into `coverage/` and run, for whichever part
+changed:
+
+```bash
+python scripts/coverage_ratchet.py backend coverage/backend.json --update
+```
+
+```bash
+python scripts/coverage_ratchet.py frontend coverage/frontend/coverage-summary.json --update
+```
+
+`--update` refuses while the check fails and never lowers a number. If a
+change has to lower one (a file split in two, tests moved elsewhere),
+edit `coverage-baseline.json` by hand and say why in the PR, so the lower
+number is in the diff for review.
+
 ## Order
 
 | Step | Issue | Can start |
 |---|---|---|
 | Every test runs | #228 | done (#236) |
 | Profiling job | #231 | now (a workflow and a script, no pipeline change) |
-| Coverage | #232 | now |
+| Coverage | #232 | done (#247) |
 | Stage timings and budgets | #229 | built (#229) |
 | Big O per function | #230 | now, on the split's functions |

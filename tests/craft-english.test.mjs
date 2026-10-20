@@ -4,10 +4,11 @@
 // response with no language information.
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import assert from 'node:assert/strict';
 const context={};context.window=context;vm.createContext(context);
-vm.runInContext(fs.readFileSync('frontend/src/engine/craft.js','utf8'),context);
-vm.runInContext(fs.readFileSync('frontend/src/engine/compact-client.js','utf8'),context);
+runSource('frontend/src/engine/craft.js',context);
+runSource('frontend/src/engine/compact-client.js',context);
 const craft=context.VahiniCraft;
 const reading=(script,...languages)=>({script,languages});
 

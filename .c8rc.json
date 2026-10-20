@@ -1,0 +1,8 @@
+{
+  "all": true,
+  "src": ["frontend/src"],
+  "include": ["frontend/src/**"],
+  "reporter": ["html", "json-summary", "text-summary"],
+  "reports-dir": "coverage/frontend",
+  "temp-directory": "coverage/frontend-tmp"
+}
