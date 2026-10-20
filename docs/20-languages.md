@@ -10,7 +10,8 @@ order to build it in. Builds on
 [03-scoring-criteria.md](03-scoring-criteria.md) and
 [06-reading-engines.md](06-reading-engines.md).
 
-Line references are to `main` at 2ee37f4 (20 October 2026).
+Line references are to `main` at 2ee37f4 (20 October 2026). Work is
+tracked in #217, one issue per step of section 12.
 
 ## 1. The problem today
 
@@ -175,6 +176,12 @@ different score for the same photo, which breaks the rule in
 [02-how-a-scan-works.md](02-how-a-scan-works.md) that the same photo gets
 the same score. "auto" without a worksheet uses 3 and 4 only.
 
+The image settles the script, not the language. English and German are
+both Latin, and no ink classifier tells them apart. Within a script the
+language comes from the recognised text: a small language-identification
+model over the line's words, with a language model as the tie-breaker
+only when that is unsure (section 16).
+
 The decision goes into the response with its source, so a report can be
 traced back to why it was scored as Telugu.
 
@@ -300,38 +307,44 @@ Each step is one PR, and each keeps the benchmark green
 ([18-benchmark.md](18-benchmark.md)). Steps 1 to 3 must not move a single
 number in `benchmarks/*/expected.json`.
 
-1. **Packs for what exists, no behaviour change.** Add
+1. **Packs for what exists, no behaviour change.** (#206) Add
    `backend/languages/` with the registry, the schema and `Latn`/`en`
    packs holding today's constants. Point `scoring.py`, `zone_analysis.py`,
    `letter_geometry.py`, `tbar_analysis.py`, `finishing_letters.py`,
    `style_analysis.py`, `coach_tips.py` and `classify.py` at the pack.
    Add a test that fails on a letter list, `[A-Za-z]`, a Unicode script
    range or `isascii()` in a scoring module outside `backend/languages/`.
-2. **Factor needs.** Declare `needs` for the 20 factors and replace
+2. **Factor needs.** (#207) Declare `needs` for the 20 factors and replace
    `_LATIN_ONLY`, `_NEEDS_RECOGNITION` and `_INK_MEASURED` with the one
    check. The "Not measured" reasons stay word for word.
-3. **Recognition registry.** Replace `_INDIC_LANGS`
+3. **Recognition registry.** (#208) Replace `_INDIC_LANGS`
    (`recognizer.py:53`) and the TrOCR default (`ocr_backends.py:661`) with
    registry lookups; engines return graphemes.
-4. **Graphemes and alignment.** A grapheme splitter, and
+4. **Graphemes and alignment.** (#209) A grapheme splitter, and
    `align_to_expected` comparing graphemes with marks kept. English is
    unchanged; Telugu alignment gets stricter, which is the point.
-5. **Script decision, logging only.** The per-line decision from section
+5. **Script decision, logging only.** (#210) The per-line decision from section
    5, recorded next to today's character-based tag on every scan but not
    used, until the two have been compared on real pages.
-6. **Script decision in charge,** with the refusal on disagreement.
+6. **Script decision in charge** (#211), with the refusal on disagreement.
    `telugu_not_read` becomes the general case.
-7. **Request contract** (section 13).
-8. **Telugu pack:** zones, loop and mark classes reviewed by a Telugu
+7. **Request contract** (#212, section 13).
+8. **Telugu pack:** (#213) zones, loop and mark classes reviewed by a Telugu
    teacher; ink geometry reads it. Level 1 to 2 when the reader passes.
-9. **German pack:** `de` and `de-DE`, the letter models taught in German
+9. **German pack:** (#214) `de` and `de-DE`, the letter models taught in German
    schools, ä ö ü ß in the classes, a reader that keeps them, and the
    English form words in `classify.py` checked against German pages.
-10. **Hindi pack:** `Deva` zones with the headline, a headline continuity
+10. **Hindi pack:** (#215) `Deva` zones with the headline, a headline continuity
     measurement, and Surya as the first reader.
 
-Norm tables (section 9) start as soon as there are real children's pages
-for a script; they do not wait for step 10.
+11. **Language-model service** (#218), off by default: the `ScriptJudge`
+    and `Reader` interface, a local adapter first, measured like any
+    other reader before it enters the registry (section 16). It can start
+    after steps 3 and 5; an API adapter waits for the owner's privacy
+    decision.
+
+Norm tables (section 9, #216) start as soon as there are real children's
+pages for a script; they do not wait for step 10.
 
 ## 13. Contract change
 
@@ -394,6 +407,84 @@ dictionary on open writing measures the reader, not the writer. For Telugu
 the useful checks are phonetic: short and long vowel signs, aspirated and
 plain consonants, and conjuncts.
 
+## 16. Language models: where they help and where they do not
+
+A vision-language model (a local one, or an API such as Claude, Gemini or
+GPT) can help in two layers: deciding the script and language (layer 2)
+and reading (layer 3). Measuring and scoring (layers 4 and 5) stay with
+OpenCV and the deterministic code in `scoring.py`. A language model never
+produces a number that goes into a factor. Every score has to trace to
+code ([03-scoring-criteria.md](03-scoring-criteria.md)), and the same
+photo has to get the same score.
+
+**Script and language decision.** A language model is a fifth source in
+section 5, asked only when the cheaper sources are unsure: the image
+classifier gives no clear script, or the language-identification model
+cannot choose between two languages of one script. It never overrides
+the worksheet or the family's choice; if it disagrees with them the page
+is refused, as with any other disagreement.
+
+**Reading.** A language model is one more engine in the registry (section
+6), not a replacement for it. The analyser already runs two
+vision-language readers, Surya and PaddleOCR-VL (`ocr_backends.py:785`,
+`:905`), and already guards against them: a stronger engine's reading
+replaces Paddle's only when the two are at least 0.70 similar or the
+engine is very sure (`config.py:133-143`), because below that the
+difference was mostly invented text. A general language model gets the
+same guard, and three more rules:
+
+- **It must copy, not correct.** A language model reads what the child
+  meant: it fixes a misspelling, closes an open letter, finishes a word.
+  For a handwriting check that is wrong, because the mistakes are what we
+  measure. The prompt asks for an exact transcription, the answer is
+  compared with the classic reader, and on a copy task with the
+  worksheet's text. When the model's text matches the worksheet better
+  than the ink does, that is a warning sign, not a success.
+- **Its confidence is not used.** Factors 1, 2 and 19 use the reader's
+  per-character confidence. Language models do not give a calibrated one,
+  so those factors keep the classic reader's confidence, or are "Not
+  measured" when only the language model could read the line. The model
+  may mark words it is unsure of; that marks a line, it is not a score.
+- **Fixed answers.** A pinned model version (weights hash for a local
+  model, the dated version for an API), greedy decoding, a versioned
+  prompt, a JSON schema for the answer, and the answer cached by photo,
+  model and prompt version. An answer outside the schema counts as no
+  answer. An API that changes the model behind the same name changes
+  scores, so the version goes into the response and into the benchmark's
+  Layer B run.
+
+**Where it runs.** Not in the analyser container. That container has a
+2.5 GB memory limit on a shared CPU host and one scan already peaks near
+1.6 GB ([13-api-and-capacity.md](13-api-and-capacity.md)); a 3 to 7
+billion parameter vision model needs a GPU. The language model is a
+separate service behind one internal interface (`ScriptJudge` and
+`Reader`), with adapters for a local server (vLLM, llama.cpp or Ollama on
+a GPU machine) and for API providers. Off by default. The analyser works
+the same without it, with a timeout and a recorded "not asked" when it is
+slow or down.
+
+**Privacy.** An API model means a child's handwriting leaves our server.
+Today's rule is that no deployed engine does that, and that a cloud API
+needs explicit consent and a privacy review first
+([06-reading-engines.md](06-reading-engines.md)); Chandra OCR 2 was removed
+for this reason. That rule stands. A local model on our own GPU keeps the
+photo on our machines and is the default path. An API path needs the
+owner's decision, a provider that keeps nothing, a consent line for the
+family, and the matching change to vahini-web's privacy page. Even then it
+gets line crops after the layout filter, never the whole page, so a name
+written at the top does not travel.
+
+**Words, not runtime.** Language models are useful for drafting tips,
+exercises and report strings in a new language at build time. A teacher
+of that language edits them, and they go into the practice catalogue like
+any other text. They are never generated per child at scan time.
+
+**How it is judged.** Like any reader: character error rate per script on
+the benchmark sets and on real photos, the share of lines where it
+"corrected" the child, the share of answers outside the schema, and
+repeat runs on the same photo. It enters the registry at the level those
+numbers support (section 11), the same as Surya or Paddle.
+
 ## Open questions for the owner
 
 1. The bar for each maturity step per language: how many real pages, and
@@ -402,6 +493,9 @@ plain consonants, and conjuncts.
 3. Whether factor 6 is renamed for non-Latin scripts, and to what.
 4. For German, whether to ask the family which school script the child
    learned, or detect it.
+5. Whether a language-model API may ever see a child's handwriting, and
+   on what terms, or whether only a local model on our own GPU is allowed.
+   Whether there is a GPU budget for that local model.
 
 Sources for section 14: [Census 2011 mother-tongue shares](https://www.thenewsminute.com/news/what-india-speaks-south-indian-languages-are-growing-not-fast-hindi-83823);
 [2024 board-exam medium](https://www.legacyias.com/hindi-english-top-choice-as-medium-of-instruction-for-class-10-12-exams/);
