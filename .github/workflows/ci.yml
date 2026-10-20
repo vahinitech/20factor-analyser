@@ -56,7 +56,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -98,6 +98,8 @@ jobs:
             backend/languages/__init__.py backend/languages/registry.py \
             backend/tests/test_language_packs.py \
             backend/tests/test_letter_facts.py \
+            backend/languages/stages.py \
+            backend/tests/test_recognition_stages.py \
             backend/factor_needs.py backend/tests/test_factor_needs.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
@@ -145,6 +147,7 @@ jobs:
             backend.tests.test_access_api \
             backend.tests.test_language_packs \
             backend.tests.test_letter_facts \
+            backend.tests.test_recognition_stages \
             backend.tests.test_factor_needs
 
   # Real handwriting, replayed: every page's kept reader output goes

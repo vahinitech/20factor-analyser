@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from model_map import parse_model_map
 from gpu_detect import resolve_use_gpu
+from languages import stages
 
 # Every value recognizer.collect_lines() handles. Anything else used to run
 # as paddle while /health reported the unknown name (vahini-web stage said
@@ -68,9 +69,11 @@ def load() -> Settings:
             f"VAHINI_OCR_BACKEND={ocr_backend!r} is not one of "
             + ", ".join(OCR_BACKENDS)
         )
+    # The default ("en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec")
+    # comes from the Paddle stages in backend/languages/stages.json.
     rec_model_map_raw = os.environ.get(
         "VAHINI_OCR_REC_MODEL_MAP",
-        "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec",
+        stages.table().default_rec_model_map(),
     )
     return Settings(
         use_gpu=resolve_use_gpu("VAHINI_OCR_GPU", engine="paddle"),
