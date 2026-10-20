@@ -135,7 +135,7 @@ work runs on CPU, GPU and memory. The fallback for each ladder is in
 
 ```mermaid
 flowchart TD
-  U["Photo and request<br/>lang, worksheet id, expected text"] --> AD{"Page admitted?<br/>scan slot, budget for its top rung"}
+  U["Photo and request<br/>lang, worksheet id, expected text,<br/>profile, age band"] --> AD{"Page admitted?<br/>scan slot, budget for its top rung"}
   AD -- no --> XB["503 busy, Retry-After"]
   AD -- yes --> P1["1. Photo and ink<br/>decode, rows, baselines, ink blobs"]
   P1 --> P2{"2. Script and language<br/>per line, up its ladder"}
@@ -145,15 +145,18 @@ flowchart TD
   P3 -- "needed rung down" --> XU
   P3 -- "too many lines unread" --> XN["Refused: handwriting_not_read"]
   P3 --> P4["4. Measurements<br/>OpenCV, facts from the pack"]
+  P3 --> SK["7. Language skills<br/>spelling, grammar, phonetics;<br/>trusted text only, never a score"]
   P4 --> P5{"5. 20-factor scoring<br/>each factor's needs met?"}
   P5 -- no --> NM["That factor: Not measured,<br/>with the reason"]
   P5 -- yes --> SC["Scored"]
   NM --> P6["6. Report and practice<br/>in the family's language"]
   SC --> P6
-  LP[("Language packs<br/>script, language, locale")] -.-> P2
+  SK --> P6
+  LP[("Resolved ruleset, hashed<br/>packs: script, language, locale<br/>then school, class, child profile")] -.-> P2
   LP -.-> P3
   LP -.-> P4
   LP -.-> P5
+  LP -.-> SK
   LD[("stages.json, ladders.json<br/>committed, built offline")] -.-> P2
   LD -.-> P3
 ```
