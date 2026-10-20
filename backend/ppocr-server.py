@@ -31,6 +31,7 @@
 #   The first request for a new language is therefore slow (it downloads); every
 #   request after that is fast. To pre-warm at deploy time, see README "warm-up".
 
+import logging
 import os
 import sys
 import time
@@ -89,6 +90,8 @@ from starlette.concurrency import run_in_threadpool
 from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
 from daily_limit import LIMIT as DAILY
 import numpy as np
+
+log = logging.getLogger("vahini.server")
 
 # PaddleOCR 3.x (PP-OCRv5) is imported LAZILY inside get_engine() so this module
 # loads even when paddle isn't installed (e.g. a non-paddle backend, or tests).
@@ -864,6 +867,9 @@ def _report_python_process(
             ).to_dict()
         factor_needs.explain(analysis, ruleset)
     except Exception as e:
+        # The visitor gets str(e); the traceback goes to the container log
+        # so the failing line can be found (#199).
+        log.exception("report-python failed")
         return {
             "ok": False,
             "engine": "pp-ocrv5+python-report",

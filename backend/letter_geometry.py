@@ -130,15 +130,18 @@ REST_REACH = 0.8
 
 def _level(mask, mx0, y0, slope, icpt):
     """The mask with each column shifted so the fitted baseline is row h
-    (the mask's own height) of a 2h-row array."""
+    (the mask's own height) of a 2h-row array. A column the shift moves
+    wholly outside the array stays empty (#199: a steep fit across a wide
+    word gave an empty or negative range and the two slices differed)."""
     h, w = mask.shape
     level = np.zeros((h * 2, w), bool)
     for c in range(w):
         base = slope * (mx0 + c) + icpt - y0
         shift = int(round(h - base))
-        col = mask[:, c]
         lo, hi = max(0, shift), min(2 * h, shift + h)
-        level[lo:hi, c] = col[lo - shift : hi - shift]
+        if hi <= lo:
+            continue
+        level[lo:hi, c] = mask[lo - shift : hi - shift, c]
     return level
 
 
