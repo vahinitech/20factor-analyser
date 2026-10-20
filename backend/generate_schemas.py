@@ -1706,6 +1706,44 @@ def health():
                     "built_tiers": {"type": "array"},
                 }
             ),
+            "stage_timings": closed(
+                {
+                    "scans": {"type": "integer", "minimum": 0},
+                    "window": {"type": "integer", "minimum": 1},
+                    "stages": {
+                        "type": "object",
+                        "description": (
+                            "Each stage's milliseconds over the last "
+                            "window scans (backend/perf.py)."
+                        ),
+                        "additionalProperties": closed(
+                            {
+                                "samples": {"type": "integer", "minimum": 1},
+                                "wall_ms_p50": {"type": "number"},
+                                "wall_ms_p95": {"type": "number"},
+                                "cpu_ms_p50": {"type": "number"},
+                                "cpu_ms_p95": {"type": "number"},
+                            }
+                        ),
+                    },
+                    "budget_breaches": {
+                        "type": "object",
+                        "description": (
+                            "Pages over a budget in backend/perf/"
+                            "budgets.json since the server started, by "
+                            "budget:stage. Counted, never refused."
+                        ),
+                        "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 1,
+                        },
+                    },
+                },
+                description=(
+                    "Stage timings of the scans since the server "
+                    "started, in memory: numbers only (#229)."
+                ),
+            ),
         },
     }
 
