@@ -1,0 +1,213 @@
+{
+  "$comment": "Recognition stages (docs/20-languages.md, sections 6, 17.1 and 17.8; #208). scripts says which engine re-reads a handwriting line of each script in hybrid mode; a language not listed reads as default_script. stages holds the facts about each engine on each device. Every \"unmeasured\" value waits for scripts/rank_stages.py and backend/load_test.py on stage (#219); never replace one with a guess. VAHINI_TROCR_MODEL and VAHINI_OCR_REC_MODEL_MAP still override the model ids below.",
+  "version": 1,
+  "default_script": "Latn",
+  "scripts": {
+    "Latn": {"languages": ["en"], "refine": ["trocr"]},
+    "Telu": {"languages": ["te"], "refine": ["surya"]},
+    "Deva": {"languages": ["hi"], "refine": ["surya"]},
+    "Taml": {"languages": ["ta"], "refine": ["surya"]},
+    "Knda": {"languages": ["kn"], "refine": ["surya"]},
+    "Mlym": {"languages": ["ml"], "refine": ["surya"]}
+  },
+  "stages": [
+    {
+      "id": "paddle-latn-cpu",
+      "engine": "paddle",
+      "task": "read",
+      "scripts": ["Latn"],
+      "device": "cpu",
+      "where": "server",
+      "version": {
+        "package": "paddleocr",
+        "model": "PP-OCRv5_server_rec",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Latn": "unmeasured"},
+      "level": {"Latn": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": 0,
+      "threads": "unmeasured"
+    },
+    {
+      "id": "paddle-latn-gpu",
+      "engine": "paddle",
+      "task": "read",
+      "scripts": ["Latn"],
+      "device": "gpu",
+      "where": "server",
+      "version": {
+        "package": "paddleocr",
+        "model": "PP-OCRv5_server_rec",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Latn": "unmeasured"},
+      "level": {"Latn": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": "unmeasured",
+      "threads": "unmeasured"
+    },
+    {
+      "id": "paddle-telu-cpu",
+      "engine": "paddle",
+      "task": "read",
+      "scripts": ["Telu"],
+      "device": "cpu",
+      "where": "server",
+      "version": {
+        "package": "paddleocr",
+        "model": "te_PP-OCRv5_mobile_rec",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Telu": "unmeasured"},
+      "level": {"Telu": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": 0,
+      "threads": "unmeasured"
+    },
+    {
+      "id": "paddle-telu-gpu",
+      "engine": "paddle",
+      "task": "read",
+      "scripts": ["Telu"],
+      "device": "gpu",
+      "where": "server",
+      "version": {
+        "package": "paddleocr",
+        "model": "te_PP-OCRv5_mobile_rec",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Telu": "unmeasured"},
+      "level": {"Telu": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": "unmeasured",
+      "threads": "unmeasured"
+    },
+    {
+      "id": "trocr-latn-cpu",
+      "engine": "trocr",
+      "task": "read",
+      "scripts": ["Latn"],
+      "device": "cpu",
+      "where": "server",
+      "version": {
+        "package": "transformers",
+        "model": "microsoft/trocr-base-handwritten",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Latn": "unmeasured"},
+      "level": {"Latn": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": 0,
+      "threads": "unmeasured"
+    },
+    {
+      "id": "trocr-latn-gpu",
+      "engine": "trocr",
+      "task": "read",
+      "scripts": ["Latn"],
+      "device": "gpu",
+      "where": "server",
+      "version": {
+        "package": "transformers",
+        "model": "microsoft/trocr-base-handwritten",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {"Latn": "unmeasured"},
+      "level": {"Latn": "unmeasured"},
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": "unmeasured",
+      "threads": "unmeasured"
+    },
+    {
+      "$comment": "Surya picks its own checkpoint from the installed surya-ocr release, so the model id is not recorded yet.",
+      "id": "surya-cpu",
+      "engine": "surya",
+      "task": "read",
+      "scripts": ["Latn", "Telu", "Deva", "Taml", "Knda", "Mlym"],
+      "device": "cpu",
+      "where": "server",
+      "version": {
+        "package": "surya-ocr",
+        "model": "unmeasured",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {
+        "Latn": "unmeasured",
+        "Telu": "unmeasured",
+        "Deva": "unmeasured",
+        "Taml": "unmeasured",
+        "Knda": "unmeasured",
+        "Mlym": "unmeasured"
+      },
+      "level": {
+        "Latn": "unmeasured",
+        "Telu": "unmeasured",
+        "Deva": "unmeasured",
+        "Taml": "unmeasured",
+        "Knda": "unmeasured",
+        "Mlym": "unmeasured"
+      },
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": 0,
+      "threads": "unmeasured"
+    },
+    {
+      "$comment": "Surya picks its own checkpoint from the installed surya-ocr release, so the model id is not recorded yet.",
+      "id": "surya-gpu",
+      "engine": "surya",
+      "task": "read",
+      "scripts": ["Latn", "Telu", "Deva", "Taml", "Knda", "Mlym"],
+      "device": "gpu",
+      "where": "server",
+      "version": {
+        "package": "surya-ocr",
+        "model": "unmeasured",
+        "weights_sha256": "unmeasured"
+      },
+      "fixed": "unmeasured",
+      "quality": {
+        "Latn": "unmeasured",
+        "Telu": "unmeasured",
+        "Deva": "unmeasured",
+        "Taml": "unmeasured",
+        "Knda": "unmeasured",
+        "Mlym": "unmeasured"
+      },
+      "level": {
+        "Latn": "unmeasured",
+        "Telu": "unmeasured",
+        "Deva": "unmeasured",
+        "Taml": "unmeasured",
+        "Knda": "unmeasured",
+        "Mlym": "unmeasured"
+      },
+      "cost": {"p95_ms_per_line": "unmeasured", "money_per_call": 0},
+      "load_mb": "unmeasured",
+      "work_mb": "unmeasured",
+      "vram_mb": "unmeasured",
+      "threads": "unmeasured"
+    }
+  ]
+}

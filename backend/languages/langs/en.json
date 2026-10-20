@@ -1,0 +1,21 @@
+{
+  "id": "en",
+  "kind": "language",
+  "extends": "Latn",
+  "set": {
+    "name": "English",
+    "level": 3,
+    "benchmark": "uji-clean",
+    "letters_per_word": 5.0,
+    "finishing": "adhilmnrtu",
+    "form_words": [
+      "name", "address", "adress", "date", "age", "sex", "gender", "case",
+      "doctor", "dr", "diagnosis", "admission", "discharge", "procedure",
+      "phone", "mobile", "id", "form", "hospital", "patient", "summary",
+      "findings", "consultant", "fir", "ip", "op", "investigation",
+      "investgation", "results", "dob", "dod", "d.o.b", "d.o.d", "reg", "no",
+      "ref", "signature", "sign", "amount", "total", "qty", "rate",
+      "received", "receipt", "paid", "issued", "office", "department"
+    ]
+  }
+}

@@ -37,6 +37,7 @@ try:
 except ImportError:  # pragma: no cover - cv2 ships in core
     cv2 = None
 
+import languages
 from geometry import clamp_box
 
 # The coach's rule: reach two x-heights up and down.
@@ -52,9 +53,12 @@ MIN_XHEIGHT_PX = 6
 DENSE_FRAC = 0.40
 INK_FRAC = 0.08
 
-_ASCENDER_RE = re.compile(r"[bdfhklt]")
-_DESCENDER_RE = re.compile(r"[gjpqy]")
-_LATIN_RE = re.compile(r"[A-Za-z]")
+# Which letters rise above the small letters, drop below the line, and
+# count as letters: the language pack (backend/languages, #206).
+_PACK = languages.language()
+_ASCENDER_RE = re.compile(_PACK.char_class("ascender"))
+_DESCENDER_RE = re.compile(_PACK.char_class("descender"))
+_LATIN_RE = re.compile(_PACK.char_class("letter"))
 
 
 def binarise(crop):

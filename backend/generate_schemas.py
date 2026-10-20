@@ -1607,6 +1607,26 @@ def health():
             "det_limit_side_len": nullable("integer"),
             "printed_threshold": {"type": "number"},
             "adaptive_engine_speed": {"type": "object"},
+            "recognition": closed(
+                {
+                    "stages_sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                        "description": (
+                            "sha256 of backend/languages/stages.json, "
+                            "the table every recognition route comes from."
+                        ),
+                    },
+                    "devices": {
+                        "type": "object",
+                        "description": (
+                            "The device each registered engine resolved "
+                            "to; null until the engine is built."
+                        ),
+                        "additionalProperties": nullable("string"),
+                    },
+                }
+            ),
             "debug_store": {
                 "type": "boolean",
                 "description": (

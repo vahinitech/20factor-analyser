@@ -33,15 +33,20 @@ from collections import deque
 
 import numpy as np
 
+import languages
 from zone_analysis import MIN_XHEIGHT_PX, binarise, dense_band
+
+# What counts as a Latin letter: the language pack (backend/languages).
+_PACK = languages.language()
+_LETTERS = _PACK.letter_set("letter")
 
 # Word-cluster segmentation: gaps at or above the word-gap floor split
 # words; anything narrower stays part of the same word cluster.
 WORD_GAP_XH = 0.9
 # Minimum share of Latin letters (of all alphabetic characters, page-
-# wide) required to run the style check - matches the threshold
+# wide) required to run the style check - the same pack value
 # coach_tips.py's _latin_share gates English-only lessons on.
-MIN_LATIN_SHARE = 0.9
+MIN_LATIN_SHARE = _PACK.get("min_script_share")
 # Components smaller than this many pixels are dots/noise (i-dots,
 # specks) and are not counted as pen lifts.
 MIN_COMPONENT_PX = 6
@@ -53,7 +58,7 @@ DOMINANT_SHARE = 0.65
 
 
 def _is_latin_letter(c):
-    return c.isascii() and c.isalpha()
+    return c in _LETTERS
 
 
 def _latin_letter_count(word):
@@ -61,13 +66,9 @@ def _latin_letter_count(word):
 
 
 def _latin_share(text):
-    """Share of Latin/ASCII letters among all alphabetic characters in
-    `text`. Same convention as coach_tips.py's _latin_share."""
-    letters = [c for c in str(text or "") if c.isalpha()]
-    if not letters:
-        return 0.0
-    latin = sum(1 for c in letters if c.isascii())
-    return latin / float(len(letters))
+    """Share of Latin letters among all alphabetic characters in `text`.
+    Same convention as coach_tips.py's _latin_share."""
+    return _PACK.share(text)
 
 
 def _components(ink):
