@@ -56,7 +56,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/graphemes.py backend/languages/profile.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py
       - name: Lint (pylint, min score 9.0)
@@ -102,6 +102,8 @@ jobs:
             backend/tests/test_letter_facts.py \
             backend/languages/stages.py \
             backend/tests/test_recognition_stages.py \
+            backend/languages/ladders.py scripts/rank_stages.py \
+            backend/tests/test_ladders.py \
             backend/factor_needs.py backend/tests/test_factor_needs.py \
             backend/languages/profile.py backend/tests/test_profiles.py \
             backend/languages/graphemes.py backend/tests/test_graphemes.py \
@@ -114,6 +116,8 @@ jobs:
         run: python backend/generate_schemas.py --check
       - name: Every language pack resolves and validates
         run: python backend/languages/registry.py --check
+      - name: The recognition ladders are what stages.json gives
+        run: python scripts/rank_stages.py --check
       # Discovery, not a hand-written list: eight test files once ran in no
       # workflow because nobody added them to the list here (#228).
       - name: Every backend test file runs in some workflow

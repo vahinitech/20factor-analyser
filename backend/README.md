@@ -98,6 +98,19 @@ Paddle recognition models (`VAHINI_OCR_REC_MODEL_MAP`) and the TrOCR model
 override it. `GET /health`'s `recognition` field gives the file's sha256
 and the device each engine resolved to (`null` until the engine is built).
 
+`backend/languages/ladders.json` is built from that table by
+`python scripts/rank_stages.py` and committed (#219, design in
+`docs/20-languages.md`, section 17.2). For each mode and script it lists
+the stages that may read a handwriting line, cheapest first: the Paddle
+stage that found the line, then the stages a line is sent up to. In
+paddle mode that is Paddle alone, in trocr mode Paddle then TrOCR for
+every script, and in hybrid mode the stages ranked by the rules of 17.2.
+While a quality or a cost is `unmeasured`, a hybrid ladder cannot be
+ranked, so it is the route the stage table names (`basis: route`) and
+lists the stages that were not measured. The file records the sha256 of
+the stage table it was built from; after any change to `stages.json`,
+run the script again and commit both. CI runs it with `--check`.
+
 The re-read text is accepted when EITHER it agrees with paddle's own reading
 at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
 at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.

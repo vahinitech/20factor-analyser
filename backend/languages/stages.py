@@ -150,6 +150,19 @@ class Table:
         """The engine that re-reads a handwriting line in hybrid mode."""
         return self._data["scripts"][self.script_for(lang)]["refine"][0]
 
+    def route(self, script):
+        """The engines hybrid mode re-reads a script's lines with, in
+        order: the route scripts/rank_stages.py keeps while a stage's
+        quality or cost is unmeasured."""
+        return list(self._data["scripts"][script]["refine"])
+
+    def stage(self, stage_id):
+        """A copy of one stage entry; KeyError when there is none."""
+        for stage in self._data["stages"]:
+            if stage["id"] == stage_id:
+                return copy.deepcopy(stage)
+        raise KeyError(stage_id)
+
     def stages(self, engine=None):
         """Copies of the stage entries, optionally for one engine."""
         return [
