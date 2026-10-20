@@ -36,6 +36,16 @@ def nullable(kind, **extra):
     return {"type": [kind, "null"], **extra}
 
 
+# The request's `lang`: auto, or BCP 47 tags separated by commas. A tag is
+# a language subtag, then an optional script (Latn, Telu) and an optional
+# region (IN, GB): en, te-Telu-IN, en-Latn-GB,te. The language subtag
+# takes 2 to 8 letters, as the old pattern `^([a-z]{2,8}|auto)$` did and
+# BCP 47 allows, so a PaddleOCR language name a server loads (latin,
+# korean) stays valid. lang_tags.py maps each tag to its engine code.
+_LANG_TAG = "[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?"
+LANG_PATTERN = f"^(auto|{_LANG_TAG}(,{_LANG_TAG})*)$"
+
+
 def closed(properties, required=None, **extra):
     return {
         "type": "object",
@@ -1532,7 +1542,13 @@ def request():
                     "lang": {
                         "type": "string",
                         "default": "auto",
-                        "pattern": "^([a-z]{2,8}|auto)$",
+                        "pattern": LANG_PATTERN,
+                        "description": (
+                            "auto, or BCP 47 tags separated by commas: "
+                            "en, en,te, te-Telu-IN. The server reads each "
+                            "tag by its language subtag, so te-Telu-IN "
+                            "reads as te."
+                        ),
                     },
                     "expected_text": {
                         "type": "string",

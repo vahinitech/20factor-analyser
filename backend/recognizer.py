@@ -29,6 +29,7 @@ import time
 import numpy as np
 
 import config
+import lang_tags
 import ocr_backends
 import classify
 import detector
@@ -62,7 +63,7 @@ def configure(**kwargs):
 
 
 def resolve_langs(lang: str):
-    req = (lang or "").strip().lower()
+    req = lang_tags.engine_langs(lang)
     ocr_langs = _CFG["ocr_langs"]
     if not req or req == "auto":
         return ocr_langs or ["en"]
@@ -391,7 +392,7 @@ def telugu_not_read(lang, hand_lines):
     really read, or None when it passes or was not asked for as Telugu.
     Lines with no text were not read at all (cv-fallback, or rows found
     from the ink); a page of only those keeps its own path."""
-    asked = {x.strip() for x in str(lang or "").lower().split(",")}
+    asked = set(lang_tags.engine_langs(str(lang or "")).split(","))
     if "te" not in asked or "en" in asked:
         return None
     read = [l for l in hand_lines if str(l.get("text") or "").strip()]

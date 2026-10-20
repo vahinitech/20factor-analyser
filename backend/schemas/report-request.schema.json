@@ -51,7 +51,8 @@
         "lang": {
           "type": "string",
           "default": "auto",
-          "pattern": "^([a-z]{2,8}|auto)$"
+          "pattern": "^(auto|[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?(,[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?)*)$",
+          "description": "auto, or BCP 47 tags separated by commas: en, en,te, te-Telu-IN. The server reads each tag by its language subtag, so te-Telu-IN reads as te."
         },
         "expected_text": {
           "type": "string",
