@@ -124,6 +124,72 @@ factors 13 to 16 only when pen data exists.
 The website's worksheet library also has pages for cursive, Hindi, Kannada,
 Malayalam, Tamil and Telugu; the analyser scores English and Telugu.
 
+### Planned: the multilingual design
+
+Not built yet. The design for German, Hindi, the English variants and
+Telugu beyond ink geometry is [20-languages.md](20-languages.md), tracked
+in #217. Two pictures from it, so this page shows where the analyser is
+going: the path of one page with every place it can stop, and where the
+work runs on CPU, GPU and memory. The fallback for each ladder is in
+[20-languages.md, section 17](20-languages.md#17-choosing-a-tool-ladders-escalation-and-fallback).
+
+```mermaid
+flowchart TD
+  U["Photo and request<br/>lang, worksheet id, expected text,<br/>profile, age band"] --> AD{"Page admitted?<br/>scan slot, budget for its top rung"}
+  AD -- no --> XB["503 busy, Retry-After"]
+  AD -- yes --> P1["1. Photo and ink<br/>decode, rows, baselines, ink blobs"]
+  P1 --> P2{"2. Script and language<br/>per line, up its ladder"}
+  P2 -- "sources disagree" --> XS["Refused: writing does not<br/>match the chosen language"]
+  P2 -- "needed rung down" --> XU["503 ocr_unavailable, Retry-After<br/>not cached, no free check used"]
+  P2 --> P3{"3. Reading<br/>per line, up its ladder"}
+  P3 -- "needed rung down" --> XU
+  P3 -- "too many lines unread" --> XN["Refused: handwriting_not_read"]
+  P3 --> P4["4. Measurements<br/>OpenCV, facts from the pack"]
+  P3 --> SK["7. Language skills<br/>spelling, grammar, phonetics;<br/>trusted text only, never a score"]
+  P4 --> P5{"5. 20-factor scoring<br/>each factor's needs met?"}
+  P5 -- no --> NM["That factor: Not measured,<br/>with the reason"]
+  P5 -- yes --> SC["Scored"]
+  NM --> P6["6. Report and practice<br/>in the family's language"]
+  SC --> P6
+  SK --> P6
+  LP[("Resolved ruleset, hashed<br/>packs: script, language, locale<br/>then school, class, child profile")] -.-> P2
+  LP -.-> P3
+  LP -.-> P4
+  LP -.-> P5
+  LP -.-> SK
+  LD[("stages.json, ladders.json<br/>committed, built offline")] -.-> P2
+  LD -.-> P3
+```
+
+```mermaid
+flowchart TB
+  P["Page admitted"] --> AN
+  subgraph HOST["Shared CPU host: 4 cores, 7.9 GB, other sites on it"]
+    subgraph AN["Analyser container: 2.5 GB limit, no swap"]
+      direction TB
+      CAP["capacity.py at start-up<br/>slots = smallest of memory, cores, GPUs, 16"]
+      BASE["Loaded once at start-up, counted in BASE<br/>Paddle for every pack language, layout model,<br/>script classifier, language-ID"]
+      SL["scan_slots.py<br/>N running, 4 queued per slot"]
+      SLOT["One slot: own engine copy,<br/>cores / slots threads, about 0.6 GB working"]
+      CPU["CPU rungs<br/>Paddle, TrOCR, Surya"]
+      CAP --> SL
+      BASE --> SLOT
+      SL --> SLOT --> CPU
+    end
+  end
+  SL -- "queue full" --> XB["503 busy, Retry-After 20"]
+  subgraph GPUBOX["GPU service, planned, own machine"]
+    direction TB
+    GQ["Own slots from VRAM,<br/>own queue, batched lines"]
+    GR["GPU rungs<br/>local LLM; Surya or Paddle GPU builds"]
+    GQ --> GR
+  end
+  CPU -- "a line needs a GPU rung" --> GQ
+  CPU -- "a line needs the API rung,<br/>only if the owner allows" --> API["API LLM<br/>line crops only"]
+  GQ -- "full past the page's wait,<br/>or down" --> XU["Page refused, retry later<br/>circuit breaker opens"]
+  API -- "down or over budget" --> XU
+```
+
 ## 5. The 20 factors
 
 Four sections, weighted 0.30, 0.30, 0.20 and 0.20. A photo measures no

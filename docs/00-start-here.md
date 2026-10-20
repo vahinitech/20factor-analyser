@@ -42,6 +42,7 @@ to the ones it builds on.
 | 17 | [Access and trials](17-access-and-trials.md) | Giving a Pro trial, turning it into paid Pro, renewing, moving back to Free, replacing a lost key, and the owner decisions still open |
 | 18 | [The real-handwriting benchmark](18-benchmark.md) | How every change is checked against real pages: the kept reader output, expected scores, what may not get worse, and the live run with the models |
 | 19 | [Comparison data](19-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
+| 20 | [Languages](20-languages.md) | The design for more scripts and languages: language packs, the per-line script decision, what each factor needs, maturity levels, and the build order |
 
 ## Elsewhere
 
