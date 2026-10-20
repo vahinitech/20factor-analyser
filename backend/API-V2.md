@@ -13,6 +13,8 @@ curl --max-time 120 https://stage.vahinitech.com/api/v2/reports \
   -F 'image=@handwriting.jpg' -F 'lang=auto'
 ```
 
+`lang` is `auto` or one or more BCP 47 tags separated by commas, with no spaces: `en`, `te`, `en,te`, `te-Telu-IN`, `en-Latn-GB,te`. A tag is a language subtag (2 to 8 lowercase letters), then an optional script (`Latn`, `Telu`) and an optional region (`IN`, `GB`). The server reads each tag by its language subtag (`backend/lang_tags.py`), so `te-Telu-IN` is read, cached and answered exactly as `te`, and the response's `lang` and `langs` give the short form. `EN`, `en_US` and `en-latn` do not match the schema. Every value the old pattern `^([a-z]{2,8}|auto)$` allowed still does, and still reads the same way. A language the server has not loaded (`VAHINI_OCR_LANGS`) is read with the languages it has, as before.
+
 Use the same request with the customer's Bearer header for Pro. Never put credentials in query strings or bundle a shared Pro credential in the app. Each customer has their own revocable key.
 
 ## Access policy

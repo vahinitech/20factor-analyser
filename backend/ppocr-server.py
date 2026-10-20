@@ -43,6 +43,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
+import lang_tags  # BCP 47 tags in the request to the engine's codes
 import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
 from PIL import UnidentifiedImageError
@@ -527,6 +528,8 @@ async def ocr(
 ):
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
     ckey = _cache_key(
         "ocr",
@@ -691,6 +694,8 @@ async def analyze_vl(
             raise HTTPException(403, "Detailed factor evidence requires Pro")
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
     ckey = _cache_key(
         "analyze-vl",
@@ -727,7 +732,7 @@ def _ink_mode(lang):
     (VAHINI_INK_GEOMETRY_LANGS): only when the request names languages
     and every one of them is set; "auto" cannot know the script before
     reading, so it never is."""
-    req = [x.strip() for x in (lang or "").lower().split(",") if x.strip()]
+    req = [x for x in lang_tags.engine_langs(lang).split(",") if x]
     if not INK_LANGS or not req or "auto" in req:
         return False
     return all(x in INK_LANGS for x in req)
@@ -991,6 +996,8 @@ def _report_python_process(
 
 async def _report_payload(image, lang, expected_text, include_evidence=True):
     t0 = time.perf_counter()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
     ckey = _cache_key(
         "report-python",

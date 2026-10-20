@@ -12,6 +12,8 @@ import hashlib
 import threading
 import time
 
+import lang_tags
+
 _CACHE = {}
 _LOCK = threading.Lock()
 
@@ -30,8 +32,10 @@ def configure(**kwargs):
 
 
 def cache_key(endpoint: str, raw: bytes, lang: str, extra: str = "") -> str:
+    # Keyed by the engine form of `lang`, so `te` and `te-Telu-IN` share
+    # an entry; every short code keys exactly as it did before.
     h = hashlib.sha1(raw).hexdigest()
-    return f"{endpoint}|{(lang or '').strip().lower()}|{extra}|{h}"
+    return f"{endpoint}|{lang_tags.engine_langs(lang)}|{extra}|{h}"
 
 
 def cache_get(key: str):
