@@ -9,9 +9,10 @@
 #
 # It warms whichever engines are installed; missing engines are skipped with a
 # note (never an error). Control what to warm:
-#   VAHINI_OCR_PRELOAD_LANGS   paddle languages (default "en,te")
+#   VAHINI_OCR_PRELOAD_LANGS   paddle languages (default "en,te"); models
+#                              from backend/languages/stages.json
 #   VAHINI_WARMUP_ENGINES      comma list of paddle,trocr,surya,layout (default: all installed)
-#   VAHINI_TROCR_MODEL         TrOCR model id (default microsoft/trocr-base-handwritten)
+#   VAHINI_TROCR_MODEL         TrOCR model id (default: languages/stages.json)
 #
 # "layout" warms BOTH PP-DocLayout-S and PP-DocLayout-M (a few MB each) —
 # layout_filter.py uses the one VAHINI_LAYOUT_MODEL names (default M), and
@@ -21,6 +22,7 @@
 #   python warmup_models.py
 import os
 
+from languages import stages
 from model_map import parse_model_map
 
 
@@ -60,7 +62,7 @@ def warm_paddle():
     rec_model_map = parse_model_map(
         os.environ.get(
             "VAHINI_OCR_REC_MODEL_MAP",
-            "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec",
+            stages.table().default_rec_model_map(),
         )
     )
     det_limit_side_len = max(
@@ -101,9 +103,7 @@ def warm_trocr():
     except Exception as e:
         print(f"[warmup] trocr: skipped (not installed: {e})")
         return
-    model = os.environ.get(
-        "VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten"
-    )
+    model = os.environ.get("VAHINI_TROCR_MODEL", stages.table().model("trocr"))
     print(f"[warmup] trocr: downloading {model}")
     TrOCRProcessor.from_pretrained(model)
     VisionEncoderDecoderModel.from_pretrained(model)

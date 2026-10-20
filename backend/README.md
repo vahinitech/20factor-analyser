@@ -84,6 +84,19 @@ TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya: so a mixed-language
 page gets the right engine for each line instead of one engine for the whole
 page.
 
+That routing, and the model each engine reads with, is data:
+`backend/languages/stages.json` (checked against `stages.schema.json` when
+the server starts). Its `scripts` part lists the languages of each script
+and the engine that re-reads that script; a language it does not name reads
+as Latin, so it goes to TrOCR. Its `stages` part has one entry per engine,
+script and device with the facts the ladders (#219) will be built from:
+quality, cost, memory, threads and maturity, all `unmeasured` until
+`backend/load_test.py` and the benchmark measure them on stage. The default
+Paddle recognition models (`VAHINI_OCR_REC_MODEL_MAP`) and the TrOCR model
+(`VAHINI_TROCR_MODEL`) come from the same file, and both variables still
+override it. `GET /health`'s `recognition` field gives the file's sha256
+and the device each engine resolved to (`null` until the engine is built).
+
 The re-read text is accepted when EITHER it agrees with paddle's own reading
 at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
 at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
