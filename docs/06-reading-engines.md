@@ -34,9 +34,17 @@ detection and printed-vs-handwriting split are kept either way; only lines
 paddle already classified as handwriting get a second read. TrOCR
 (Microsoft, `microsoft/trocr-base-handwritten`) handles English. Surya
 handles Telugu, Hindi, Tamil, Kannada and Malayalam. Both are CPU-capable,
-free, and self-hosted, at the cost of extra CPU time per line, which is
-why a per-machine speed check can turn either one off automatically on a
-slow box rather than stalling every scan.
+free, and self-hosted, at the cost of extra CPU time per line. Every
+handwriting line is re-read on every scan: a speed check used to turn an
+engine off on a slow box, so the same photo read differently under load
+(#112). It now only reports speed in `/health`; a machine too slow for
+hybrid mode should run `paddle`.
+
+Which engine reads which script, and the model ids, live in one committed
+table, `backend/languages/stages.json` (design: `docs/20-languages.md`,
+sections 6 and 17, in #205; #208). Its
+quality, cost and memory figures are marked `unmeasured` until they are
+measured on stage.
 
 **Reference-passage alignment is the single biggest accuracy win, and it
 costs nothing extra.** When a writer copies a known passage, the
