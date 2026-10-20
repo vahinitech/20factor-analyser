@@ -47,6 +47,10 @@ def _env_f(name, default):
 # Decision threshold: printed if printed_prob >= this. Higher = keep more as
 # handwriting (fail-open). Default leans slightly toward keeping handwriting.
 PRINTED_THRESHOLD = _env_f("VAHINI_PRINTED_THRESHOLD", 0.58)
+# A page is taken as printed (a form, a worksheet) when at least this
+# share of the reader's lines look printed. Below it, page context never
+# pushes a line toward print (#202).
+PAGE_PRINT_SHARE = 0.5
 
 # Words that mark a printed form, letters and capitals: the language
 # pack (backend/languages, #206).
@@ -389,7 +393,11 @@ def classify_lines(arr, lines, threshold=None):
         (ln, p) for ln, p in zip(lines, probs) if not ln.get("recovered")
     ] or list(zip(lines, probs))
     strong_count = sum(1 for ln, p in found if _is_strong_printed(ln, p))
-    page_has_print = strong_count >= max(1, int(0.15 * len(found)))
+    # Most of the lines, not one: the old rule (15% of them, rounded
+    # down, at least one) let a single crisp line on a page of neat
+    # handwriting pull its borderline lines to print and set the top
+    # tenth of the page aside as letterhead (#202).
+    page_has_print = strong_count >= PAGE_PRINT_SHARE * len(found)
 
     # Position relative to the DETECTED TEXT BLOCK, not the image — a phone photo
     # often frames the page in the middle, so image-relative position is useless.
