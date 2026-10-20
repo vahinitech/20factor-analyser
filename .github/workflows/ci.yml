@@ -87,6 +87,7 @@ jobs:
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
             backend/tests/test_telugu_not_read.py \
+            backend/tests/test_not_writing_page.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_line_pieces.py \
             backend/tests/test_word_spacing.py \
