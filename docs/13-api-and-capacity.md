@@ -65,3 +65,6 @@ The separately CDN-loaded PDF.js was 3.11.174, affected by [CVE-2024-4367](https
 `sbom.spdx.json` is a source inventory: exact npm lockfile packages and integrity checksums, CDN assets, and declared Python core/default-engine dependencies. Python ranges are recorded as constraints rather than pretending to be installed versions. It is not a complete deployed-container inventory; OS packages, resolved Python transitives, optional OCR tiers and model weights require a build-time SBOM. Paddle/model upgrades were not made without real-model compatibility and performance evidence.
 
 Use `python backend/update_sbom.py` to refresh and `python backend/update_sbom.py --check` to detect drift. CI checks drift, and this revision was validated with `pyspdxtools -i sbom.spdx.json`. The writing guidance in `skills.md` now requires evidence provenance and scoped concurrency/dependency claims.
+
+Per-step timings, call budgets, growth checks and profiling are designed in
+[21-performance-and-coverage.md](21-performance-and-coverage.md).
