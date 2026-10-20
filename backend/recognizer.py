@@ -90,11 +90,19 @@ def collect_lines_paddle(arr: np.ndarray, lang: str):
         engine, err = _build_engine(ocr_backends.get_engine, lg)
         if err:
             last_err = err
-        engine_safe, err_safe = _build_engine(ocr_backends.get_engine_safe, lg)
-        if err_safe:
-            last_err = err_safe
-        if engine is None and engine_safe is None:
-            continue  # try the next configured language
+        # The safe engine is a second copy of the reader's models, used only
+        # when the normal engine cannot read, so it is built only then: when
+        # the normal engine failed to build, or failed on a variant (#173).
+        engine_safe, safe_tried = None, False
+        if engine is None:
+            engine_safe, err_safe = _build_engine(
+                ocr_backends.get_engine_safe, lg
+            )
+            safe_tried = True
+            if err_safe:
+                last_err = err_safe
+            if engine_safe is None:
+                continue  # try the next configured language
         for variant in detector.variants(
             arr, _CFG["max_variants"], _CFG["adv_preproc"]
         ):
@@ -105,6 +113,13 @@ def collect_lines_paddle(arr: np.ndarray, lang: str):
                     got = True
                 except Exception as e:
                     last_err = str(e)
+            if not got and not safe_tried:
+                # The variant's error stays the one reported, as when the
+                # safe engine was built before the variants were read.
+                engine_safe, _err = _build_engine(
+                    ocr_backends.get_engine_safe, lg
+                )
+                safe_tried = True
             if not got and engine_safe is not None:
                 try:
                     lines.extend(ocr_backends.run(engine_safe, variant, lg))

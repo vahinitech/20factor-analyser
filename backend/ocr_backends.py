@@ -582,18 +582,25 @@ def _paddle_run_lang(arr: np.ndarray, lg: str):
     """Single-language paddle recogniser over all preprocessing variants.
     Engine construction happens lazily on first use (it can trigger a model
     download) and must not raise out of here — a failed build of the normal
-    engine still leaves the safe engine usable, and vice versa."""
+    engine still leaves the safe engine usable, and vice versa. The safe
+    engine is built only when the normal one cannot read (#173)."""
+
+    def _safe():
+        try:
+            return get_engine_safe(lg)
+        except Exception:
+            return None
+
     try:
         engine = get_engine(lg)
     except Exception:
         engine = None
-    try:
-        engine_safe = get_engine_safe(lg)
-    except Exception:
-        engine_safe = None
     out = []
-    if engine is None and engine_safe is None:
-        return out
+    engine_safe, safe_tried = None, False
+    if engine is None:
+        engine_safe, safe_tried = _safe(), True
+        if engine_safe is None:
+            return out
     for variant in detector.variants(
         arr, _PADDLE_CFG["max_variants"], _PADDLE_CFG["adv_preproc"]
     ):
@@ -604,6 +611,8 @@ def _paddle_run_lang(arr: np.ndarray, lg: str):
                 got = True
             except Exception:
                 pass
+        if not got and not safe_tried:
+            engine_safe, safe_tried = _safe(), True
         if not got and engine_safe is not None:
             try:
                 out.extend(run(engine_safe, variant, lg))

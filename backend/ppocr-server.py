@@ -168,13 +168,15 @@ _with_meta = cache.with_meta
 
 @app.on_event("startup")
 def _warm_startup_engines():
-    # Warm EVERY configured language (both the normal and the safe engine) at
-    # startup so the FIRST real request isn't slowed by model download/init —
+    # Warm EVERY configured language's normal engine at startup so the
+    # FIRST real request isn't slowed by model download/init —
     # which previously pushed the first /report-python past the reverse-proxy
     # read timeout. Only paddle is warmed here; other backends warm on demand.
     # Runs in a background thread: on an offline/blocked network the model
     # download can take minutes to fail, and the server must still answer
     # /health and scans (via the CV fallback) while it warms.
+    # The safe engine is not warmed: it is a second copy of the same
+    # models, built only when the normal engine cannot read (#173).
     if os.environ.get("VAHINI_OCR_PRELOAD_ON_START", "1") != "1":
         return
 
@@ -182,7 +184,6 @@ def _warm_startup_engines():
         for lg in OCR_LANGS or ["en"]:
             try:
                 ocr_backends.get_engine(lg)
-                ocr_backends.get_engine_safe(lg)
             except Exception:
                 pass
         layout_filter.warm()
