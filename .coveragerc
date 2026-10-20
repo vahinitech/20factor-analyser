@@ -1,0 +1,18 @@
+# Backend coverage (#232, docs/21-performance-and-coverage.md section 6).
+# CI runs the unittest discovery under `python -m coverage run`; every
+# file under backend/ is reported, a file no test imports at 0%, so the
+# total is not raised by leaving files out. The ratchet is
+# scripts/coverage_ratchet.py against coverage-baseline.json.
+[run]
+branch = True
+source = backend
+omit =
+    backend/tests/*
+relative_files = True
+
+[html]
+directory = coverage/backend-html
+title = Backend test coverage
+
+[json]
+output = coverage/backend.json

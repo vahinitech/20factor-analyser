@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 // The loopback helper server is a developer convenience. On a public host the
 // health probe must never reach for 127.0.0.1 on the visitor's machine.
-import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import assert from 'node:assert/strict';
 
-const src = fs.readFileSync('frontend/src/engine/ocr.js', 'utf8');
+const src = 'frontend/src/engine/ocr.js';
 
 async function probedUrls(hostname){
   const urls = [];
@@ -13,7 +13,7 @@ async function probedUrls(hostname){
   context.window = context;
   context.fetch = async url => { urls.push(String(url)); throw new Error('offline'); };
   vm.createContext(context);
-  vm.runInContext(src, context);
+  runSource(src, context);
   const res = await context.VahiniOCR.checkHealth(50);
   assert.equal(res.ok, false);
   return urls;
@@ -34,7 +34,7 @@ async function probe(reply){
   context.window = context;
   context.fetch = async () => reply;
   vm.createContext(context);
-  vm.runInContext(src, context);
+  runSource(src, context);
   return context.VahiniOCR.checkHealth(50);
 }
 const html = { ok: true, json: async () => { throw new SyntaxError('Unexpected token <'); } };

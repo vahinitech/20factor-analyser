@@ -1,9 +1,10 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import assert from 'node:assert/strict';
 const context={};vm.createContext(context);
-vm.runInContext(fs.readFileSync('frontend/src/engine/compact-client.js','utf8'),context);
+runSource('frontend/src/engine/compact-client.js',context);
 const file=fs.readdirSync('backend/catalogs').find(n=>n.endsWith('.json'));
 const catalog=JSON.parse(fs.readFileSync('backend/catalogs/'+file));
 const response={schema_version:'2.1',format:'compact',catalog_version:catalog.version,ok:true,access:{tier:'free'},summary:{score:60},factors:[1,5,7,8,18].map(n=>({n,s:6,st:'e'}))};
