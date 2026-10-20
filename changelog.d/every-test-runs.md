@@ -1,0 +1,1 @@
+- CI now runs every `backend/tests/test_*.py` by unittest discovery instead of a hand-written list of modules. Eight test files, the capacity and scan-slot tests among them, had run in no workflow, so a change that broke them still passed. `scripts/check_tests_run.py --check` fails when a Python test file runs in no workflow, so the list cannot drift again (#228).
