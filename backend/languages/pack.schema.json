@@ -114,7 +114,15 @@
         "benchmark": {"type": "string", "pattern": "^[a-z0-9-]+$"},
         "letters_per_word": {"type": "number", "exclusiveMinimum": 0},
         "finishing": {"$ref": "#/$defs/letters"},
-        "form_words": {"$ref": "#/$defs/words"}
+        "form_words": {"$ref": "#/$defs/words"},
+        "reading": {
+          "description": "Acceptance limits for reading a line (docs/20-languages.md, section 17.3). accept_confidence: a rung's reading is accepted when that rung's confidence reaches it and the letters are in the script (min_script_share). Unset, a reading is accepted at the top rung of the ladder only, so every line climbs the whole ladder. Set only from rank_stages.py's calibration on benchmark sets (section 19, gap 5).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "accept_confidence": {"type": "number", "minimum": 0, "maximum": 1}
+          }
+        }
       },
       "allOf": [
         {

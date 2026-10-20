@@ -24,7 +24,6 @@
 
 import difflib
 import re
-import time
 import unicodedata
 
 import numpy as np
@@ -37,7 +36,8 @@ import detector
 import computer_vision
 import layout_filter
 import line_recovery
-from languages import graphemes, stages
+import escalation
+from languages import graphemes, ladders, stages
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -247,13 +247,57 @@ def _refine_engine_for_line(line_lang: str, backend_name: str) -> str:
     return stages.table().refine_engine(line_lang or "en")
 
 
+def _crop_reader(raw_bytes, proc_arr):
+    """crop_for(line) for the escalation loop: the line's box cut from the
+    FULL-RESOLUTION original (paddle's working image is downscaled, and
+    the full image reads materially better), padded 6% across and 25% up
+    and down plus 6 px. The photo is decoded on the first crop asked for.
+    None for a line with no usable box, or when the photo cannot be
+    decoded: such a line keeps the reader's reading, as it always has."""
+    ph = float(max(1, proc_arr.shape[0]))
+    pw = float(max(1, proc_arr.shape[1]))
+    full = []
+
+    def crop_for(line):
+        if not full:
+            try:
+                full.append(np.array(computer_vision.decode_image(raw_bytes)))
+            except Exception:
+                full.append(None)
+        img = full[0]
+        box = line.get("box") or [0, 0, 0, 0]
+        if img is None or len(box) < 4:
+            return None
+        oh, ow = img.shape[0], img.shape[1]
+        sx, sy = ow / pw, oh / ph
+        x, y, w, h = [float(v) for v in box[:4]]
+        padx = int(w * sx * 0.06) + 6
+        pady = int(h * sy * 0.25) + 6
+        x0 = max(0, int(x * sx) - padx)
+        y0 = max(0, int(y * sy) - pady)
+        x1 = min(ow, int((x + w) * sx) + padx)
+        y1 = min(oh, int((y + h) * sy) + pady)
+        if x1 <= x0 or y1 <= y0:
+            return None
+        return img[y0:y1, x0:x1]
+
+    return crop_for
+
+
+def _guard(lower, text, conf):
+    return escalation.trusted(
+        lower, text, conf, _CFG["refine_min_sim"], _CFG["refine_min_conf"]
+    )
+
+
 def refine_handwriting_text(
     raw_bytes: bytes, proc_arr: np.ndarray, hand_lines, backend_name: str
 ):
-    """Re-recognise each handwriting crop with a stronger, script-appropriate
-    engine and accept its text when EITHER holds:
-      - it roughly agrees with paddle's reading, or
-      - the specialist engine's OWN confidence is high.
+    """Send each handwriting line up its ladder (backend/languages/
+    ladders.json, escalation.py) and keep a higher rung's text when
+    EITHER holds:
+      - it roughly agrees with the lower rung's reading, or
+      - the higher engine's OWN confidence is high.
 
     Why two acceptance paths, not just agreement: TrOCR/Surya are
     language-model recognisers that produce excellent text on clear input
@@ -266,83 +310,24 @@ def refine_handwriting_text(
     confident specialist reading is trusted even when it disagrees with
     paddle. (The agreement check is Latin-only — non-Latin scripts strip to
     an empty string and always score 0 — so Indic refinements rely on the
-    confidence path.) Crops are taken from the FULL-RESOLUTION original
-    (paddle's working image is downscaled), which materially improves
-    recognition.
+    confidence path.)
 
-    Every handwriting line (up to 40) is re-read, every time. The engines
-    used to be skipped after one slow line, for the rest of the page and
-    for VAHINI_HYBRID_RETRY_SEC afterwards, so the text read from one photo
-    depended on server load (#112). Calls are still timed for /health's
-    adaptive_engine_speed, which is information only. A machine too slow
-    for every line should not run hybrid or trocr mode.
+    The ladders for paddle, trocr and hybrid mode give every line the
+    engines it got before them: paddle alone, TrOCR, or TrOCR for Latin
+    and Surya for the Indic scripts. Every handwriting line (up to 40) is
+    re-read, every time: the engines used to be skipped after one slow
+    line, so the text read from one photo depended on server load (#112).
+    A line that needs an engine that cannot answer refuses the page
+    (escalation.RungDown); it is never left with the lower reading
+    instead. Calls are still timed for /health's adaptive_engine_speed,
+    which is information only.
     """
-    try:
-        full = np.array(computer_vision.decode_image(raw_bytes))
-    except Exception:
-        return
-
-    ph = float(max(1, proc_arr.shape[0]))
-    pw = float(max(1, proc_arr.shape[1]))
-    oh, ow = full.shape[0], full.shape[1]
-    sx, sy = ow / pw, oh / ph
-
-    ready = {}  # engine name -> backend, or None if unavailable (cached)
-
-    def _get_ready(name):
-        if name not in ready:
-            be = ocr_backends.get_backend(name)
-            ok = False
-            if be is not None and hasattr(be, "recognize_crop"):
-                try:
-                    ok, _reason = be.available()
-                except Exception:
-                    ok = False
-            ready[name] = be if ok else None
-        return ready[name]
-
-    for l in hand_lines[:40]:
-        engine_name = _refine_engine_for_line(l.get("lang"), backend_name)
-        be = _get_ready(engine_name)
-        if be is None:
-            continue
-        box = l.get("box") or [0, 0, 0, 0]
-        if len(box) < 4:
-            continue
-        x, y, w, h = [float(v) for v in box[:4]]
-        padx = int(w * sx * 0.06) + 6
-        pady = int(h * sy * 0.25) + 6
-        x0 = max(0, int(x * sx) - padx)
-        y0 = max(0, int(y * sy) - pady)
-        x1 = min(ow, int((x + w) * sx) + padx)
-        y1 = min(oh, int((y + h) * sy) + pady)
-        if x1 <= x0 or y1 <= y0:
-            continue
-        crop = full[y0:y1, x0:x1]
-        t0 = time.perf_counter()
-        try:
-            cand, conf = be.recognize_crop(crop)
-        except Exception:
-            continue
-        # Only a successful call counts as a speed measurement (for
-        # /health): an exception is a reliability problem, not a latency
-        # one, and recording it would let an instant crash look "fast".
-        ocr_backends.record_engine_speed(
-            engine_name, (time.perf_counter() - t0) * 1000.0
-        )
-        cand = (cand or "").strip()
-        # TrOCR often appends a stray " ." — drop trailing isolated punctuation.
-        cand = re.sub(r"\s*[.·,]+\s*$", "", cand).strip()
-        if not cand:
-            continue
-        base = str(l.get("text", "") or "").strip()
-        a = re.sub(r"[^a-z0-9]", "", base.lower())
-        b = re.sub(r"[^a-z0-9]", "", cand.lower())
-        sim = difflib.SequenceMatcher(None, a, b).ratio() if (a and b) else 0.0
-        conf = float(conf or 0.0)
-        if sim >= _CFG["refine_min_sim"] or conf >= _CFG["refine_min_conf"]:
-            l["text"] = cand
-            l["refined_by"] = engine_name
+    escalation.climb(
+        hand_lines,
+        backend_name,
+        _crop_reader(raw_bytes, proc_arr) if raw_bytes else lambda _l: None,
+        _guard,
+    )
 
 
 def extract_hand_lines(
@@ -378,7 +363,7 @@ def extract_hand_lines(
     if cleaned:
         hand_lines = cleaned
     hand_lines = detector.join_row_pieces(hand_lines)
-    if refine_backend in ("trocr", "hybrid") and raw_bytes:
+    if refine_backend in ladders.MODES:
         refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
     return lines, hand_lines
 

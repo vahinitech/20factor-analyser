@@ -850,6 +850,17 @@ ladders. An unread line is "Not measured" for every factor that needs
 graphemes (section 8), and still counts for the factors that need only
 rows.
 
+As built (#219): the loop is `backend/escalation.py`. Two parts wait for
+other work. First, the acceptance test checks confidence and script share
+against `reading.accept_confidence` in the line's pack. No pack sets that
+limit until `rank_stages.py` calibrates one (section 19, gap 5), so a
+reading is accepted at the top rung only, and every line climbs its whole
+ladder as before. The ink and worksheet checks come with section 7.
+Second, a line whose top reading fails the test keeps the best trusted
+reading, as before, and is marked `accepted: false` in its trail. It is
+not yet unread, because the share of unread lines that refuses a page is
+open question 6.
+
 ### 17.7 What gets recorded
 
 Each line in the response carries its trail: the rungs tried, the one
