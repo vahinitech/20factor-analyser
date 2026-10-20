@@ -194,7 +194,7 @@ flowchart TB
 
 Four sections, weighted 0.30, 0.30, 0.20 and 0.20. A photo measures no
 motion, so Dynamics gets no weight on a photo and the others are rescaled
-(`scoring.py:140-163, 900-916`).
+(`scoring.py:83-108, 434-467`).
 
 | # | Factor | Section | Tier | Needs the pen | Needs text read |
 |---|---|---|---|---|---|
@@ -219,7 +219,7 @@ motion, so Dynamics gets no weight on a photo and the others are rescaled
 | 19 | Character Distinction | Style | Pro | | yes |
 | 20 | Overall Neatness | Style | Pro | | yes |
 
-Names: `scoring.py:167-196`. Tiers: `entitlements.py:14, 172-180`. Text
+Names: `scoring.py:110-143`. Tiers: `entitlements.py:14, 172-180`. Text
 needed: `NEEDS` in `factor_needs.py`. A factor that cannot be
 measured says "Not measured" and is left out of every average.
 
