@@ -27,6 +27,7 @@ bench = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(bench)
 
 ENGLISH = {
+    "settings": {},
     "sentences": [
         "pihu sings while tara reads a story",
         "the quick brown fox jumps over the lazy dog",
