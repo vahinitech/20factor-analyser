@@ -558,8 +558,9 @@ function render(host, data){
     ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.evidence_id||r.id,text:r.text}))
     : [{id:null,text:recognizedText}];
   const hasText=sources.some(r=>String(r.text||'').trim());
+  // English spelling runs only on a page the server read as English (#221).
   const spelling=readable && window.VahiniCraft
-    ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text).map(f=>({...f,region:r.id}))) : [];
+    ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text,analysis.comparability).map(f=>({...f,region:r.id}))) : [];
   const firstSpelling=spelling[0];
   const free=analysis.access?.tier==='free';
   const tier=free?'free':'pro';

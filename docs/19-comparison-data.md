@@ -51,11 +51,13 @@ formats, carries the facts a comparison needs to say so:
 | `page` | `handwriting`, or `handwriting_with_print` when printed lines were left out. A page with only print is refused and never gets a report | `printed_lines` |
 | `reading` | The recognition level (`passage-verified`, `high`, `moderate`, `low`, `unavailable`) | `recognition.level` |
 | `passage_aligned` | The page was matched to a copied passage, so two pages of the same passage compare best | `recognition.passage_aligned` |
+| `ruleset` | sha256 of the rules the page was scored by: the language pack and the request's school, class and child `profile` (`backend/languages/profile.py`). Without a profile it is the pack's own hash. Two pages with different hashes were scored by different rules, so compare them as you would two scripts. Null only for a payload made before the hash existed | the request's `profile` |
 
 When a copied passage was matched, `words` and `characters` count the
 passage's words as the reader aligned them, which is what was written.
 The fields are counts and labels: no text, no identifier and nothing about
-the child. They come from the same photo the same way every time, so the
+the child (`ruleset` is a hash; the profile behind it, which can hold
+children's names as exception words, never comes back). They come from the same photo the same way every time, so the
 same photo gives the same facts.
 
 What this does not decide: how different two pages may be before a

@@ -3,9 +3,11 @@
 What the analyser scores, how each score is computed, and where the
 cut-offs sit. Everything on this page is read from the code, not
 described from memory: sections and weights from `_SECTIONS`, factor
-definitions from `_FACTOR_META` / `_FACTOR_EXTRAS`, formulas from
-`_score_factor_map()` and `build_analysis()` — all in
-`backend/scoring.py` — and the zone rule from `backend/zone_analysis.py`.
+definitions from `_FACTOR_META` / `_FACTOR_EXTRAS` and `build_analysis()`,
+all in `backend/scoring.py`; the formulas from `_score_factor_map()`,
+which runs one file per section in `backend/scoring_parts/`
+(`structure.py`, `spatial.py`, `dynamics.py`, `style.py`); and the zone
+rule from `backend/zone_analysis.py`.
 If this page and the code ever disagree, the code wins; please file an
 issue.
 

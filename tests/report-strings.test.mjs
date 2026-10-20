@@ -9,13 +9,14 @@
 // with its licence.
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import crypto from 'node:crypto';
 import assert from 'node:assert/strict';
 
 const window = {};
 const context = vm.createContext({ window, localStorage: undefined });
 for (const file of ['frontend/src/report/strings/en.js', 'frontend/src/report/strings/te.js', 'frontend/src/report/i18n.js']) {
-  vm.runInContext(fs.readFileSync(file, 'utf8'), context, { filename: file });
+  runSource(file, context);
 }
 const { en, te } = window.VahiniReportStrings;
 const i18n = window.VahiniI18n;
@@ -63,7 +64,7 @@ assert.equal(i18n.translator('en').n('sn.since.better', 3), '3 skills got better
 assert.equal(i18n.translator('xx')('p2.title'), en['p2.title'], 'an unknown language is English');
 assert.equal(t.html('spell.saw', { word: '<b>recieve</b>', suggestion: '<b>receive</b>' }).includes('<b>recieve</b>'), true);
 assert.ok(i18n.translator('en').html('pp.keep').includes('&quot;Keep my pages&quot;'), 'html() escapes the table text');
-vm.runInContext(fs.readFileSync('frontend/src/report/strings/te.js', 'utf8'), context);
+runSource('frontend/src/report/strings/te.js', context);
 
 // The approved stage names (owner, 2026-10-11).
 assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => window.VahiniReportStrings.te['stage.' + b]),

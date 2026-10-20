@@ -58,7 +58,8 @@ words were not read.
 | `classify.py` | Printed vs handwriting classifier |
 | `layout_filter.py` | Negative pre-filter dropping photos/seals/charts before classification |
 | `computer_vision.py` | Image decode, evidence crops, layout signals, OCR-free fallback |
-| `scoring.py` | The 20-factor model and reference values |
+| `scoring.py` | The 20-factor model: factor catalogue and `build_analysis` |
+| `scoring_parts/` | Its measurements, per-section formulas, "Not measured" rules and advisory checks |
 | `cache.py`, `geometry.py`, `model_map.py`, `gpu_detect.py` | Small shared helpers |
 
 ## OCR engines
@@ -84,6 +85,32 @@ TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya: so a mixed-language
 page gets the right engine for each line instead of one engine for the whole
 page.
 
+That routing, and the model each engine reads with, is data:
+`backend/languages/stages.json` (checked against `stages.schema.json` when
+the server starts). Its `scripts` part lists the languages of each script
+and the engine that re-reads that script; a language it does not name reads
+as Latin, so it goes to TrOCR. Its `stages` part has one entry per engine,
+script and device with the facts the ladders (#219) will be built from:
+quality, cost, memory, threads and maturity, all `unmeasured` until
+`backend/load_test.py` and the benchmark measure them on stage. The default
+Paddle recognition models (`VAHINI_OCR_REC_MODEL_MAP`) and the TrOCR model
+(`VAHINI_TROCR_MODEL`) come from the same file, and both variables still
+override it. `GET /health`'s `recognition` field gives the file's sha256
+and the device each engine resolved to (`null` until the engine is built).
+
+`backend/languages/ladders.json` is built from that table by
+`python scripts/rank_stages.py` and committed (#219, design in
+`docs/20-languages.md`, section 17.2). For each mode and script it lists
+the stages that may read a handwriting line, cheapest first: the Paddle
+stage that found the line, then the stages a line is sent up to. In
+paddle mode that is Paddle alone, in trocr mode Paddle then TrOCR for
+every script, and in hybrid mode the stages ranked by the rules of 17.2.
+While a quality or a cost is `unmeasured`, a hybrid ladder cannot be
+ranked, so it is the route the stage table names (`basis: route`) and
+lists the stages that were not measured. The file records the sha256 of
+the stage table it was built from; after any change to `stages.json`,
+run the script again and commit both. CI runs it with `--check`.
+
 The re-read text is accepted when EITHER it agrees with paddle's own reading
 at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
 at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
@@ -92,6 +119,26 @@ re-read. On genuinely hard handwriting, requiring agreement with paddle's
 own possibly wrong reading would throw away real corrections, so a
 confident specialist reading is trusted on its own. The agreement path
 still guards against hallucination on low-confidence, made-up text.
+
+The re-reading is `backend/escalation.py`, driven by `ladders.json`
+(`docs/20-languages.md`, section 17.6). Each line climbs its ladder
+until a rung's reading passes the acceptance test. No language pack sets
+an acceptance limit yet (`reading.accept_confidence`), so a reading is
+accepted at the top rung only and every line is re-read, as before. Lines
+that reach the same rung on a page go in one call when the engine reads
+batches, and answers are cached per loaded engine by the crop's hash,
+the stage version and the prompt version. If a line needs an engine that
+cannot answer (not installed, failing, or a remote stage whose circuit
+breaker is open), the page is refused with `ocr_unavailable`, a 503 and
+`Retry-After: 60`, on `/ocr`, `/analyze-vl`, `/report-python` and
+`/api/v2/reports`. It is not cached and uses no free check. The line is
+never left with the lower reading, so one photo always gets the same
+score or a "try again". In the legacy payloads, each entry of
+`hand_lines` carries `trail` (`ladder`, `tried`, `answered`, `accepted`,
+and `held` when a line could not be sent up: `no_crop` or `line_limit`
+past 40 lines), and the payload carries `ladder`: the sha256 of
+`ladders.json` and `stages.json`, the version of each stage tried, and
+how many lines each stage answered.
 
 To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
 `docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
@@ -239,11 +286,7 @@ hardware and send a PR with your table and CPU/GPU details._
 
 ```bash
 pip install -r backend/requirements-core.txt
-python -m unittest -v \
-  backend.tests.test_backends_classify \
-  backend.tests.test_server_pipeline \
-  backend.tests.test_regression_functional \
-  backend.tests.test_handwriting_only
+python -m unittest discover -v -s backend/tests -t .
 ```
 
 The suite covers the response contracts, the printed/handwriting split, the

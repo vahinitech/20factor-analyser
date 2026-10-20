@@ -889,7 +889,8 @@
         "printed_lines",
         "page",
         "reading",
-        "passage_aligned"
+        "passage_aligned",
+        "ruleset"
       ],
       "properties": {
         "lines": {
@@ -948,9 +949,21 @@
         },
         "passage_aligned": {
           "type": "boolean"
+        },
+        "ruleset": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{64}$"
         }
       },
-      "description": "Facts that say whether two pages can be compared: handwriting lines scored, words and non-space characters read (null when nothing was read), the script of the letters read, the reading engine languages, printed lines found and left out, the reading level and whether a copied passage was matched. Counts only: no text or identifier. Every tier, successful reports only."
+      "description": "Facts that say whether two pages can be compared: handwriting lines scored, words and non-space characters read (null when nothing was read), the script of the letters read, the reading engine languages, printed lines found and left out, the reading level, whether a copied passage was matched, and the hash of the rules the page was scored by (see ruleset; a different hash compares like a different script). Counts only: no text or identifier. Every tier, successful reports only."
+    },
+    "ruleset": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "sha256 of the rules the page was scored by: the language pack the scorer reads and the request's profile (backend/languages/profile.py). Without a profile it is the pack's own hash. Never the profile itself."
     },
     "recognitionMetadata": {
       "type": "object",

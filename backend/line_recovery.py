@@ -35,6 +35,8 @@ import re
 import numpy as np
 
 import detector
+import languages
+import perf
 
 try:
     import cv2
@@ -185,7 +187,7 @@ def _inside(point, box):
     return x <= point[0] <= x + w and y <= point[1] <= y + h
 
 
-def recover_lines(arr, lines, read, lang="en"):
+def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
     """Words read from the writing the detector missed (missed_regions),
     each shaped like a reader's line and marked "recovered";
     detector.join_row_pieces joins them into lines. read(crop, lang)
@@ -205,6 +207,7 @@ def recover_lines(arr, lines, read, lang="en"):
         pad = max(4, int(round(h * 0.15)))
         x0, y0 = max(0, x - pad), max(0, y - pad)
         x1, y1 = min(page_w, x + w + pad), min(page_h, y + h + pad)
+        perf.count("reader_calls")
         got = read(np.ascontiguousarray(arr[y0:y1, x0:x1]), lang) or []
         for word in got:
             text = str(word.get("text") or "").strip()
@@ -249,7 +252,7 @@ def recover_lines(arr, lines, read, lang="en"):
     return out
 
 
-def add_missed(arr, lines, read, lang="en"):
+def add_missed(arr, lines, read, lang=languages.DEFAULT_LANG):
     """lines plus the words recover_lines reads, once each (repeated
     readings from overlapping crops dropped by detector.merge_lines). A
     found line that is not readable (a garbage reading) gives way to the

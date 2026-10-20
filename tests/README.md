@@ -8,11 +8,7 @@ Server logic without the heavy paddle/torch install:
 
 ```bash
 pip install -r backend/requirements-core.txt
-python -m unittest -v \
-  backend.tests.test_backends_classify \
-  backend.tests.test_server_pipeline \
-  backend.tests.test_regression_functional \
-  backend.tests.test_handwriting_only
+python -m unittest discover -v -s backend/tests -t .
 ```
 
 Covers the API contracts, the printed/handwriting classifier, the 20-factor

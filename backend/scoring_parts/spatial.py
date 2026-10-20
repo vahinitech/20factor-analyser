@@ -1,0 +1,39 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# (c) 2026 Vahini Technologies.
+#
+# spatial.py - the Spatial section's formulas, factors 7 to 12:
+# spacing, baseline and layout.
+
+from scoring_parts.stats import _clamp10
+
+# Letter Spacing: the spread (std / mean) of the gaps between letters
+# that loses all marks; Line Straightness: the wander off the baseline,
+# in small letters, that loses its 5 points.
+LETTER_GAP_SCALE = 2.5
+WAVE_SCALE = 0.25
+
+
+def add_scores(fx, s):
+    """Adds factors 7 to 12 to s, the page's scores by factor number."""
+    # Less up to 5 points as the share of words sitting off their line
+    # reaches 25%: one sunken word does not turn a line.
+    s[7] = _clamp10(
+        (1.0 - min(1.0, fx["line_slope_abs"] / 8.0)) * 10.0
+        - 5.0 * min(1.0, (fx.get("words_off_line") or 0.0) / 0.25)
+    )
+    s[8] = _clamp10((1.0 - min(1.0, fx["word_gap_cv"] / 1.4)) * 10.0)
+    if fx.get("letter_gap_cv") is not None:
+        s[9] = _clamp10(
+            (1.0 - min(1.0, fx["letter_gap_cv"] / LETTER_GAP_SCALE)) * 10.0
+        )
+    else:
+        s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
+    s[10] = _clamp10((1.0 - min(1.0, fx["left_cv"] / 0.55)) * 10.0)
+    # A straight line is level and does not wave: the slope, less up to 5
+    # points as the most wandering line's letters drift a quarter of a
+    # small letter off their baseline.
+    s[11] = _clamp10(
+        (1.0 - min(1.0, fx["line_slope_abs"] / 10.0)) * 10.0
+        - 5.0 * min(1.0, (fx.get("line_wave") or 0.0) / WAVE_SCALE)
+    )
+    s[12] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 10.0)) * 10.0)

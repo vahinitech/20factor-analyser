@@ -1,0 +1,350 @@
+# Performance, complexity and coverage
+
+This is a design. It says how the analyser will show where each scan's
+time and memory go, catch a function that starts growing faster than it
+should, and show what the tests do not reach. Nothing below is built yet
+except where a section says "today". Builds on
+[13-api-and-capacity.md](13-api-and-capacity.md),
+[18-benchmark.md](18-benchmark.md) and
+[20-languages.md](20-languages.md). Work is tracked in #217.
+
+## Why now
+
+The language framework adds steps to every scan: a script decision per
+line, reading ladders that can call two or three engines for a hard line,
+profiles to resolve, and later a language-model rung on another machine.
+Each is cheap alone. Together they can turn one page into dozens of calls,
+on a shared host where the analyser container has 2.5 GB and one scan
+already peaks near 1.6 GB. We need to see that before production does.
+
+## What exists today
+
+Checked on `main` at d24cf63 (20 October 2026):
+
+| What | Where | What it covers |
+|---|---|---|
+| Whole request time | `_with_meta`, `ppocr-server.py:530`, `:696`, `:998` | one number per request, no steps |
+| Engine time per line | `recognizer.py:306-315`, `engine_speed_snapshot` in `/health` | hybrid engines only, information only since #112 |
+| Memory plan | `capacity.py`, [13-api-and-capacity.md](13-api-and-capacity.md) | scan slots from the container limit |
+| Peak memory under load | `backend/load_test.py` on stage | by hand |
+| Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` (replaced by discovery in #228) | 38 of 46 test files |
+| Coverage | none (since #232: section 6) | |
+| Profiler | none | |
+
+(Since fixed by #228: every test file now runs.) Eight test files ran in no workflow at all: `test_baseline_track`,
+`test_capacity`, `test_coach_tips`, `test_plain_groups`, `test_scan_slots`,
+`test_style_finishing`, `test_tbar_analysis` and `test_zone_analysis`.
+Two of them guard the memory protections. A change that breaks them passes
+CI today. That is the first thing to fix, because coverage numbers mean
+nothing while some tests never run.
+
+## The rules every part follows
+
+- **Measuring never decides.** No timer, budget or profile changes which
+  engine runs or what score a page gets. #112 came from runtime speed
+  choosing what ran, and the same photo scored differently on a busy
+  server.
+- **Numbers only.** Timings, counts and sizes. Never text, images, crops,
+  profile contents, a name or an IP address.
+- **Heavy measuring happens in CI.** Profilers, scaling runs and coverage
+  run on GitHub's runners. The production host only keeps the cheap
+  per-stage timers; peak memory on the real deployment is still measured
+  with `load_test.py` on stage.
+
+## 1. Every test runs (#228)
+
+Switch the backend run to `python -m unittest discover -s backend/tests -t .`,
+or keep the list and add a check that fails when a `test_*.py` file is
+missing from every workflow. Discovery is better: the list has already
+drifted by eight files. Each of the eight is fixed or explained once it
+runs; one that finds a real bug gets its own issue.
+
+## 2. Stage timings on every scan (#229)
+
+Built in #229: `backend/perf.py`, and `stage_timings` in `/health`. The
+stages are `decode`, `detect` (and `detect.ink` when rows are found from
+the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
+one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
+`passage`, `evidence`, `features`, `scoring` and `practice`. CPU time is
+the time of the thread the stage ran on; work a library does on its own
+threads (Paddle's) shows in the wall time only. A scan's work keeps the
+request's context on the scan thread (`scan_slots.run`), so concurrent
+scans never mix their numbers, except the container's memory, which is
+shared.
+
+A small module, `backend/perf.py`, standard library only:
+
+```python
+with perf.stage("read.rung", rung="paddle", lines=len(todo)):
+    answers = rung.read_batch(todo)
+```
+
+Each stage records wall time, CPU time, the change in the container's
+`memory.current`, its input sizes (pixels, lines, words, graphemes) and
+its call counts (reader calls per rung, model calls). The steps wrapped:
+decode, layout filter, detection, each reading rung, the printed check,
+line recovery, passage alignment, features, scoring, evidence and
+practice.
+
+Where the numbers go:
+
+| Output | Holds | Who sees it |
+|---|---|---|
+| `Server-Timing` HTTP header | stage names and milliseconds | the browser's developer tools, our own tests |
+| `/health` | rolling p50 and p95 per stage, in memory, reset on restart | operators |
+| one log line per scan | stage numbers only | the server log |
+| weekly report, later | p95 per stage and budget breaches, anonymous, read by vahini-web from `/health` (no service reads another's files) | the team |
+
+## 3. Large-call budgets (#229)
+
+Built in #229. `scripts/perf_budgets.py check` (the `benchmark` job in
+`ci.yml`) replays each benchmark page through the server's own scan, the
+`/report-python` body with the page's written text as the passage, then
+the Pro report, and fails when a page breaks a budget. It prints each
+stage's median and slowest CPU time to the job summary; a stage's cap is
+five times the slowest page on GitHub's runners, at least 100 ms, so a
+stage that becomes several times slower fails while runner noise does
+not.
+
+`backend/perf/budgets.json` says how much one page may cost:
+
+| Budget | Limit |
+|---|---|
+| Reader calls | at most lines times rungs on the ladder |
+| Language-model calls | one batched call per rung per page |
+| Decoded image | 24 MP, as the upload limit already says |
+| CPU time per stage | a cap per stage, set from the benchmark pages |
+
+In CI a benchmark page that breaks a budget fails the build, which is
+where a loop that calls a reader once per word instead of once per line
+shows up. In production a breach is counted in `/health` and the weekly
+report, never refused: the page was already admitted and paid for.
+
+## 4. Recording growth: big O per function (#230)
+
+Built in #230: `backend/perf/complexity.json`, `scripts/complexity.py` and
+the `complexity` job in `ci.yml`, which writes the table to the job
+summary and uploads it as the `complexity` artifact. The inputs are
+synthetic pages of handwriting-like strokes, reader lines and passage
+text, the same at every run. Lines past the ladder's 40 are held, so
+`escalation.climb` is measured up to 40 lines. A test plants a quadratic
+function declared O(n) and checks the job would fail
+(`backend/tests/test_complexity.py`); it is never in the real table.
+
+`backend/perf/complexity.json` lists every function that runs once per
+page, what its n is, and how fast it should grow:
+
+```json
+{
+  "scoring.build_analysis": {"n": "lines", "declared": "O(n)"},
+  "ink_geometry.find_rows": {"n": "pixels", "declared": "O(n)"},
+  "recognizer.align_to_expected": {"n": "graphemes", "declared": "O(n^2)",
+    "why": "edit distance between the line and its passage line"}
+}
+```
+
+A CI job builds deterministic synthetic inputs at four sizes (n, 2n, 4n,
+8n), runs each function five times, takes the median CPU time, and fits
+the slope of log time against log n. A slope near 1 is linear, near 2 is
+quadratic. The job fails when the slope is more than 0.3 above the
+declared class, and prints the table on every PR:
+
+| Function | n | Declared | Measured slope |
+|---|---|---|---|
+| `scoring.build_analysis` | lines | O(n) | 1.04 |
+| `recognizer.align_to_expected` | graphemes | O(n^2) | 1.91 |
+
+(Example rows, not measurements.)
+
+Anything above O(n log n) needs a reason in the file, so a reviewer sees
+it. Model inference is not in this table: its cost is fixed per crop and
+Perf 1's call counts show how many crops there were. Shared runners are
+noisy, so only slopes are compared, never absolute times.
+
+## 5. Profiling hot paths (#231)
+
+A workflow, `profile.yml`, runs weekly and on PRs labelled `perf`. It
+replays the benchmark pages (Layer A, no models) under `cProfile`, then
+again under `tracemalloc`, and writes two tables to the job summary: the
+top 30 functions by cumulative time and the top 20 allocation sites,
+each compared with the last run on `main`. A function that entered the
+top 10 or grew by more than a quarter is marked. It never fails a PR;
+the raw profiles are kept as artifacts for anyone who wants to dig.
+The script is `scripts/profile_benchmark.py`; how to run it and read the
+tables is in [18-benchmark.md](18-benchmark.md#where-the-replay-spends-its-time-and-memory).
+
+## 6. Coverage (#232)
+
+`coverage.py` with branch coverage around the backend unit tests, and
+`c8` around the node unit tests (`tests/*.test.mjs`). Each PR gets a
+table per file in the job summary and an HTML report as an artifact.
+
+`coverage-baseline.json` is a ratchet: the total and each file may not
+drop by more than 0.5 points, and the new packages (`backend/languages/`,
+`backend/scoring_parts/`) have a floor of 90%. A PR that raises coverage
+raises the baseline in the same PR. No third-party coverage service; the
+numbers stay in GitHub.
+
+Coverage waits for #228, so it counts every test.
+
+### Reading the report (built in #232)
+
+Both CI jobs measure on every PR. `python-tests` runs the unittest
+discovery under `python -m coverage run --branch` (settings in
+`.coveragerc`), and `e2e` runs every `tests/*.test.mjs` under c8
+(`npm run coverage:frontend`, settings in `.c8rc.json`). A file's number
+is its covered lines and branches over all its lines and branches. Every
+file under `backend/` and `frontend/src/` is listed, including files no
+test loads, which show 0%.
+
+- **Job summary.** Open the run, then the job. The summary starts with
+  the total against the baseline, any rule the run breaks, and the ten
+  least covered files, followed by one row per file: its number, lines
+  and branches covered, the baseline and the change.
+- **HTML report.** The run's artifacts `coverage-backend` and
+  `coverage-frontend` hold the full report. Download, unzip, open
+  `index.html`; red lines never ran, yellow ones took only one way
+  through a branch.
+
+The node tests load frontend files with `vm`. They go through
+`tests/run-source.mjs`, which gives V8 each file's real path; code run
+without one is named "evalmachine" and c8 cannot count it.
+
+### The ratchet and updating the baseline
+
+`scripts/coverage_ratchet.py --check` fails the job when the total or any
+file is more than 0.5 points under `coverage-baseline.json`, when a file
+in `backend/languages/` or `backend/scoring_parts/` is under 90%, or when
+a file the baseline lists still exists but is no longer measured. A file
+in those two packages that was under 90% when the rule came in has a
+dated entry under `exceptions`: its number then is its floor, which can
+only go up, and the entry goes away once the file reaches 90%. When the
+ratchet came in (20 October 2026) the backend stood at 82.96% and the
+frontend at 31.27%, and one file needed an exception:
+`backend/scoring_parts/advisory.py` at 84.73%. The frontend number is low
+because most browser code runs only in the Playwright tests, which c8
+does not measure.
+
+When a PR raises coverage, raise the baseline in the same PR. Download
+the run's report artifact into `coverage/` and run, for whichever part
+changed:
+
+```bash
+python scripts/coverage_ratchet.py backend coverage/backend.json --update
+```
+
+```bash
+python scripts/coverage_ratchet.py frontend coverage/frontend/coverage-summary.json --update
+```
+
+`--update` refuses while the check fails and never lowers a number. If a
+change has to lower one (a file split in two, tests moved elsewhere),
+edit `coverage-baseline.json` by hand and say why in the PR, so the lower
+number is in the diff for review.
+
+## 7. Regression gate: is this commit slower or less accurate?
+
+Every commit should answer two questions before it merges: does a scan
+take longer or use more memory than on `main`, and does the analyser read
+or score less well? Part of this exists; the rest is below.
+
+### What already guards each commit
+
+| Check | When | Fails when | Source |
+|---|---|---|---|
+| Replay of the 20 benchmark pages (Layer A) | every PR and push to main | any score, line or reading differs from `expected.json` | `scripts/benchmark.py`, [18-benchmark.md](18-benchmark.md) |
+| Limits on the replay | same | fewer written lines found than the set's floor, a line scored twice, a measured score of exactly 0, or a replay that differs from itself | `LIMITS` in `scripts/benchmark.py` |
+| Agreement with the owner's ranking by eye | same | it falls by more than 0.05 | `eye_drop`; **inert today: the ranking is empty (#198)** |
+| Live reader (Layer B) | weekly, and PRs touching the reader | a score moves by more than 0.3 | `benchmark-live.yml` |
+| Planted mistakes per factor | weekly, and PRs touching scoring | a factor catches its mistake on fewer writers than `benchmarks/factors/expected.json` says | `factor-tests.yml`, `scripts/factor_tests.py` |
+| Stage timings and call budgets | every PR (#248) | a benchmark page breaks a budget | #229 |
+| Growth per function | every PR (#249) | a function grows faster than declared | #230 |
+
+So accuracy has a strong guard against *any* change (Layer A fails on
+every moved number) and a floor for each factor. What is missing: no check
+says whether the reader reads the words right, no check compares scores
+with people's judgement while #198 is empty, and nothing fails a commit
+because a scan got slower or heavier, apart from #248's coarse budgets.
+
+### Why speed is hard to test, and the answer
+
+GitHub's shared runners give the same code different times from one run
+to the next, often by tens of percent. A gate on absolute seconds either
+fails at random or is set so loose that it catches nothing. Three things
+do not have that problem:
+
+- **Counts.** How many reader calls, rungs climbed, pixels decoded and
+  model calls one page needed. The same code gives the same counts every
+  time, so any rise is real.
+- **Paired timing.** Main's code and the PR's code on the same runner in
+  the same job, alternating. The runner's speed cancels out of the ratio.
+- **Growth.** The slope of time against input size (#230), which noise
+  barely moves.
+
+### The five new gates
+
+| Gate | Catches | Runs | Fails when | Issue |
+|---|---|---|---|---|
+| 1. Work counts per page | an extra reader call, a rung climbed that was not before, an image decoded twice | every PR, Layer A replay | any count rises without `work.json` updated in the same PR | #250 |
+| 2. Paired timing against main | slower Python in measuring and scoring | PRs touching `backend/` | median CPU time over 7 alternating rounds is more than 10% above main's, and the last three rounds agree | #251 |
+| 3. Live latency and memory | a slower or hungrier reader or model | Layer B: weekly, reader PRs | p95 page time more than 15% above main's, memory peak more than 10% above, or any page over 2.5 GB | #252 |
+| 4. Reading accuracy | the reader reading worse while scores stay inside 0.3 | Layer A (code after the reader) and Layer B (the reader) | character error rate, in graphemes, rises by more than 0.5 points on a page or 0.2 overall | #253 |
+| 5. History and slow drift | many small slowdowns that each pass | every push to main | a PR is more than 15% slower or heavier than the median of the last 10 main runs, or any accuracy measure falls | #254 |
+
+How they fit together on one PR:
+
+```mermaid
+flowchart LR
+  PR["Pull request"] --> A["Layer A replay<br/>20 pages, no models"]
+  A --> S1{"Scores, lines,<br/>readings equal<br/>expected.json?"}
+  A --> S2{"Work counts<br/>equal work.json?"}
+  A --> S3{"Reading error<br/>within baseline?"}
+  PR --> T["Paired timing<br/>main and PR, same runner"]
+  T --> S4{"Within 10%?"}
+  PR --> F["Planted mistakes"]
+  F --> S5{"Each factor still<br/>catches its mistake?"}
+  PR --> H["History of main"]
+  H --> S6{"Within 15% of<br/>last 10 main runs?"}
+  S1 & S2 & S3 & S4 & S5 & S6 --> OK["Merge allowed"]
+```
+
+A change that is meant to move a number (a scoring fix, a faster reader
+that reads slightly differently) is not blocked forever: the PR updates
+`expected.json`, `work.json` or `reading.json` and says in its body which
+pages moved, by how much and why, as [18-benchmark.md](18-benchmark.md)
+already asks for scores. The point is that nothing moves silently.
+
+### Accuracy against people, not only against ourselves
+
+Every gate above compares the analyser with its own past. That catches
+regressions but cannot say whether a score is right. Two sources can:
+
+- **The owner's ranking by eye** of the 20 benchmark pages (#198). The
+  check exists (`eye_drop`, 0.05); it starts working the day the ranking
+  is filled in.
+- **People's ratings of real photos**, such as the 200 GNHK pages
+  scored on stage on 19 October 2026, where the overall score agreed with
+  how good a person thought the page was at a rank correlation of only
+  0.12 on 37 pages ([history/real-photos-gnhk-2026-10-19.md](history/real-photos-gnhk-2026-10-19.md)). Rated sets live outside the repository when their licence does
+  not allow publishing (`--root`, [18-benchmark.md](18-benchmark.md)),
+  and run weekly rather than on every PR. Their agreement becomes a
+  ratchet like the eye ranking.
+
+Each language pack brings its own set (section 19 of
+[20-languages.md](20-languages.md), gap 12), and every gate runs per set,
+so a Telugu change is judged on Telugu pages.
+
+## Order
+
+| Step | Issue | Can start |
+|---|---|---|
+| Every test runs | #228 | done (#236) |
+| Profiling job | #231 | done (#246) |
+| Coverage | #232 | done (#247) |
+| Stage timings and budgets | #229 | built (#229) |
+| Big O per function | #230 | done (#249) |
+| Work counts per page | #250 | now (#248 merged) |
+| Paired timing against main | #251 | in review (#256) |
+| Live latency and memory | #252 | done (#258) |
+| Reading accuracy | #253 | in review (#257) |
+| History and slow drift | #254 | after #250 to #253, which give it numbers to keep |

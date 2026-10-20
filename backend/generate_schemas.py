@@ -13,6 +13,8 @@ import sys
 from pathlib import Path
 
 from entitlements import FREE_FACTORS, STATUSES, TIERS
+from languages.profile import CODES as PROFILE_CODES
+from languages.profile import MAX_BYTES as PROFILE_BYTES
 from practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
 from report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 
@@ -26,6 +28,7 @@ FREE = sorted(FREE_FACTORS)
 LOCKED = [n for n in range(1, 21) if n not in FREE_FACTORS]
 SENSOR = sorted(SENSOR_LIMITATIONS)
 NUMBER_KEY = "^([1-9]|1[0-9]|20)$"
+RULESET_PATTERN = "^[0-9a-f]{64}$"
 
 
 def ref(name):
@@ -34,6 +37,16 @@ def ref(name):
 
 def nullable(kind, **extra):
     return {"type": [kind, "null"], **extra}
+
+
+# The request's `lang`: auto, or BCP 47 tags separated by commas. A tag is
+# a language subtag, then an optional script (Latn, Telu) and an optional
+# region (IN, GB): en, te-Telu-IN, en-Latn-GB,te. The language subtag
+# takes 2 to 8 letters, as the old pattern `^([a-z]{2,8}|auto)$` did and
+# BCP 47 allows, so a PaddleOCR language name a server loads (latin,
+# korean) stays valid. lang_tags.py maps each tag to its engine code.
+_LANG_TAG = "[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?"
+LANG_PATTERN = f"^(auto|{_LANG_TAG}(,{_LANG_TAG})*)$"
 
 
 def closed(properties, required=None, **extra):
@@ -498,6 +511,7 @@ def common():
                         "$ref": COMMON + "recognitionMetadata/properties/level"
                     },
                     "passage_aligned": {"type": "boolean"},
+                    "ruleset": nullable("string", pattern=RULESET_PATTERN),
                 },
                 description=(
                     "Facts that say whether two pages can be compared: "
@@ -505,11 +519,24 @@ def common():
                     "characters read (null when nothing was read), the "
                     "script of the letters read, the reading engine "
                     "languages, printed lines found and left out, the "
-                    "reading level and whether a copied passage was "
-                    "matched. Counts only: no text or identifier. Every "
-                    "tier, successful reports only."
+                    "reading level, whether a copied passage was "
+                    "matched, and the hash of the rules the page was "
+                    "scored by (see ruleset; a different hash compares "
+                    "like a different script). Counts only: no text or "
+                    "identifier. Every tier, successful reports only."
                 ),
             ),
+            "ruleset": {
+                "type": "string",
+                "pattern": RULESET_PATTERN,
+                "description": (
+                    "sha256 of the rules the page was scored by: the "
+                    "language pack the scorer reads and the request's "
+                    "profile (backend/languages/profile.py). Without a "
+                    "profile it is the pack's own hash. Never the profile "
+                    "itself."
+                ),
+            },
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -931,6 +958,7 @@ def expanded():
                 "items": ref("sectionScore"),
             },
             "comparability": ref("comparability"),
+            "ruleset": ref("ruleset"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -1118,6 +1146,7 @@ def compact():
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
             "comparability": ref("comparability"),
+            "ruleset": ref("ruleset"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,
@@ -1397,6 +1426,21 @@ def error():
                         },
                     },
                     {
+                        "type": "object",
+                        "description": (
+                            "413 or 422: the request's profile was refused "
+                            "(backend/languages/profile.py). field names "
+                            "where, never what the profile holds."
+                        ),
+                        "required": ["error_code", "error", "field"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"enum": sorted(PROFILE_CODES)},
+                            "error": {"type": "string", "minLength": 1},
+                            "field": {"type": "string"},
+                        },
+                    },
+                    {
                         "type": "array",
                         "minItems": 1,
                         "description": "FastAPI request validation errors.",
@@ -1425,8 +1469,9 @@ def error():
         description=(
             "FastAPI's HTTPException shape. 401 invalid or revoked "
             "credential, 403 paid include= fields requested by Free, 404 "
-            "unknown catalogue version, 413 upload too large, 422 "
-            "unsupported include field or invalid form/query, 429 the free "
+            "unknown catalogue version, 413 upload or profile too large, "
+            "422 unsupported include field, invalid form/query or a "
+            "refused profile (detail.error_code says which), 429 the free "
             "tier's daily checks for this connection are used (a Pro key "
             "is never limited; Retry-After gives the seconds to midnight, "
             "India time), 503 "
@@ -1532,7 +1577,13 @@ def request():
                     "lang": {
                         "type": "string",
                         "default": "auto",
-                        "pattern": "^([a-z]{2,8}|auto)$",
+                        "pattern": LANG_PATTERN,
+                        "description": (
+                            "auto, or BCP 47 tags separated by commas: "
+                            "en, en,te, te-Telu-IN. The server reads each "
+                            "tag by its language subtag, so te-Telu-IN "
+                            "reads as te."
+                        ),
                     },
                     "expected_text": {
                         "type": "string",
@@ -1541,6 +1592,21 @@ def request():
                         "description": (
                             "Optional copied reference passage for "
                             "passage-verified recognition."
+                        ),
+                    },
+                    "profile": {
+                        "type": "string",
+                        "default": "",
+                        "maxLength": PROFILE_BYTES,
+                        "description": (
+                            "Optional school, class and child profile as "
+                            "JSON text: $defs/layers of "
+                            "backend/languages/profile.schema.json, at "
+                            f"most {PROFILE_BYTES} bytes in UTF-8. Sent "
+                            "with each request and never stored; the "
+                            "response carries only its hash as ruleset. "
+                            "A refused profile is HTTP 413 or 422 before "
+                            "the photo is read."
                         ),
                     },
                 },
@@ -1607,6 +1673,26 @@ def health():
             "det_limit_side_len": nullable("integer"),
             "printed_threshold": {"type": "number"},
             "adaptive_engine_speed": {"type": "object"},
+            "recognition": closed(
+                {
+                    "stages_sha256": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$",
+                        "description": (
+                            "sha256 of backend/languages/stages.json, "
+                            "the table every recognition route comes from."
+                        ),
+                    },
+                    "devices": {
+                        "type": "object",
+                        "description": (
+                            "The device each registered engine resolved "
+                            "to; null until the engine is built."
+                        ),
+                        "additionalProperties": nullable("string"),
+                    },
+                }
+            ),
             "debug_store": {
                 "type": "boolean",
                 "description": (
@@ -1619,6 +1705,44 @@ def health():
                     "enabled": {"type": "boolean"},
                     "built_tiers": {"type": "array"},
                 }
+            ),
+            "stage_timings": closed(
+                {
+                    "scans": {"type": "integer", "minimum": 0},
+                    "window": {"type": "integer", "minimum": 1},
+                    "stages": {
+                        "type": "object",
+                        "description": (
+                            "Each stage's milliseconds over the last "
+                            "window scans (backend/perf.py)."
+                        ),
+                        "additionalProperties": closed(
+                            {
+                                "samples": {"type": "integer", "minimum": 1},
+                                "wall_ms_p50": {"type": "number"},
+                                "wall_ms_p95": {"type": "number"},
+                                "cpu_ms_p50": {"type": "number"},
+                                "cpu_ms_p95": {"type": "number"},
+                            }
+                        ),
+                    },
+                    "budget_breaches": {
+                        "type": "object",
+                        "description": (
+                            "Pages over a budget in backend/perf/"
+                            "budgets.json since the server started, by "
+                            "budget:stage. Counted, never refused."
+                        ),
+                        "additionalProperties": {
+                            "type": "integer",
+                            "minimum": 1,
+                        },
+                    },
+                },
+                description=(
+                    "Stage timings of the scans since the server "
+                    "started, in memory: numbers only (#229)."
+                ),
             ),
         },
     }

@@ -26,10 +26,9 @@ good-names=i,j,k,x,y,w,h,x0,y0,x1,y1,H,W,OH,OW,dx,dy,cv2,Image,ImageDraw,TestCli
 generated-members=cv2.*
 
 [DESIGN]
-# The per-factor feature-extraction / scoring functions in scoring.py
-# (_extract_features, _score_factor_map, build_analysis) are
-# inherently a flat enumeration over 20 independent factors, not a sign of
-# poor structure: splitting them would scatter one coherent table across
+# The feature extraction (_extract_features in scoring_parts/features.py)
+# is inherently a flat enumeration of the page's measurements, not a sign
+# of poor structure: splitting it would scatter one coherent table across
 # many tiny functions. Thresholds are raised modestly rather than disabled.
 # clamp_box() in geometry.py also needs 6 plain numeric args (x, y, w, h,
 # max_w, max_h); there's no natural way to group them without an

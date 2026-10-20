@@ -33,9 +33,7 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertTrue(lines)
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         by_n = {f["n"]: f for f in result["results"]}
-        for n in scoring._NEEDS_RECOGNITION:
-            if by_n[n]["sec"] == "dynamics":
-                continue
+        for n in (1, 2, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
             if (
                 n == 6
                 and by_n[n]["scoringInputs"]["method"] == "zone_geometry"

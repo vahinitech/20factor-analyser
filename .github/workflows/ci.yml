@@ -1,6 +1,7 @@
 # CI for the 20-Factor Analyser — runs on every push + PR.
 #  - python-tests   : server logic without the heavy paddle/torch install.
 #  - benchmark      : real handwriting pages replayed; scores as expected.
+#  - complexity     : each per-page function grows no faster than declared.
 #  - e2e            : headless Chrome — analyser app loads, print/handwriting
 #                     classification, bundle is in sync with src/.
 #  - e2e-recognition: full stack WITH the OCR backend; proves server recognition
@@ -56,9 +57,9 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/config.py backend/cache.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/escalation.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/perf.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/tests/*.py
+        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/paired_timing.py scripts/live_timing.py
       - name: Lint (pylint, min score 9.0)
         run: |
           pylint --fail-under=9.0 frontend/build_bundle.py \
@@ -68,13 +69,16 @@ jobs:
             backend/warmup_models.py backend/geometry.py \
             backend/model_map.py backend/gpu_detect.py \
             backend/computer_vision.py backend/scoring.py \
+            backend/scoring_parts/*.py \
             backend/marked_places.py backend/letter_geometry.py \
             backend/print_hand.py backend/letter_boxes.py \
             backend/scan_slots.py backend/capacity.py \
             backend/detector.py backend/line_recovery.py \
             backend/ink_geometry.py scripts/ink_geometry_eval.py \
-            backend/recognizer.py \
+            backend/recognizer.py backend/escalation.py \
+            backend/tests/test_escalation.py \
             backend/config.py backend/cache.py \
+            backend/lang_tags.py backend/tests/test_lang_tags.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/comparison_data.py backend/tests/test_comparison_data.py backend/upload_limits.py backend/daily_limit.py \
             backend/tests/test_subscription_admin.py \
             backend/practice_catalog.py backend/tests/test_practice_catalog.py \
@@ -84,60 +88,71 @@ jobs:
             backend/tests/test_regression_functional.py \
             backend/tests/test_handwriting_only.py \
             backend/tests/test_telugu_not_read.py \
+            backend/tests/test_not_writing_page.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_line_pieces.py \
             backend/tests/test_word_spacing.py \
             backend/tests/test_benchmark.py scripts/benchmark.py \
+            backend/tests/test_reading_accuracy.py \
+            scripts/profile_benchmark.py backend/tests/test_profile_benchmark.py \
+            scripts/live_timing.py backend/tests/test_live_timing.py \
             backend/tests/test_ink_geometry.py \
             backend/tests/test_factor_scores.py scripts/factor_tests.py \
             backend/tests/test_image_formats.py \
             backend/tests/test_scanner_strings.py \
             backend/tests/test_daily_limit.py \
             backend/debug_store.py backend/tests/test_debug_store.py \
-            backend/access_api.py backend/tests/test_access_api.py
+            backend/access_api.py backend/tests/test_access_api.py \
+            backend/languages/__init__.py backend/languages/registry.py \
+            backend/tests/test_language_packs.py \
+            backend/tests/test_letter_facts.py \
+            backend/languages/stages.py \
+            backend/tests/test_recognition_stages.py \
+            backend/languages/ladders.py scripts/rank_stages.py \
+            backend/tests/test_ladders.py \
+            backend/factor_needs.py backend/tests/test_factor_needs.py \
+            backend/languages/profile.py backend/tests/test_profiles.py \
+            backend/languages/graphemes.py backend/tests/test_graphemes.py \
+            backend/tests/test_passage_alignment.py \
+            scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
+            scripts/complexity.py backend/tests/test_complexity.py \
+            backend/perf.py backend/tests/test_perf.py \
+            scripts/perf_budgets.py \
+            scripts/paired_timing.py backend/tests/test_paired_timing.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
         run: python scripts/practice_map.py --check
       - name: Verify generated JSON Schemas
         run: python backend/generate_schemas.py --check
-      - name: Run server unit + integration tests
+      - name: Every language pack resolves and validates
+        run: python backend/languages/registry.py --check
+      - name: The recognition ladders are what stages.json gives
+        run: python scripts/rank_stages.py --check
+      # Discovery, not a hand-written list: eight test files once ran in no
+      # workflow because nobody added them to the list here (#228).
+      - name: Every backend test file runs in some workflow
+        run: python scripts/check_tests_run.py --check
+      # Under coverage.py with branch coverage (.coveragerc). The per-file
+      # table goes to the job summary, the HTML report is an artifact, and
+      # coverage-baseline.json is the ratchet (#232,
+      # docs/21-performance-and-coverage.md section 6).
+      - name: Run server unit + integration tests (every backend/tests/test_*.py)
+        run: python -m coverage run --branch -m unittest discover -v -s backend/tests -t .
+      - name: Backend coverage report
         run: |
-          python -m unittest -v \
-            backend.tests.test_review_safety \
-            backend.tests.test_report_access \
-            backend.tests.test_subscription_admin \
-            backend.tests.test_compact_reports \
-            backend.tests.test_comparison_data \
-            backend.tests.test_variation_study \
-            backend.tests.test_zone_stability \
-            backend.tests.test_practice_catalog \
-            backend.tests.test_schemas \
-            backend.tests.test_backends_classify \
-            backend.tests.test_server_pipeline \
-            backend.tests.test_regression_functional \
-            backend.tests.test_handwriting_only \
-            backend.tests.test_telugu_not_read \
-            backend.tests.test_layout_filter \
-            backend.tests.test_photo_validity \
-            backend.tests.test_factor_evidence \
-            backend.tests.test_marked_places \
-            backend.tests.test_planted_pages \
-            backend.tests.test_letter_geometry \
-            backend.tests.test_line_pieces \
-            backend.tests.test_word_spacing \
-            backend.tests.test_benchmark \
-            backend.tests.test_ink_geometry \
-            backend.tests.test_factor_scores \
-            backend.tests.test_print_hand \
-            backend.tests.test_page_measurements \
-            backend.tests.test_letter_boxes \
-            backend.tests.test_api_concurrency \
-            backend.tests.test_image_formats \
-            backend.tests.test_scanner_strings \
-            backend.tests.test_daily_limit \
-            backend.tests.test_debug_store \
-            backend.tests.test_access_api
+          python -m coverage json
+          python -m coverage html
+      - name: Upload the backend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backend
+          path: |
+            coverage/backend.json
+            coverage/backend-html/
+          if-no-files-found: error
+      - name: Backend coverage no lower than coverage-baseline.json
+        run: python scripts/coverage_ratchet.py backend coverage/backend.json --check --summary "$GITHUB_STEP_SUMMARY"
 
   # Real handwriting, replayed: every page's kept reader output goes
   # through this PR's code and must give the scores in expected.json
@@ -152,8 +167,20 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
-      - name: Real pages, every score as expected
-        run: python scripts/benchmark.py check
+      - name: Real pages, every score as expected (each language pack's set)
+        run: |
+          sets=$(python backend/languages/registry.py --benchmark-sets)
+          for set in $sets; do
+            python scripts/benchmark.py check --set "$set"
+          done
+      # Each page through the server's own scan with perf.py recording:
+      # a page over a budget in backend/perf/budgets.json fails (#229).
+      - name: Every page within its call and CPU budgets
+        run: |
+          sets=$(python backend/languages/registry.py --benchmark-sets)
+          for set in $sets; do
+            python scripts/perf_budgets.py check --set "$set"
+          done
       - name: Cache the UJI letters for the planted pages
         uses: actions/cache@v4
         with:
@@ -161,6 +188,84 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Planted mistakes, no rate worse
         run: python scripts/benchmark.py planted
+
+  # Is this PR's code slower than main's? Main and the PR replay the
+  # benchmark pages on the same runner, alternating, seven rounds; the
+  # runner's speed cancels out of the ratio (scripts/paired_timing.py,
+  # #251, docs/18-benchmark.md). Pull requests that touch backend/ only.
+  paired-timing:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: pr
+          fetch-depth: 2
+      - name: Does this pull request change the analyser?
+        id: changed
+        working-directory: pr
+        # HEAD is the PR merged onto main; its first parent is main.
+        run: |
+          if git diff --name-only HEAD^1 HEAD | grep -qE '^(backend/|scripts/(benchmark|paired_timing)\.py$)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+            echo "No change under backend/: paired timing skipped." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.changed.outputs.run == 'true'
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: main
+      - uses: actions/setup-python@v5
+        if: steps.changed.outputs.run == 'true'
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: pr/backend/requirements-core.txt
+      - if: steps.changed.outputs.run == 'true'
+        run: pip install -r pr/backend/requirements-core.txt
+      - name: Main and this PR, seven rounds on one runner
+        if: steps.changed.outputs.run == 'true'
+        run: |
+          args=""
+          for set in $(python pr/backend/languages/registry.py --benchmark-sets); do
+            args="$args --set $set"
+          done
+          # shellcheck disable=SC2086
+          python pr/scripts/paired_timing.py --main main --pr pr \
+            --json "$RUNNER_TEMP/paired-timing.json" $args
+      - name: Keep every round's times
+        if: always() && steps.changed.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: paired-timing
+          path: ${{ runner.temp }}/paired-timing.json
+          if-no-files-found: ignore
+  # Each per-page function's growth against backend/perf/complexity.json
+  # (#230, docs/21-performance-and-coverage.md section 4): synthetic
+  # inputs at n, 2n, 4n and 8n, the slope of log CPU time against log n.
+  # Slopes only, never times, so runner noise does not fail it.
+  complexity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Every per-page function grows no faster than declared
+        run: python scripts/complexity.py check --summary "$GITHUB_STEP_SUMMARY" --out complexity.md
+      - name: Upload the growth table
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: complexity
+          path: complexity.md
+          if-no-files-found: warn
 
   e2e:
     runs-on: ubuntu-latest
@@ -179,8 +284,21 @@ jobs:
           restore-keys: playwright-${{ runner.os }}-
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - name: Verify account and worksheet clients
-        run: node tests/account-access.test.mjs && node tests/worksheets.test.mjs && node tests/compact-client.test.mjs && node tests/report-words.test.mjs && node tests/report-strings.test.mjs && node tests/practice-select.test.mjs && node tests/report-colours.test.mjs && node tests/check-page-faq.test.mjs && node tests/expected-text.test.mjs && python3 scripts/changelog.py --check
+      # Every tests/*.test.mjs (account and worksheet clients, report
+      # strings, the OCR client's probes, ...) under c8 (.c8rc.json), with
+      # the same summary, artifact and ratchet as the backend (#232).
+      - name: Node unit tests under c8 (every tests/*.test.mjs)
+        run: npm run coverage:frontend
+      - name: Upload the frontend coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-frontend
+          path: coverage/frontend/
+          if-no-files-found: error
+      - name: Frontend coverage no lower than coverage-baseline.json
+        run: python3 scripts/coverage_ratchet.py frontend coverage/frontend/coverage-summary.json --check --summary "$GITHUB_STEP_SUMMARY"
+      - name: Changelog fragments are valid
+        run: python3 scripts/changelog.py --check
       - name: Build the packed bundle (generated, never committed)
         run: |
           python3 frontend/build_bundle.py
@@ -192,8 +310,6 @@ jobs:
             echo "::error::A page carries a committed ?v= asset stamp. Run 'python frontend/build_bundle.py --strip'."
             exit 1
           fi
-      - name: Verify the OCR client never probes loopback on a public host
-        run: node tests/ocr-candidates.test.mjs
       - name: Browser PDF upload checks
         run: npm run test:pdf
       - name: Unreadable photos (iPhone HEIC in Chrome) are explained, not sent to the store
@@ -206,8 +322,12 @@ jobs:
         run: npm run test:ocr-unavailable
       - name: A Telugu page the reader could not read is refused, never scored
         run: npm run test:handwriting-not-read
+      - name: Picking Telugu sends lang=te and says it is not scored yet
+        run: npm run test:telugu-choice
       - name: File and key errors have their own screens; notice pictures come only from the host
         run: npm run test:notice-art
+      - name: A maths or science page asks for four lines of English, never a score
+        run: npm run test:not-writing-page
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)

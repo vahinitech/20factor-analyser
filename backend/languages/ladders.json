@@ -1,0 +1,165 @@
+{
+  "$comment": "Built by scripts/rank_stages.py from stages.json (docs/20-languages.md, section 17.2); do not edit by hand. Each ladder lists the stages that may read a handwriting line of one script, cheapest first: the Paddle stage that found the line, then the stages a line is sent up to. basis: reader (paddle mode, the reader alone), pinned (trocr mode, TrOCR re-reads every line), route (hybrid mode while a quality or cost is unmeasured: the refine route in stages.json), ranked (hybrid mode from measured facts). left_off says why a stage is not on a ladder; unmeasured names the stages that kept a ladder from being ranked.",
+  "version": 1,
+  "stages_sha256": "ba3088582635fb741d72743acd3622a257b5b7fa5131f6b97e690c3a88de7740",
+  "device": "cpu",
+  "modes": {
+    "paddle": {
+      "read": {
+        "Latn": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-latn-cpu"
+          ]
+        },
+        "Telu": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-telu-cpu"
+          ]
+        },
+        "Deva": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-deva-cpu"
+          ]
+        },
+        "Taml": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-taml-cpu"
+          ]
+        },
+        "Knda": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-knda-cpu"
+          ]
+        },
+        "Mlym": {
+          "basis": "reader",
+          "rungs": [
+            "paddle-mlym-cpu"
+          ]
+        }
+      }
+    },
+    "trocr": {
+      "read": {
+        "Latn": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-latn-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Telu": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-telu-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Deva": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-deva-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Taml": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-taml-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Knda": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-knda-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Mlym": {
+          "basis": "pinned",
+          "rungs": [
+            "paddle-mlym-cpu",
+            "trocr-latn-cpu"
+          ]
+        }
+      }
+    },
+    "hybrid": {
+      "read": {
+        "Latn": {
+          "basis": "route",
+          "rungs": [
+            "paddle-latn-cpu",
+            "trocr-latn-cpu"
+          ],
+          "unmeasured": [
+            "paddle-latn-cpu",
+            "surya-cpu",
+            "trocr-latn-cpu"
+          ]
+        },
+        "Telu": {
+          "basis": "route",
+          "rungs": [
+            "paddle-telu-cpu",
+            "surya-cpu"
+          ],
+          "unmeasured": [
+            "paddle-telu-cpu",
+            "surya-cpu"
+          ]
+        },
+        "Deva": {
+          "basis": "route",
+          "rungs": [
+            "paddle-deva-cpu",
+            "surya-cpu"
+          ],
+          "unmeasured": [
+            "paddle-deva-cpu",
+            "surya-cpu"
+          ]
+        },
+        "Taml": {
+          "basis": "route",
+          "rungs": [
+            "paddle-taml-cpu",
+            "surya-cpu"
+          ],
+          "unmeasured": [
+            "paddle-taml-cpu",
+            "surya-cpu"
+          ]
+        },
+        "Knda": {
+          "basis": "route",
+          "rungs": [
+            "paddle-knda-cpu",
+            "surya-cpu"
+          ],
+          "unmeasured": [
+            "paddle-knda-cpu",
+            "surya-cpu"
+          ]
+        },
+        "Mlym": {
+          "basis": "route",
+          "rungs": [
+            "paddle-mlym-cpu",
+            "surya-cpu"
+          ],
+          "unmeasured": [
+            "paddle-mlym-cpu",
+            "surya-cpu"
+          ]
+        }
+      }
+    }
+  }
+}

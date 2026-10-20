@@ -31,6 +31,7 @@
 #   The first request for a new language is therefore slow (it downloads); every
 #   request after that is fast. To pre-warm at deploy time, see README "warm-up".
 
+import logging
 import os
 import sys
 import time
@@ -43,6 +44,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import config  # server-wide settings, parsed once from the environment
 import cache  # response cache (TTL + max-item eviction) for the endpoints
+import lang_tags  # BCP 47 tags in the request to the engine's codes
 import ocr_backends  # pluggable engine adapters (paddle/trocr/surya)
 import classify  # printed-vs-handwriting classifier
 from PIL import UnidentifiedImageError
@@ -51,6 +53,7 @@ from pypdfium2 import PdfiumError
 import computer_vision  # image decode/crop/preview + layout/doc-context
 import ink_geometry  # lines and geometry from the ink, for unread scripts
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
+import factor_needs  # what each factor needs; a profile's emptied classes
 import recognizer  # dispatches + post-processes recognition across backends
 import layout_filter  # negative pre-filter using PaddleOCR's layout model
 import entitlements
@@ -59,9 +62,14 @@ import report_contract
 import compact_reports
 import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
+import perf  # stage timings and call budgets, numbers only (#229)
 import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
+import escalation  # each line up its ladder (#219)
+from languages import stages  # which engine reads each script (#208)
+from languages import ladders  # the order stages read a line (#219)
+from languages import profile as profiles  # school/class/child rules (#220)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -85,6 +93,8 @@ from starlette.concurrency import run_in_threadpool
 from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
 from daily_limit import LIMIT as DAILY
 import numpy as np
+
+log = logging.getLogger("vahini.server")
 
 # PaddleOCR 3.x (PP-OCRv5) is imported LAZILY inside get_engine() so this module
 # loads even when paddle isn't installed (e.g. a non-paddle backend, or tests).
@@ -113,6 +123,26 @@ async def private_api_responses(request, call_next):
     ):
         response.headers["Cache-Control"] = "no-store"
         response.headers["Vary"] = "Authorization"
+    return response
+
+
+# The routes that scan a page. Each answer carries a Server-Timing header
+# (stage names and milliseconds); /health keeps each stage's p50 and p95.
+_TIMED_PATHS = ("/ocr", "/analyze-vl", "/report-python", "/api/v2/reports")
+
+
+@app.middleware("http")
+async def stage_timings(request, call_next):
+    """Time each stage of a scan (perf.py). Measuring never decides: no
+    number here changes what is read or scored (#112)."""
+    if request.url.path not in _TIMED_PATHS:
+        return await call_next(request)
+    t0 = time.perf_counter()
+    with perf.scan() as record:
+        response = await call_next(request)
+    header = perf.finish(record, (time.perf_counter() - t0) * 1000.0)
+    if header:
+        response.headers["Server-Timing"] = header
     return response
 
 
@@ -161,13 +191,15 @@ _with_meta = cache.with_meta
 
 @app.on_event("startup")
 def _warm_startup_engines():
-    # Warm EVERY configured language (both the normal and the safe engine) at
-    # startup so the FIRST real request isn't slowed by model download/init —
+    # Warm EVERY configured language's normal engine at startup so the
+    # FIRST real request isn't slowed by model download/init —
     # which previously pushed the first /report-python past the reverse-proxy
     # read timeout. Only paddle is warmed here; other backends warm on demand.
     # Runs in a background thread: on an offline/blocked network the model
     # download can take minutes to fail, and the server must still answer
     # /health and scans (via the CV fallback) while it warms.
+    # The safe engine is not warmed: it is a second copy of the same
+    # models, built only when the normal engine cannot read (#173).
     if os.environ.get("VAHINI_OCR_PRELOAD_ON_START", "1") != "1":
         return
 
@@ -175,7 +207,6 @@ def _warm_startup_engines():
         for lg in OCR_LANGS or ["en"]:
             try:
                 ocr_backends.get_engine(lg)
-                ocr_backends.get_engine_safe(lg)
             except Exception:
                 pass
         layout_filter.warm()
@@ -219,6 +250,9 @@ recognizer.configure(
     refine_min_sim=SETTINGS.refine_min_sim,
     refine_min_conf=SETTINGS.refine_min_conf,
 )
+# A ladders.json that is broken, or built from another stages.json, stops
+# the server here rather than on the first scan (#219).
+ladders.table()
 ocr_backends.init_registry(
     resolve_langs=recognizer.resolve_langs,
     paddle_config={
@@ -269,12 +303,13 @@ def _vl_analyze(arr, lines, include_evidence=True):
     # Rows found from the ink were not read, and are not read again for
     # their least-sure letters either.
     unread = bool(lines) and all(l.get("ink_row") for l in lines)
-    return computer_vision.vl_analyze(
-        arr,
-        lines,
-        include_evidence,
-        read_letters=None if unread else _READ_LETTERS,
-    )
+    with perf.stage("evidence", lines=len(lines)):
+        return computer_vision.vl_analyze(
+            arr,
+            lines,
+            include_evidence,
+            read_letters=None if unread else _READ_LETTERS,
+        )
 
 
 # _SECTIONS/_FACTOR_META/_FACTOR_EXTRAS/_mean/_std/_cv/_clamp10/_band/
@@ -283,7 +318,10 @@ def _vl_analyze(arr, lines, include_evidence=True):
 # SectionScore/AnalysisResult dataclasses + build_analysis().
 
 
+# /ocr/health is the same probe under the /ocr prefix a proxy routes to
+# this server; the browser asks for it (#34).
 @app.get("/health")
+@app.get("/ocr/health", include_in_schema=False)
 def health():
     # Probe every registered engine without crashing if its deps are missing.
     backends = {}
@@ -299,6 +337,9 @@ def health():
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
         "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
+        # Each stage's p50 and p95 over the last scans, and how often a
+        # page broke a budget (perf.py). Numbers only; reset on restart.
+        "stage_timings": perf.ROLLING.snapshot(),
         # True only on stage with debug storage provisioned (debug_store.py).
         "debug_store": debug_store.STORE.enabled,
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
@@ -315,6 +356,13 @@ def health():
         # first relevant call has actually run. The layout filter's model is
         # fixed by configuration, so it records nothing here (#112).
         "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # The committed stage table every route comes from, and the device
+        # each engine resolved to (None until it is built). Recorded so the
+        # ladders, where the device is part of the stage (#219), have data.
+        "recognition": {
+            "stages_sha256": stages.table().hash,
+            "devices": ocr_backends.engine_devices(),
+        },
         # Which layout model is loaded (see layout_filter.py). A scan waits
         # for the load, never skips it, so this is the model every scan uses.
         "layout_filter": {
@@ -417,6 +465,36 @@ def _handwriting_not_read_payload(engine, lang, counts, extra=None):
     return payload
 
 
+# A page that is mostly numbers and sums (recognizer.not_writing_page):
+# a maths or science notebook page. The factors measure letters, words
+# and the gaps between them, so a report on sums would describe nothing
+# it measured. Like no_handwriting it is never cached and never counts as
+# a free check, and it tells the child what to write instead.
+NOT_WRITING_PAGE_DETAIL = (
+    "This page is mostly numbers and sums, so the 20 handwriting factors "
+    "cannot be measured on it. Write four lines of English in sentences "
+    "and check that page."
+)
+
+
+def _not_writing_page_payload(engine, lang, counts, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "not_writing_page",
+        "error": NOT_WRITING_PAGE_DETAIL,
+        **counts,
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -443,11 +521,19 @@ def _ocr_process(arr, raw, lang):
         not_read = recognizer.telugu_not_read(lang, hand_lines)
         if not_read:
             return _handwriting_not_read_payload("pp-ocrv5", lang, not_read)
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload("pp-ocrv5", lang, numbers)
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
         rec_langs = [l["lang"] for l in hand_lines]
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5")
     except (
         Exception
     ) as e:  # never 500 the client — let it fall back to on-device
@@ -489,6 +575,7 @@ def _ocr_process(arr, raw, lang):
         "engine": f"pp-ocrv5+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
     }
@@ -519,6 +606,8 @@ async def ocr(
 ):
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
     ckey = _cache_key(
         "ocr",
@@ -534,6 +623,7 @@ async def ocr(
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
         payload = await scan_slots.run(_ocr_process, arr, raw, lang)
+    _raise_if_ocr_unavailable(payload)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
 
@@ -592,6 +682,20 @@ def _analyze_vl_process(arr, raw, lang):
                     "ambiguous_word_gaps": [],
                 },
             )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+vl",
+                lang,
+                numbers,
+                extra={
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The layout/context/factor-region
             # analysis is pure CV, so use OCR-free line detection; the same
@@ -607,6 +711,11 @@ def _analyze_vl_process(arr, raw, lang):
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
 
         vl = _vl_analyze(arr, hand_lines)
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5+vl")
     except Exception as e:
         return {
             "ok": False,
@@ -644,6 +753,7 @@ def _analyze_vl_process(arr, raw, lang):
         "engine": f"pp-ocrv5+opencv-context+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
         "rec_texts": texts,
@@ -683,6 +793,8 @@ async def analyze_vl(
             raise HTTPException(403, "Detailed factor evidence requires Pro")
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
     t0 = time.perf_counter()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
     ckey = _cache_key(
         "analyze-vl",
@@ -719,7 +831,7 @@ def _ink_mode(lang):
     (VAHINI_INK_GEOMETRY_LANGS): only when the request names languages
     and every one of them is set; "auto" cannot know the script before
     reading, so it never is."""
-    req = [x.strip() for x in (lang or "").lower().split(",") if x.strip()]
+    req = [x for x in lang_tags.engine_langs(lang).split(",") if x]
     if not INK_LANGS or not req or "auto" in req:
         return False
     return all(x in INK_LANGS for x in req)
@@ -729,19 +841,22 @@ def _ink_lines(arr, expected_text):
     """(all rows, handwriting rows) from the ink. The printed check still
     runs on each row's shape, so a printed page is still refused. A
     passage with one line per row gives each row its number of words."""
-    rows = ink_geometry.find_rows(arr)
-    classify.classify_lines(arr, rows)
+    with perf.stage("detect.ink", pixels=int(arr.shape[0] * arr.shape[1])):
+        rows = ink_geometry.find_rows(arr)
+    with perf.stage("printed", lines=len(rows)):
+        classify.classify_lines(arr, rows)
     hand = [r for r in rows if not r.get("printed_hint")]
     ink_geometry.expect_words(hand, expected_text)
     return rows, hand
 
 
 def _report_python_process(
-    arr, raw, lang, expected_text, include_evidence=True
+    arr, raw, lang, expected_text, include_evidence=True, ruleset=None
 ):
     """Synchronous body of /report-python: OCR plus the full 20-factor
     analysis, the heaviest of the three endpoints (see _ocr_process for why
-    this runs off the event loop)."""
+    this runs off the event loop). ruleset: the packs plus the request's
+    profile (languages/profile.py); None is the packs alone."""
     last_err = ""
     selected_backend = "paddle"
     compare_meta = {}
@@ -797,6 +912,21 @@ def _report_python_process(
                     "ambiguous_word_gaps": [],
                 },
             )
+        numbers = recognizer.not_writing_page(hand_lines)
+        if numbers:
+            return _not_writing_page_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                numbers,
+                extra={
+                    "analysis": None,
+                    "document_context": {},
+                    "layout": {},
+                    "regions": [],
+                    "factor_regions": {},
+                    "ambiguous_word_gaps": [],
+                },
+            )
         if not hand_lines:
             # OCR ran and found no lines. The 20 factors are measured from
             # GEOMETRY, so score OCR-free CV line regions; recognition is
@@ -828,7 +958,14 @@ def _report_python_process(
             line.setdefault("text_as_read", str(line.get("text") or ""))
         # Reference-passage alignment: if the writer copied a known passage,
         # correct the recognised text against it (consistent, dependable reading).
-        align_info = recognizer.align_to_expected(hand_lines, expected_text)
+        with perf.stage(
+            "passage",
+            lines=len(hand_lines),
+            characters=len(expected_text or ""),
+        ):
+            align_info = recognizer.align_to_expected(
+                hand_lines, expected_text
+            )
         texts = [l["text"] for l in hand_lines]
         polys = [l["poly"] for l in hand_lines]
         scores = [float(l["score"]) for l in hand_lines]
@@ -840,10 +977,22 @@ def _report_python_process(
             if include_evidence
             else _vl_analyze(arr, hand_lines, include_evidence=False)
         )
-        analysis = scoring.build_analysis(
-            arr, hand_lines, vl.get("layout", {})
-        ).to_dict()
+        # The profile reaches the scorer through factor_needs, for this
+        # call only: a class it emptied leaves its factors Not measured.
+        with profiles.applied(ruleset):
+            analysis = scoring.build_analysis(
+                arr, hand_lines, vl.get("layout", {})
+            ).to_dict()
+        factor_needs.explain(analysis, ruleset)
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5+python-report")
     except Exception as e:
+        # The visitor gets str(e); the traceback goes to the container log
+        # so the failing line can be found (#199).
+        log.exception("report-python failed")
         return {
             "ok": False,
             "engine": "pp-ocrv5+python-report",
@@ -951,6 +1100,7 @@ def _report_python_process(
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
         "expected_text": expected_text or "",
@@ -981,14 +1131,32 @@ def _report_python_process(
     }
 
 
-async def _report_payload(image, lang, expected_text, include_evidence=True):
+def _ruleset(profile):
+    """The packs plus the request's profile field, or HTTP 413/422 with
+    the profile's error code. Called before the upload is read or a free
+    check is counted. The profile is never logged or stored; only its
+    hash leaves this request."""
+    try:
+        return profiles.from_request(profile)
+    except profiles.ProfileError as exc:
+        raise HTTPException(exc.status, exc.detail()) from None
+
+
+async def _report_payload(
+    image, lang, expected_text, include_evidence=True, ruleset=None
+):
     t0 = time.perf_counter()
+    ruleset = ruleset or profiles.resolve()
+    # te-Telu-IN reads, caches and answers as te (lang_tags.py).
+    lang = lang_tags.engine_langs(lang)
     raw = await _read_upload(image)
+    # The ruleset hash keys the cache: a changed profile is a new scan.
     ckey = _cache_key(
         "report-python",
         raw,
         lang,
         f"{expected_text or ''}|backend={OCR_BACKEND}|evidence={include_evidence}",
+        ruleset=ruleset.hash,
     )
     cached = _cache_get(ckey)
     if cached is not None:
@@ -996,14 +1164,16 @@ async def _report_payload(image, lang, expected_text, include_evidence=True):
 
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
-        if include_evidence:
-            payload = await scan_slots.run(
-                _report_python_process, arr, raw, lang, expected_text
-            )
-        else:
-            payload = await scan_slots.run(
-                _report_python_process, arr, raw, lang, expected_text, False
-            )
+        payload = await scan_slots.run(
+            _report_python_process,
+            arr,
+            raw,
+            lang,
+            expected_text,
+            include_evidence,
+            ruleset,
+        )
+    payload["ruleset"] = ruleset.hash
     _raise_if_ocr_unavailable(payload)
     if not payload.get("ok"):
         return payload
@@ -1038,20 +1208,23 @@ async def report_python(
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
+    profile: str = Form(""),
     authorization: str = Header(default=None),
 ):
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
+    ruleset = _ruleset(profile)
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
-    payload = await _report_payload(image, lang, expected_text)
+    payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
-        return report_contract.legacy_report(
-            payload,
-            await run_in_threadpool(entitlements.access_for, authorization),
+        access = await run_in_threadpool(
+            entitlements.access_for, authorization
         )
+        with perf.stage("practice"):
+            return report_contract.legacy_report(payload, access)
     return payload
 
 
@@ -1077,6 +1250,7 @@ async def api_report(
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
+    profile: str = Form(""),
     authorization: str = Header(default=None),
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
@@ -1089,22 +1263,27 @@ async def api_report(
     # factors; scoring inputs and coaching stay Pro.
     if fields - {"text", "evidence"} and access["tier"] != "pro":
         raise HTTPException(403, "Requested report details require Pro")
+    ruleset = _ruleset(profile)
     charge = DAILY.check(request, exempt=access["tier"] == "pro")
     if format == "compact":
         payload = await _report_payload(
-            image, lang, expected_text, include_evidence="evidence" in fields
+            image,
+            lang,
+            expected_text,
+            include_evidence="evidence" in fields,
+            ruleset=ruleset,
         )
         _spend_if_report(charge, payload)
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
-        return compact_reports.build_compact(payload, access, fields)
-    payload = await _report_payload(image, lang, expected_text)
+        with perf.stage("practice"):
+            return compact_reports.build_compact(payload, access, fields)
+    payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
-    return report_contract.public_report(
-        payload,
-        await run_in_threadpool(entitlements.access_for, authorization),
-    )
+    access = await run_in_threadpool(entitlements.access_for, authorization)
+    with perf.stage("practice"):
+        return report_contract.public_report(payload, access)
 
 
 @app.get("/api/v2/catalog/{version}")

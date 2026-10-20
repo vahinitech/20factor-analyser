@@ -51,6 +51,7 @@ from PIL import Image
 import detector
 from geometry import clamp_box
 from gpu_detect import resolve_use_gpu, gpu_capable
+from languages import stages
 
 _TELUGU = re.compile(r"[ఀ-౿]")
 
@@ -85,6 +86,17 @@ def _env(name, default=""):
     return (os.environ.get(name, default) or "").strip()
 
 
+def _device_name(raw):
+    """A torch or paddle device string ("cuda:0", "gpu", "cpu") as "gpu"
+    or "cpu"; any other value as given; None when empty."""
+    dev = (raw or "").strip().lower()
+    if not dev:
+        return None
+    if dev.startswith(("cuda", "gpu")):
+        return "gpu"
+    return dev
+
+
 # --------------------------------------------------------------------------- #
 # Base interface
 # --------------------------------------------------------------------------- #
@@ -94,6 +106,12 @@ class OCRBackend:
     def available(self):
         """Return (ok: bool, reason: str). Cheap; never raises."""
         return False, "not implemented"
+
+    def resolved_device(self):
+        """The device this engine was set to run on ("cpu" or "gpu"), or
+        None while it has not been built in this process. For /health
+        only: the choice itself is still gpu_detect.resolve_use_gpu's."""
+        return None
 
     def recognize(self, arr, lang, langs, detect_fn=None):
         """Return list[line]. `arr` is an RGB uint8 numpy array.
@@ -564,18 +582,25 @@ def _paddle_run_lang(arr: np.ndarray, lg: str):
     """Single-language paddle recogniser over all preprocessing variants.
     Engine construction happens lazily on first use (it can trigger a model
     download) and must not raise out of here — a failed build of the normal
-    engine still leaves the safe engine usable, and vice versa."""
+    engine still leaves the safe engine usable, and vice versa. The safe
+    engine is built only when the normal one cannot read (#173)."""
+
+    def _safe():
+        try:
+            return get_engine_safe(lg)
+        except Exception:
+            return None
+
     try:
         engine = get_engine(lg)
     except Exception:
         engine = None
-    try:
-        engine_safe = get_engine_safe(lg)
-    except Exception:
-        engine_safe = None
     out = []
-    if engine is None and engine_safe is None:
-        return out
+    engine_safe, safe_tried = None, False
+    if engine is None:
+        engine_safe, safe_tried = _safe(), True
+        if engine_safe is None:
+            return out
     for variant in detector.variants(
         arr, _PADDLE_CFG["max_variants"], _PADDLE_CFG["adv_preproc"]
     ):
@@ -586,6 +611,8 @@ def _paddle_run_lang(arr: np.ndarray, lg: str):
                 got = True
             except Exception:
                 pass
+        if not got and not safe_tried:
+            engine_safe, safe_tried = _safe(), True
         if not got and engine_safe is not None:
             try:
                 out.extend(run(engine_safe, variant, lg))
@@ -611,6 +638,11 @@ class PaddleBackend(OCRBackend):
         if importlib.util.find_spec("paddleocr") is None:
             return False, "paddleocr not installed"
         return True, ""
+
+    def resolved_device(self):
+        # Fixed at start-up by VAHINI_OCR_GPU (config.py). The "safe"
+        # fallback engine always runs on the CPU.
+        return "gpu" if _PADDLE_CFG["use_gpu"] else "cpu"
 
     def detect(self, arr):
         """Detection boxes (polys) from paddle, used by recogniser-only
@@ -657,8 +689,10 @@ class TrOCRBackend(OCRBackend):
         # VAHINI_TROCR_GPU=1/0 overrides; left unset, use the GPU if this
         # machine's installed torch build can actually reach one.
         self._device = "cuda" if resolve_use_gpu("VAHINI_TROCR_GPU") else "cpu"
+        # The model comes from backend/languages/stages.json unless
+        # VAHINI_TROCR_MODEL names another.
         self.model_name = _env(
-            "VAHINI_TROCR_MODEL", "microsoft/trocr-base-handwritten"
+            "VAHINI_TROCR_MODEL", stages.table().model("trocr")
         )
         # Cap the number of crops we feed per page so a busy page can't stall the
         # CPU for minutes. Detection order is preserved (top-to-bottom).
@@ -680,6 +714,9 @@ class TrOCRBackend(OCRBackend):
                 f"no {', '.join(missing)}",
             )
         return True, f"trocr ready (device: {self._device})"
+
+    def resolved_device(self):
+        return _device_name(self._device)
 
     def _ensure_model(self):
         if self._model is not None:
@@ -794,6 +831,7 @@ class SuryaBackend(OCRBackend):
         self._det = None
         self._rec = None
         self._manager = None
+        self._device = None
         # Guards both building the models (below) and the actual predict
         # calls: this backend is a registry singleton shared by every
         # concurrent analysis.
@@ -804,6 +842,9 @@ class SuryaBackend(OCRBackend):
             return False, "surya not installed (pip install surya-ocr)"
         device = "gpu" if gpu_capable("torch") else "CPU (slow)"
         return True, f"surya ready (device: {device})"
+
+    def resolved_device(self):
+        return self._device
 
     def _ensure(self):
         if self._rec is not None:
@@ -837,6 +878,7 @@ class SuryaBackend(OCRBackend):
             # a partially-built predictor pair.
             self._det = det
             self._manager = manager
+            self._device = _device_name(os.environ.get("TORCH_DEVICE"))
             self._rec = rec
 
     def recognize_crop(self, crop_rgb):
@@ -914,6 +956,7 @@ class PaddleVLBackend(OCRBackend):
 
     def __init__(self):
         self._pipe = None
+        self._device = None
         # Guards building the pipeline and its predict() call: this backend
         # is a registry singleton shared by every concurrent analysis.
         self._lock = threading.Lock()
@@ -931,6 +974,9 @@ class PaddleVLBackend(OCRBackend):
             "this paddleocr build has no PaddleOCRVL (pip install -U paddleocr)",
         )
 
+    def resolved_device(self):
+        return self._device
+
     def _ensure(self):
         if self._pipe is not None:
             return
@@ -943,8 +989,10 @@ class PaddleVLBackend(OCRBackend):
             device = "gpu" if use_gpu else "cpu"
             try:
                 self._pipe = PaddleOCRVL(device=device)
+                self._device = device
             except TypeError:
-                # Older signature without a device kwarg.
+                # Older signature without a device kwarg: it picks its own,
+                # so the device stays unrecorded.
                 self._pipe = PaddleOCRVL()
 
     def recognize(self, arr, lang, langs, detect_fn=None):
@@ -1046,6 +1094,21 @@ def register(backend):
 
 def get_backend(name):
     return _REGISTRY.get((name or "").strip().lower())
+
+
+def engine_devices():
+    """{name: "cpu" | "gpu" | None} for every registered engine, for
+    /health: the device each one resolved to. Paddle and TrOCR fix theirs
+    at start-up; Surya and PaddleOCR-VL report None until their first use
+    builds them. Recorded so the ladders (#219), where the device is part of the stage,
+    start from what each deployment really ran on."""
+    out = {}
+    for name, be in _REGISTRY.items():
+        try:
+            out[name] = be.resolved_device()
+        except Exception:  # never let a probe crash health
+            out[name] = None
+    return out
 
 
 def available_backends():

@@ -41,6 +41,7 @@ benchmarks/
     pages/*.jpg     the pages, committed so their pixels never change
     reader/*.json   the reader's output per page
     expected.json   every page's result
+    reading.json    how well the reader read each page (character error rate)
   planted/
     expected.json   how often planted mistakes are marked (scripts/planted_pages.py)
 ```
@@ -116,6 +117,55 @@ the PR shows what the new reader did to every page.
 container, writing straight into `reader/`. The kept output was captured
 on the stage server's image on 19 October 2026.
 
+### Speed and memory of the live reader
+
+The same workflow times the reader (#252, `scripts/live_timing.py`). On
+a pull request it builds main's analyser image next to the pull
+request's and runs each as a container held to the production limit
+(`--memory 2500m --memory-swap 2500m`). Each container reads and scores
+every page with its own checkout's code, recording the page's wall time
+and the container's memory peak after it (cgroup v2 `memory.peak`, the
+number the limit is held to). One page is read first and not timed, so
+loading the models is not charged to a page. There are two passes a
+side, in the order main, PR, PR, main, and each page keeps its fastest
+time and its highest peak.
+
+It fails when the pull request's 95th percentile page time is more than
+15% above main's, its memory peak more than 10% above main's, or any page
+passes 2500 MiB. The summary has both numbers for each side and a row
+per page; the `timing` artifact keeps every pass. The weekly run has no
+main to compare with, so it compares with the last weekly run on `main`
+and only reports.
+
+## How well the reader reads
+
+The set knows what was written, so every check also measures how well
+the lines were read (#253). Each scored line is matched to the written
+sentence it reads best, as for `sentences_found`, and compared with it in
+graphemes (`backend/languages/graphemes.py`): what a reader sees as one
+letter, so a Telugu letter with its vowel sign is one unit and a dropped
+vowel sign is one wrong letter. Both sides are put in NFC, lower case
+(the sentences carry no capitals) and one space between words; spaces
+count, since a word read as two or two words read as one is a reading
+mistake. The character error rate is the number of graphemes to insert,
+delete or change, over the graphemes of the matched sentences. Lines that
+match no sentence, or repeat one, are left out: `unmatched` and `repeats`
+count them already, as `sentences_found` counts lines never read.
+
+`check` adds a table to the summary: the rate per script, and per page
+with its baseline from `benchmarks/<set>/reading.json`. It fails when a
+page's rate rises by more than 0.5 points or the set's by more than 0.2.
+`live` does the same for the reading the real models just made, so a
+reader change that reads worse fails even when every score stays within
+0.3. On 20 October 2026 the UJI set read at 9.54% (290 of 3040
+graphemes), from 0.62% on UJI_W14 to 27.1% on UPV_W30.
+
+`update` writes `reading.json` too, but only ever lowers it: a page that
+reads better keeps its new rate, one that reads worse keeps the old one.
+When a change is meant to read worse (a faster reader that reads a little
+less well, say), edit `reading.json` by hand and say why in the pull
+request, so the higher number is in the diff for review.
+
 ## Planted mistakes
 
 `python scripts/benchmark.py planted` runs `scripts/planted_pages.py`
@@ -134,6 +184,68 @@ mistake, and fails when a factor catches its mistake less often than
 ([02-how-a-scan-works.md](02-how-a-scan-works.md), section 13). It takes
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
+
+## Is this pull request slower than main?
+
+A pull request that changes `backend/` gets a `paired-timing` job in
+`ci.yml` (#251). Seconds on GitHub's shared runners move by tens of
+percent with no change at all, so the job never compares with a number
+from another day. It checks out `main` next to the pull request and
+replays the benchmark pages with each, seven rounds, each side in a fresh
+process, taking turns at going first (`scripts/paired_timing.py`). The
+runner's speed is the same for both, so it cancels out of the ratio.
+
+It counts CPU time per page and per step: decoding the photo, finding the
+hand lines from the kept reading, the layout pass, scoring, and the rest.
+A step's time leaves out any other step it calls. Each page also runs
+inside `perf.scan()` (#229), so the summary has a second table of the
+stages `backend/perf.py` records (merge, printed check, recovery, join,
+features, scoring and the rest); each of those includes the stages
+inside it. The job fails when the
+pull request's median total is more than 10% above main's and the pull
+request was slower than main in each of the last three rounds; one slow
+minute on the runner is not enough. The summary has the table per step
+(main, PR, PR / main), the ratio in each round, and a folded table per
+page. The `paired-timing` artifact keeps every round's numbers.
+
+When it fails, the step with the largest ratio is where to look; the
+profiling job (below) shows the functions inside it. A change that is
+meant to cost more time says so and why in the pull request; the owner
+decides whether to merge it over the failed check.
+
+## Where the replay spends its time and memory
+
+`.github/workflows/profile.yml` replays the pages through
+`scripts/profile_benchmark.py`: once under `cProfile`, once under
+`tracemalloc`, standard library only and no models, on GitHub's runners.
+It runs every Monday, by hand (Actions, Profile, Run workflow), and on a
+pull request that carries the `perf` label. Add the label when a change
+might make scoring slower or hungrier; the run never fails the PR.
+
+The job summary has two tables:
+
+- **Time**: the 30 functions with the most cumulative time (the function
+  and everything it calls). *Share* is that time over the whole run.
+  Look for our own functions (`backend/...`) high in the list, and for a
+  large *Self s*, which is time spent in the function's own lines.
+- **Memory**: the 20 places holding the most memory at the run's peak.
+  Each allocation is charged to the innermost line of our own code that
+  led to it, so a numpy array shows up as the line that made it. This is
+  Python's view of one replay, not the server's memory per scan; that is
+  `backend/load_test.py` on stage.
+
+Each row is compared with the last successful scheduled or manual run on
+`main` (its `profile.json` artifact). *Change* is the move in share of
+time, or in MiB. A row is in bold when it entered the top 10 or grew by
+more than 25%. Shares, not seconds, are compared, because one runner can
+be a fifth slower than another with no change at all; even so, read a
+mark as "look here", not as proof. When there is no earlier run the
+summary says so and nothing is marked.
+
+The `profile` artifact keeps `profile.prof` (open it with
+`python -m pstats profile.prof` or any cProfile viewer), `profile.json`
+and `profile.md`. To profile on your own machine, never the production
+host: `python scripts/profile_benchmark.py --out profile-out`.
 
 ## Adding a set
 

@@ -1,0 +1,114 @@
+{
+ "cer": 9.54,
+ "edits": 290,
+ "graphemes": 3040,
+ "pages": {
+  "UJI_W12": {
+   "cer": 8.97,
+   "edits": 14,
+   "graphemes": 156
+  },
+  "UJI_W13": {
+   "cer": 14.1,
+   "edits": 22,
+   "graphemes": 156
+  },
+  "UJI_W14": {
+   "cer": 0.62,
+   "edits": 1,
+   "graphemes": 161
+  },
+  "UJI_W15": {
+   "cer": 4.4,
+   "edits": 7,
+   "graphemes": 159
+  },
+  "UJI_W16": {
+   "cer": 7.69,
+   "edits": 12,
+   "graphemes": 156
+  },
+  "UPV_W18": {
+   "cer": 1.86,
+   "edits": 3,
+   "graphemes": 161
+  },
+  "UPV_W21": {
+   "cer": 21.93,
+   "edits": 25,
+   "graphemes": 114
+  },
+  "UPV_W24": {
+   "cer": 0.65,
+   "edits": 1,
+   "graphemes": 154
+  },
+  "UPV_W27": {
+   "cer": 10.17,
+   "edits": 12,
+   "graphemes": 118
+  },
+  "UPV_W30": {
+   "cer": 27.1,
+   "edits": 42,
+   "graphemes": 155
+  },
+  "UPV_W33": {
+   "cer": 1.29,
+   "edits": 2,
+   "graphemes": 155
+  },
+  "UPV_W36": {
+   "cer": 13.66,
+   "edits": 22,
+   "graphemes": 161
+  },
+  "UPV_W39": {
+   "cer": 2.58,
+   "edits": 4,
+   "graphemes": 155
+  },
+  "UPV_W42": {
+   "cer": 6.92,
+   "edits": 11,
+   "graphemes": 159
+  },
+  "UPV_W45": {
+   "cer": 0.65,
+   "edits": 1,
+   "graphemes": 155
+  },
+  "UPV_W48": {
+   "cer": 19.87,
+   "edits": 31,
+   "graphemes": 156
+  },
+  "UPV_W51": {
+   "cer": 13.84,
+   "edits": 22,
+   "graphemes": 159
+  },
+  "UPV_W54": {
+   "cer": 9.52,
+   "edits": 12,
+   "graphemes": 126
+  },
+  "UPV_W57": {
+   "cer": 6.75,
+   "edits": 11,
+   "graphemes": 163
+  },
+  "UPV_W60": {
+   "cer": 21.74,
+   "edits": 35,
+   "graphemes": 161
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 9.54,
+   "edits": 290,
+   "graphemes": 3040
+  }
+ }
+}

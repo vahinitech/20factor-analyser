@@ -13,6 +13,22 @@ curl --max-time 120 https://stage.vahinitech.com/api/v2/reports \
   -F 'image=@handwriting.jpg' -F 'lang=auto'
 ```
 
+`lang` is `auto` or one or more BCP 47 tags separated by commas, with no spaces: `en`, `te`, `en,te`, `te-Telu-IN`, `en-Latn-GB,te`. A tag is a language subtag (2 to 8 lowercase letters), then an optional script (`Latn`, `Telu`) and an optional region (`IN`, `GB`). The server reads each tag by its language subtag (`backend/lang_tags.py`), so `te-Telu-IN` is read, cached and answered exactly as `te`, and the response's `lang` and `langs` give the short form. `EN`, `en_US` and `en-latn` do not match the schema. Every value the old pattern `^([a-z]{2,8}|auto)$` allowed still does, and still reads the same way. A language the server has not loaded (`VAHINI_OCR_LANGS`) is read with the languages it has, as before.
+
+`profile` (optional) carries a school, class and child profile as JSON text: teaching choices layered on the language packs, school first, then class, then child (`backend/languages/profile.schema.json`, `$defs/layers`; design in [docs/20-languages.md, section 18.1](../docs/20-languages.md#181-who-sets-what)). Each field says whether it sets, adds or removes: the letter model and the letter forms the class accepts (both only from the lists the language pack has reviewed; the Latin pack has none yet), the ruling, class word lists, exception words and what to skip (`digits`, `formulas`), and which language-skill checks run. A child's profile may only set the letter model. There is no field for health, diagnosis, ability or a name outside the exception words. Words are literals, never patterns.
+
+```bash
+curl --max-time 120 https://stage.vahinitech.com/api/v2/reports \
+  -F 'image=@handwriting.jpg' -F 'lang=en' \
+  -F 'profile={"class": {"exceptions": {"add": {"words": ["Pihu"]}}}}'
+```
+
+The profile is sent with every request and never stored, logged or sent to analytics: exception lists can hold children's names. Who may keep a profile on the server is the owner's decision still to make (docs/20-languages.md, open question 8). The response carries only `ruleset`, the hash of the language pack the scorer reads and the resolved profile; without a profile it is the pack's own hash and every score is what it was before profiles existed. The same photo with the same ruleset gives the same scores; a changed profile is a new ruleset, a new cache entry and a different `comparability.ruleset`.
+
+What a profile changes today: a letter whose accepted forms are set to an empty list (`{"variants": {"set": {"o": []}}}`) is not taught yet. When every letter that factor 3 (loops and bowls) or factor 6 (tall letters) counts is untaught, that factor is "Not measured", with the profile's reason, never a higher score. A profile may not take out every letter, or every small letter. Exception words, skip rules, word lists, checks, ruling and letter model are checked, resolved and hashed but not yet used: the script decision and the language skills that will read them are not built, and exception words never change a geometry factor.
+
+A refused profile answers before the photo is read and does not count against the free checks: HTTP 413 with `detail: {error_code: "profile_too_large", error, field}` over 16384 bytes, otherwise HTTP 422 with `error_code` one of `profile_not_json`, `profile_field_not_allowed` (a field a profile may not hold), `profile_list_too_long` (a list over its limit, alone or with the layers together), `profile_not_in_pack` (a letter model or form the pack does not list), `profile_empties_class` or `profile_invalid`. `field` says where, such as `class.exceptions.add.words`; the error never repeats what the profile holds.
+
 Use the same request with the customer's Bearer header for Pro. Never put credentials in query strings or bundle a shared Pro credential in the app. Each customer has their own revocable key.
 
 ## Access policy
@@ -41,7 +57,8 @@ Responses contain:
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
 - Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
-- `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, and `passage_aligned`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
+- `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, `passage_aligned`, and `ruleset`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
+- `ruleset`: the sha256 of the rules the page was scored by, the language pack and the request's `profile`, on every report the scan produced (both tiers, both formats). Never the profile itself.
 
 Each factor score includes the original 0–10 value, normalized 0–100 value, scale boundaries and band. A missing or invalid score is null, never substituted with zero. Status is `estimated`, `proxy`, `measured` (sensor-supplied) or `unavailable`. The image endpoint does not accept sensor measurements. Pressure, speed, stroke order and pen lifts explicitly disclose what a still image cannot measure.
 
@@ -180,4 +197,4 @@ Backend limits apply without nginx: request bodies are counted before multipart 
 
 ## Machine-readable contract
 
-`backend/schemas/` holds JSON Schema (draft-07) files for every version-2 message. `backend/contract_schemas.py` validates a body from Python or the command line, and `backend/tests/test_schemas.py` checks in CI that the committed examples, every archived catalogue and the live builder output for Free, Pro and failed reports still match. See [the schema README](schemas/README.md) for the file list and how a client repository uses them.
+`backend/schemas/` holds JSON Schema (draft-07) files for every version-2 message. `backend/contract_schemas.py` validates a body from Python or the command line, and `backend/tests/test_schemas.py` checks in CI that the committed examples, every archived catalogue and the live builder output for Free, Pro and failed reports still match. See [the schema README](schemas/README.md) for the file list and how a client repository uses them. The `profile` field's own shape is `backend/languages/profile.schema.json`.

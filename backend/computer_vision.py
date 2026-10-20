@@ -18,12 +18,20 @@ import numpy as np
 from PIL import Image, ImageOps, ImageDraw
 
 import detector
+import languages
+import perf
 from geometry import clamp_box
 
 try:
     import cv2
 except Exception:  # pragma: no cover - cv2 optional
     cv2 = None
+
+# What counts as a letter, and the letters and digits written with a
+# closed loop: the language pack (backend/languages, #206).
+_PACK = languages.language()
+_LETTER_RE = re.compile(_PACK.char_class("letter"))
+_LOOP_SHAPE_RE = re.compile(_PACK.char_class("loop_shapes"))
 
 
 # --------------------------------------------------------------------------- #
@@ -119,16 +127,20 @@ def photo_size(raw: bytes):
 def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:
     """Decode an upload and downscale it so its longest side is at most
     `max_side` (the caller passes the server's configured limit)."""
-    img = decode_image(raw)
-    w, h = img.size
-    m = max(w, h)
-    if m > max_side:
-        scale = max_side / float(m)
-        img = img.resize(
-            (max(1, int(w * scale)), max(1, int(h * scale))),
-            Image.Resampling.LANCZOS,
-        )
-    return np.array(img)
+    with perf.stage("decode", bytes=len(raw)) as step:
+        img = decode_image(raw)
+        w, h = img.size
+        step.size(pixels=w * h)
+        m = max(w, h)
+        if m > max_side:
+            scale = max_side / float(m)
+            img = img.resize(
+                (max(1, int(w * scale)), max(1, int(h * scale))),
+                Image.Resampling.LANCZOS,
+            )
+        arr = np.array(img)
+        step.size(working_pixels=arr.shape[0] * arr.shape[1])
+    return arr
 
 
 # --------------------------------------------------------------------------- #
@@ -272,7 +284,7 @@ def fallback_line_regions(arr: np.ndarray, max_lines: int = 40):
                 "poly": poly,
                 "box": [x, y, bw, bh],
                 "score": 0.0,
-                "lang": "en",
+                "lang": languages.DEFAULT_LANG,
                 "printed_hint": False,
                 "cv_fallback": True,
             }
@@ -455,9 +467,7 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
     width_outlier = outlier(widths)
     loop_context = max(
         accepted,
-        key=lambda l: len(
-            re.findall(r"[abdegopqABDGOPQR0689]", str(l.get("text") or ""))
-        ),
+        key=lambda l: len(_LOOP_SHAPE_RE.findall(str(l.get("text") or ""))),
     )
     out = {
         "1": evidence(
@@ -862,7 +872,7 @@ def infer_writing_style(arr, lines):
     total_components = 0
     for l in lines:
         text = str(l.get("text", "") or "")
-        n_letters = len(re.findall(r"[A-Za-z]", text))
+        n_letters = len(_LETTER_RE.findall(text))
         if n_letters < 3:
             continue
         box = l.get("box") or [0, 0, 0, 0]

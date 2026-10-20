@@ -29,11 +29,14 @@ import re
 
 import numpy as np
 
+import languages
 from zone_analysis import INK_FRAC, MIN_XHEIGHT_PX, binarise, dense_band
 
-# Words where the rule applies, from the OCR text (lowercased).
-_TT_RE = re.compile(r"tt")
-_TL_RE = re.compile(r"t[lhkb]|[lhkb]t")
+# Words where the rule applies, from the OCR text (lowercased): a double
+# t, or a t beside a tall stem (the language pack's letter pairs).
+_PACK = languages.language()
+_TT_RE = re.compile(_PACK.any_of("tbar_pairs.double"))
+_TL_RE = re.compile(_PACK.any_of("tbar_pairs.beside_stem"))
 
 # A stem must rise at least this fraction of the ascender band to
 # count as a tall stroke (a t or l trunk, not a rounded letter top).

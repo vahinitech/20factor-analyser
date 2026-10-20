@@ -1,0 +1,75 @@
+# Where the benchmark replay spends its time and memory (#231,
+# docs/21-performance-and-coverage.md section 5). The replay (Layer A, no
+# models) runs once under cProfile and once under tracemalloc; the job
+# summary gets the top 30 functions by cumulative time and the top 20
+# places holding memory at the peak, compared with the last successful run
+# on main. Informational only: timings never fail it (shared runners are
+# noisy), only an error in the script does. Weekly, by hand, and on pull
+# requests labelled `perf`. GitHub's runners only, never the production
+# host; the server's real memory is backend/load_test.py on stage.
+name: Profile
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'
+  workflow_dispatch:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  actions: read  # download the last run's profile from main
+
+jobs:
+  profile:
+    # On a pull request only with the `perf` label, and not again when
+    # some other label is added.
+    if: >-
+      github.event_name != 'pull_request' ||
+      (contains(github.event.pull_request.labels.*.name, 'perf') &&
+      (github.event.action != 'labeled' || github.event.label.name == 'perf'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: profile-${{ github.ref }}
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Last successful profile on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow profile.yml --branch main --status success \
+            --limit 20 --json databaseId,event \
+            --jq 'map(select(.event == "schedule" or .event == "workflow_dispatch"))[0].databaseId // empty')
+          if [ -n "$run" ] && gh run download "$run" \
+              --repo "$GITHUB_REPOSITORY" --name profile \
+              --dir "$RUNNER_TEMP/baseline"; then
+            echo "Comparing with run $run"
+          else
+            echo "No earlier successful run on main to compare with"
+          fi
+      - name: Profile the replay (cProfile, then tracemalloc)
+        run: |
+          args=""
+          for set in $(python backend/languages/registry.py --benchmark-sets); do
+            args="$args --set $set"
+          done
+          # shellcheck disable=SC2086
+          python scripts/profile_benchmark.py --out "$RUNNER_TEMP/profile" \
+            --baseline "$RUNNER_TEMP/baseline/profile.json" $args
+          cat "$RUNNER_TEMP/profile/profile.md" >> "$GITHUB_STEP_SUMMARY"
+      - name: Keep the raw profile and the tables
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile
+          path: ${{ runner.temp }}/profile
+          retention-days: 90
+          if-no-files-found: ignore
