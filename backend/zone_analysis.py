@@ -208,19 +208,20 @@ def _typical_reach(reaches, h_m):
     """The usual reach of one line's tall (or hanging) letters.
 
     reaches: (pixels, joined) per blob, joined when the blob runs into
-    the neighbouring line's x-height band. Takes the median over the
-    blobs that clear the band by REACH_MIN_FRAC of the x-height, so one
-    letter does not set the line: a single long f is outvoted by the
-    line's other ascenders. A joined blob (a descender touching a letter
-    on the line below) has no measurable end of its own, so it counts
-    only when the line has no other tall letter, clipped at the
-    neighbour's band. With no tall blob at all the line has no reach to
+    the neighbouring line's x-height band; a joined blob's reach is
+    already clipped at that band. Takes the median over the blobs that
+    clear the band by REACH_MIN_FRAC of the x-height, so one letter does
+    not set the line: a single long f, or one descender touching a
+    letter on the line below, is outvoted by the line's other tall
+    letters. Joined blobs stay in the median: when a whole line's
+    ascenders grow until they touch the line above, they are the line's
+    reach, and leaving them out hid that line from factor 6's line to
+    line check (#194). With no tall blob at all the line has no reach to
     speak of, and its largest overshoot is kept (the single-zone
     case)."""
-    tall = [(r, joined) for r, joined in reaches if r >= REACH_MIN_FRAC * h_m]
-    free = [r for r, joined in tall if not joined]
-    if free or tall:
-        return int(round(float(np.median(free or [r for r, _ in tall]))))
+    tall = [r for r, _joined in reaches if r >= REACH_MIN_FRAC * h_m]
+    if tall:
+        return int(round(float(np.median(tall))))
     return max([0] + [r for r, _ in reaches])
 
 
