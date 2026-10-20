@@ -12,6 +12,8 @@ on:
   pull_request:
     paths:
       - 'backend/recognizer.py'
+      - 'backend/escalation.py'
+      - 'backend/languages/ladders.json'
       - 'backend/ocr_backends.py'
       - 'backend/detector.py'
       - 'backend/line_recovery.py'

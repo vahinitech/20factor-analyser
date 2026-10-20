@@ -120,6 +120,26 @@ own possibly wrong reading would throw away real corrections, so a
 confident specialist reading is trusted on its own. The agreement path
 still guards against hallucination on low-confidence, made-up text.
 
+The re-reading is `backend/escalation.py`, driven by `ladders.json`
+(`docs/20-languages.md`, section 17.6). Each line climbs its ladder
+until a rung's reading passes the acceptance test. No language pack sets
+an acceptance limit yet (`reading.accept_confidence`), so a reading is
+accepted at the top rung only and every line is re-read, as before. Lines
+that reach the same rung on a page go in one call when the engine reads
+batches, and answers are cached per loaded engine by the crop's hash,
+the stage version and the prompt version. If a line needs an engine that
+cannot answer (not installed, failing, or a remote stage whose circuit
+breaker is open), the page is refused with `ocr_unavailable`, a 503 and
+`Retry-After: 60`, on `/ocr`, `/analyze-vl`, `/report-python` and
+`/api/v2/reports`. It is not cached and uses no free check. The line is
+never left with the lower reading, so one photo always gets the same
+score or a "try again". In the legacy payloads, each entry of
+`hand_lines` carries `trail` (`ladder`, `tried`, `answered`, `accepted`,
+and `held` when a line could not be sent up: `no_crop` or `line_limit`
+past 40 lines), and the payload carries `ladder`: the sha256 of
+`ladders.json` and `stages.json`, the version of each stage tried, and
+how many lines each stage answered.
+
 To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
 `docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
 llama.cpp). `hybrid` mode needs both.

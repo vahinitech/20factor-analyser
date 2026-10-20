@@ -65,7 +65,9 @@ import scan_slots  # caps simultaneous scans so memory cannot run out
 import debug_store  # stage-only photo keeping, off unless provisioned
 from typing import Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
+import escalation  # each line up its ladder (#219)
 from languages import stages  # which engine reads each script (#208)
+from languages import ladders  # the order stages read a line (#219)
 from languages import profile as profiles  # school/class/child rules (#220)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
@@ -227,6 +229,9 @@ recognizer.configure(
     refine_min_sim=SETTINGS.refine_min_sim,
     refine_min_conf=SETTINGS.refine_min_conf,
 )
+# A ladders.json that is broken, or built from another stages.json, stops
+# the server here rather than on the first scan (#219).
+ladders.table()
 ocr_backends.init_registry(
     resolve_langs=recognizer.resolve_langs,
     paddle_config={
@@ -466,6 +471,11 @@ def _ocr_process(arr, raw, lang):
         scores = [float(l["score"]) for l in hand_lines]
         rec_langs = [l["lang"] for l in hand_lines]
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5")
     except (
         Exception
     ) as e:  # never 500 the client — let it fall back to on-device
@@ -507,6 +517,7 @@ def _ocr_process(arr, raw, lang):
         "engine": f"pp-ocrv5+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
     }
@@ -554,6 +565,7 @@ async def ocr(
     async with scan_slots.SLOTS.slot():
         arr = await _decode_upload(raw)
         payload = await scan_slots.run(_ocr_process, arr, raw, lang)
+    _raise_if_ocr_unavailable(payload)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
 
@@ -627,6 +639,11 @@ def _analyze_vl_process(arr, raw, lang):
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
 
         vl = _vl_analyze(arr, hand_lines)
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5+vl")
     except Exception as e:
         return {
             "ok": False,
@@ -664,6 +681,7 @@ def _analyze_vl_process(arr, raw, lang):
         "engine": f"pp-ocrv5+opencv-context+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
         "rec_texts": texts,
@@ -870,6 +888,11 @@ def _report_python_process(
                 arr, hand_lines, vl.get("layout", {})
             ).to_dict()
         factor_needs.explain(analysis, ruleset)
+    except escalation.RungDown as exc:
+        # A line needed a rung that cannot answer: refuse the page, never
+        # keep the lower reading or skip to another rung (17.4, #219).
+        log.warning("scan refused: %s", exc)
+        return _ocr_unavailable_payload("pp-ocrv5+python-report")
     except Exception as e:
         # The visitor gets str(e); the traceback goes to the container log
         # so the failing line can be found (#199).
@@ -981,6 +1004,7 @@ def _report_python_process(
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
+        "ladder": escalation.summary(selected_backend, hand_lines),
         "lang": lang,
         "langs": recognizer.resolve_langs(lang),
         "expected_text": expected_text or "",
