@@ -112,48 +112,12 @@ jobs:
         run: python backend/generate_schemas.py --check
       - name: Every language pack resolves and validates
         run: python backend/languages/registry.py --check
-      - name: Run server unit + integration tests
-        run: |
-          python -m unittest -v \
-            backend.tests.test_review_safety \
-            backend.tests.test_report_access \
-            backend.tests.test_subscription_admin \
-            backend.tests.test_compact_reports \
-            backend.tests.test_comparison_data \
-            backend.tests.test_variation_study \
-            backend.tests.test_practice_catalog \
-            backend.tests.test_schemas \
-            backend.tests.test_backends_classify \
-            backend.tests.test_server_pipeline \
-            backend.tests.test_regression_functional \
-            backend.tests.test_handwriting_only \
-            backend.tests.test_telugu_not_read \
-            backend.tests.test_lang_tags \
-            backend.tests.test_layout_filter \
-            backend.tests.test_photo_validity \
-            backend.tests.test_factor_evidence \
-            backend.tests.test_marked_places \
-            backend.tests.test_planted_pages \
-            backend.tests.test_letter_geometry \
-            backend.tests.test_line_pieces \
-            backend.tests.test_word_spacing \
-            backend.tests.test_benchmark \
-            backend.tests.test_ink_geometry \
-            backend.tests.test_factor_scores \
-            backend.tests.test_print_hand \
-            backend.tests.test_page_measurements \
-            backend.tests.test_letter_boxes \
-            backend.tests.test_api_concurrency \
-            backend.tests.test_image_formats \
-            backend.tests.test_scanner_strings \
-            backend.tests.test_daily_limit \
-            backend.tests.test_debug_store \
-            backend.tests.test_access_api \
-            backend.tests.test_language_packs \
-            backend.tests.test_letter_facts \
-            backend.tests.test_recognition_stages \
-            backend.tests.test_factor_needs \
-            backend.tests.test_profiles
+      # Discovery, not a hand-written list: eight test files once ran in no
+      # workflow because nobody added them to the list here (#228).
+      - name: Every backend test file runs in some workflow
+        run: python scripts/check_tests_run.py --check
+      - name: Run server unit + integration tests (every backend/tests/test_*.py)
+        run: python -m unittest discover -v -s backend/tests -t .
 
   # Real handwriting, replayed: every page's kept reader output goes
   # through this PR's code and must give the scores in expected.json

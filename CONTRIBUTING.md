@@ -67,11 +67,7 @@ Run what CI runs:
 
 ```bash
 python frontend/build_bundle.py          # build output, not committed
-python -m unittest -v \
-  backend.tests.test_backends_classify \
-  backend.tests.test_server_pipeline \
-  backend.tests.test_regression_functional \
-  backend.tests.test_handwriting_only
+python -m unittest discover -v -s backend/tests -t .
 npm ci && npx playwright install --with-deps chromium
 npm run test:regression:headless
 ```

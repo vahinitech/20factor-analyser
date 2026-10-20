@@ -253,11 +253,7 @@ hardware and send a PR with your table and CPU/GPU details._
 
 ```bash
 pip install -r backend/requirements-core.txt
-python -m unittest -v \
-  backend.tests.test_backends_classify \
-  backend.tests.test_server_pipeline \
-  backend.tests.test_regression_functional \
-  backend.tests.test_handwriting_only
+python -m unittest discover -v -s backend/tests -t .
 ```
 
 The suite covers the response contracts, the printed/handwriting split, the

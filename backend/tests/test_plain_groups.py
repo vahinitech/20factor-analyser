@@ -9,6 +9,8 @@
 import os
 import sys
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from plain_groups import (  # noqa: E402
@@ -152,3 +154,7 @@ def test_endurance_detects_degradation_and_onset():
 def test_endurance_improvement_is_recognised():
     e = build_endurance(_pages(5.0, 6.5, 8.0))
     assert e["overallTrend"] == "improving"
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())
