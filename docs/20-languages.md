@@ -201,6 +201,11 @@ Every engine returns the same shape: lines, words and graphemes, each with
 a box and a confidence, text in Unicode NFC. Layers 4 and 5 never see an
 engine name.
 
+Which engine runs first, and when the next one is asked, is the ladder in
+section 17: cheapest first, a step up only for lines the cheaper engine
+was unsure of, and a refusal rather than a quiet substitute when a needed
+engine is down.
+
 ## 7. Graphemes and copy tasks
 
 Counting characters is wrong for Indic scripts: one written akshara can be
@@ -342,6 +347,11 @@ number in `benchmarks/*/expected.json`.
     other reader before it enters the registry (section 16). It can start
     after steps 3 and 5; an API adapter waits for the owner's privacy
     decision.
+
+12. **Ladders and the cascade** (#219): `stages.json`, `rank_stages.py`,
+    `ladders.json` and the escalation loop from section 17. It lands
+    right after step 3 and before step 5, because the script decision and
+    every new reader run through it.
 
 Norm tables (section 9, #216) start as soon as there are real children's
 pages for a script; they do not wait for step 10.
@@ -485,6 +495,194 @@ the benchmark sets and on real photos, the share of lines where it
 repeat runs on the same photo. It enters the registry at the level those
 numbers support (section 11), the same as Surya or Paddle.
 
+## 17. Choosing a tool: ladders, escalation and fallback
+
+Sections 5, 6 and 16 name many tools for the same job. This section says
+which one runs, in what order, and what happens when one is unsure or
+down. The rule underneath all of it: the path a page takes depends only
+on the photo, the request and committed files, never on server load, time
+of day or which model happened to be warm. Hybrid mode broke this once:
+it skipped an engine for the rest of the page after one slow line, so the
+same photo read differently on a busy server (#112, the note at
+`recognizer.py:257-263`). The design below cannot do that.
+
+### 17.1 Every tool is a stage
+
+Each tool registers as a stage with facts about it, kept in a committed
+file (`backend/languages/stages.json`), not measured at runtime:
+
+| Field | Meaning |
+|---|---|
+| `task` | `script`, `language` or `read` |
+| `scripts` | the scripts it handles |
+| `quality` | a band per script (A best to D), from the benchmark |
+| `cost` | measured p95 time per line on the deploy box, money per call |
+| `where` | `server` (photo stays with us) or `leaves` (an API) |
+| `fixed` | whether the same input always gives the same output |
+| `level` | the maturity it has reached per script (section 11) |
+| `version` | model id and weights hash, or the API's dated model |
+
+`quality` and `cost` come from one tool, `scripts/rank_stages.py`, run on
+the benchmark sets ([18-benchmark.md](18-benchmark.md)) and on the
+deploy box, and committed with the numbers it used. A model change is a
+change to this file, reviewed in a PR like a scoring change, and it reruns
+the live benchmark.
+
+Today's judgement, to be replaced by those measurements:
+
+| Stage | Task | Quality, English hand | Quality, Telugu/Hindi hand | Cost | Where |
+|---|---|---|---|---|---|
+| Pack lookup | rules | exact | exact | instant, free | server |
+| Image classifier | script | n/a | n/a | milliseconds | server |
+| Language-ID model | language | n/a | n/a | milliseconds | server |
+| Paddle | read | B | C | about 2.7 s a page on 4 threads ([13-api-and-capacity.md](13-api-and-capacity.md)) | server |
+| TrOCR | read | A | none | slower than Paddle | server |
+| Surya | read | B | B | slower than Paddle on CPU | server |
+| Local LLM | script, language, read | A | A | seconds, GPU | server |
+| API LLM | script, language, read | A | B | seconds plus network, per page charge | leaves |
+
+The bands for the two LLM rows are a guess until #218 measures them.
+
+### 17.2 Building a ladder
+
+For each task and script, `rank_stages.py` builds the ladder once, offline:
+
+1. **Filter.** Drop a stage that fails a hard rule: `where: leaves`
+   unless the owner's policy allows it and the family agreed; `fixed:
+   false` for anything that feeds a score; `level` below what the task
+   needs for this script; not built into this deployment.
+2. **Sort by cost.** On-server and free first, then by p95 time, then by
+   money. Ties break on the stage name, so the order never depends on
+   file order.
+3. **Keep only stages that are better.** Walk the sorted list and keep a
+   stage only if its quality band is strictly better than every cheaper
+   stage already kept. A stage that is slower and no better can never
+   help, so it is not on the ladder at all.
+
+The result is a short list, cheapest first, where every step up is an
+improvement. With the judgement table above:
+
+| Ladder | Rungs |
+|---|---|
+| Read English | Paddle, TrOCR, local LLM (Surya drops out: slower than Paddle and no better than TrOCR) |
+| Read Telugu or Hindi | Paddle, Surya, local LLM |
+| Script | worksheet, family's choice, image classifier, local LLM |
+| Language within a script | worksheet, family's choice, language-ID model, local LLM |
+
+The worksheet and the family's choice are not stages to escalate past.
+They are fixed facts: when they settle the question the ladder stops
+there, and later stages may only confirm or refuse (section 5).
+
+The ladder file is committed (`backend/languages/ladders.json`) and the
+server reads it as is. Rebuilding it is a reviewed change.
+
+### 17.3 Escalation: climbing on doubt
+
+The server runs each line up its ladder and stops at the first rung
+whose answer passes the acceptance test for that task:
+
+| Task | Accepted when |
+|---|---|
+| Script | top script's probability and its margin over the second are both above the pack's limits |
+| Language | language-ID probability above the limit, with enough words to judge |
+| Read | line confidence above the script's limit; the text is in the decided script; the grapheme count fits the ink (section 7); on a copy task, the match with the worksheet line is above the limit |
+
+A higher rung's reading replaces a lower one's only through the
+existing guard: similar enough to the lower reading, or the higher engine
+very sure (`config.py:133-143`, 0.70 similarity today). For an LLM rung,
+section 16's extra rules apply: copy not correct, its confidence not
+used. Confidences from different engines are never compared with each
+other; the rung decides, not the number.
+
+The test runs per line, so a page with one hard line sends one line up,
+not the whole page. Lines that reach the same rung on one page go in one
+call, which matters for an LLM where the cost is per call.
+
+All of this is deterministic: the stages are fixed, the limits are in the
+pack, and the cache key for a rung's answer is the line crop's hash, the
+stage version and the prompt version. The same photo climbs the same
+rungs and stops at the same one.
+
+### 17.4 Fallback: when a rung is down
+
+Escalation is about doubt; fallback is about a rung that cannot answer
+(not built, not loaded, crashed, timed out). The rule is narrow:
+
+- A rung that is down matters only if a line actually needs it. If every
+  line was accepted below it, nothing changes and the page is scored.
+- If a line needs a rung that is down, the server does not skip to the
+  next rung or settle for the last accepted answer. It refuses the page
+  with `ocr_unavailable` and `Retry-After`, as it already does when the
+  reader fails (`ppocr-server.py:333-345`). The refusal is not cached and
+  does not use a free check.
+- A remote rung (a GPU service or an API) gets a circuit breaker: after a
+  run of failures it is marked down for a set time, so pages that need it
+  are refused at once instead of waiting for a timeout each.
+
+This costs some availability on hard pages, and that is the right trade:
+a "try again in a minute" is honest, a different score for the same photo
+is not.
+
+There is one deliberate exception, and it is not automatic. An operator
+can take a rung off a ladder (an API outage that will last days, a GPU
+host being moved). That is a change to the ladder file, so every page
+after it is read the same way, and the response carries the ladder
+version so scores before and after can be told apart.
+
+### 17.5 Budget per page, not per minute
+
+A money or time budget that runs out halfway through a page would give
+that page a shorter ladder than the same photo got an hour earlier. So the
+budget is checked once, before a page starts: if today's API budget or the
+GPU queue cannot take a page that might need the top rung, the page waits
+in the existing queue or is refused as busy (the scan admission limit in
+[13-api-and-capacity.md](13-api-and-capacity.md)). A page that starts gets
+its whole ladder.
+
+### 17.6 The algorithm
+
+```python
+def read_page(lines, ctx):
+    ladder = LADDERS["read"][ctx.script]       # committed, cheapest first
+    results, needs = {}, {}
+    for rung in ladder:
+        todo = [l for l in lines if l.id not in results]
+        if not todo:
+            break
+        if not rung.available():               # down, or circuit open
+            return refuse("ocr_unavailable", retry_after=60)
+        answers = rung.read_batch(todo, cache_key=(rung.version, PROMPT_V))
+        for line, ans in zip(todo, answers):
+            prev = needs.get(line.id)
+            if prev is not None and not passes_guard(prev, ans, rung):
+                continue                       # higher rung not trusted here
+            if accepted(ans, line, ctx.pack, rung):
+                results[line.id] = ans.with_trail(rung)
+            else:
+                needs[line.id] = ans           # carry the best so far up
+    for line in lines:
+        if line.id not in results:
+            results[line.id] = unread(line, best=needs.get(line.id))
+    if share_unread(results) > ctx.pack.max_unread:
+        return refuse("handwriting_not_read")  # telugu_not_read, in general
+    return results
+```
+
+The script and language decisions run the same loop over their own
+ladders. An unread line is "Not measured" for every factor that needs
+graphemes (section 8), and still counts for the factors that need only
+rows.
+
+### 17.7 What gets recorded
+
+Each line in the response carries its trail: the rungs tried, the one
+that answered, the ladder version and the stage versions. No photo, crop
+or text leaves the response for this; the counts (how many lines climbed
+to each rung, how many pages were refused because a rung was down, what
+the API cost) go to the weekly report as anonymous numbers. When those
+counts show a rung answering most lines on its own, that is the signal to
+measure whether the rung below it is still worth running.
+
 ## Open questions for the owner
 
 1. The bar for each maturity step per language: how many real pages, and
@@ -493,7 +691,9 @@ numbers support (section 11), the same as Surya or Paddle.
 3. Whether factor 6 is renamed for non-Latin scripts, and to what.
 4. For German, whether to ask the family which school script the child
    learned, or detect it.
-5. Whether a language-model API may ever see a child's handwriting, and
+5. The share of unread lines at which a page is refused, per script, and
+   the daily money limit for an API rung if one is ever allowed.
+6. Whether a language-model API may ever see a child's handwriting, and
    on what terms, or whether only a local model on our own GPU is allowed.
    Whether there is a GPU budget for that local model.
 
