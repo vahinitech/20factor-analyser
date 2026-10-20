@@ -31,7 +31,7 @@ ENGLISH = {
     "sentences": [
         "pihu sings while tara reads a story",
         "the quick brown fox jumps over the lazy dog",
-    ]
+    ],
 }
 TELUGU = {"sentences": ["పిల్లి పాలు తాగింది", "అమ్మ కథ చెప్పింది"]}
 
