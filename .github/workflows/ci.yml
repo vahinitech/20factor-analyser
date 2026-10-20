@@ -115,6 +115,15 @@ jobs:
       # workflow because nobody added them to the list here (#228).
       - name: Every backend test file runs in some workflow
         run: python scripts/check_tests_run.py --check
+      - name: TEMP which module changes the refined_by test
+        run: |
+          t=backend.tests.test_server_pipeline.TestServerPipeline.test_recognition_summary_proves_which_engine_refined_lines
+          python -m unittest $t || echo "ALONE FAILS"
+          for f in backend/tests/test_*.py; do
+            m=$(basename $f .py)
+            [ $m = test_server_pipeline ] && continue
+            python -m unittest backend.tests.$m $t > out.txt 2>&1 || { echo "AFFECTS: $m"; grep -E "^(FAIL|ERROR):|Error:" out.txt | head -5; }
+          done
       - name: Run server unit + integration tests (every backend/tests/test_*.py)
         run: python -m unittest discover -v -s backend/tests -t .
 

@@ -15,6 +15,11 @@ This checks three things:
 - ci.yml still runs that discovery command;
 - backend/tests/ is a package (discovery with `-t .` needs its __init__.py),
   and so is every folder under it that holds a test file;
+- every file there gives unittest a test to run: a TestCase with test
+  methods, or, for a file written as plain test_* functions, a last line
+  `FunctionTests = function_tests(globals())` (backend/tests/__init__.py),
+  since discovery collects TestCase classes only and six files once ran
+  nothing although they were discovered;
 - a test_*.py anywhere else in the repository is named by some workflow in
   .github/workflows/, by path or by module name.
 
@@ -22,6 +27,7 @@ Standard library only: it runs before anything is installed.
 """
 
 import argparse
+import ast
 import os
 import sys
 
@@ -69,6 +75,34 @@ def discovered(path, root):
         folder = os.path.dirname(folder)
 
 
+def collects_nothing(path, root):
+    """Why unittest would run no test from path, or None."""
+    with open(os.path.join(root, path), encoding="utf-8") as fh:
+        source = fh.read()
+    tree = ast.parse(source, path)
+    funcs = (ast.FunctionDef, ast.AsyncFunctionDef)
+    loose = [
+        node.name
+        for node in tree.body
+        if isinstance(node, funcs) and node.name.startswith("test_")
+    ]
+    if loose:
+        if "function_tests(globals())" in source:
+            return None
+        return (
+            f"has test functions outside a TestCase ({loose[0]}, ...),"
+            " which unittest never runs: end the file with"
+            " `FunctionTests = function_tests(globals())`"
+        )
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and any(
+            isinstance(item, funcs) and item.name.startswith("test")
+            for item in node.body
+        ):
+            return None
+    return "defines no TestCase with a test method"
+
+
 def problems(root=ROOT):
     """What is wrong, one line each; empty when every test file runs."""
     out = []
@@ -80,6 +114,9 @@ def problems(root=ROOT):
     every = "\n".join(flows.values())
     for path in test_files(root):
         if discovered(path, root):
+            why = collects_nothing(path, root)
+            if why:
+                out.append(f"{path.replace(os.sep, '/')} {why}")
             continue
         module = path[: -len(".py")].replace(os.sep, ".")
         posix = path.replace(os.sep, "/")

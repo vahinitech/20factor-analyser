@@ -9,6 +9,8 @@
 import os
 import sys
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from coach_tips import (  # noqa: E402
@@ -392,3 +394,7 @@ def test_tips_carry_handwritten_examples():
     for tip in selected:
         assert tip["examples"], f"{tip['id']} has no examples"
         assert all(isinstance(e, str) and e for e in tip["examples"])
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())

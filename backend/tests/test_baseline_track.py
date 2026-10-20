@@ -15,6 +15,8 @@ import sys
 
 import numpy as np
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from baseline_track import (  # noqa: E402
@@ -127,3 +129,7 @@ def test_track_rows_maps_group_rows_shape():
     med = float(np.median(out["slopes_deg"]))
     assert 1.5 < med < 3.0
     assert all(w < 0.1 for w in out["waviness"])
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())
