@@ -407,6 +407,7 @@ def _ink_features(arr, lines):
     )
     angles = [abs(a - tilt) for a in ink["signed"]] or ink["angles"]
     out = {
+        "ink_rows": True,
         "line_slope_abs": mean(angles),
         "line_slope_std": _std(angles),
         "line_slope_signed_med": (

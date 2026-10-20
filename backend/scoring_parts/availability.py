@@ -11,6 +11,12 @@
 from scoring_parts import needs as factor_needs
 
 _MIN_WORD_GAPS = 3
+# A page whose rows were found from the ink (ink_geometry.py: a language
+# whose letters the reader cannot read yet) shows its layout only: size,
+# baseline, word spacing, margin, line straightness and neatness. The
+# factors that read letters, and the line-band stand-in for lean (12),
+# wait for that language's reader.
+INK_LAYOUT = (5, 7, 8, 10, 11, 20)
 # Loop Closure needs this many letters with a bowl on lines measured in
 # the ink (features._stroke_features); with fewer, one open bowl moves
 # the score by a fifth or more.
@@ -22,6 +28,7 @@ _UNMEASURED_REASONS = {
     "ocr": "Requires recognised text from the page.",
     "insufficient": "Needs at least three measurable word gaps.",
     "script": "Reads English letters; not measured on this script.",
+    "letters_later": "Reads the letters; this language's are not read yet.",
     # Joined cursive (#277): the reason code is the scoring_inputs
     # method, letters_joined. Words for families wait for the owner's
     # approval (docs/12-report-rules.md), so none are given yet.
@@ -55,6 +62,10 @@ _UNMEASURED_EVIDENCE = {
         "Text recognition did not read this page, so this factor "
         "could not be measured."
     ),
+    "letters_later": (
+        "This page was measured from the shape of its writing. Reading "
+        "its letters comes next, and this score comes with it."
+    ),
 }
 
 
@@ -77,11 +88,13 @@ def page_supplies(lines, fx, zone_based, style=None):
 
 def missing_kind(n, fx, supplied):
     """Why factor n is not measured on this page ("imu", "ocr",
-    "insufficient", "script" or "joined"), or None when it is
+    "insufficient", "script", "joined" or "letters_later"), or None when it is
     measured."""
     # The one check (factor_needs.py): which need, if any, this page
     # did not supply for this factor.
     lacking = factor_needs.missing_kind(n, supplied)
+    if fx.get("ink_rows") and n not in INK_LAYOUT and lacking != "imu":
+        return "letters_later"
     if lacking is not None:
         return lacking
     if n == 8 and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS:
@@ -123,6 +136,8 @@ def unmeasured_inputs(kind, fx, n=None):
         return {"method": "sensor_required", "features": {}}
     if kind == "ocr":
         return {"method": "recognition_required", "features": {}}
+    if kind == "letters_later":
+        return {"method": "reader_coming", "features": {}}
     if kind == "script":
         return {
             "method": "script_not_supported",
