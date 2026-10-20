@@ -436,18 +436,18 @@ class TestTeluguPrint(unittest.TestCase):
         self.assertEqual(len(hand), 2)
 
     def test_reader_veto_follows_the_letters(self):
+        def hand(text):
+            return classify._reader_hand({"_model": 0.05, "text": text})
+
         self.assertTrue(classify._reader_hand({"_model": 0.05}))
-        self.assertTrue(
-            classify._reader_hand({"_model": 0.05, "text": "big blue bag"})
-        )
-        self.assertFalse(
-            classify._reader_hand({"_model": 0.05, "text": "ఉదర బస్సుల"})
-        )
+        self.assertTrue(hand("big blue bag"))
+        self.assertFalse(hand(self.PRINTED[0][0]))
         # No letters to judge (digits only): the reader keeps its say.
-        self.assertTrue(classify._reader_hand({"_model": 0.05, "text": "123"}))
+        self.assertTrue(hand("123"))
 
     def test_clean_share_keeps_vowel_signs(self):
-        self.assertGreater(classify._clean_share("క్రీస్తుశకం ఉదర బస్సుల"), 0.9)
+        for text, _score in self.PRINTED:
+            self.assertGreater(classify._clean_share(text), 0.9, text)
         # Latin text measures as it did with re.sub(r"[^\w]", ...).
         latin = "Kothapet, Behind Sivalayam, GUNTUR - 522 001."
         old = len(re.sub(r"[^\w]", "", latin)) / len(latin)
