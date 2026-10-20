@@ -122,6 +122,11 @@ as the website sends, and with `lang=en` (`benchmark.py langs`). Both
 must give the same number of lines and every score within the same 0.3
 (#145). A named language once read both image variants and kept most
 lines twice, so the same photo scored 74 with `auto` and 71 with `en`.
+The step reports without failing until #145 is fixed: on 20 October
+2026 the doubled lines were gone, but only 4 of 21 photos agreed. Two
+had a line more with `en` (the sample photo 18 against 15), and factor
+scores moved by up to 4 points on the rest, since with `en` both image
+variants are read and the merged lines have other boxes.
 
 ## Planted mistakes
 
