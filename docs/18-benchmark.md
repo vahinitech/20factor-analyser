@@ -135,6 +135,40 @@ mistake, and fails when a factor catches its mistake less often than
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
 
+## Where the replay spends its time and memory
+
+`.github/workflows/profile.yml` replays the pages through
+`scripts/profile_benchmark.py`: once under `cProfile`, once under
+`tracemalloc`, standard library only and no models, on GitHub's runners.
+It runs every Monday, by hand (Actions, Profile, Run workflow), and on a
+pull request that carries the `perf` label. Add the label when a change
+might make scoring slower or hungrier; the run never fails the PR.
+
+The job summary has two tables:
+
+- **Time**: the 30 functions with the most cumulative time (the function
+  and everything it calls). *Share* is that time over the whole run.
+  Look for our own functions (`backend/...`) high in the list, and for a
+  large *Self s*, which is time spent in the function's own lines.
+- **Memory**: the 20 places holding the most memory at the run's peak.
+  Each allocation is charged to the innermost line of our own code that
+  led to it, so a numpy array shows up as the line that made it. This is
+  Python's view of one replay, not the server's memory per scan; that is
+  `backend/load_test.py` on stage.
+
+Each row is compared with the last successful scheduled or manual run on
+`main` (its `profile.json` artifact). *Change* is the move in share of
+time, or in MiB. A row is in bold when it entered the top 10 or grew by
+more than 25%. Shares, not seconds, are compared, because one runner can
+be a fifth slower than another with no change at all; even so, read a
+mark as "look here", not as proof. When there is no earlier run the
+summary says so and nothing is marked.
+
+The `profile` artifact keeps `profile.prof` (open it with
+`python -m pstats profile.prof` or any cProfile viewer), `profile.json`
+and `profile.md`. To profile on your own machine, never the production
+host: `python scripts/profile_benchmark.py --out profile-out`.
+
 ## Adding a set
 
 A new set is a folder with the same files. Pages need a licence that
