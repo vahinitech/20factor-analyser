@@ -36,6 +36,7 @@ import numpy as np
 
 import detector
 import languages
+import perf
 
 try:
     import cv2
@@ -206,6 +207,7 @@ def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
         pad = max(4, int(round(h * 0.15)))
         x0, y0 = max(0, x - pad), max(0, y - pad)
         x1, y1 = min(page_w, x + w + pad), min(page_h, y + h + pad)
+        perf.count("reader_calls")
         got = read(np.ascontiguousarray(arr[y0:y1, x0:x1]), lang) or []
         for word in got:
             text = str(word.get("text") or "").strip()
