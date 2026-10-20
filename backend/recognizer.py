@@ -35,6 +35,7 @@ import detector
 import computer_vision
 import layout_filter
 import line_recovery
+from languages import stages
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -46,11 +47,6 @@ _CFG = {
     "refine_min_sim": 0.70,
     "refine_min_conf": 0.75,
 }
-
-# Languages Surya is documented to handle well (Indic + English); anything
-# else routes to TrOCR, which is an English-only handwriting checkpoint
-# (microsoft/trocr-base-handwritten).
-_INDIC_LANGS = {"te", "hi", "ta", "kn", "ml"}
 
 
 def configure(**kwargs):
@@ -219,17 +215,19 @@ def collect_lines(arr: np.ndarray, lang: str):
 def _refine_engine_for_line(line_lang: str, backend_name: str) -> str:
     """Which registered engine should re-read a handwriting line.
 
-    In "hybrid" mode, route by script: Surya is documented to handle Indic
-    scripts well; TrOCR's checkpoint (microsoft/trocr-base-handwritten) is
-    English-only, so anything else goes to TrOCR. Only Telugu is currently
-    auto-detected per line (see ocr_backends._TELUGU); other Indic scripts
-    route to Surya when the request itself was made with that `lang=`. Any
-    other mode (e.g. "trocr") uses that single named engine for every line,
-    unchanged from before.
+    In "hybrid" mode, route by script, as backend/languages/stages.json
+    says: Telugu, Hindi, Tamil, Kannada and Malayalam go to Surya, and
+    Latin, the script of any language the table does not name, goes to
+    TrOCR. Only Telugu is currently auto-detected per line (see
+    ocr_backends._TELUGU); other Indic scripts route to Surya when the
+    request itself was made with that `lang=`. The route depends on the
+    line's language and the committed table only, never on how fast an
+    engine has been (#112). Any other mode (e.g. "trocr") uses that single
+    named engine for every line, unchanged from before.
     """
     if backend_name != "hybrid":
         return backend_name
-    return "surya" if (line_lang or "en") in _INDIC_LANGS else "trocr"
+    return stages.table().refine_engine(line_lang or "en")
 
 
 def refine_handwriting_text(

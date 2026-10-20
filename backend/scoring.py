@@ -25,11 +25,25 @@ import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
 import ink_geometry
+import factor_needs
+import languages
 
 try:
     import cv2
 except Exception:
     cv2 = None
+
+# Letter facts come from the language pack (backend/languages, #206):
+# the letters counted, those that close a loop, and the tall ones that
+# rise above the small letters or drop below the line.
+_PACK = languages.language()
+_LETTER_RE = re.compile(_PACK.char_class("letter"))
+_LOOP_RE = re.compile(_PACK.char_class("loop"))
+_TALL_RE = re.compile(
+    _PACK.char_class("ascender") + "|" + _PACK.char_class("descender")
+)
+# Factor 15's ideal word length, in letters.
+WORD_LETTERS = _PACK.get("letters_per_word")
 
 
 @dataclass
@@ -499,10 +513,10 @@ def _extract_features(arr: np.ndarray, lines, layout):
     digits_ratio = (
         len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
     )
-    loop_chars = len(re.findall(r"[aodpegqAODPEGQ]", full))
-    alpha_chars = len(re.findall(r"[A-Za-z]", full))
+    loop_chars = len(_LOOP_RE.findall(full))
+    alpha_chars = len(_LETTER_RE.findall(full))
     loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-    tall_chars = len(re.findall(r"[bdfhkltgjpqy]", full))
+    tall_chars = len(_TALL_RE.findall(full))
     tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
 
     ink_cv = 0.0
@@ -617,7 +631,7 @@ def _ink_features(arr, lines):
 # A word's small letters this far from the page's usual are off size
 # (marked_places.py marks the same words).
 SIZE_OFF = 0.30
-BOWL_LETTERS = set("abdegopq")
+BOWL_LETTERS = _PACK.letter_set("bowl")
 MIN_BOWLS = 3
 # Full marks for Loop Closure when this share of the bowls read is
 # closed (a few open at small sizes are normal).
@@ -667,10 +681,8 @@ def _stroke_features(geo, texts):
 
 
 _MIN_WORD_GAPS = 3
-# Factors whose measure counts Latin letters (scoring loop_ratio and
-# tall_ratio): loops (3) and letter zones (6, unless the zone profile
-# measured it from the ink).
-_LATIN_ONLY = (3, 6)
+# Why a factor is not measured, by the kind its missing need gives
+# (factor_needs.py).
 _UNMEASURED_REASONS = {
     "imu": "Requires time-series data from the sensor pen.",
     "ocr": "Requires recognised text from the page.",
@@ -737,14 +749,9 @@ def _score_factor_map(fx):
     s[12] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 10.0)) * 10.0)
     s[13] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.85)) * 10.0)
     s[14] = _clamp10((1.0 - min(1.0, fx["ink_cv"] / 0.95)) * 10.0)
+    word_len = fx["n_chars"] / max(1, fx["n_words"])
     s[15] = _clamp10(
-        (
-            1.0
-            - min(
-                1.0, abs((fx["n_chars"] / max(1, fx["n_words"])) - 5.0) / 5.0
-            )
-        )
-        * 10.0
+        (1.0 - min(1.0, abs(word_len - WORD_LETTERS) / WORD_LETTERS)) * 10.0
     )
     s[16] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.4)) * 10.0)
     if fx.get("slant_std") is not None:
@@ -794,24 +801,6 @@ _INPUT_FEATURES = {
     19: ("avg_score", "digits_ratio"),
     20: (),
 }
-
-
-# Factors whose inputs come from OCR output: recognition confidence
-# (1, 19), recognised characters (2, 3, 6, 9, 15, 16), line polygon angles
-# (7, 11, 12, 17), word boxes within a row (8), and the composites built on
-# them (18, 20). Line-band height, width and left edge (4, 5, 10, 13) are
-# still measured from the ink when recognition is unavailable.
-_NEEDS_RECOGNITION = frozenset(
-    (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
-)
-
-
-# Measured from rows found in the ink (ink_geometry.py) although nothing
-# was read: line angle from each row's fitted baseline (7, 11, 12), word
-# gaps when the passage gives each row's words (8), and the blend of them
-# with size and margins (20). Slant Consistency (17) is the spread of each
-# word's lean, and ink rows have no words to lean, so it stays unmeasured.
-_INK_MEASURED = frozenset((7, 8, 11, 12, 20))
 
 
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
@@ -904,8 +893,9 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     # and level rectangles. Factors that read those inputs would publish
     # 0.0 for letter formation and a perfect 10.0 for line angle that the
     # page never produced, so they are reported as not measured instead.
-    cv_only = all(bool(l.get("cv_fallback")) for l in lines)
-    ink_only = bool(lines) and all(bool(l.get("ink_row")) for l in lines)
+    supplied = factor_needs.page_supplies(
+        lines, fx.get("latin_letters", 0), zone_based
+    )
     results = []
     for n in range(1, 21):
         sec, name, detail = _FACTOR_META[n]
@@ -920,29 +910,20 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
-        motion_only = sec == "dynamics"
+        # The one check (factor_needs.py): which need, if any, this page
+        # did not supply for this factor.
+        lacking = factor_needs.missing_kind(n, supplied)
+        motion_only = lacking == "imu"
+        needs_ocr = lacking == "ocr"
+        no_latin = lacking == "script"
         if motion_only:
             score = 0.0
             value = "Not measured"
             evidence = "A still photo cannot measure pen motion or pressure."
-        needs_ocr = (
-            cv_only
-            and not motion_only
-            and n in _NEEDS_RECOGNITION
-            and not (n == 6 and zone_based)
-            and not (ink_only and n in _INK_MEASURED)
-        )
         few_gaps = (
             n == 8
-            and not needs_ocr
+            and lacking is None
             and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
-        )
-        no_latin = (
-            n in _LATIN_ONLY
-            and not motion_only
-            and not needs_ocr
-            and not (n == 6 and zone_based)
-            and fx.get("latin_letters", 0) == 0
         )
         if no_latin:
             score = 0.0

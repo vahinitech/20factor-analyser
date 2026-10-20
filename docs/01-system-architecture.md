@@ -220,7 +220,7 @@ motion, so Dynamics gets no weight on a photo and the others are rescaled
 | 20 | Overall Neatness | Style | Pro | | yes |
 
 Names: `scoring.py:167-196`. Tiers: `entitlements.py:14, 172-180`. Text
-needed: `_NEEDS_RECOGNITION`, `scoring.py:652-654`. A factor that cannot be
+needed: `NEEDS` in `factor_needs.py`. A factor that cannot be
 measured says "Not measured" and is left out of every average.
 
 ## 6. Deployment and capacity

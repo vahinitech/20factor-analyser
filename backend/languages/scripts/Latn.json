@@ -1,0 +1,28 @@
+{
+  "id": "Latn",
+  "kind": "script",
+  "$comment": "Today's constants exactly (#206). classes.letter is the ASCII letters the scorer counts; accented letters join it in a later step, since that moves scores.",
+  "set": {
+    "name": "Latin",
+    "unicode": ["0041-005A", "0061-007A", "00C0-024F"],
+    "unit": "letter",
+    "direction": "ltr",
+    "zones": ["ascender", "body", "descender"],
+    "min_script_share": 0.9,
+    "classes": {
+      "letter": "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+      "upper": "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+      "loop": "aodpegqAODPEGQ",
+      "bowl": "abdegopq",
+      "ascender": "bdfhklt",
+      "descender": "gjpqy",
+      "body_only": "acemnorsuvwxz",
+      "c_family": "adgqo",
+      "loop_shapes": "abdegopqABDGOPQR0689"
+    },
+    "tbar_pairs": {
+      "double": ["tt"],
+      "beside_stem": ["tl", "th", "tk", "tb", "lt", "ht", "kt", "bt"]
+    }
+  }
+}

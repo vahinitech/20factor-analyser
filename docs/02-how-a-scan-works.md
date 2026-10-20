@@ -164,7 +164,7 @@ overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 | **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
 
 Code: features at `scoring.py:422-560`, formulas at `scoring.py:571-612`,
-`_NEEDS_RECOGNITION` at `scoring.py:652-654`.
+what each factor needs from the page in `factor_needs.py`.
 
 Three things a reader of a report should know:
 
