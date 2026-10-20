@@ -64,6 +64,9 @@ LIMITS = {
 # How far a live reading may move a score before it is reported as a
 # change of the reader (CPUs and library builds round differently).
 LIVE_TOLERANCE = 0.3
+# How far the character error rate of the reading may rise above
+# reading.json, in percentage points (#253): per page, and for the set.
+READING_RISE = {"page": 0.5, "set": 0.2}
 
 
 def _load_set(name):
@@ -194,10 +197,12 @@ def _norm(text):
     )
 
 
-def _line_check(lines, sentences):
+def _pairs(lines, sentences):
     """Each scored line matched to the written sentence it reads best:
-    which sentences were found, and how many lines repeat one."""
-    found, repeats, other = set(), 0, 0
+    (line, sentence index) for the first line found for a sentence,
+    (line, "repeat") for a later one, (line, None) when no sentence is
+    close enough."""
+    found, out = set(), []
     for text in lines:
         sims = [
             difflib.SequenceMatcher(None, _norm(text), _norm(s)).ratio()
@@ -205,12 +210,206 @@ def _line_check(lines, sentences):
         ]
         best = int(max(range(len(sims)), key=sims.__getitem__))
         if sims[best] < 0.4:
-            other += 1
+            out.append((text, None))
         elif best in found:
-            repeats += 1
+            out.append((text, "repeat"))
         else:
             found.add(best)
-    return len(found), repeats, other
+            out.append((text, best))
+    return out
+
+
+def _line_check(lines, sentences):
+    """Which written sentences were found, and how many lines repeat one
+    or match none."""
+    pairs = _pairs(lines, sentences)
+    found = sum(1 for _t, s in pairs if isinstance(s, int))
+    repeats = sum(1 for _t, s in pairs if s == "repeat")
+    return found, repeats, sum(1 for _t, s in pairs if s is None)
+
+
+def _units(text):
+    """The graphemes a reading is compared in: NFC, lower case (the set's
+    sentences carry no capitals), one space between words. Marks stay on
+    their letter, so a dropped vowel sign is one wrong letter (#209)."""
+    if BACKEND not in sys.path:
+        sys.path.insert(0, BACKEND)
+    from languages import graphemes
+
+    text = unicodedata.normalize("NFC", str(text or "")).lower()
+    return graphemes.split(" ".join(text.split()))
+
+
+def _edits(a, b):
+    """Levenshtein distance between two lists of graphemes."""
+    row = list(range(len(b) + 1))
+    for i, x in enumerate(a, 1):
+        prev, row[0] = row[0], i
+        for j, y in enumerate(b, 1):
+            cost = prev + (x != y)
+            prev = row[j]
+            row[j] = min(row[j] + 1, row[j - 1] + 1, cost)
+    return row[-1]
+
+
+def _script(text):
+    """The script most of text's letters are written in, from their
+    Unicode names: Latin, Telugu, Devanagari."""
+    names = [
+        unicodedata.name(ch, "UNKNOWN").split()[0]
+        for ch in text
+        if ch.isalpha()
+    ]
+    if not names:
+        return "Unknown"
+    return max(sorted(set(names)), key=names.count).title()
+
+
+def _rate(edits, units):
+    return round(100.0 * edits / units, 2) if units else None
+
+
+def reading(meta, results):
+    """Character error rate, in graphemes, of every page's lines against
+    the written sentences they match (#253): per page, per script and for
+    the set. Lines that match no sentence, or repeat one, are left out;
+    sentences_found and repeats already count them."""
+    pages, scripts = {}, {}
+    for page, r in results.items():
+        written = meta.get("page_text", {}).get(page, meta.get("sentences"))
+        edits = units = 0
+        for text, index in _pairs(r["lines"], written):
+            if not isinstance(index, int):
+                continue
+            want = _units(written[index])
+            moved = _edits(_units(text), want)
+            edits, units = edits + moved, units + len(want)
+            tally = scripts.setdefault(
+                _script(written[index]), {"edits": 0, "graphemes": 0}
+            )
+            tally["edits"] += moved
+            tally["graphemes"] += len(want)
+        pages[page] = {
+            "edits": edits,
+            "graphemes": units,
+            "cer": _rate(edits, units),
+        }
+    for tally in scripts.values():
+        tally["cer"] = _rate(tally["edits"], tally["graphemes"])
+    edits = sum(p["edits"] for p in pages.values())
+    units = sum(p["graphemes"] for p in pages.values())
+    return {
+        "edits": edits,
+        "graphemes": units,
+        "cer": _rate(edits, units),
+        "scripts": dict(sorted(scripts.items())),
+        "pages": pages,
+    }
+
+
+def reading_problems(now, base):
+    """Where the error rate rose by more than READING_RISE allows."""
+    problems = []
+    for page, r in sorted(now["pages"].items()):
+        old = base.get("pages", {}).get(page, {}).get("cer")
+        if old is None or r["cer"] is None:
+            continue
+        if r["cer"] > old + READING_RISE["page"]:
+            problems.append(
+                f"{page}: character error rate rose from {old}% to "
+                f"{r['cer']}%"
+            )
+    old = base.get("cer")
+    if old is not None and now["cer"] is not None:
+        if now["cer"] > old + READING_RISE["set"]:
+            problems.append(
+                f"character error rate of the set rose from {old}% to "
+                f"{now['cer']}%"
+            )
+    return problems
+
+
+def ratchet(now, base):
+    """The baseline update keeps: each page's lower rate, and the set's.
+    A rise is never written; reading_problems reports it instead."""
+    keep = dict(now)
+    pages = {}
+    for page, r in now["pages"].items():
+        old = base.get("pages", {}).get(page) or {}
+        pages[page] = r
+        if old.get("cer") is not None:
+            if r["cer"] is None or r["cer"] > old["cer"]:
+                pages[page] = old
+    keep["pages"] = pages
+    old = base.get("cer")
+    if old is not None and (now["cer"] is None or now["cer"] > old):
+        for key in ("edits", "graphemes", "cer", "scripts"):
+            keep[key] = base[key]
+    return keep
+
+
+def reading_table(now, base):
+    """Markdown: the rate per script, then per page with its baseline."""
+    out = ["| Script | Graphemes | Edits | CER % |", "|---|---|---|---|"]
+    for script, t in now["scripts"].items():
+        out.append(
+            f"| {script} | {t['graphemes']} | {t['edits']} | "
+            f"{_fmt(t['cer'])} |"
+        )
+    out += [
+        "",
+        "| Page | Graphemes | Edits | CER % | Baseline % |",
+        "|---|---|---|---|---|",
+    ]
+    for page, r in sorted(now["pages"].items()):
+        old = base.get("pages", {}).get(page, {}).get("cer")
+        out.append(
+            f"| {page} | {r['graphemes']} | {r['edits']} | "
+            f"{_fmt(r['cer'])} | {'none' if old is None else old} |"
+        )
+    return "\n".join(out)
+
+
+def _reading_path(name):
+    return os.path.join(SETS[0], name, "reading.json")
+
+
+def _load_reading(name):
+    path = _reading_path(name)
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _write_reading(name, data):
+    with open(_reading_path(name), "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=1, sort_keys=True)
+        f.write("\n")
+
+
+def report_reading(name, meta, results, title):
+    """The reading table for the job summary; returns the problems."""
+    if _ink_mode(meta):
+        return []
+    now = reading(meta, results)
+    base = _load_reading(name)
+    note = "" if base is None else f" (baseline {_fmt(base.get('cer'))}%)"
+    _report(f"\n### {title}: character error rate {_fmt(now['cer'])}%{note}")
+    if base is None:
+        _report(
+            "No reading.json for this set yet; `benchmark.py update` "
+            "writes one."
+        )
+        base = {}
+    _report(reading_table(now, base))
+    problems = reading_problems(now, base)
+    if problems:
+        _report(
+            "\nThe reader's text got worse. If that is meant, edit "
+            "reading.json by hand and say why in the pull request."
+        )
+    return problems
 
 
 def _spearman(a, b):
@@ -392,6 +591,12 @@ def cmd_check(args):
             os.path.join(args.results, args.set, "expected.json"),
             _results(args.set, meta, results),
         )
+        if not _ink_mode(meta):
+            base = _load_reading(args.set) or {}
+            _write_results(
+                os.path.join(args.results, args.set, "reading.json"),
+                ratchet(reading(meta, results), base),
+            )
     with open(os.path.join(folder, "expected.json"), encoding="utf-8") as f:
         expected = json.load(f)
     problems += _limits(meta, results, expected)
@@ -414,7 +619,10 @@ def cmd_check(args):
     if not table and not problems:
         _report("Every page matches expected.json.")
     _report("\n" + summary(meta, results))
-    return 1 if (table or problems) else 0
+    worse = report_reading(args.set, meta, results, "Reading")
+    for p in worse:
+        _report(f"- {p}")
+    return 1 if (table or problems or worse) else 0
 
 
 def cmd_update(args):
@@ -429,6 +637,13 @@ def cmd_update(args):
         os.path.join(folder, "expected.json"),
         _results(args.set, meta, results),
     )
+    if not _ink_mode(meta):
+        # The reading baseline only ever falls: a rise is reported, and
+        # raising it is a hand edit with the reason in the pull request.
+        now = reading(meta, results)
+        base = _load_reading(args.set) or {}
+        hard += reading_problems(now, base)
+        _write_reading(args.set, ratchet(now, base))
     for p in hard:
         print(f"over a limit, so check will still fail: {p}")
     print(summary(meta, results))
@@ -509,7 +724,7 @@ def cmd_live(args):
     server = _server()
     with open(os.path.join(folder, "expected.json"), encoding="utf-8") as f:
         expected = json.load(f)
-    rows, moved_reader = [], 0
+    rows, moved_reader, live = [], 0, {}
     for page in _pages(folder):
         reader = read_page(server, folder, page, meta)
         if args.out:
@@ -525,6 +740,7 @@ def cmd_live(args):
             moved_reader += 1
         raw, arr = _image(folder, page, meta)
         now = _score(arr, raw, reader, meta)
+        live[page] = now
         old = expected["pages"][page]
         for n in ["overall"] + list(map(str, SCORED)):
             a = old["overall"] if n == "overall" else old["scores"][n]
@@ -547,7 +763,10 @@ def cmd_live(args):
         )
     else:
         _report("Every score is within tolerance of expected.json.")
-    return 1 if rows else 0
+    worse = report_reading(args.set, meta, live, "Live reading")
+    for p in worse:
+        _report(f"- {p}")
+    return 1 if (rows or worse) else 0
 
 
 def cmd_planted(args):
