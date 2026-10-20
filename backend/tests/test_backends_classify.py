@@ -5,6 +5,7 @@
 # pillow and (optionally) opencv. Run:
 #     python -m unittest -v backend/tests/test_backends_classify.py
 import os
+import re
 import sys
 import unittest
 from unittest import mock
@@ -382,6 +383,76 @@ class TestClassifier(unittest.TestCase):
         if len(hand) < max(1, int(0.15 * len(lines))):
             hand = lines
         self.assertEqual(len(hand), 5)
+
+
+class TestTeluguPrint(unittest.TestCase):
+    """#171: the line reader learned from Latin only and gives printed
+    Telugu a print probability of 0.001 to 0.01, so its veto kept every
+    printed Telugu line as handwriting. Lines and confidences are the
+    printed control page of the 2026-10-19 Telugu test; the crops are
+    plain, so only the reading and the reader decide."""
+
+    PRINTED = [
+        ("క్రీస్తుశకం ఉదర బస్సుల", 0.985),
+        ("వ్యాధులలో దోహద వస్తువులు", 0.967),
+        ("గోకవరం తపన ఔచిత్యవంతమైన", 1.000),
+        ("వున్నారని ఆశ్రయించి ఇమ్యూనో", 0.956),
+    ]
+
+    @staticmethod
+    def _split(rows, reader=0.005):
+        arr = np.full((60 * len(rows) + 40, 400, 3), 235, np.uint8)
+        lines = [
+            {"text": t, "score": sc, "box": [20, 20 + 60 * i, 360, 30]}
+            for i, (t, sc) in enumerate(rows)
+        ]
+        with mock.patch.object(
+            classify, "_reader_says_print", return_value=reader
+        ):
+            return classify.split_lines(arr, lines)
+
+    def test_printed_telugu_is_set_aside(self):
+        hand, printed = self._split(self.PRINTED)
+        self.assertEqual(hand, [])
+        self.assertEqual(len(printed), len(self.PRINTED))
+
+    def test_handwritten_telugu_is_kept(self):
+        # Handwritten Telugu reads at 0.61 to 0.70, below the 0.93 the
+        # clean-line override needs.
+        rows = [(t, sc) for (t, _), sc in zip(self.PRINTED, (0.61, 0.70))]
+        hand, printed = self._split(rows)
+        self.assertEqual(printed, [])
+        self.assertEqual(len(hand), 2)
+
+    def test_reader_still_vetoes_latin_lines(self):
+        # Neat English handwriting read at 0.93 to 0.95 stays handwriting
+        # when the reader says so, as before.
+        rows = [
+            ("The quick brown fox jumps over", 0.932),
+            ("Dabe has a big blue bag and a small", 0.952),
+        ]
+        hand, printed = self._split(rows)
+        self.assertEqual(printed, [])
+        self.assertEqual(len(hand), 2)
+
+    def test_reader_veto_follows_the_letters(self):
+        self.assertTrue(classify._reader_hand({"_model": 0.05}))
+        self.assertTrue(
+            classify._reader_hand({"_model": 0.05, "text": "big blue bag"})
+        )
+        self.assertFalse(
+            classify._reader_hand({"_model": 0.05, "text": "ఉదర బస్సుల"})
+        )
+        # No letters to judge (digits only): the reader keeps its say.
+        self.assertTrue(classify._reader_hand({"_model": 0.05, "text": "123"}))
+
+    def test_clean_share_keeps_vowel_signs(self):
+        self.assertGreater(classify._clean_share("క్రీస్తుశకం ఉదర బస్సుల"), 0.9)
+        # Latin text measures as it did with re.sub(r"[^\w]", ...).
+        latin = "Kothapet, Behind Sivalayam, GUNTUR - 522 001."
+        old = len(re.sub(r"[^\w]", "", latin)) / len(latin)
+        self.assertEqual(classify._clean_share(latin), old)
+        self.assertEqual(classify._clean_share(""), 0.0)
 
 
 class TestGpuDetect(unittest.TestCase):
