@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""A page is taken as printed only when most of its lines look printed
-(classify.PAGE_PRINT_SHARE, #202).
+"""A page is taken as printed only when at least two of its lines look
+strongly printed (classify.PAGE_PRINT_MIN_LINES, #202).
 
 On real phone photos one crisp line on a page of neat handwriting was
 enough: borderline lines were then pulled to print and the top tenth of
@@ -70,14 +70,14 @@ class TestPagePrintShare(unittest.TestCase):
         self.assertTrue(got[TOP], "the top band of a form is letterhead")
         self.assertTrue(got[BORDERLINE[0]])
 
-    def test_half_the_lines_is_enough(self):
+    def test_two_crisp_lines_are_enough(self):
         printed = [(f"Printed form label {i}", 0.99, 0.75) for i in range(2)]
-        got = self.classify(
-            printed + [(BORDERLINE[0], 0.7, 0.5), (BORDERLINE[1], 0.7, 0.2)]
-        )
-        self.assertTrue(got[BORDERLINE[0]])
-        self.assertFalse(got[BORDERLINE[1]])
-        self.assertEqual(classify.PAGE_PRINT_SHARE, 0.5)
+        rest = [(t, 0.7, 0.5) for t in BORDERLINE] + [(TOP, 0.7, 0.2)]
+        got = self.classify(printed + rest)
+        for text in BORDERLINE:
+            self.assertTrue(got[text], text)
+        self.assertFalse(got[TOP])
+        self.assertEqual(classify.PAGE_PRINT_MIN_LINES, 2)
 
 
 if __name__ == "__main__":
