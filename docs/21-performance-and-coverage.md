@@ -163,5 +163,5 @@ Coverage waits for #228, so it counts every test.
 | Every test runs | #228 | now |
 | Profiling job | #231 | now (a workflow and a script, no pipeline change) |
 | Coverage | #232 | after #228 |
-| Stage timings and budgets | #229 | after the scoring.py split (#227) merges, since it wraps those steps |
-| Big O per function | #230 | after the split, for the same reason |
+| Stage timings and budgets | #229 | now; it wraps the steps in `backend/scoring_parts/` from the split (#227) |
+| Big O per function | #230 | now, on the split's functions |
