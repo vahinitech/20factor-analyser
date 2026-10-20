@@ -209,6 +209,7 @@ def _ink_features(arr, lines):
     row's fitted baseline and sizes from its letters."""
     ink = ink_geometry.page_features(arr, lines)
     out = {
+        "ink_rows": True,
         "line_slope_abs": mean(ink["angles"]),
         "line_slope_std": _std(ink["angles"]),
         "line_slope_signed_med": (

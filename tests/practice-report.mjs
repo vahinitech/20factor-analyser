@@ -37,7 +37,9 @@ const RENDER = `window.__render = (opts) => {
   let results = d.analysis.results.map(f => ({ ...f }));
   if (o.free) results = results.filter(f => [1, 5, 7, 8, 18].includes(f.n));
   if (o.scores) results.forEach(f => { if (o.scores[f.n] != null) { f.score = o.scores[f.n]; } });
-  const analysis = { ...d.analysis, results, recognition: { ...(d.analysis.recognition || {}), level: o.spelling ? 'high' : 'low' } };
+  // A page measured from the ink: its layout scored, its letters not read.
+  if (o.ink) results.forEach(f => { if (![5, 7, 8, 10, 11, 20, 13, 14, 15, 16].includes(f.n)) { f.unmeasured = true; f.score = 0; } });
+  const analysis = { ...d.analysis, results, recognition: { ...(d.analysis.recognition || {}), level: o.spelling ? 'high' : 'low', ...(o.ink ? { backend: 'ink-geometry' } : {}) } };
   if (o.free) analysis.access = { tier: 'free' };
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
@@ -73,6 +75,9 @@ const RENDER = `window.__render = (opts) => {
     keep: host.querySelector('.sn-keep') ? host.querySelector('.sn-keep').textContent : '',
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
+    locks: Object.fromEntries([...host.querySelectorAll('.sn-lockchip')].map(e => [e.dataset.locked, e.querySelector('i').textContent])),
+    sub: host.querySelector('.sn-m-sub') ? host.querySelector('.sn-m-sub').textContent : '',
+    text: host.textContent,
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
     hard: host.querySelector('.p2-hard') ? host.querySelector('.p2-hard').textContent : '',
     hardLink: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').getAttribute('href') : '',
@@ -180,6 +185,16 @@ try {
   add(pro.rows.length === 3 && pro.rows.every(r => r.tips.length === 2), 'Pro shows two tips per skill', pro.rows);
   const pr3 = pro.rows.find(r => r.factor === '3');
   add(pr3 && pr3.exercises.length === 2 && /15 tries a day in all/.test(pr3.plan) && pr3.now === 'Learning', 'Pro, Learning band: two exercises and 15 tries a day', pr3);
+  // A Telugu page measured from the ink (owner review pending): the letter
+  // skills say they come next, never "full review", and the page says it
+  // was measured from the shape of the writing, not that the photo was
+  // unclear.
+  const ink = await page.evaluate(() => window.__render({ ink: true }));
+  add(['2', '3', '4', '9', '18'].every(k => ink.locks[k] === 'coming next')
+    && !ink.chips.some(n => ['1', '2', '3', '4', '6', '9', '12', '17', '18', '19'].includes(n)),
+  'A page measured from the ink names its letter skills as coming next', ink.locks);
+  add(/Measured from the shape of the writing/.test(ink.text) && !/not clear enough/.test(ink.text) && !/words/.test(ink.sub),
+    'A page measured from the ink says how it was measured', { sub: ink.sub });
   const mastering = await page.evaluate(() => window.__render({ scores: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i + 1, 9]).concat([[6, 7.6]])) }));
   add(mastering.rows.length === 1 && mastering.rows[0].exercises.length === 1 && mastering.rows[0].factor === '6', 'A Mastering skill gets one exercise even on Pro', mastering.rows);
   add(pro.others.length > 0 && !/Pro checks/.test(pro.text), 'Pro lists its other skills and no Pro note');

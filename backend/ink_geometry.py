@@ -395,6 +395,18 @@ def expect_words(rows, expected_text):
         row["words_expected"] = len(text.split())
 
 
+def mark_rows(arr, rows):
+    """Write each row's measured slope and baseline onto it ("ink_angle",
+    None for a row too short to have one, and "ink_baseline"), so the
+    report marks and draws the slope that was scored (marked_places.py)
+    and not the angle of the row's outline."""
+    known = [r.get("words_expected") for r in rows]
+    geo = measure_page(arr, rows, known if all(known) else None)
+    for row, g in zip(rows, geo):
+        row["ink_angle"] = g["angle"] if g else None
+        row["ink_baseline"] = g["baseline"] if g else None
+
+
 def letter_groups(g):
     """A row's letter heights, as the median of every LETTER_GROUP
     letters left to right: the size the eye compares, steady whether or
