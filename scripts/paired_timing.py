@@ -15,7 +15,10 @@ first. The runner's speed cancels out of the ratio.
 
 It records CPU time (time.process_time) per page and per step: decoding
 the photo, finding the hand lines from the kept reading, the layout pass
-and scoring. A step's time leaves out any other step it calls.
+and scoring. A step's time leaves out any other step it calls. Where the
+checkout has backend/perf.py (#229), each page also runs inside a
+perf.scan(), and its stages' CPU time gets a table of its own; a stage
+there includes the stages inside it.
 
 It fails when the PR's median total over the rounds is more than LIMIT
 above main's, and the PR was slower than main in each of the last AGREE
@@ -33,6 +36,7 @@ to read it.
 # pylint: disable=import-outside-toplevel,protected-access
 
 import argparse
+import contextlib
 import importlib
 import importlib.util
 import json
@@ -150,7 +154,11 @@ def worker(checkout, sets):
         importlib.import_module(module)
     clock = Clock()
     _wrap_steps(clock)
-    pages, skipped = {}, []
+    try:
+        perf = importlib.import_module("perf")
+    except ImportError:
+        perf = None
+    pages, skipped, stages = {}, [], {}
     for index, (name, folder, meta, page) in enumerate(plan):
         bench._apply_settings(meta)
         run = _page_runner(bench, folder, meta, page)
@@ -164,16 +172,35 @@ def worker(checkout, sets):
             clock.spent.clear()
         start = time.process_time()
         try:
-            run()
+            with _scan(perf) as record:
+                run()
         except bench.MissingRead:
             # The benchmark job reports it; there is nothing to time.
             skipped.append(f"{name}/{page}")
             continue
         pages[f"{name}/{page}"] = time.process_time() - start
+        for stage, row in (record.summary() if record else {}).items():
+            stages[stage] = stages.get(stage, 0.0) + row["cpu_ms"] / 1000.0
     total = sum(pages.values())
     steps = dict(clock.spent)
     steps[OTHER] = max(0.0, total - sum(steps.values()))
-    return {"total": total, "pages": pages, "steps": steps, "skip": skipped}
+    return {
+        "total": total,
+        "pages": pages,
+        "steps": steps,
+        "stages": stages,
+        "skip": skipped,
+    }
+
+
+@contextlib.contextmanager
+def _scan(perf):
+    """perf.scan() when the checkout has #229's timers, else nothing."""
+    if perf is None:
+        yield None
+        return
+    with perf.scan() as record:
+        yield record
 
 
 def _run_worker(checkout, sets):
@@ -265,6 +292,7 @@ def table(history, limit=LIMIT, agree=AGREE):
     out.append(
         "\nPR / main by round: " + ", ".join(f"{x:.2f}" for x in each) + "."
     )
+    out += _stage_table(history)
     if failed:
         out.append(
             f"\n**Slower than main**: the median total is "
@@ -292,6 +320,28 @@ def table(history, limit=LIMIT, agree=AGREE):
         out.append(f"| {page} | {old:.3f} | {new:.3f} | {_ratio(new, old)} |")
     out.append("\n</details>")
     return failed, "\n".join(out)
+
+
+def _stage_table(history):
+    """Rows for #229's stages that both sides recorded, as markdown."""
+    names = None
+    for r in history:
+        for side in r.values():
+            have = set(side.get("stages") or {})
+            names = have if names is None else names & have
+    if not names:
+        return []
+    out = [
+        "\nStages from backend/perf.py (#229): CPU seconds of the thread, "
+        "each including the stages inside it.\n",
+        "| Stage | main | PR | PR / main |",
+        "|---|---|---|---|",
+    ]
+    for name in sorted(names):
+        old = _median(history, "main", lambda s, n=name: s["stages"][n])
+        new = _median(history, "pr", lambda s, n=name: s["stages"][n])
+        out.append(f"| {name} | {old:.2f} | {new:.2f} | {_ratio(new, old)} |")
+    return out
 
 
 def _report(text):

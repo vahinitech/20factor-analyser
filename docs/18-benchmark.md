@@ -147,7 +147,11 @@ runner's speed is the same for both, so it cancels out of the ratio.
 
 It counts CPU time per page and per step: decoding the photo, finding the
 hand lines from the kept reading, the layout pass, scoring, and the rest.
-A step's time leaves out any other step it calls. The job fails when the
+A step's time leaves out any other step it calls. Each page also runs
+inside `perf.scan()` (#229), so the summary has a second table of the
+stages `backend/perf.py` records (merge, printed check, recovery, join,
+features, scoring and the rest); each of those includes the stages
+inside it. The job fails when the
 pull request's median total is more than 10% above main's and the pull
 request was slower than main in each of the last three rounds; one slow
 minute on the runner is not enough. The summary has the table per step

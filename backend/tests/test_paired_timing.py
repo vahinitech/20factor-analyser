@@ -122,6 +122,23 @@ class TestTable(unittest.TestCase):
         self.assertFalse(failed)
         self.assertIn("taken as the runner", text)
 
+    def test_stages_both_sides_recorded_get_their_own_table(self):
+        rows = history([(10, 10)] * 3)
+        for r in rows:
+            r["main"]["stages"] = {"scoring": 4.0, "old.only": 1.0}
+            r["pr"]["stages"] = {"scoring": 5.0, "new.only": 1.0}
+        _failed, text = paired.table(rows)
+        self.assertIn("| scoring | 4.00 | 5.00 | 1.25 |", text)
+        self.assertNotIn("only", text)
+
+    def test_without_stages_there_is_no_stage_table(self):
+        _failed, text = paired.table(history([(10, 10)] * 3))
+        self.assertNotIn("backend/perf.py", text)
+
+    def test_scan_without_perf_records_nothing(self):
+        with paired._scan(None) as record:  # pylint: disable=W0212
+            self.assertIsNone(record)
+
     def test_an_unchanged_pull_request_is_within_the_limit(self):
         failed, text = paired.table(history([(10, 10.2)] * 7))
         self.assertFalse(failed)
