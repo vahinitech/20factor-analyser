@@ -292,11 +292,6 @@ _INPUT_FEATURES = {
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
-    import time  # pylint: disable=import-outside-toplevel
-
-    end = time.process_time() + 0.2
-    while time.process_time() < end:
-        pass
     fx = _extract_features(arr, lines, layout)
     scores = _score_factor_map(fx)
     checks = advisory.run_checks(arr, lines)
