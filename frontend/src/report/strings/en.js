@@ -188,9 +188,12 @@ S.en = {
   // "What we measured on your page" (owner, 2026-10-13, #137).
   'm.title': 'What your page shows',
   'm.sub': 'A close look at your own writing: {lines} lines, {words} words, {letters} letters.',
+  'm.sub.ink': 'A close look at your own writing: {lines} lines.',
   'm.strip.alt': 'Part of your page, with the measurement drawn on it',
   'm.full': 'full review',
   'm.nophoto': 'not from a photo',
+  'm.later': 'coming next',
+  'm.passage': 'with a copied passage',
   'm.gaps.h': 'Spaces between your words',
   'm.gaps.wider': 'Look at the marked spaces. They are wider than the other spaces between your words. Keep every space about one finger wide.',
   'm.gaps.narrower': 'Look at the marked spaces. They are narrower than the other spaces between your words. Leave about one finger of space after each word.',
@@ -243,6 +246,7 @@ S.en = {
   'sn.note': 'A practice guide from one photo, not a school mark.',
   'sn.empty': 'We could not measure your writing on this photo. Try a clearer photo with a few lines of handwriting.',
   'note.printed': { other: 'We left out {n} printed lines. Only handwriting is checked.' },
+  'note.ink': 'Measured from the shape of the writing: letter size, lines, word spacing and margins. Reading the letters comes next.',
 
   'spelling.deferred': 'Spelling: not checked. The photo was not clear enough to read the words.',
   'spelling.notext': 'Spelling: not checked. We could not read any words.',

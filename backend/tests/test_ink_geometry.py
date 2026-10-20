@@ -17,6 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 import ink_geometry as ig  # noqa: E402
+import marked_places  # noqa: E402
 import scoring  # noqa: E402
 
 cv2 = ig.cv2
@@ -139,6 +140,37 @@ class TestInkGeometry(unittest.TestCase):
         self.assertEqual(a, b)
 
 
+class TestInkMarks(unittest.TestCase):
+    """The report marks and draws the slope that was scored."""
+
+    def setUp(self):
+        if cv2 is None:
+            self.skipTest("OpenCV unavailable")
+        self.arr = draw_page([SENTENCE] * 4, tilt_last=4.0)
+        self.rows = ig.find_rows(self.arr)
+        ig.mark_rows(self.arr, self.rows)
+        for i, r in enumerate(self.rows):
+            r["evidence_id"] = f"line_{i + 1}"
+
+    def test_the_sinking_row_is_marked(self):
+        places = marked_places.free_skill_places(self.arr, self.rows, [])
+        looks = [p for p in places["7"] if p["role"] == "look"]
+        self.assertEqual([p["region_id"] for p in looks], ["line_4"])
+        self.assertAlmostEqual(looks[0]["value"], 4.0, delta=0.6)
+
+    def test_the_measured_baseline_is_drawn(self):
+        out = marked_places.page_measurements(self.arr, self.rows)
+        line = out["slope"]["line"]
+        self.assertEqual(line["region_id"], "line_4")
+        (x0, y0), (x1, y1) = self.rows[-1]["ink_baseline"]
+        self.assertEqual(
+            line["baseline"],
+            marked_places._point_pairs(  # pylint: disable=W0212
+                [[x0, y0], [x1, y1]]
+            ),
+        )
+
+
 class TestInkScores(unittest.TestCase):
     def setUp(self):
         if cv2 is None:
@@ -148,13 +180,13 @@ class TestInkScores(unittest.TestCase):
         result = scoring.build_analysis(arr, rows, {})
         return {r.n: r for r in result.results}
 
-    def test_geometry_is_measured_and_reading_is_not(self):
+    def test_layout_is_measured_and_letters_wait_for_the_reader(self):
         arr = draw_page([SENTENCE] * 4)
         f = self.factors(arr, ig.find_rows(arr))
-        for n in (5, 7, 11, 12, 20):
+        for n in (5, 7, 10, 11, 20):
             self.assertFalse(f[n].unmeasured, n)
-        for n in (1, 2, 3, 9, 17, 18, 19):
-            self.assertTrue(f[n].unmeasured, n)
+        for n in (1, 2, 3, 4, 6, 9, 12, 17, 18, 19):
+            self.assertEqual(f[n].unmeasured_kind, "letters_later", n)
         self.assertGreater(f[7].score, 9.0)
         self.assertTrue(f[5].based_on.endswith("letter groups"))
         # Words are not known without a passage.

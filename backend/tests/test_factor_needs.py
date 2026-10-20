@@ -114,7 +114,7 @@ class TestNeedsOnPages(unittest.TestCase):
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         return {f["n"]: f for f in result["results"]}
 
-    def test_a_telugu_page_in_ink_mode_measures_its_geometry(self):
+    def test_a_telugu_page_in_ink_mode_measures_its_layout_only(self):
         if ink_geometry.cv2 is None:
             self.skipTest("OpenCV unavailable")
         arr = draw_page([SENTENCE] * 4)
@@ -122,24 +122,22 @@ class TestNeedsOnPages(unittest.TestCase):
         ink_geometry.expect_words(rows, "\n".join(["అ ఆ ఇ ఈ"] * 4))
         by_n = self.results(arr, rows)
         got = {n for n, f in by_n.items() if not f["unmeasured"]}
-        if by_n[6]["scoringInputs"]["method"] == "zone_geometry":
-            got.discard(6)
-        self.assertEqual(got - LINE_BANDS, {7, 8, 11, 12, 20})
-        for n in (1, 2, 3, 9, 17, 18, 19):
-            self.assertEqual(by_n[n]["unmeasuredKind"], "ocr", n)
+        # Size, baseline, word spacing, margin, line straightness and
+        # neatness; the rest wait for the language's reader.
+        self.assertEqual(got, {5, 7, 8, 10, 11, 20})
+        for n in (1, 2, 3, 4, 6, 9, 12, 17, 18, 19):
+            self.assertEqual(by_n[n]["unmeasuredKind"], "letters_later", n)
             self.assertEqual(
                 by_n[n]["scoringInputs"],
-                {"method": "recognition_required", "features": {}},
+                {"method": "reader_coming", "features": {}},
             )
             self.assertEqual(
                 by_n[n]["unmeasuredReason"],
-                "Requires recognised text from the page.",
+                "Reads the letters; this language's are not read yet.",
             )
-            # A cross-bar note may follow (scoring.py adds it to 1).
             self.assertTrue(
                 by_n[n]["evidence"].startswith(
-                    "Text recognition did not read this page, so this "
-                    "factor could not be measured."
+                    "This page was measured from the shape of its writing."
                 ),
                 n,
             )
