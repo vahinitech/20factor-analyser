@@ -1,0 +1,22 @@
+{
+  "$comment": "How much one page may cost (docs/21-performance-and-coverage.md, section 3; backend/perf.py). reader_calls: the ladder's reader calls on a page are at most its lines times the rungs on its ladder. model_calls: one batched call per rung per page. decoded_megapixels: the upload limit (computer_vision.MAX_DECODE_PIXELS). recovery_reader_calls: line_recovery.MAX_READS times ROUNDS. cpu_ms: each stage's CPU time on one page, in milliseconds, set from the benchmark pages on GitHub's runners (scripts/perf_budgets.py prints the measured maximum). In CI a benchmark page over a budget fails; in production a breach is counted in /health, never refused.",
+  "version": 1,
+  "reader_calls_per_line_and_rung": 1,
+  "model_calls_per_rung": 1,
+  "decoded_megapixels": 24,
+  "recovery_reader_calls": 24,
+  "cpu_ms": {
+    "decode": 60000,
+    "merge": 60000,
+    "layout": 60000,
+    "recovery": 60000,
+    "printed": 60000,
+    "join": 60000,
+    "ladder": 60000,
+    "passage": 60000,
+    "evidence": 60000,
+    "features": 60000,
+    "scoring": 60000,
+    "practice": 60000
+  }
+}

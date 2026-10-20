@@ -42,6 +42,7 @@ import time
 import weakref
 
 import ocr_backends
+import perf
 from languages import ladders, registry, stages
 
 # What a rung is given: the line's crop from the full-resolution photo,
@@ -225,6 +226,8 @@ class Rung:
         batch = getattr(self.engine, "recognize_crops", None)
         try:
             if callable(batch):
+                perf.count("reader_calls")
+                perf.count("model_calls")
                 t0 = time.perf_counter()
                 got = list(batch(crops))
                 if len(got) != len(crops):
@@ -237,6 +240,7 @@ class Rung:
             else:
                 got = []
                 for crop in crops:
+                    perf.count("reader_calls")
                     t0 = time.perf_counter()
                     got.append(self.engine.recognize_crop(crop))
                     ocr_backends.record_engine_speed(
@@ -379,11 +383,28 @@ def climb(lines, mode, crop_for, guard, get_backend=None, ladder_table=None):
     ``trail`` always. The reader's confidence stays in ``score``.
 
     Raises RungDown when a line needs a rung that cannot answer; no line
-    is changed then."""
+    is changed then.
+
+    perf.py times the ladder and each rung's reading, and counts the
+    reader's calls against the page's budget (lines times rungs, one
+    batched call per rung); it never changes a route."""
     ladder_table = ladder_table or ladders.table()
     get_backend = get_backend or ocr_backends.get_backend
+    with perf.stage("ladder", lines=len(lines)) as step:
+        states = _start(lines, mode, crop_for, ladder_table)
+        step.size(rungs=max((len(s.rungs) for s in states), default=0))
+        page_rungs = _read_up(states, guard, get_backend)
+    for state in states:
+        if state.by != state.rungs[0]:
+            state.line["text"] = state.text
+            state.line["refined_by"] = page_rungs[state.by].name
+        state.line["trail"] = state.trail()
+
+
+def _read_up(states, guard, get_backend):
+    """Each level of the ladders in turn, every line still climbing read
+    together with the others on its rung. Returns the page's rungs."""
     stage_table = stages.table()
-    states = _start(lines, mode, crop_for, ladder_table)
     page_rungs = {}
     level = 1
     while True:
@@ -402,15 +423,12 @@ def climb(lines, mode, crop_for, guard, get_backend=None, ladder_table=None):
             ok, reason = rung.available()
             if not ok:
                 raise RungDown(stage_id, reason)
-            answers = rung.read_batch([s.crop for s in group])
+            with perf.stage("read." + stage_id, lines=len(group)):
+                answers = rung.read_batch([s.crop for s in group])
             for state, answer in zip(group, answers):
                 _answer(state, stage_id, answer, guard)
         level += 1
-    for state in states:
-        if state.by != state.rungs[0]:
-            state.line["text"] = state.text
-            state.line["refined_by"] = page_rungs[state.by].name
-        state.line["trail"] = state.trail()
+    return page_rungs
 
 
 def summary(mode, hand_lines, ladder_table=None):
