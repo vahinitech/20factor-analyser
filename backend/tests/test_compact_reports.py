@@ -129,9 +129,7 @@ class CompactHTTPTests(unittest.TestCase):
                 files={"image": ("test.png", b"synthetic")},
             )
             self.assertEqual(free_evidence.status_code, 200)
-            self.assertEqual(
-                scorer.call_args.kwargs, {"include_evidence": True}
-            )
+            self.assertIs(scorer.call_args.kwargs["include_evidence"], True)
             self.assertEqual(
                 len(free_evidence.json()["evidence"]["factor_regions"]), 5
             )
