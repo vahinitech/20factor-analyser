@@ -188,7 +188,7 @@ a file the baseline lists still exists but is no longer measured. A file
 in those two packages that was under 90% when the rule came in has a
 dated entry under `exceptions`: its number then is its floor, which can
 only go up, and the entry goes away once the file reaches 90%. When the
-ratchet came in (20 October 2026) the backend stood at 82.46% and the
+ratchet came in (20 October 2026) the backend stood at 82.96% and the
 frontend at 31.27%, and one file needed an exception:
 `backend/scoring_parts/advisory.py` at 84.73%. The frontend number is low
 because most browser code runs only in the Playwright tests, which c8

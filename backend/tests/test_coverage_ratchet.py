@@ -65,6 +65,13 @@ class RatchetTest(unittest.TestCase):
             found, [f"{PLAIN} was 80.00% and is no longer measured"]
         )
 
+    def test_a_path_outside_the_repository_fails(self):
+        name = "../../runner/work/repo/repo/" + PLAIN
+        found = self.check(80.0, {PLAIN: 80.0}, baseline(files={name: 1.0}))
+        self.assertEqual(
+            found, [f"{name} in the baseline is not a repository path"]
+        )
+
     def test_a_deleted_file_is_dropped(self):
         os.remove(os.path.join(self.root, PLAIN))
         self.assertEqual(self.check(80.0, {}, baseline()), [])
@@ -118,6 +125,12 @@ class RatchetTest(unittest.TestCase):
             self.root,
         )
         self.assertNotIn(LANG, later["exceptions"])
+
+    def test_a_path_from_another_checkout(self):
+        name = "/home/runner/work/repo/repo/" + PLAIN
+        self.assertEqual(ratchet.relative(name, self.root), PLAIN)
+        inside = os.path.join(self.root, LANG)
+        self.assertEqual(ratchet.relative(inside, self.root), LANG)
 
     def test_reads_both_report_formats(self):
         coverage_py = {

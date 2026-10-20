@@ -1,5 +1,5 @@
 {
-  "about": "Coverage ratchet (#232, docs/21-performance-and-coverage.md section 6). Numbers are covered lines and branches in percent, from CI run 39419571904. Raise them with scripts/coverage_ratchet.py <part> <report> --update; lower one only by hand, with the reason in the PR.",
+  "about": "Coverage ratchet (#232, docs/21-performance-and-coverage.md section 6). Numbers are covered lines and branches in percent, from CI run 39420259827. Raise them with scripts/coverage_ratchet.py <part> <report> --update; lower one only by hand, with the reason in the PR.",
   "backend": {
     "files": {
       "backend/access_api.py": 100.0,
@@ -19,6 +19,7 @@
       "backend/debug_store.py": 94.9,
       "backend/detector.py": 83.93,
       "backend/entitlements.py": 98.8,
+      "backend/escalation.py": 96.14,
       "backend/factor_needs.py": 87.16,
       "backend/finishing_letters.py": 100.0,
       "backend/generate_schemas.py": 84.44,
@@ -41,10 +42,10 @@
       "backend/model_map.py": 83.33,
       "backend/ocr_backends.py": 59.03,
       "backend/plain_groups.py": 91.73,
-      "backend/ppocr-server.py": 90.34,
+      "backend/ppocr-server.py": 90.0,
       "backend/practice_catalog.py": 92.22,
       "backend/print_hand.py": 91.82,
-      "backend/recognizer.py": 74.05,
+      "backend/recognizer.py": 74.59,
       "backend/report_contract.py": 92.67,
       "backend/scan_slots.py": 81.82,
       "backend/scoring.py": 100.0,
@@ -67,7 +68,7 @@
       "backend/warmup_models.py": 11.02,
       "backend/zone_analysis.py": 90.23
     },
-    "total": 82.46
+    "total": 82.96
   },
   "exceptions": {
     "backend/scoring_parts/advisory.py": {
@@ -78,24 +79,24 @@
   },
   "frontend": {
     "files": {
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/app/app.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/app/share.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/account.js": 81.13,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/compact-client.js": 88.43,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/craft.js": 96.82,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/forecast.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/imu.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/narrate.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/engine/ocr.js": 29.61,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/i18n.js": 82.69,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/practice-select.js": 93.88,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/progress.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/report-render.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/report-share.js": 0.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/strings/en.js": 100.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/strings/te.js": 99.71,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/worksheet-catalog.js": 100.0,
-      "../../../../../../runner/work/20factor-analyser/20factor-analyser/frontend/src/report/worksheets.js": 75.93
+      "frontend/src/app/app.js": 0.0,
+      "frontend/src/app/share.js": 0.0,
+      "frontend/src/engine/account.js": 81.13,
+      "frontend/src/engine/compact-client.js": 88.43,
+      "frontend/src/engine/craft.js": 96.82,
+      "frontend/src/engine/forecast.js": 0.0,
+      "frontend/src/engine/imu.js": 0.0,
+      "frontend/src/engine/narrate.js": 0.0,
+      "frontend/src/engine/ocr.js": 29.61,
+      "frontend/src/report/i18n.js": 82.69,
+      "frontend/src/report/practice-select.js": 93.88,
+      "frontend/src/report/progress.js": 0.0,
+      "frontend/src/report/report-render.js": 0.0,
+      "frontend/src/report/report-share.js": 0.0,
+      "frontend/src/report/strings/en.js": 100.0,
+      "frontend/src/report/strings/te.js": 99.71,
+      "frontend/src/report/worksheet-catalog.js": 100.0,
+      "frontend/src/report/worksheets.js": 75.93
     },
     "total": 31.27
   }

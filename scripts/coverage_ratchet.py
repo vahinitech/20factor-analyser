@@ -19,7 +19,8 @@ The rules (#232, docs/21-performance-and-coverage.md section 6):
 - each file in backend/languages/ and backend/scoring_parts/ is at 90% or
   more, unless the baseline holds a dated exception for it, which then is
   that file's floor and can only go up;
-- a file the baseline lists that still exists must still be measured.
+- a file the baseline lists that still exists must still be measured,
+  and every file the baseline lists is a path inside the repository.
 
 `--update` writes this run's numbers into the baseline. It refuses while
 the check fails, and it only raises numbers: lowering one is a hand edit
@@ -54,10 +55,20 @@ def percent(covered, total):
 
 
 def relative(name, root=ROOT):
-    """Repository-relative posix path for a report key (c8 gives
-    absolute paths, coverage.py relative ones)."""
-    if os.path.isabs(name):
-        name = os.path.relpath(name, root)
+    """Repository-relative posix path for a report key. coverage.py gives
+    relative paths; c8 gives absolute ones from the checkout it ran in,
+    which for a downloaded CI report is not this one, so the key is the
+    longest tail of the path that exists here."""
+    if not os.path.isabs(name):
+        return name.replace(os.sep, "/")
+    inside = os.path.relpath(name, root)
+    if not inside.startswith(os.pardir):
+        return inside.replace(os.sep, "/")
+    parts = name.replace(os.sep, "/").split("/")
+    for start in range(1, len(parts)):
+        tail = "/".join(parts[start:])
+        if os.path.exists(os.path.join(root, tail)):
+            return tail
     return name.replace(os.sep, "/")
 
 
@@ -117,6 +128,9 @@ def problems(part, total, files, baseline, root=ROOT):
             f" under the baseline {base['total']:.2f}%"
         )
     for name, was in sorted(base["files"].items()):
+        if os.path.isabs(name) or name.startswith(os.pardir):
+            out.append(f"{name} in the baseline is not a repository path")
+            continue
         now = files.get(name)
         if now is None:
             if os.path.exists(os.path.join(root, name)):
