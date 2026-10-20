@@ -30,7 +30,14 @@ Two tracks share the registry, split by ``kind``:
 Adding a tip = appending one registry entry. Nothing else changes.
 """
 
+import languages
+
 MAX_TIPS = 3
+# Letter facts from the language pack (backend/languages, #206). The
+# English letter lessons show only when at least this share of the
+# page's letters are Latin.
+_PACK = languages.language()
+MIN_LATIN_SHARE = _PACK.get("min_script_share")
 
 
 def _score(ctx, n, default=10.0):
@@ -63,12 +70,7 @@ def _style_relevant(ctx):
 
 
 def _latin_share(ctx):
-    text = str(ctx.get("text", "") or "")
-    letters = [c for c in text if c.isalpha()]
-    if not letters:
-        return 0.0
-    latin = sum(1 for c in letters if c.isascii())
-    return latin / float(len(letters))
+    return _PACK.share(ctx.get("text", ""))
 
 
 def _count_letter(ctx, letter):
@@ -78,7 +80,7 @@ def _count_letter(ctx, letter):
 def _distinct_c_family(ctx):
     """How many of the five c-built letters (a d g q o) the page uses."""
     text = str(ctx.get("text", "") or "").lower()
-    return sum(1 for c in "adgqo" if c in text)
+    return sum(1 for c in _PACK.letters("c_family") if c in text)
 
 
 def _is_cursive_page(ctx):
@@ -261,7 +263,7 @@ TIP_LIBRARY = [
         # shape from no alphabet), so urgency rises when Letter
         # Formation (F1) is weak - and when Speed Consistency (F13)
         # is, because hurry is exactly what exposes it.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and _count_letter(ctx, "x") >= 1,
         "priority": lambda ctx: 2.2
         + (10.0 - min(_score(ctx, 1), _score(ctx, 13))) * 0.55,
@@ -299,7 +301,7 @@ TIP_LIBRARY = [
         # In words like Mars the two letters blur together because both
         # start with the same entry stroke. Gated to pages that write
         # r directly next to s - the exact place the confusion shows.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and "rs" in str(ctx.get("text", "") or "").lower(),
         "priority": lambda ctx: 2.1
         + (10.0 - min(_score(ctx, 1), _score(ctx, 3))) * 0.5,
@@ -330,7 +332,7 @@ TIP_LIBRARY = [
         # a, d, g, q and o are all built on the same c. Identical c's
         # across them read as rhythm; varied c's unsettle the word.
         # Gated to pages using at least three of the five.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and _distinct_c_family(ctx) >= 3,
         "priority": lambda ctx: 2.3
         + (10.0 - min(_score(ctx, 1), _score(ctx, 3))) * 0.6,
@@ -361,7 +363,7 @@ TIP_LIBRARY = [
         # The last letter, but not least: gated to pages that write z.
         # Like the x tip, hurry exposes a badly built z, so weak Speed
         # Consistency (F13) raises it alongside weak formation.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and _count_letter(ctx, "z") >= 1,
         "priority": lambda ctx: 2.0
         + (10.0 - min(_score(ctx, 1), _score(ctx, 13))) * 0.5,
@@ -391,7 +393,7 @@ TIP_LIBRARY = [
         # Cursive-specific: an inside join collapses the s. Gated to
         # pages that actually join their letters; urgency follows
         # Stroke Continuity (F15), the factor joins live in.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and _is_cursive_page(ctx)
         and _count_letter(ctx, "s") >= 1,
         "priority": lambda ctx: 2.4 + (10.0 - _score(ctx, 15)) * 0.6,
@@ -576,7 +578,7 @@ TIP_LIBRARY = [
         # Word craft meets hand craft: shorter, plainer sentences are
         # literally fewer strokes. English-prose advice, so gated to
         # Latin pages.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9,
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE,
         "priority": lambda ctx: 1.5 + (10.0 - _score(ctx, 13)) * 0.25,
         "text": lambda ctx: (
             "George Orwell's famous rules for writers are also speed "
@@ -609,7 +611,7 @@ TIP_LIBRARY = [
         # Entertainment only: English pages with enough n's. Never
         # score-driven, never score-affecting; the honesty note is in
         # the card itself.
-        "relevant": lambda ctx: _latin_share(ctx) >= 0.9
+        "relevant": lambda ctx: _latin_share(ctx) >= MIN_LATIN_SHARE
         and _count_letter(ctx, "n") >= 5,
         "priority": lambda ctx: 1.0,
         "text": lambda ctx: (

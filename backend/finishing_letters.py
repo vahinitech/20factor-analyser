@@ -19,9 +19,13 @@ segmentation, and the method field says so.
 
 import re
 
-FINISHING_LETTERS = set("adhilmnrtu")
+import languages
 
-_WORD_RE = re.compile(r"[A-Za-z]+")
+# The ten letters and what counts as a letter: the language pack.
+_PACK = languages.language()
+FINISHING_LETTERS = frozenset(_PACK.get("finishing"))
+
+_WORD_RE = re.compile(_PACK.char_class("letter") + "+")
 
 TIP_ID = "finishing-letters"
 TIP_TITLE = "The 10 letters that improve your handwriting"
