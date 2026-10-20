@@ -25,6 +25,7 @@
 import difflib
 import re
 import time
+import unicodedata
 
 import numpy as np
 
@@ -36,7 +37,7 @@ import detector
 import computer_vision
 import layout_filter
 import line_recovery
-from languages import stages
+from languages import graphemes, stages
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -413,6 +414,27 @@ def telugu_not_read(lang, hand_lines):
     }
 
 
+_WORD = re.compile(r"\w")
+
+
+def _match_units(text):
+    """The graphemes a passage line is compared by: NFC, lower case,
+    letters, digits and their marks, one space between words. Python's
+    \\w does not match combining marks, so the old \\w-only filter
+    dropped every vowel sign and virama: పిల్లి compared as పలల and
+    a missing vowel sign was invisible (#209). Latin text gives one unit
+    per letter, so English matches are what they were."""
+    text = unicodedata.normalize("NFC", str(text or "")).lower()
+    kept = "".join(
+        ch
+        for ch in text
+        if ch == " "
+        or _WORD.match(ch)
+        or unicodedata.category(ch).startswith("M")
+    )
+    return graphemes.split(re.sub(" +", " ", kept).strip())
+
+
 def align_to_expected(hand_lines, expected_text):
     """Reference-passage alignment (the consistent-accuracy path).
 
@@ -435,19 +457,14 @@ def align_to_expected(hand_lines, expected_text):
     if not exp_lines or not hand_lines:
         return None
 
-    def _norm(s):
-        return re.sub(
-            r"\s+", " ", re.sub(r"[^\w ]", "", str(s or "").lower())
-        ).strip()
-
     matches = []
     for hl in hand_lines:
-        rec = _norm(hl.get("text", ""))
+        rec = _match_units(hl.get("text", ""))
         if not rec:
             continue
         best_i, best_r = -1, 0.0
         for i, el in enumerate(exp_lines):
-            r = difflib.SequenceMatcher(None, rec, _norm(el)).ratio()
+            r = difflib.SequenceMatcher(None, rec, _match_units(el)).ratio()
             if r > best_r:
                 best_r, best_i = r, i
         if best_i >= 0 and best_r >= 0.45:
