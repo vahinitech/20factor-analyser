@@ -198,17 +198,21 @@ class CatalogueRules(unittest.TestCase):
 
     def test_selection_passes_composite_need_by_scoring_weights(self):
         """practice-select.js hands a composite's need to the factors it
-        is made of, with the weights backend/scoring.py blends them by."""
-        scoring = (ROOT / "backend" / "scoring.py").read_text("utf-8")
+        is made of, with the weights backend/scoring_parts/style.py
+        blends them by."""
+        scoring = (ROOT / "backend" / "scoring_parts" / "style.py").read_text(
+            "utf-8"
+        )
         select = (
             ROOT / "frontend" / "src" / "report" / "practice-select.js"
         ).read_text("utf-8")
         for number in (18, 20):
             start = scoring.index(f"s[{number}] = _clamp10(")
+            # s[20] is the file's last statement: it ends with the file.
             ends = [
                 scoring.find(mark, start + 1)
                 for mark in ("\n    s[", "\n    return")
-            ]
+            ] + [len(scoring)]
             statement = scoring[start : min(e for e in ends if e > 0)]
             parts = {
                 int(n): float(w)
