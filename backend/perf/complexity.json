@@ -38,8 +38,9 @@
     },
     "ink_geometry.find_rows": {
       "n": "pixels",
-      "declared": "O(n)",
-      "base": 4
+      "declared": "O(n^2)",
+      "base": 4,
+      "why": "Each row's outline is found with np.isin over the whole page, and each ink blob is matched to every row middle, so the work is pixels times rows, and rows grow with a page's height. A page has at most a few dozen rows; cropping each row's mask to its blobs' box would make it O(n)."
     },
     "escalation.climb": {
       "n": "lines",
@@ -50,8 +51,9 @@
     "recognizer.align_to_expected": {
       "n": "graphemes",
       "declared": "O(n^2)",
-      "base": 250,
-      "why": "Edit distance (difflib.SequenceMatcher) between the line read and its passage line, every pair of graphemes in the worst case. A line is under a hundred graphemes."
+      "base": 24,
+      "inner": 50,
+      "why": "Edit distance (difflib.SequenceMatcher) between the line read and its passage line, every pair of graphemes in the worst case. A line is under a hundred graphemes. Measured below 200 graphemes: there difflib starts junking common letters (autojunk), which hides the quadratic case on long synthetic lines."
     },
     "computer_vision.vl_analyze": {
       "n": "lines",
