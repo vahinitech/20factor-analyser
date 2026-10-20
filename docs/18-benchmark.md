@@ -41,6 +41,7 @@ benchmarks/
     pages/*.jpg     the pages, committed so their pixels never change
     reader/*.json   the reader's output per page
     expected.json   every page's result
+    reading.json    how well the reader read each page (character error rate)
   planted/
     expected.json   how often planted mistakes are marked (scripts/planted_pages.py)
 ```
@@ -148,6 +149,35 @@ per page; the `timing` artifact keeps every pass. The weekly run has no
 main to compare with, so it compares with the last weekly run on `main`
 and only reports.
 
+## How well the reader reads
+
+The set knows what was written, so every check also measures how well
+the lines were read (#253). Each scored line is matched to the written
+sentence it reads best, as for `sentences_found`, and compared with it in
+graphemes (`backend/languages/graphemes.py`): what a reader sees as one
+letter, so a Telugu letter with its vowel sign is one unit and a dropped
+vowel sign is one wrong letter. Both sides are put in NFC, lower case
+(the sentences carry no capitals) and one space between words; spaces
+count, since a word read as two or two words read as one is a reading
+mistake. The character error rate is the number of graphemes to insert,
+delete or change, over the graphemes of the matched sentences. Lines that
+match no sentence, or repeat one, are left out: `unmatched` and `repeats`
+count them already, as `sentences_found` counts lines never read.
+
+`check` adds a table to the summary: the rate per script, and per page
+with its baseline from `benchmarks/<set>/reading.json`. It fails when a
+page's rate rises by more than 0.5 points or the set's by more than 0.2.
+`live` does the same for the reading the real models just made, so a
+reader change that reads worse fails even when every score stays within
+0.3. On 20 October 2026 the UJI set read at 9.54% (290 of 3040
+graphemes), from 0.62% on UJI_W14 to 27.1% on UPV_W30.
+
+`update` writes `reading.json` too, but only ever lowers it: a page that
+reads better keeps its new rate, one that reads worse keeps the old one.
+When a change is meant to read worse (a faster reader that reads a little
+less well, say), edit `reading.json` by hand and say why in the pull
+request, so the higher number is in the diff for review.
+
 ## Planted mistakes
 
 `python scripts/benchmark.py planted` runs `scripts/planted_pages.py`
@@ -166,6 +196,34 @@ mistake, and fails when a factor catches its mistake less often than
 ([02-how-a-scan-works.md](02-how-a-scan-works.md), section 13). It takes
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
+
+## Is this pull request slower than main?
+
+A pull request that changes `backend/` gets a `paired-timing` job in
+`ci.yml` (#251). Seconds on GitHub's shared runners move by tens of
+percent with no change at all, so the job never compares with a number
+from another day. It checks out `main` next to the pull request and
+replays the benchmark pages with each, seven rounds, each side in a fresh
+process, taking turns at going first (`scripts/paired_timing.py`). The
+runner's speed is the same for both, so it cancels out of the ratio.
+
+It counts CPU time per page and per step: decoding the photo, finding the
+hand lines from the kept reading, the layout pass, scoring, and the rest.
+A step's time leaves out any other step it calls. Each page also runs
+inside `perf.scan()` (#229), so the summary has a second table of the
+stages `backend/perf.py` records (merge, printed check, recovery, join,
+features, scoring and the rest); each of those includes the stages
+inside it. The job fails when the
+pull request's median total is more than 10% above main's and the pull
+request was slower than main in each of the last three rounds; one slow
+minute on the runner is not enough. The summary has the table per step
+(main, PR, PR / main), the ratio in each round, and a folded table per
+page. The `paired-timing` artifact keeps every round's numbers.
+
+When it fails, the step with the largest ratio is where to look; the
+profiling job (below) shows the functions inside it. A change that is
+meant to cost more time says so and why in the pull request; the owner
+decides whether to merge it over the failed check.
 
 ## Where the replay spends its time and memory
 
