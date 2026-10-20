@@ -5,6 +5,7 @@ takes, that a refused one answers before the scan, that a valid one is
 echoed in every report shape and schema, and that no score reads it."""
 
 import importlib.util
+import os
 import re
 import sys
 import unittest
@@ -80,6 +81,12 @@ class RequestField(unittest.TestCase):
         scan = patch.object(self.server, "_report_payload", new=self.fake)
         scan.start()
         self.addCleanup(scan.stop)
+        # No engine warm-up at start-up: its thread would build (and,
+        # without paddleocr, cache a failed) engine while later test
+        # files count how often an engine is built.
+        quiet = patch.dict(os.environ, {"VAHINI_OCR_PRELOAD_ON_START": "0"})
+        quiet.start()
+        self.addCleanup(quiet.stop)
 
     def post(self, band):
         """The same band to every report route and shape."""
