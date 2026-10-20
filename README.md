@@ -146,12 +146,7 @@ Run the tests:
 ```bash
 # Python server tests (no heavy paddle/torch install needed)
 pip install -r backend/requirements-core.txt
-python -m unittest -v \
-  backend.tests.test_backends_classify \
-  backend.tests.test_server_pipeline \
-  backend.tests.test_regression_functional \
-  backend.tests.test_handwriting_only \
-  backend.tests.test_layout_filter
+python -m unittest discover -v -s backend/tests -t .
 
 # Headless Chrome report checks
 npm ci && npx playwright install --with-deps chromium

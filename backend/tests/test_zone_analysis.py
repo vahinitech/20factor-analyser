@@ -12,6 +12,8 @@ import sys
 
 import numpy as np
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from zone_analysis import (  # noqa: E402
@@ -165,3 +167,7 @@ def test_build_analysis_scores_factor6_from_zones():
     zp = d["zoneProfile"]
     assert zp["method"].startswith("measured")
     assert abs(zp["ascenderReach"] - 2.0) <= 0.3
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())
