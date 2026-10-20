@@ -135,6 +135,30 @@ mistake, and fails when a factor catches its mistake less often than
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
 
+## Is this pull request slower than main?
+
+A pull request that changes `backend/` gets a `paired-timing` job in
+`ci.yml` (#251). Seconds on GitHub's shared runners move by tens of
+percent with no change at all, so the job never compares with a number
+from another day. It checks out `main` next to the pull request and
+replays the benchmark pages with each, seven rounds, each side in a fresh
+process, taking turns at going first (`scripts/paired_timing.py`). The
+runner's speed is the same for both, so it cancels out of the ratio.
+
+It counts CPU time per page and per step: decoding the photo, finding the
+hand lines from the kept reading, the layout pass, scoring, and the rest.
+A step's time leaves out any other step it calls. The job fails when the
+pull request's median total is more than 10% above main's and the pull
+request was slower than main in each of the last three rounds; one slow
+minute on the runner is not enough. The summary has the table per step
+(main, PR, PR / main), the ratio in each round, and a folded table per
+page. The `paired-timing` artifact keeps every round's numbers.
+
+When it fails, the step with the largest ratio is where to look; the
+profiling job (below) shows the functions inside it. A change that is
+meant to cost more time says so and why in the pull request; the owner
+decides whether to merge it over the failed check.
+
 ## Where the replay spends its time and memory
 
 `.github/workflows/profile.yml` replays the pages through
