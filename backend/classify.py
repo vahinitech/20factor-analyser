@@ -32,6 +32,7 @@ except Exception:  # pragma: no cover - cv2 optional
     cv2 = None
 
 from geometry import clamp_box  # noqa: E402 (after the optional cv2 import)
+import languages  # noqa: E402
 import print_hand  # noqa: E402
 
 
@@ -46,14 +47,15 @@ def _env_f(name, default):
 # handwriting (fail-open). Default leans slightly toward keeping handwriting.
 PRINTED_THRESHOLD = _env_f("VAHINI_PRINTED_THRESHOLD", 0.58)
 
+# Words that mark a printed form, letters and capitals: the language
+# pack (backend/languages, #206).
+_PACK = languages.language()
 _FORM_KW = re.compile(
-    r"\b(name|address|adress|date|age|sex|gender|case|doctor|dr|diagnosis|admission|"
-    r"discharge|procedure|phone|mobile|id|form|hospital|patient|summary|findings|"
-    r"consultant|fir|ip|op|investigation|investgation|results|dob|dod|d\.o\.b|d\.o\.d|"
-    r"reg|no|ref|signature|sign|amount|total|qty|rate|received|receipt|paid|issued|"
-    r"office|department)\b",
-    re.IGNORECASE,
+    r"\b(" + _PACK.any_of("form_words") + r")\b", re.IGNORECASE
 )
+_LETTER_RE = re.compile(_PACK.char_class("letter"))
+_UPPER_RE = re.compile(_PACK.char_class("upper"))
+_CAPS_WORD_RE = re.compile(_PACK.char_class("upper") + "{5,}")
 
 
 def _gray(arr):
@@ -197,10 +199,8 @@ def _text_printed_score(text, score, box):
     if not t:
         return 0.0
     low = t.lower()
-    alpha = len(re.findall(r"[A-Za-z]", t))
-    upper_ratio = (
-        (len(re.findall(r"[A-Z]", t)) / max(1, alpha)) if alpha else 0.0
-    )
+    alpha = len(_LETTER_RE.findall(t))
+    upper_ratio = (len(_UPPER_RE.findall(t)) / max(1, alpha)) if alpha else 0.0
     digit_ratio = len(re.findall(r"\d", t)) / max(1, len(t))
     has_kw = bool(_FORM_KW.search(low))
     aspect = 0.0
@@ -288,7 +288,7 @@ def printed_probability(crop_rgb, text, score, box):
         and 0 < feat.get("sw_cv", 1) <= 0.30
         and feat.get("gh_cv", 1) <= 0.12
         and float(score or 0) >= 0.86
-        and re.fullmatch(r"[A-Z]{5,}", str(text or "").strip())
+        and _CAPS_WORD_RE.fullmatch(str(text or "").strip())
     ):
         prob = max(prob, 0.80)
     return float(max(0.0, min(1.0, prob))), feat

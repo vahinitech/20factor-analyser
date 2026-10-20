@@ -25,11 +25,24 @@ import letter_geometry
 from zone_analysis import analyze_zones, zone_score
 import computer_vision
 import ink_geometry
+import languages
 
 try:
     import cv2
 except Exception:
     cv2 = None
+
+# Letter facts come from the language pack (backend/languages, #206):
+# the letters counted, those that close a loop, and the tall ones that
+# rise above the small letters or drop below the line.
+_PACK = languages.language()
+_LETTER_RE = re.compile(_PACK.char_class("letter"))
+_LOOP_RE = re.compile(_PACK.char_class("loop"))
+_TALL_RE = re.compile(
+    _PACK.char_class("ascender") + "|" + _PACK.char_class("descender")
+)
+# Factor 15's ideal word length, in letters.
+WORD_LETTERS = _PACK.get("letters_per_word")
 
 
 @dataclass
@@ -499,10 +512,10 @@ def _extract_features(arr: np.ndarray, lines, layout):
     digits_ratio = (
         len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
     )
-    loop_chars = len(re.findall(r"[aodpegqAODPEGQ]", full))
-    alpha_chars = len(re.findall(r"[A-Za-z]", full))
+    loop_chars = len(_LOOP_RE.findall(full))
+    alpha_chars = len(_LETTER_RE.findall(full))
     loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-    tall_chars = len(re.findall(r"[bdfhkltgjpqy]", full))
+    tall_chars = len(_TALL_RE.findall(full))
     tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
 
     ink_cv = 0.0
@@ -617,7 +630,7 @@ def _ink_features(arr, lines):
 # A word's small letters this far from the page's usual are off size
 # (marked_places.py marks the same words).
 SIZE_OFF = 0.30
-BOWL_LETTERS = set("abdegopq")
+BOWL_LETTERS = _PACK.letter_set("bowl")
 MIN_BOWLS = 3
 # Full marks for Loop Closure when this share of the bowls read is
 # closed (a few open at small sizes are normal).
@@ -737,14 +750,9 @@ def _score_factor_map(fx):
     s[12] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 10.0)) * 10.0)
     s[13] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.85)) * 10.0)
     s[14] = _clamp10((1.0 - min(1.0, fx["ink_cv"] / 0.95)) * 10.0)
+    word_len = fx["n_chars"] / max(1, fx["n_words"])
     s[15] = _clamp10(
-        (
-            1.0
-            - min(
-                1.0, abs((fx["n_chars"] / max(1, fx["n_words"])) - 5.0) / 5.0
-            )
-        )
-        * 10.0
+        (1.0 - min(1.0, abs(word_len - WORD_LETTERS) / WORD_LETTERS)) * 10.0
     )
     s[16] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.4)) * 10.0)
     if fx.get("slant_std") is not None:
