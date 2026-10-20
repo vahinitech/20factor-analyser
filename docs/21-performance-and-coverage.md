@@ -248,7 +248,7 @@ or score less well? Part of this exists; the rest is below.
 | Agreement with the owner's ranking by eye | same | it falls by more than 0.05 | `eye_drop`; **inert today: the ranking is empty (#198)** |
 | Live reader (Layer B) | weekly, and PRs touching the reader | a score moves by more than 0.3 | `benchmark-live.yml` |
 | Planted mistakes per factor | weekly, and PRs touching scoring | a factor catches its mistake on fewer writers than `benchmarks/factors/expected.json` says | `factor-tests.yml`, `scripts/factor_tests.py` |
-| Stage timings and call budgets | every PR, once #248 merges | a benchmark page breaks a budget | #229 |
+| Stage timings and call budgets | every PR (#248) | a benchmark page breaks a budget | #229 |
 | Growth per function | every PR, once #249 merges | a function grows faster than declared | #230 |
 
 So accuracy has a strong guard against *any* change (Layer A fails on
@@ -334,7 +334,7 @@ so a Telugu change is judged on Telugu pages.
 | Coverage | #232 | done (#247) |
 | Stage timings and budgets | #229 | built (#229) |
 | Big O per function | #230 | now, on the split's functions |
-| Work counts per page | #250 | after #248 merges (it uses #229's counters) |
+| Work counts per page | #250 | now (#248 merged) |
 | Paired timing against main | #251 | now |
 | Live latency and memory | #252 | now |
 | Reading accuracy | #253 | now |
