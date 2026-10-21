@@ -127,14 +127,17 @@ def _ink_mode(meta):
 def _score_ink(arr, page, meta):
     """One page measured from the ink, as the server's ink mode does;
     with "passage" set, the page's written text is the passage copied."""
+    import classify
     import computer_vision
     import ink_geometry
     import scoring
 
-    text = None
+    rows = ink_geometry.find_rows(arr)
+    classify.classify_lines(arr, rows)
+    hand = [r for r in rows if not r.get("printed_hint")]
     if meta.get("passage"):
-        text = "\n".join(meta.get("page_text", {}).get(page) or [])
-    hand = _ink_hand(arr, ink_geometry.find_rows(arr), text)
+        text = meta.get("page_text", {}).get(page) or []
+        ink_geometry.expect_words(hand, "\n".join(text))
     layout = computer_vision.vl_analyze(arr, hand, False)["layout"]
     analysis = scoring.build_analysis(arr, hand, layout).to_dict()
     results = {r["n"]: r for r in analysis["results"]}
@@ -146,20 +149,6 @@ def _score_ink(arr, page, meta):
         },
         "lines": ["" for _ in hand],
     }
-
-
-def _ink_hand(arr, rows, text):
-    """The handwriting rows of ink rows, as the server's _ink_lines gives
-    them: the printed check on each row, and each row's number of words
-    from the passage when text is given."""
-    import classify
-    import ink_geometry
-
-    classify.classify_lines(arr, rows)
-    hand = [r for r in rows if not r.get("printed_hint")]
-    if text is not None:
-        ink_geometry.expect_words(hand, text)
-    return hand
 
 
 def _reader_lines(arr, raw, reader, meta):
@@ -195,18 +184,16 @@ def _reader_lines(arr, raw, reader, meta):
 def _score(arr, raw, reader, meta):
     """One page through the pipeline after the reader, from its kept
     output. Returns the result kept in expected.json. A page the reader
-    read in pieces is measured from the ink rows, as the server does
-    (ink_geometry.fragment_rows, #277); the lines kept are still the
-    reader's."""
+    read in pieces is measured on whole rows of its ink, as the server
+    does (ink_geometry.fragment_rows, #277); the lines kept are still
+    the reader's."""
     import computer_vision
     import ink_geometry
     import scoring
 
-    found, hand = _reader_lines(arr, raw, reader, meta)
-    measured = hand
-    if hand:
-        rows, _cover = ink_geometry.fragment_rows(arr, found)
-        measured = (_ink_hand(arr, rows, None) if rows else []) or hand
+    _found, hand = _reader_lines(arr, raw, reader, meta)
+    rows, _cover = ink_geometry.fragment_rows(arr, hand)
+    measured = rows or hand
     layout = computer_vision.vl_analyze(arr, measured, False)["layout"]
     analysis = scoring.build_analysis(arr, measured, layout).to_dict()
     results = {r["n"]: r for r in analysis["results"]}
@@ -955,11 +942,11 @@ def cmd_fragments(args):
         return 0
     out = [
         f"## Read in pieces? {args.set}\n",
-        f"In pieces: {ig.FRAGMENT_MIN_ROWS} ink rows or more, and cover "
-        f"under {ig.FRAGMENT_COVER}, {ig.FRAGMENT_PIECES} boxes per row or "
+        f"In pieces: {ig.FRAGMENT_MIN_ROWS} rows or more, and cover "
+        f"under {ig.FRAGMENT_COVER}, {ig.FRAGMENT_PIECES} lines per row or "
         f"more, or a short share of {ig.FRAGMENT_SHORT_SHARE} or more "
-        f"(a box under {ig.FRAGMENT_SHORT} of its row's ink).\n",
-        "| Page | Ink rows | Reader boxes | Cover | Boxes per row "
+        f"(a line under {ig.FRAGMENT_SHORT} of its row's ink).\n",
+        "| Page | Rows | Reader lines | Cover | Lines per row "
         "| Short | In pieces |",
         "|---|---|---|---|---|---|---|",
     ]
@@ -971,20 +958,24 @@ def cmd_fragments(args):
         ) as f:
             reader = json.load(f)
         try:
-            found, hand = _reader_lines(arr, raw, reader, meta)
+            _found, hand = _reader_lines(arr, raw, reader, meta)
         except MissingRead:
             out.append(f"| {page} | reads a crop not kept | | | | | |")
             continue
         if not hand:
             out.append(f"| {page} | no handwriting read | | | | | |")
             continue
-        _rows, c = ig.fragment_rows(arr, found)
-        if c["fragments"]:
+        # The numbers even where the server does not look at the ink.
+        _rows, c = ig.reader_rows(arr, hand)
+        decided = ig.fragment_rows(arr, hand)[1]
+        if decided["fragments"]:
             in_pieces.append(page)
+        verdict = "yes" if decided["fragments"] else "no"
+        if not decided["looked"]:
+            verdict += ", ink not looked at"
         out.append(
             f"| {page} | {c['rows']} | {c['pieces']} | {c['cover']:.2f} "
-            f"| {c['per_row']:g} | {c['short']:.2f} "
-            f"| {'yes' if c['fragments'] else 'no'} |"
+            f"| {c['per_row']:g} | {c['short']:.2f} | {verdict} |"
         )
     if args.none and in_pieces:
         out.append(f"\n**Read in pieces: {', '.join(in_pieces)}.**")

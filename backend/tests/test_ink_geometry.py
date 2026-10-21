@@ -235,35 +235,45 @@ class TestReadInPieces(unittest.TestCase):
         rows, cover = ig.fragment_rows(self.arr, whole_lines(self.boxes))
         self.assertEqual(rows, [])
         self.assertFalse(cover["fragments"])
+        # Plainly whole: the ink is not looked at.
+        self.assertFalse(cover["looked"])
+        _rows, cover = ig.reader_rows(self.arr, whole_lines(self.boxes))
+        self.assertFalse(ig.read_in_fragments(cover))
         self.assertGreater(cover["cover"], 0.95)
         self.assertEqual(cover["per_row"], 1)
         self.assertEqual(cover["short"], 0)
 
-    def test_many_pieces_on_a_row_or_short_pieces_count(self):
-        rows = [{"box": [0, 0, 1000, 50]}, {"box": [0, 100, 1000, 50]}]
-        words = [
-            reader_line([x, y, 240, 40], "a")
-            for y in (5, 105)
-            for x in (0, 250, 500, 750)
-        ]
-        cover = ig.reader_cover(rows, words)
-        self.assertEqual(cover["per_row"], 4)
-        self.assertEqual(cover["short"], 1.0)
-        self.assertTrue(ig.read_in_fragments(cover))
-        # One row is too little to tell.
-        self.assertFalse(ig.read_in_fragments({**cover, "rows": 1}))
-        # A box outside every row, or with no size, is left out.
-        stray = [reader_line([0, 400, 100, 20], "7"), {"box": [0, 0, 0, 0]}]
-        self.assertEqual(ig.reader_cover(rows, stray)["pieces"], 0)
-        self.assertEqual(ig.reader_cover([], words)["cover"], 0.0)
+    def test_the_rows_are_whole_and_keep_the_readers_text(self):
+        rows, _cover = ig.fragment_rows(self.arr, pieces(self.boxes))
+        for row, words in zip(rows, self.boxes):
+            right = words[-1][0] + words[-1][2]
+            self.assertLess(abs(row["box"][0] - words[0][0]), 4)
+            self.assertLess(abs(row["box"][0] + row["box"][2] - right), 4)
+            self.assertEqual(row["text"], "minimum")
+            self.assertFalse(row.get("ink_row"))
 
-    def test_letter_spacing_is_not_measured_from_the_ink(self):
+    def test_many_pieces_on_a_row_or_short_pieces_count(self):
+        whole = {"rows": 4, "cover": 0.96, "per_row": 1, "short": 0.0}
+        self.assertFalse(ig.read_in_fragments(whole))
+        self.assertTrue(ig.read_in_fragments({**whole, "cover": 0.5}))
+        self.assertTrue(ig.read_in_fragments({**whole, "per_row": 3}))
+        self.assertTrue(ig.read_in_fragments({**whole, "short": 0.5}))
+        # One row is too little to tell.
+        one_row = {**whole, "rows": 1, "cover": 0}
+        self.assertFalse(ig.read_in_fragments(one_row))
+        # A box with no size is left out.
+        rows, cover = ig.reader_rows(self.arr, [{"box": [0, 0, 0, 0]}])
+        self.assertEqual((rows, cover["rows"]), ([], 0))
+
+    def test_joined_letters_leave_letter_spacing_unmeasured(self):
         rows, _cover = ig.fragment_rows(self.arr, pieces(self.boxes))
         result = scoring.build_analysis(self.arr, rows, {})
+        self.assertEqual(result.style_profile.get("verdict"), "cursive")
         f = {r.n: r for r in result.results}
         self.assertTrue(f[9].unmeasured)
         self.assertEqual(f[9].value, "Not measured")
-        for n in (5, 7, 10, 11, 12):
+        self.assertEqual(f[9].unmeasured_kind, "joined")
+        for n in (1, 5, 7, 10, 11, 12):
             self.assertFalse(f[n].unmeasured, n)
 
     def test_same_page_same_decision(self):
