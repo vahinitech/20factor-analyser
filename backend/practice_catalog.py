@@ -1014,7 +1014,13 @@ FACTORS = {
                 17,
                 "slant.push-pull",
                 1,
-                ("Push-pull lines", "row", "any", "warm-up-drills", "push-pulls"),
+                (
+                    "Push-pull lines",
+                    "row",
+                    "any",
+                    "warm-up-drills",
+                    "push-pulls",
+                ),
                 (
                     "Draw close up-and-down lines between two lines. Count to"
                     " ten without lifting. Keep every line leaning the same"
