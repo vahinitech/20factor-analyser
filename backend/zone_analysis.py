@@ -54,7 +54,7 @@ ZONE_HEAVY_REACH = 3.2
 # distance from the page's median reach, up to LINE_DEV_MAX. Apart from
 # the line-to-line spread penalty, which is capped at 2 points and so
 # no longer moves on a page whose lines already vary.
-LINE_DEV_RATE = 4.0
+LINE_DEV_RATE = 6.0
 LINE_DEV_MAX = 3.0
 # A line needs a middle band at least this tall (pixels) to be usable.
 MIN_XHEIGHT_PX = 6
@@ -353,12 +353,14 @@ def analyze_zones(gray, lines):
 
 
 def _line_dev(reaches):
-    """The lines' mean distance from the page's median reach, in
-    x-heights. Each line is measured against the page, so one line
-    whose tall letters run long always adds to it; the mean, not the
-    largest, so one short line read badly does not set it."""
+    """How far the lines reach past the page's median reach, in
+    x-heights, on average over the lines. Each line is measured against
+    the page, so one line whose tall letters run long always adds to it;
+    the mean, not the largest, so one line read badly does not set it.
+    Only reach past the median counts: the mistake is letters written
+    too long, and a short line is the spread penalty's to judge."""
     mid = _median(reaches)
-    return sum(abs(r - mid) for r in reaches) / len(reaches)
+    return sum(max(0.0, r - mid) for r in reaches) / len(reaches)
 
 
 def _line_dev_penalty(dev):
