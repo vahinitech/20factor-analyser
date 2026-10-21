@@ -12,6 +12,7 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import scoring  # noqa: E402
+from scoring_parts.features import _margin_spread  # noqa: E402
 
 BASE = {
     "avg_score": 0.9,
@@ -28,6 +29,7 @@ BASE = {
     "word_gap_cv": 0.3,
     "word_gap_count": 10,
     "left_cv": 0.02,
+    "left_spread": 0.002,
     "ink_cv": 0.2,
     "n_chars": 100,
     "n_words": 20,
@@ -80,6 +82,39 @@ class TestFactorScores(unittest.TestCase):
             )
         # Loop closure falls back to the share of loop letters read.
         self.assertEqual(score(3, bowl_share=None, loop_ratio=0.14), 5.0)
+
+
+class TestMarginSpread(unittest.TestCase):
+    """Margin Discipline (factor 10) from the rows' starts (#201)."""
+
+    def test_an_even_margin_scores_full_marks(self):
+        self.assertEqual(_margin_spread([0.1, 0.1, 0.1, 0.1]), 0.0)
+        self.assertEqual(score(10, left_spread=0.0), 10.0)
+
+    def test_one_indented_line_among_four_is_counted(self):
+        spread = _margin_spread([0.1, 0.1, 0.1, 0.143])
+        self.assertAlmostEqual(spread, 0.043 / 4)
+        self.assertLess(score(10, left_spread=spread), 9.0)
+
+    def test_a_date_or_title_far_right_is_left_out(self):
+        self.assertEqual(_margin_spread([0.1, 0.1, 0.1, 0.7]), 0.0)
+        self.assertEqual(_margin_spread([0.1, 0.5]), 0.0)
+
+    def test_a_line_starting_left_of_the_margin_is_counted(self):
+        self.assertAlmostEqual(_margin_spread([0.1, 0.1, 0.1, 0.0]), 0.025)
+
+    def test_the_margin_position_does_not_change_the_spread(self):
+        near = _margin_spread([0.02, 0.03, 0.02, 0.04])
+        far = _margin_spread([0.32, 0.33, 0.32, 0.34])
+        self.assertAlmostEqual(near, far)
+
+    def test_no_rows_is_no_spread(self):
+        self.assertEqual(_margin_spread([]), 0.0)
+        self.assertEqual(_margin_spread([0.3]), 0.0)
+
+    def test_the_score_falls_with_the_spread(self):
+        self.assertEqual(score(10, left_spread=0.025), 5.0)
+        self.assertEqual(score(10, left_spread=0.2), 0.0)
 
 
 if __name__ == "__main__":

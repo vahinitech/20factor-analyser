@@ -57,7 +57,7 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/escalation.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/perf.py backend/telugu_reader.py
+        run: python -m py_compile backend/ppocr-server.py backend/ocr_backends.py backend/classify.py backend/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/benchmark_ocr.py backend/geometry.py backend/model_map.py backend/gpu_detect.py backend/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/factor_needs.py backend/age_band.py backend/detector.py backend/line_recovery.py backend/ink_geometry.py backend/recognizer.py backend/escalation.py backend/config.py backend/cache.py backend/lang_tags.py backend/scan_slots.py backend/capacity.py backend/practice_catalog.py backend/debug_store.py backend/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/perf.py backend/telugu_reader.py
       - name: Check formatting (black, line-length 79)
         run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/paired_timing.py scripts/live_timing.py
       - name: Lint (pylint, min score 9.0)
@@ -79,6 +79,7 @@ jobs:
             backend/tests/test_escalation.py \
             backend/config.py backend/cache.py \
             backend/lang_tags.py backend/tests/test_lang_tags.py \
+            backend/age_band.py backend/tests/test_age_band.py \
             backend/entitlements.py backend/report_contract.py backend/subscription_admin.py backend/compact_reports.py backend/comparison_data.py backend/tests/test_comparison_data.py backend/upload_limits.py backend/daily_limit.py \
             backend/tests/test_subscription_admin.py \
             backend/practice_catalog.py backend/tests/test_practice_catalog.py \
@@ -119,8 +120,9 @@ jobs:
             scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
             scripts/complexity.py backend/tests/test_complexity.py \
             backend/perf.py backend/tests/test_perf.py \
-            scripts/perf_budgets.py \
-            scripts/paired_timing.py backend/tests/test_paired_timing.py
+            scripts/perf_budgets.py backend/tests/test_work_counts.py \
+            scripts/paired_timing.py backend/tests/test_paired_timing.py \
+            scripts/bench_history.py backend/tests/test_bench_history.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -189,13 +191,25 @@ jobs:
           path: ${{ runner.temp }}/benchmark-results
           if-no-files-found: ignore
       # Each page through the server's own scan with perf.py recording:
-      # a page over a budget in backend/perf/budgets.json fails (#229).
-      - name: Every page within its call and CPU budgets
+      # a page over a budget in backend/perf/budgets.json fails (#229),
+      # and so does any work count above benchmarks/<set>/work.json
+      # (#250). The counts this run found are kept as an artifact.
+      - name: Every page within its call and CPU budgets, no more work
         run: |
           sets=$(python backend/languages/registry.py --benchmark-sets)
+          status=0
           for set in $sets; do
-            python scripts/perf_budgets.py check --set "$set"
+            python scripts/perf_budgets.py check --set "$set" \
+              --results "$RUNNER_TEMP/work-counts" || status=1
           done
+          exit $status
+      - name: Keep the work counts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: work-counts
+          path: ${{ runner.temp }}/work-counts
+          if-no-files-found: ignore
       - name: Cache the UJI letters for the planted pages
         uses: actions/cache@v4
         with:
@@ -281,6 +295,74 @@ jobs:
           name: complexity
           path: complexity.md
           if-no-files-found: warn
+
+  # Slow drift (#254, scripts/bench_history.py): each push to main adds a
+  # line per benchmark set to history/<set>.jsonl on the bench-history
+  # branch; each pull request is compared with the median of the last ten
+  # lines. Accuracy that falls fails; time, memory or work creeping up
+  # more than 15% is flagged, since the lines come from different runners
+  # and the paired-timing job already compares with main on one runner.
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: bench-history-${{ github.event_name }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: write  # a push to main appends to the bench-history branch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: The history so far
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if ! git clone --quiet --depth 1 --branch bench-history "$url" "$RUNNER_TEMP/history"; then
+            mkdir -p "$RUNNER_TEMP/history"
+            git -C "$RUNNER_TEMP/history" init --quiet -b bench-history
+            git -C "$RUNNER_TEMP/history" remote add origin "$url"
+          fi
+      - name: Measure this commit
+        run: |
+          mkdir -p "$RUNNER_TEMP/now"
+          for set in $(python backend/languages/registry.py --benchmark-sets); do
+            # Work counts, once perf_budgets.py writes them (#250).
+            python scripts/perf_budgets.py check --set "$set" \
+              --results "$RUNNER_TEMP/work" >/dev/null 2>&1 || true
+            python scripts/bench_history.py collect --set "$set" \
+              --work "$RUNNER_TEMP/work" --out "$RUNNER_TEMP/now/$set.json"
+          done
+      - name: Against the last ten main runs
+        if: github.event_name == 'pull_request'
+        run: |
+          status=0
+          for f in "$RUNNER_TEMP"/now/*.json; do
+            python scripts/bench_history.py check \
+              --history "$RUNNER_TEMP/history" "$f" || status=1
+          done
+          exit $status
+      - name: Add this commit to the history
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd "$RUNNER_TEMP/history"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in "$RUNNER_TEMP"/now/*.json; do
+            python "$GITHUB_WORKSPACE/scripts/bench_history.py" append \
+              --history . "$f"
+          done
+          git add history
+          git commit --quiet -m "history: ${GITHUB_SHA::7}"
+          for try in 1 2 3; do
+            if git push --quiet origin HEAD:bench-history; then exit 0; fi
+            git pull --quiet --rebase origin bench-history || true
+          done
+          exit 1
 
   e2e:
     runs-on: ubuntu-latest

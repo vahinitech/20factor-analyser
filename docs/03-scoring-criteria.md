@@ -60,7 +60,7 @@ score falls linearly and hits zero at the stated limit.
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
 | 8 | Word Spacing | consistency of word gaps, in line heights: gaps between detected segments sharing a row, plus the widest (words − 1) ink gaps inside each line. Not measured below three gaps | `10 · (1 − min(1, gap CV / 1.4))` | ≈1.0 x-h, CV ≤0.25 |
 | 9 | Letter Spacing | intra-word spacing proxy: char-width consistency | `10 · (1 − min(1, char-width CV / 1.2))` | gap CV ≤0.30 |
-| 10 | Margin Discipline | left-edge consistency after page-tilt correction | `10 · (1 − min(1, left CV / 0.55))` | left CV ≤0.05 |
+| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
 | 12 | Vertical Alignment | line-to-line tilt spread | `10 · (1 − min(1, angle std / 10))` | tilt CV ≤0.20 |
 | 13 | Speed Consistency | speed proxy from stroke/line-width regularity | `10 · (1 − min(1, width CV / 0.85))` | velocity CV ≤0.20 |
