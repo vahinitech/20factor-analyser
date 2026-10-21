@@ -142,7 +142,9 @@ why.
   row unread, and the factors used to be measured on the pieces' boxes.
   After step 6 the reader's handwriting lines are grouped into rows (lines
   overlapping in height by 45% of the shorter one), each row is widened to
-  the ink on it (blobs whose middle lies within 0.6 of a line of the row's),
+  the ink on it (blobs whose middle lies within 0.6 of a line of the row's,
+  leaving out ink inside the lines the reader found printed, such as a
+  form's words beside the writing),
   and the reader's numbers are compared with the rows
   (`ink_geometry.fragment_rows`). The page is read in pieces when it has
   two rows or more and any of: the reader's boxes span under 60% of the
@@ -154,7 +156,9 @@ why.
   recognition block. Rows nothing was read on are not measured. To keep
   the cost down, a page whose median row holds fewer than three lines,
   none under half the widest, the widest spanning 60% of the page or
-  more, is taken as read whole without looking at its ink.
+  more, is taken as read whole without looking at its ink. So is a page
+  where the reader found as many printed lines as handwriting lines or
+  more: a form written on, whose unread ink is mostly print.
 
 The thresholds are the `FRAGMENT_*` constants in `ink_geometry.py`.
 `scripts/benchmark.py fragments` prints each benchmark page's numbers
