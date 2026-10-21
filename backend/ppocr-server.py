@@ -838,16 +838,12 @@ def _ink_mode(lang):
     return all(x in INK_LANGS for x in req)
 
 
-def _ink_lines(arr, expected_text, rows=None):
+def _ink_lines(arr, expected_text):
     """(all rows, handwriting rows) from the ink. The printed check still
     runs on each row's shape, so a printed page is still refused. A
-    passage with one line per row gives each row its number of words.
-    rows: the ink rows when already found (_fragment_lines)."""
-    if rows is None:
-        with perf.stage(
-            "detect.ink", pixels=int(arr.shape[0] * arr.shape[1])
-        ):
-            rows = ink_geometry.find_rows(arr)
+    passage with one line per row gives each row its number of words."""
+    with perf.stage("detect.ink", pixels=int(arr.shape[0] * arr.shape[1])):
+        rows = ink_geometry.find_rows(arr)
     with perf.stage("printed", lines=len(rows)):
         classify.classify_lines(arr, rows)
     hand = [r for r in rows if not r.get("printed_hint")]
@@ -855,17 +851,17 @@ def _ink_lines(arr, expected_text, rows=None):
     return rows, hand
 
 
-def _fragment_lines(arr, lines, expected_text):
-    """The handwriting rows to measure from the ink when the reader read
-    the page in pieces (joined cursive, #277), else None. The reader's
+def _fragment_lines(arr, hand_lines):
+    """The rows to measure when the reader read the page in pieces
+    (joined cursive, #277), else None: its lines as whole rows, widened
+    to the ink on each row (ink_geometry.fragment_rows). The reader's
     lines still give the text, the passage match and the recognition
-    block; only the measuring moves to the ink rows."""
-    with perf.stage("fragments", lines=len(lines)):
-        rows, _cover = ink_geometry.fragment_rows(arr, lines)
-    if not rows:
-        return None
-    _rows, hand = _ink_lines(arr, expected_text, rows)
-    return hand or None
+    block."""
+    with perf.stage("fragments", lines=len(hand_lines)):
+        rows, _cover = ink_geometry.fragment_rows(arr, hand_lines)
+    for row in rows:
+        row.setdefault("text_as_read", row["text"])
+    return rows or None
 
 
 def _report_python_process(
@@ -992,13 +988,13 @@ def _report_python_process(
 
         # What the factors are measured on: the reader's lines, or rows
         # found from the ink, and why (recognition.ink_reason). A page
-        # the reader read in pieces (joined cursive, #277) is measured
-        # from the ink; the reader's lines still give the text above.
+        # the reader read in pieces (joined cursive, #277) is measured on
+        # whole rows of its ink; the reader's lines give the text above.
         score_lines, ink_reason = hand_lines, None
         if selected_backend == "ink-geometry":
             ink_reason = "language"
         elif selected_backend != "cv-fallback":
-            rows = _fragment_lines(arr, lines, expected_text)
+            rows = _fragment_lines(arr, hand_lines)
             if rows:
                 score_lines, ink_reason = rows, "read_in_fragments"
 

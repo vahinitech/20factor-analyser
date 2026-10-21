@@ -55,12 +55,15 @@ LETTER_GROUP = 5
 # A page read in pieces (#277): the reader's boxes against the ink rows.
 # Joined cursive comes back as short pieces ("Thi", "cmen") with the rest
 # of each row unread, and every factor was measured on the pieces' boxes.
-# A page is read in pieces when it has FRAGMENT_MIN_ROWS ink rows or more
-# and any of:
+# A page is read in pieces when the reader's lines fall on
+# FRAGMENT_MIN_ROWS rows or more and any of:
 # - the reader's boxes span under FRAGMENT_COVER of the rows' ink width;
 # - the median row holds FRAGMENT_PIECES reader boxes or more;
 # - FRAGMENT_SHORT_SHARE of the boxes or more are short: under
 #   FRAGMENT_SHORT of their own row's ink width.
+# A page whose median row holds fewer than FRAGMENT_PIECES lines, none
+# under FRAGMENT_SHORT of the widest line, is read whole without looking
+# at its ink (_plainly_whole), so most pages cost nothing more.
 # Set from every page of benchmarks/uji-clean (none of which may cross
 # them) and the neat penmanship pages of #276; `benchmark.py fragments`
 # prints each page's numbers against them.
@@ -69,6 +72,11 @@ FRAGMENT_COVER = 0.6
 FRAGMENT_PIECES = 3
 FRAGMENT_SHORT = 0.5
 FRAGMENT_SHORT_SHARE = 0.5
+# Ink joins a row read in pieces when its middle is within this many line
+# heights of the row's middle (reader_rows): a word's loops reach about
+# half a line either side, and the next row is a line or more away.
+ROW_REACH = 0.6
+_NO_ROWS = {"rows": 0, "pieces": 0, "cover": 0.0, "per_row": 0, "short": 0.0}
 
 
 def _ink(gray, line_h):
@@ -130,12 +138,7 @@ def find_rows(arr):
     line_h, labels, stats = page["line_h"], page["labels"], page["stats"]
     page_w = labels.shape[1]
     n = len(stats)
-    blobs = [
-        i
-        for i in range(1, n)
-        if stats[i, cv2.CC_STAT_HEIGHT] < 2.5 * line_h
-        and stats[i, cv2.CC_STAT_WIDTH] < 0.5 * page_w
-    ]
+    blobs = _blobs(page)
     if not blobs:
         return []
     # Row middles from the letter-sized blobs only: a consonant written
@@ -160,18 +163,13 @@ def find_rows(arr):
         ids = groups[peak]
         if not ids:
             continue
-        mask = np.isin(labels, ids)
-        ys, xs = np.nonzero(mask)
-        x0, x1 = int(xs.min()), int(xs.max()) + 1
-        y0, y1 = int(ys.min()), int(ys.max()) + 1
-        if x1 - x0 < ROW_MIN_WIDTH * page_w:
+        shape = _outline(labels, ids)
+        if shape["box"][2] < ROW_MIN_WIDTH * page_w:
             continue
-        pts = np.stack([xs, ys], axis=1)[:: max(1, len(xs) // 4000)]
         out.append(
             {
                 "text": "",
-                "box": [float(x0), float(y0), float(x1 - x0), float(y1 - y0)],
-                "poly": detector.outline(pts),
+                **shape,
                 "score": 0.0,
                 "lang": "",
                 "printed_hint": False,
@@ -181,6 +179,33 @@ def find_rows(arr):
             }
         )
     return out
+
+
+def _blobs(page):
+    """The page's ink blobs no taller than 2.5 lines and narrower than
+    half the page: letters, words and marks, not rules or borders."""
+    line_h, labels, stats = page["line_h"], page["labels"], page["stats"]
+    page_w = labels.shape[1]
+    return [
+        i
+        for i in range(1, len(stats))
+        if stats[i, cv2.CC_STAT_HEIGHT] < 2.5 * line_h
+        and stats[i, cv2.CC_STAT_WIDTH] < 0.5 * page_w
+    ]
+
+
+def _outline(labels, ids):
+    """{"box", "poly"} of the ink of blobs ids: its bounding box and the
+    smallest rotated rectangle around it."""
+    mask = np.isin(labels, ids)
+    ys, xs = np.nonzero(mask)
+    x0, x1 = int(xs.min()), int(xs.max()) + 1
+    y0, y1 = int(ys.min()), int(ys.max()) + 1
+    pts = np.stack([xs, ys], axis=1)[:: max(1, len(xs) // 4000)]
+    return {
+        "box": [float(x0), float(y0), float(x1 - x0), float(y1 - y0)],
+        "poly": detector.outline(pts),
+    }
 
 
 def _peaks(profile, spacing):
@@ -405,51 +430,128 @@ def page_features(arr, rows):
     }
 
 
-def reader_cover(rows, lines):
-    """How the reader's lines sit on the page's ink rows (find_rows), as
-    {"rows", "pieces", "cover", "per_row", "short"}. Each reader box with
-    a size goes to the row whose middle is nearest its own, among the
-    rows its middle lies inside; a box outside every row is left out.
 
-    cover: the share of the rows' ink width the reader's boxes span.
-    per_row: the median number of boxes on a row (a row nothing was read
-    on counts 0). short: the share of the boxes under FRAGMENT_SHORT of
-    their row's ink width; a short last line is its row's whole ink, so
-    it is not short."""
-    spans = [[] for _ in rows]
-    middles = [r["box"][1] + r["box"][3] / 2.0 for r in rows]
-    for line in lines:
-        x, y, w, h = [float(v) for v in (line.get("box") or [0, 0, 0, 0])]
-        if w <= 0 or h <= 0:
-            continue
-        cy = y + h / 2.0
-        inside = [
-            i
-            for i, r in enumerate(rows)
-            if r["box"][1] <= cy <= r["box"][1] + r["box"][3]
-        ]
-        if not inside:
-            continue
-        i = min(inside, key=lambda j, cy=cy: (abs(middles[j] - cy), j))
-        x0, rw = rows[i]["box"][0], rows[i]["box"][2]
-        a, b = max(x, x0), min(x + w, x0 + rw)
-        if b > a:
-            spans[i].append((a, b))
-    total = covered = 0.0
-    short = 0
-    for row, row_spans in zip(rows, spans):
-        rw = float(row["box"][2])
-        total += rw
-        covered += _union(row_spans)
-        short += sum(1 for a, b in row_spans if b - a < FRAGMENT_SHORT * rw)
-    pieces = sum(len(s) for s in spans)
-    return {
+def _centre(line):
+    return line["box"][1] + line["box"][3] / 2.0
+
+
+def reader_rows(arr, lines):
+    """The reader's lines as whole rows, widened to the ink on each row,
+    and how much of each row the reader read: (rows, cover).
+
+    Lines whose middles lie within half a line of each other are one row
+    (a line height is the lines' median height). Each ink blob (_blobs)
+    joins the row whose middle is nearest its own, when it lies within
+    ROW_REACH lines of it; ink far from every line (a row nothing was
+    read on) is left out. A row is shaped like a reader line: the box
+    and outline of its ink and its lines, its lines' text left to right
+    and their mean confidence, so it is measured as any read line is.
+
+    cover: {"rows", "pieces", "cover", "per_row", "short"}. cover is the
+    share of the rows' ink width the reader's boxes span; per_row the
+    median number of boxes on a row; short the share of the boxes under
+    FRAGMENT_SHORT of their row's ink width (a short last line is its
+    row's whole ink, so it is not short)."""
+    read = [l for l in lines if _has_size(l)]
+    page = _page_ink(arr) if read else None
+    if page is None:
+        return [], dict(_NO_ROWS)
+    groups, line_h = _reader_groups(read)
+    # A row read as specks ("." and ",") still has a line's height.
+    line_h = max(page["line_h"], line_h)
+    middles = [float(np.median([_centre(l) for l in g])) for g in groups]
+    stats = page["stats"]
+    ink = [[] for _ in groups]
+    for i in _blobs(page):
+        cy = stats[i, cv2.CC_STAT_TOP] + stats[i, cv2.CC_STAT_HEIGHT] / 2.0
+        k = int(np.argmin([abs(m - cy) for m in middles]))
+        if abs(middles[k] - cy) <= ROW_REACH * line_h:
+            ink[k].append(i)
+    rows, total, covered, short = [], 0.0, 0.0, 0
+    for ids, group in zip(ink, (sorted(g, key=_left) for g in groups)):
+        spans = [(l["box"][0], l["box"][0] + l["box"][2]) for l in group]
+        x0 = min([a for a, _b in spans] + [stats[i, 0] for i in ids])
+        x1 = max(
+            [b for _a, b in spans] + [stats[i, 0] + stats[i, 2] for i in ids]
+        )
+        width = float(x1 - x0)
+        total += width
+        covered += _union(spans)
+        short += sum(1 for a, b in spans if b - a < FRAGMENT_SHORT * width)
+        shape = _row_shape(page, group, ids)
+        scores = [float(l.get("score", 0.0) or 0.0) for l in group]
+        rows.append(
+            {
+                "text": " ".join(str(l.get("text") or "") for l in group),
+                **shape,
+                "score": float(np.mean(scores)),
+                "lang": group[0].get("lang", ""),
+                "printed_hint": False,
+                "rows_from_ink": True,
+            }
+        )
+    pieces = len(read)
+    return rows, {
         "rows": len(rows),
         "pieces": pieces,
         "cover": covered / total if total > 0 else 0.0,
-        "per_row": float(np.median([len(s) for s in spans])) if rows else 0,
-        "short": short / pieces if pieces else 0.0,
+        "per_row": float(np.median([len(g) for g in groups])),
+        "short": short / pieces,
     }
+
+
+def _reader_groups(read):
+    """(rows, line height): the reader's lines whose middles lie within
+    half a line of each other are one row, top to bottom; a line height
+    is the lines' median height."""
+    line_h = float(np.median([l["box"][3] for l in read]))
+    groups = []
+    for line in sorted(read, key=_centre):
+        if groups and _centre(line) - _centre(groups[-1][0]) <= line_h / 2.0:
+            groups[-1].append(line)
+        else:
+            groups.append([line])
+    return groups, line_h
+
+
+def _plainly_whole(groups):
+    """Whether the page was read whole without looking at its ink: under
+    FRAGMENT_PIECES lines on the median row, and no line under
+    FRAGMENT_SHORT of the widest. Such a page cannot have short pieces,
+    so most pages cost no more than this."""
+    widths = [l["box"][2] for g in groups for l in g]
+    per_row = float(np.median([len(g) for g in groups]))
+    return (
+        per_row < FRAGMENT_PIECES
+        and min(widths) >= FRAGMENT_SHORT * max(widths)
+    )
+
+
+def _left(line):
+    return line["box"][0]
+
+
+def _has_size(line):
+    box = line.get("box") or [0, 0, 0, 0]
+    return box[2] > 0 and box[3] > 0
+
+
+def _row_shape(page, group, ids):
+    """{"box", "poly"} of a row: the box around its ink (_outline) and
+    its lines' boxes together, so a line the ink missed stays inside; the
+    outline of its ink, which follows the row's slope (its lines' boxes
+    when it has no ink)."""
+    shape = _outline(page["labels"], ids) if ids else None
+    boxes = [l["box"] for l in group] + ([shape["box"]] if shape else [])
+    x0 = float(min(b[0] for b in boxes))
+    y0 = float(min(b[1] for b in boxes))
+    x1 = float(max(b[0] + b[2] for b in boxes))
+    y1 = float(max(b[1] + b[3] for b in boxes))
+    if shape is None:
+        poly = [[x0, y0], [x1, y0], [x1, y1], [x0, y1]]
+    else:
+        poly = shape["poly"]
+    return {"box": [x0, y0, x1 - x0, y1 - y0], "poly": poly}
 
 
 def _union(spans):
@@ -466,7 +568,7 @@ def _union(spans):
 
 
 def read_in_fragments(cover):
-    """Whether reader_cover's numbers say the page was read in pieces
+    """Whether reader_rows's numbers say the page was read in pieces
     (the FRAGMENT_* constants)."""
     if cover["rows"] < FRAGMENT_MIN_ROWS:
         return False
@@ -478,12 +580,18 @@ def read_in_fragments(cover):
 
 
 def fragment_rows(arr, lines):
-    """(rows, cover): the page's ink rows when the reader read it in
-    pieces, else an empty list; cover is reader_cover's numbers with
-    "fragments" set. lines: every line the reader kept, printed ones
-    too, so a printed title's row counts as read. The rows are
-    find_rows's, not yet put through the printed check."""
-    rows = find_rows(arr)
-    cover = reader_cover(rows, lines)
+    """(rows, cover): reader_rows's rows when the reader read the page in
+    pieces, else an empty list. cover is reader_rows's numbers with
+    "fragments" set, and "looked": False when the page was plainly read
+    whole (_plainly_whole) and its ink was not looked at. lines: the
+    reader's handwriting lines, after the pieces of each line are joined
+    (recognizer.extract_hand_lines)."""
+    read = [l for l in lines if _has_size(l)]
+    groups = _reader_groups(read)[0] if read else []
+    if len(groups) < FRAGMENT_MIN_ROWS or _plainly_whole(groups):
+        cover = {**_NO_ROWS, "rows": len(groups), "pieces": len(read)}
+        return [], {**cover, "fragments": False, "looked": False}
+    rows, cover = reader_rows(arr, lines)
     cover["fragments"] = read_in_fragments(cover)
+    cover["looked"] = True
     return (rows if cover["fragments"] else []), cover

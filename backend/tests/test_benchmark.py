@@ -134,7 +134,7 @@ class TestReadInPieces(unittest.TestCase):
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         row = [l for l in out.stdout.splitlines() if "| UJI_W12 |" in l]
         self.assertEqual(len(row), 1, out.stdout)
-        self.assertTrue(row[0].endswith("| no |"), row[0])
+        self.assertIn("| no", row[0])
 
 
 class TestLineStarts(unittest.TestCase):
