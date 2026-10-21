@@ -6,14 +6,13 @@
 
 from scoring_parts.stats import _clamp10
 
-# Word Spacing: the word gaps' mean distance from their median, as a
-# share of it, that loses all marks; Letter Spacing: the letter gaps'
-# median distance from their own word's median gap, the same way
-# (features._word_spacing, _letter_spacing, #197). Set so the 20 UJI
-# benchmark pages keep about the median they had; how high neat writing
-# scores is set later from neat pages (scripts/calibrate.py).
-WORD_GAP_SCALE = 1.05
-LETTER_GAP_SCALE = 0.37
+# Word Spacing loses all marks when the word gaps stray from their
+# median, on average, by as much as the median; Letter Spacing when a
+# typical letter gap sits half its word's median gap away
+# (features._word_spacing, _letter_spacing, #197). How high neat
+# writing scores is set later from neat pages (scripts/calibrate.py).
+WORD_GAP_SCALE = 1.0
+LETTER_GAP_SCALE = 0.5
 # Line Straightness: the wander off the baseline, in small letters,
 # that loses its 5 points.
 WAVE_SCALE = 0.25
