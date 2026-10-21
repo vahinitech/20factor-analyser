@@ -280,7 +280,6 @@ def ruled_zone_bands(gray, box, rules, rule_mask):
     }
 
 
-
 def _ruled_band(profile, rules, inside):
     """The line's small-letter band on the ruling: of the gaps between
     two neighbouring rules (at least MIN_XHEIGHT_PX apart) whose middle
