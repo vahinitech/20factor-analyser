@@ -41,9 +41,9 @@ def add_scores(fx, s):
         # Less up to 1 point as the share of letter gaps over twice their
         # word's reaches 20%, and up to 3 as the share of words written
         # with their letters apart reaches 10%.
+        spread = fx["letter_gap_spread"] / LETTER_GAP_SCALE
         s[9] = _clamp10(
-            (1.0 - min(1.0, fx["letter_gap_spread"] / LETTER_GAP_SCALE))
-            * 10.0
+            (1.0 - min(1.0, spread)) * 10.0
             - 1.0 * min(1.0, (fx.get("letter_gaps_odd") or 0.0) / 0.20)
             - 3.0 * min(1.0, (fx.get("words_spaced_off") or 0.0) / 0.10)
         )
