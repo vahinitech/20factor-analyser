@@ -305,7 +305,7 @@ try {
       saved: VahiniProgress.last('Asha'),
     };
   });
-  add(/saved on this device/.test(panel.intro) && /Nothing is sent to Vahini/.test(panel.intro) && panel.list.length === 3 && /this check/.test(panel.list[0]),
+  add(/saved on this device/.test(panel.intro) && /The name stays here\. Vahini keeps only the scores/.test(panel.intro) && panel.list.length === 3 && /this check/.test(panel.list[0]),
     'The panel lists this writer\'s saved checks, newest first', panel.list);
   add(panel.options.length === 2 && /1 October/.test(panel.options[0]), 'Compare defaults to the previous check', panel.options);
   const kinds = Object.fromEntries(panel.rows.map(r => [r[0], r[1]]));
@@ -350,6 +350,39 @@ try {
     return VahiniProgress.load().length;
   });
   add(capped === 60, 'Saved checks are capped at 60', capped);
+
+  // ---- Receipts for stored reports (backend/report_store.py, 2026-10-16)
+  const calls = [];
+  await page.route('**/api/v2/reports/**', (route) => {
+    const req = route.request();
+    calls.push({ method: req.method(), path: new URL(req.url()).pathname, token: req.headers()['x-report-token'] || null, body: req.postData() || '' });
+    route.fulfill({ status: req.method() === 'DELETE' ? 204 : 200, contentType: 'application/json', body: '{"renewed":1}' });
+  });
+  const receiptId = 'a'.repeat(32);
+  const receiptToken = 'B'.repeat(43);
+  const kept = await page.evaluate(([id, token]) => {
+    localStorage.clear();
+    VahiniProgress.receiptFor({ id, token, expires: '2027-10-03', note: 'Bheema' });
+    const first = VahiniProgress.save(VahiniProgress.entryFrom('Tara', 70, [], [{ n: 1, score: 7 }], null));
+    const second = VahiniProgress.save(VahiniProgress.entryFrom('Tara', 72, [], [{ n: 1, score: 7.2 }], null));
+    VahiniProgress.renew(location.href);
+    return {
+      first, second,
+      bad: VahiniProgress.clean({ ...first, receipt: { id: '../x', token } }),
+    };
+  }, [receiptId, receiptToken]);
+  add(kept.first.receipt && kept.first.receipt.id === receiptId && kept.first.receipt.token === receiptToken
+    && !('note' in kept.first.receipt) && !('receipt' in kept.second) && kept.bad === null,
+    'A check keeps only its own receipt, rebuilt from known fields', kept);
+  await page.evaluate(() => VahiniProgress.forget('Tara'));
+  await delay(300);
+  const renewCall = calls.find((c) => c.method === 'POST' && c.path === '/api/v2/reports/renew');
+  const deleteCall = calls.find((c) => c.method === 'DELETE');
+  add(renewCall && JSON.stringify(JSON.parse(renewCall.body)) === JSON.stringify({ receipts: [{ id: receiptId, token: receiptToken }] }),
+    'A new check renews the earlier receipts and sends nothing else', calls);
+  add(deleteCall && deleteCall.path === '/api/v2/reports/' + receiptId && deleteCall.token === receiptToken,
+    'Forget deletes the stored reports with their receipts', calls);
+  add(!calls.some((c) => /Tara|Asha|Bheema/.test(c.body + c.path)), 'No name ever goes with a receipt', calls);
   await browser.close();
 } catch (error) {
   add(false, 'Practice report checks ran', String(error && error.stack || error));

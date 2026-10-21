@@ -227,6 +227,39 @@ def common():
                 description="Original score. null means no score, never 0.",
             ),
             "scoreOutOfHundred": nullable("number", minimum=0, maximum=100),
+            "receipt": closed(
+                {
+                    "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+                    "token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$",
+                        "description": (
+                            "Reads, renews and deletes. Stays in the "
+                            "family's browser."
+                        ),
+                    },
+                    "read_token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$",
+                        "description": (
+                            "Goes into the shared PDF. Opens the record "
+                            "only through POST /api/v2/compare with a Pro "
+                            "key; never reads alone, renews or deletes."
+                        ),
+                    },
+                    "expires": {
+                        "type": "string",
+                        "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                    },
+                },
+                description=(
+                    "How the family reads this report back later "
+                    "(GET /api/v2/reports/{id} with header X-Report-Token). "
+                    "Random; only the token's SHA-256 is kept, and nothing "
+                    "links it to a person. Kept until expires, renewed by "
+                    "a later check (backend/report_store.py)."
+                ),
+            ),
             "catalogVersion": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{20}$",
@@ -1163,6 +1196,7 @@ def compact():
                 ),
             },
             "coaching": {"type": "array", "items": ref("coachingCard")},
+            "receipt": ref("receipt"),
             "comparability": ref("comparability"),
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
@@ -1474,6 +1508,21 @@ def error():
                         },
                     },
                     {
+                        "type": "object",
+                        "description": (
+                            "404 from POST /api/v2/compare: the receipt "
+                            "for this side opens no record (unknown, "
+                            "expired, deleted or a wrong token)."
+                        ),
+                        "required": ["error_code", "error", "side"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"const": "no_such_report"},
+                            "error": {"type": "string", "minLength": 1},
+                            "side": {"enum": ["before", "after"]},
+                        },
+                    },
+                    {
                         "type": "array",
                         "minItems": 1,
                         "description": "FastAPI request validation errors.",
@@ -1496,15 +1545,17 @@ def error():
             }
         },
         title=(
-            "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, "
-            "503) and /internal/access/v1/* (401, 404, 422, 503)"
+            "HTTP error body for /api/v2/* (400, 401, 403, 404, 413, 422, "
+            "429, 503) and /internal/access/v1/* (401, 404, 422, 503)"
         ),
         description=(
             "FastAPI's HTTPException shape. 401 invalid or revoked "
-            "credential, 403 paid include= fields requested by Free, 404 "
-            "unknown catalogue version, 413 upload or profile too large, "
-            "422 unsupported include field, invalid form/query, a "
-            "refused profile or age_band (detail.error_code says which), "
+            "credential, 403 paid include= fields requested by Free or a "
+            "comparison asked without Pro, 400 a comparison without exactly "
+            "two different receipts, 404 unknown catalogue version or "
+            "stored report, 413 upload or profile too large, 422 "
+            "unsupported include field, invalid form/query, a refused "
+            "profile or age_band (detail.error_code says which), "
             "429 the free "
             "tier's daily checks for this connection are used (a Pro key "
             "is never limited; Retry-After gives the seconds to midnight, "
@@ -1745,6 +1796,14 @@ def health():
                 "description": (
                     "true only on stage with debug storage provisioned: "
                     "photos and answers are being kept (SECURITY.md)."
+                ),
+            },
+            "report_store": {
+                "type": "boolean",
+                "description": (
+                    "true when report records are kept for later "
+                    "comparison: scores and counts, never a photo or the "
+                    "words read (backend/report_store.py)."
                 ),
             },
             "layout_filter": closed(
@@ -1988,12 +2047,172 @@ def access_key_lookup():
     )
 
 
+def stored():
+    """GET /api/v2/reports/{id}: the record report_store.py keeps."""
+    section = closed(
+        {
+            "id": ref("sectionId"),
+            "s": ref("scoreOutOfTen"),
+            "w": {"type": "number", "minimum": 0, "maximum": 1},
+        }
+    )
+    mark = {
+        "$ref": COMMON
+        + "factorRegions/additionalProperties/properties/marks/items"
+    }
+    return closed(
+        {
+            "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "expires": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+            },
+            "record_version": {"const": 1},
+            "day": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                "description": "The day of the check, UTC. No time.",
+            },
+            "catalog_version": {
+                "anyOf": [ref("catalogVersion"), {"type": "null"}]
+            },
+            "tier": {"type": "string", "enum": ["free", "pro"]},
+            "score": ref("scoreOutOfHundred"),
+            "factors": {
+                "type": "array",
+                "maxItems": 20,
+                "items": closed(
+                    {
+                        "n": ref("factorNumber"),
+                        "s": ref("scoreOutOfTen"),
+                        "st": ref("statusCode"),
+                    }
+                ),
+            },
+            "locked": {
+                "type": "array",
+                "items": ref("factorNumber"),
+                "uniqueItems": True,
+            },
+            "comparability": ref("comparability"),
+            "sections": {"type": "array", "maxItems": 4, "items": section},
+            "marks": closed(
+                {
+                    "photo_width": nullable("integer", minimum=1),
+                    "photo_height": nullable("integer", minimum=1),
+                    "factors": {
+                        "type": "object",
+                        "propertyNames": {"pattern": NUMBER_KEY},
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": mark,
+                        },
+                    },
+                }
+            ),
+        },
+        required=[
+            "id",
+            "expires",
+            "record_version",
+            "day",
+            "catalog_version",
+            "tier",
+            "score",
+            "factors",
+            "locked",
+            "comparability",
+        ],
+        title="GET /api/v2/reports/{id} response: a stored report",
+        description=(
+            "What is kept of a compact report so a later check can be "
+            "compared with it: scores, comparability counts and where each "
+            "factor was measured. Never the photo, a cut-out, the words "
+            "read, a caption, a file name, an access key, an address or "
+            "a time of day (backend/report_store.py)."
+        ),
+    )
+
+
+def compare_request():
+    """POST /api/v2/compare body."""
+    receipt = closed(
+        {
+            "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
+        }
+    )
+    return closed(
+        {
+            "receipts": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": receipt,
+                "description": (
+                    "The earlier check first. Either token of a receipt "
+                    "works: the full one from the browser, or the "
+                    "read-only one from a shared PDF."
+                ),
+            }
+        },
+        title="POST /api/v2/compare request body",
+        description=(
+            "Send with Authorization: Bearer <Pro key>. Anything but Pro "
+            "is refused with 403 before a record is opened."
+        ),
+    )
+
+
+def compare():
+    """POST /api/v2/compare response."""
+    stored_ref = {"$ref": "stored-report.schema.json"}
+    value = {"type": ["string", "integer", "null"]}
+    note = closed(
+        {
+            "code": {
+                "enum": [
+                    "dates_reversed",
+                    "same_day",
+                    "different_script",
+                    "different_length",
+                    "print_on_one_page",
+                ]
+            },
+            "before": value,
+            "after": value,
+        },
+        description=(
+            "dates_reversed and same_day carry the two days, "
+            "different_script the two scripts, different_length the two "
+            "word counts (more than 25% apart), print_on_one_page the two "
+            "page kinds."
+        ),
+    )
+    return closed(
+        {
+            "before": stored_ref,
+            "after": stored_ref,
+            "notes": {"type": "array", "maxItems": 5, "items": note},
+        },
+        title="POST /api/v2/compare response: two stored reports",
+        description=(
+            "The two stored records, in the order sent, and what makes "
+            "them hard to compare. Pro only; nothing new is stored "
+            "(backend/report_store.py comparison_notes)."
+        ),
+    )
+
+
 BUILDERS = {
     "common": common,
     "me": me,
     "report-request": request,
     "report-expanded": expanded,
     "report-compact": compact,
+    "stored-report": stored,
+    "compare-request": compare_request,
+    "compare": compare,
     "catalog": catalog,
     "error": error,
     "health": health,

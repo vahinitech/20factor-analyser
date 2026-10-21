@@ -64,7 +64,8 @@ import practice_catalog
 import scan_slots  # caps simultaneous scans so memory cannot run out
 import perf  # stage timings and call budgets, numbers only (#229)
 import debug_store  # stage-only photo keeping, off unless provisioned
-from typing import Literal
+import report_store  # report records for later comparison, no photos
+from typing import List, Literal
 from gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 import escalation  # each line up its ladder (#219)
 from languages import stages  # which engine reads each script (#208)
@@ -89,6 +90,7 @@ from fastapi import (
     Query,
 )
 from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
@@ -179,7 +181,7 @@ ALLOWED_ORIGINS = SETTINGS.allowed_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_methods=["POST", "GET", "OPTIONS"],
+    allow_methods=["POST", "GET", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -343,6 +345,8 @@ def health():
         "stage_timings": perf.ROLLING.snapshot(),
         # True only on stage with debug storage provisioned (debug_store.py).
         "debug_store": debug_store.STORE.enabled,
+        # Report records for later comparison (report_store.py).
+        "report_store": report_store.STORE.enabled,
         "gpu_note": None if gpu_present else gpu_zero_caveat(),
         "langs": OCR_LANGS,
         "variants": MAX_VARIANTS,
@@ -1342,13 +1346,113 @@ async def api_report(
             entitlements.access_for, authorization
         )
         with perf.stage("practice"):
-            return compact_reports.build_compact(payload, access, fields)
+            report = compact_reports.build_compact(payload, access, fields)
+        receipt = await run_in_threadpool(_keep_report, payload, access)
+        if receipt:
+            report["receipt"] = receipt
+        return report
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     payload = _with_age_band(payload, band)
     access = await run_in_threadpool(entitlements.access_for, authorization)
     with perf.stage("practice"):
         return report_contract.public_report(payload, access)
+
+
+_store_log = logging.getLogger("vahini.report_store")
+
+
+def _keep_report(payload, access):
+    """Keep this report's record (report_store.py) and return its
+    receipt, or None. Built from a compact projection without the text;
+    the evidence block is read for its marks only."""
+    store = report_store.STORE
+    if not store.enabled or payload.get("ok") is not True:
+        return None
+    try:
+        source = compact_reports.build_compact(payload, access, {"evidence"})
+        return store.save(source)
+    except Exception as exc:  # pylint: disable=broad-except
+        # Keeping a record must never cost a family their report.
+        _store_log.warning("report store: %s", exc)
+        return None
+
+
+class _Receipts(BaseModel):
+    receipts: List[dict] = []
+
+
+def _stored(report_id, token):
+    record = report_store.STORE.read(report_id, token or "")
+    if record is None:
+        # Unknown, expired, deleted or a wrong token: all the same. The
+        # read-only token from a shared PDF counts as wrong here; it
+        # opens a record only through the Pro comparison below.
+        raise HTTPException(404, "No such report")
+    return record
+
+
+@app.get("/api/v2/reports/{report_id}")
+def api_stored_report(
+    report_id: str, x_report_token: str = Header(default=None)
+):
+    return _stored(report_id, x_report_token)
+
+
+@app.delete("/api/v2/reports/{report_id}", status_code=204)
+def api_delete_report(
+    report_id: str, x_report_token: str = Header(default=None)
+):
+    if not report_store.STORE.delete(report_id, x_report_token or ""):
+        raise HTTPException(404, "No such report")
+    return Response(status_code=204)
+
+
+@app.post("/api/v2/reports/renew")
+def api_renew_reports(body: _Receipts):
+    """The family checked again: keep their earlier reports another
+    12 months. Unknown receipts are skipped silently."""
+    return {"renewed": report_store.STORE.renew(body.receipts)}
+
+
+@app.post("/api/v2/compare")
+async def api_compare(
+    body: _Receipts, authorization: str = Header(default=None)
+):
+    """Two stored reports side by side, for Pro only (owner decision,
+    2026-10-16). The key is checked before any record is opened, so a
+    free caller learns nothing about a receipt. Receipts are the
+    earlier check first; either token reads, the read-only one from a
+    shared PDF included. Nothing is stored."""
+    access = await run_in_threadpool(entitlements.access_for, authorization)
+    if access["tier"] != "pro":
+        raise HTTPException(403, "Comparing two checks requires Pro")
+    receipts = body.receipts
+    if len(receipts) != 2 or not all(isinstance(r, dict) for r in receipts):
+        raise HTTPException(400, "Send exactly two receipts")
+    if receipts[0].get("id") == receipts[1].get("id"):
+        raise HTTPException(400, "Send two different reports")
+    records = []
+    for side, receipt in zip(("before", "after"), receipts):
+        record = report_store.STORE.read(
+            receipt.get("id"), receipt.get("token"), read_only=True
+        )
+        if record is None:
+            raise HTTPException(
+                404,
+                {
+                    "error_code": "no_such_report",
+                    "error": "No such report",
+                    "side": side,
+                },
+            )
+        records.append(record)
+    before, after = records
+    return {
+        "before": before,
+        "after": after,
+        "notes": report_store.comparison_notes(before, after),
+    }
 
 
 @app.get("/api/v2/catalog/{version}")

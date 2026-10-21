@@ -1,0 +1,155 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/stored-report.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "expires",
+    "record_version",
+    "day",
+    "catalog_version",
+    "tier",
+    "score",
+    "factors",
+    "locked",
+    "comparability"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{32}$"
+    },
+    "expires": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "record_version": {
+      "const": 1
+    },
+    "day": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "The day of the check, UTC. No time."
+    },
+    "catalog_version": {
+      "anyOf": [
+        {
+          "$ref": "common.schema.json#/definitions/catalogVersion"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "tier": {
+      "type": "string",
+      "enum": [
+        "free",
+        "pro"
+      ]
+    },
+    "score": {
+      "$ref": "common.schema.json#/definitions/scoreOutOfHundred"
+    },
+    "factors": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "n",
+          "s",
+          "st"
+        ],
+        "properties": {
+          "n": {
+            "$ref": "common.schema.json#/definitions/factorNumber"
+          },
+          "s": {
+            "$ref": "common.schema.json#/definitions/scoreOutOfTen"
+          },
+          "st": {
+            "$ref": "common.schema.json#/definitions/statusCode"
+          }
+        }
+      }
+    },
+    "locked": {
+      "type": "array",
+      "items": {
+        "$ref": "common.schema.json#/definitions/factorNumber"
+      },
+      "uniqueItems": true
+    },
+    "comparability": {
+      "$ref": "common.schema.json#/definitions/comparability"
+    },
+    "sections": {
+      "type": "array",
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "s",
+          "w"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "common.schema.json#/definitions/sectionId"
+          },
+          "s": {
+            "$ref": "common.schema.json#/definitions/scoreOutOfTen"
+          },
+          "w": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    },
+    "marks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "photo_width",
+        "photo_height",
+        "factors"
+      ],
+      "properties": {
+        "photo_width": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "photo_height": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "factors": {
+          "type": "object",
+          "propertyNames": {
+            "pattern": "^([1-9]|1[0-9]|20)$"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "$ref": "common.schema.json#/definitions/factorRegions/additionalProperties/properties/marks/items"
+            }
+          }
+        }
+      }
+    }
+  },
+  "title": "GET /api/v2/reports/{id} response: a stored report",
+  "description": "What is kept of a compact report so a later check can be compared with it: scores, comparability counts and where each factor was measured. Never the photo, a cut-out, the words read, a caption, a file name, an access key, an address or a time of day (backend/report_store.py)."
+}

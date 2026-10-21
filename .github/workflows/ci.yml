@@ -122,7 +122,8 @@ jobs:
             backend/perf.py backend/tests/test_perf.py \
             scripts/perf_budgets.py backend/tests/test_work_counts.py \
             scripts/paired_timing.py backend/tests/test_paired_timing.py \
-            scripts/bench_history.py backend/tests/test_bench_history.py
+            scripts/bench_history.py backend/tests/test_bench_history.py \
+            backend/report_store.py backend/tests/test_report_store.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -442,6 +443,8 @@ jobs:
         run: npm run test:language
       - name: The print popup's optional price question and the Request Pro card
         run: npm run test:print-popup
+      - name: The shared PDF carries the receipt and the page photo, still two pages
+        run: npm run test:share-embed
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

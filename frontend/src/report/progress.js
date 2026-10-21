@@ -5,10 +5,13 @@
    Saved checks and "Your progress" (owner request with the practice report,
    2026-10-11, #122). Every check is kept in this browser's localStorage
    ("vahini_history", the last 60, by writer name); sample runs are never
-   saved. Nothing here makes a network call: the panel, the progress file
-   and "forget" all work on this device only. The panel is screen-only and
-   never printed; the printed report keeps comparing with the previous
-   check.
+   saved. The panel is screen-only and never printed; the printed report
+   keeps comparing with the previous check.
+   Each check also keeps its receipt for the server's stored report
+   (backend/report_store.py, owner decision 2026-10-16): a random id and
+   token, nothing else. The only network calls here use receipts: a new
+   check renews the earlier ones for another 12 months, and "forget"
+   deletes their stored reports. The name stays on this device.
    ========================================================================= */
 (function (global) {
 'use strict';
@@ -43,8 +46,13 @@ function last(name){ const mine = forName(name); return mine.length ? mine[mine.
 
 /* One saved check, from the report: scores, and the exercise and tip ids
    the report printed so the next one moves on. No text, no photo. */
+let pending = null;
+/* The receipt of the check just made (engine/ocr.js), for entryFrom. */
+function receiptFor(receipt){ pending = cleanReceipt(receipt); }
 function entryFrom(name, overall, sections, results, practice){
+  const receipt = pending; pending = null;
   return clean({
+    receipt: receipt || undefined,
     name: String(name || '').slice(0, 80), date: new Date().toISOString().slice(0,10),
     overall: Number.isFinite(overall) ? overall : null,
     sections: (sections||[]).filter(s=>s && SECTION_IDS.includes(s.id))
@@ -71,6 +79,14 @@ function cleanIds(map){
   }
   return out;
 }
+const RECEIPT_ID = /^[0-9a-f]{32}$/;
+const RECEIPT_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+function cleanReceipt(r){
+  if (!r || typeof r !== 'object' || !RECEIPT_ID.test(r.id) || !RECEIPT_TOKEN.test(r.token)) return null;
+  const out = { id:r.id, token:r.token };
+  if (typeof r.expires === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.expires)) out.expires = r.expires;
+  return out;
+}
 /* A valid entry rebuilt from known fields only, or null. */
 function clean(e){
   if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
@@ -86,6 +102,11 @@ function clean(e){
     seen.add(f.n); factors.push({n:f.n, score:f.score});
   }
   const out = { name:e.name, date:e.date, overall:e.overall, factors };
+  if (e.receipt !== undefined){
+    const receipt = cleanReceipt(e.receipt);
+    if (!receipt) return null;
+    out.receipt = receipt;
+  }
   if (e.sections !== undefined){
     if (!Array.isArray(e.sections) || e.sections.length > 4) return null;
     for (const s of e.sections){
@@ -131,7 +152,33 @@ function merge(checks){
 }
 function forget(name){
   const k = keyOf(name);
-  return store(load().filter(e=>keyOf(e && e.name)!==k));
+  const all = load();
+  const gone = all.filter(e=>keyOf(e && e.name)===k);
+  const ok = store(all.filter(e=>keyOf(e && e.name)!==k));
+  if (ok) gone.forEach(e=>{ const r = cleanReceipt(e && e.receipt); if (r) send('DELETE', r.id, r); });
+  return ok;
+}
+
+/* ---- stored reports on the server (receipts only) ---------------------- */
+let base = null;
+function send(method, id, receipt){
+  if (typeof global.fetch !== 'function') return;
+  /* The analyser's API is on this page's own host unless a check this
+     visit used another one. */
+  const url = new URL('/api/v2/reports/' + id, base || global.location.href);
+  global.fetch(url, { method, headers:{ 'X-Report-Token': receipt.token }, keepalive:true }).catch(()=>{});
+}
+/* The family checked again: keep every earlier stored report another 12
+   months (newest 50). Fire and forget; a failure only means they expire. */
+function renew(endpoint){
+  try{ base = new URL(endpoint, global.location.href); }catch(_e){ return; }
+  const receipts = load().map(e=>cleanReceipt(e && e.receipt)).filter(Boolean).slice(-50)
+    .map(r=>({ id:r.id, token:r.token }));
+  if (!receipts.length || typeof global.fetch !== 'function') return;
+  global.fetch(new URL('/api/v2/reports/renew', base), {
+    method:'POST', headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ receipts }), keepalive:true,
+  }).catch(()=>{});
 }
 
 /* ---- comparison ----------------------------------------------------------
@@ -228,5 +275,5 @@ function remount(){
   return mount(lastMount.after, lastMount.opts);
 }
 
-global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, remount, MAX_ENTRIES };
+global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, remount, receiptFor, renew, MAX_ENTRIES };
 })(window);
