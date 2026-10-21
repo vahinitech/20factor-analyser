@@ -75,7 +75,11 @@ a table of every number that moved:
 ```
 
 - **The move was meant.** Run `python scripts/benchmark.py update` and
-  commit `expected.json` with the change. The diff of `expected.json` is
+  commit `expected.json` with the change. Where the replay cannot run
+  (the shared production host), take the file from CI instead: the
+  `benchmark` job keeps what `update` would write as the
+  `benchmark-results` artifact (`check --results <dir>`); copy its
+  `<set>/expected.json` over the committed one. The diff of `expected.json` is
   the record: every score that moved is in the pull request, for the
   reviewer to see, and `git log -p benchmarks/uji-clean/expected.json` is
   the history of every page.

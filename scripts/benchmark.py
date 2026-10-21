@@ -585,9 +585,38 @@ def _report(text):
             f.write(text + "\n")
 
 
+def _results(name, meta, results):
+    """What update writes to expected.json."""
+    return {
+        "set": name,
+        "eye_agreement": eye_agreement(meta, results),
+        "pages": results,
+    }
+
+
+def _write_results(path, data):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=1, sort_keys=True)
+        f.write("\n")
+
+
 def cmd_check(args):
     meta, results, problems = run_set(args.set)
     folder = os.path.join(SETS[0], args.set)
+    if args.results:
+        # The expected.json update would write, so a pull request that
+        # means to move scores can take it from CI's artifact.
+        _write_results(
+            os.path.join(args.results, args.set, "expected.json"),
+            _results(args.set, meta, results),
+        )
+        if not _ink_mode(meta):
+            base = _load_reading(args.set) or {}
+            _write_results(
+                os.path.join(args.results, args.set, "reading.json"),
+                ratchet(reading(meta, results), base),
+            )
     with open(os.path.join(folder, "expected.json"), encoding="utf-8") as f:
         expected = json.load(f)
     problems += _limits(meta, results, expected)
@@ -623,17 +652,11 @@ def cmd_update(args):
         for p in problems:
             print(p)
         return 1
-    out = {
-        "set": args.set,
-        "eye_agreement": eye_agreement(meta, results),
-        "pages": results,
-    }
     hard = _limits(meta, results, {})
-    with open(
-        os.path.join(folder, "expected.json"), "w", encoding="utf-8"
-    ) as f:
-        json.dump(out, f, indent=1, sort_keys=True)
-        f.write("\n")
+    _write_results(
+        os.path.join(folder, "expected.json"),
+        _results(args.set, meta, results),
+    )
     if not _ink_mode(meta):
         # The reading baseline only ever falls: a rise is reported, and
         # raising it is a hand edit with the reason in the pull request.
@@ -999,6 +1022,11 @@ def main(argv=None):
         )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
+        if name == "check":
+            p.add_argument(
+                "--results",
+                help="also write what update would to <dir>/<set>/",
+            )
         if name == "fragments":
             p.add_argument("--page", action="append", help="this page only")
             p.add_argument(

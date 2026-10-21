@@ -174,9 +174,22 @@ jobs:
       - name: Real pages, every score as expected (each language pack's set)
         run: |
           sets=$(python backend/languages/registry.py --benchmark-sets)
+          status=0
           for set in $sets; do
-            python scripts/benchmark.py check --set "$set"
+            python scripts/benchmark.py check --set "$set" \
+              --results "$RUNNER_TEMP/benchmark-results" || status=1
           done
+          exit $status
+      # What `benchmark.py update` would write, so a pull request that
+      # means to move scores can commit it without running the replay
+      # itself (docs/18-benchmark.md).
+      - name: Keep the replay's results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: ${{ runner.temp }}/benchmark-results
+          if-no-files-found: ignore
       # A page read in pieces is measured from the ink (#277). No page
       # of these sets may be: each page's numbers against the thresholds
       # go to the job summary.
