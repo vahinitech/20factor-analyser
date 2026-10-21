@@ -158,14 +158,36 @@ def writer_scale(letters):
     return X / max(1e-6, float(np.median(heights)))
 
 
+def mistake_lines(kinds, li, n_lines):
+    """The line each mistake goes on. One mistake: line li. Several (a
+    poor page, POOR): the word and gap mistakes stay on line li, a
+    turned line is the last, and the other line mistakes go round the
+    remaining lines in turn, so the page is poor all over."""
+    at = {k: li for k in kinds}
+    if len(kinds) < 2:
+        return at
+    others = [j for j in range(n_lines) if j != li] or [li]
+    spread = [k for k in kinds if k in LINE_KINDS and k != "tilted_line"]
+    for i, k in enumerate(spread):
+        at[k] = others[i % len(others)]
+    if "tilted_line" in at:
+        at["tilted_line"] = n_lines - 1
+    return at
+
+
 def build_page(
     letters, rng, kind, style="photo", letters_out=None, ruled=False
 ):
-    """Lines of words in one writer's letters, with one planted mistake.
-    Returns (image, lines, truth) where lines carry box, poly and text.
+    """Lines of words in one writer's letters, with one planted mistake,
+    or several when kind is a tuple of them (mistake_lines).
+    Returns (image, lines, truth) where lines carry box, poly and text;
+    truth is the one mistake's box, None for several.
     ruled: the page has a printed four-line ruling under each line
     (ruling); it draws no random numbers, so the writing is the same
     as on the unruled page."""
+    if not isinstance(kind, str) and len(kind) == 1:
+        kind = kind[0]
+    kinds = (kind,) if isinstance(kind, str) else tuple(kind)
     scale = writer_scale(letters)
     sentences = list(SENTENCES)
     rng.shuffle(sentences)
@@ -191,8 +213,13 @@ def build_page(
         else int(rng.integers(len(lines)))
     )
     line = lines[li]
-    if kind == "indented_line":
-        line["x0"] += 2.5 * X
+    at = mistake_lines(kinds, li, len(lines))
+
+    def on(k, lj):
+        return k in at and lj == at[k]
+
+    if "indented_line" in at:
+        lines[at["indented_line"]]["x0"] += 2.5 * X
     nw = len(line["words"])
     wi = int(rng.integers(1, nw - 1))
     small_at = [
@@ -212,51 +239,37 @@ def build_page(
         word_boxes = []
         line_letters = []
         for wj, word in enumerate(line_["words"]):
-            drop = (
-                0.6 * X
-                if kind == "low_word" and lj == li and wj == wi
-                else 0.0
-            )
+            drop = 0.6 * X if on("low_word", lj) and wj == wi else 0.0
             word_pts = []
             for gj, g in enumerate(word):
                 grow = (
                     1.7
-                    if kind == "tall_letter"
-                    and lj == li
-                    and (wj, gj) == target_glyph
+                    if on("tall_letter", lj) and (wj, gj) == target_glyph
                     else 1.0
                 )
-                if kind == "big_word" and lj == li and wj == wi:
+                if on("big_word", lj) and wj == wi:
                     grow = 1.5
-                if (
-                    kind == "tall_ascenders"
-                    and lj == li
-                    and g["ch"] in TALL | LOW
-                ):
+                if on("tall_ascenders", lj) and g["ch"] in TALL | LOW:
                     grow = 1.5
                 wave = (
                     0.35 * X * np.sin(2 * np.pi * len(line_letters) / 6.0)
-                    if kind == "wavy_line" and lj == li
+                    if on("wavy_line", lj)
                     else 0.0
                 )
                 placed, width = _place(
                     g, scale, x, line_["baseline"] + drop + wave, grow
                 )
-                if kind == "open_loops" and g["ch"] in LOOPS:
+                if "open_loops" in at and g["ch"] in LOOPS:
                     placed = _open(placed)
-                if kind == "messy_word" and lj == li and wj == wi:
+                if on("messy_word", lj) and wj == wi:
                     placed = _shake(placed, 0.4 * X, 7 + gj)
-                if kind == "shaky_line" and lj == li:
+                if on("shaky_line", lj):
                     placed = _shake(placed, 0.1 * X, 11 + len(line_letters))
                 if grow != 1.0 and kind == "tall_letter":
                     truth = _box(placed)
                 word_pts.extend(placed)
                 line_letters.append((g["ch"], placed))
-                spread = (
-                    3.0
-                    if kind == "wide_letters" and lj == li and wj == wi
-                    else 1.0
-                )
+                spread = 3.0 if on("wide_letters", lj) and wj == wi else 1.0
                 x += width + spread * LETTER_GAP * rng.uniform(0.7, 1.3)
             if drop or (
                 lj == li
@@ -267,12 +280,8 @@ def build_page(
             word_boxes.append(_box(word_pts))
             pts_line.append(word_pts)
             gap = WORD_GAP * rng.uniform(0.85, 1.15)
-            if (
-                lj == li
-                and wj == wi - 1
-                and kind in ("wide_gap", "narrow_gap")
-            ):
-                gap = WORD_GAP * (3.0 if kind == "wide_gap" else 0.25)
+            if wj == wi - 1 and (on("wide_gap", lj) or on("narrow_gap", lj)):
+                gap = WORD_GAP * (3.0 if on("wide_gap", lj) else 0.25)
             x += gap - LETTER_GAP
         if kind in ("wide_gap", "narrow_gap") and lj == li:
             left = word_boxes[wi - 1]
@@ -286,7 +295,7 @@ def build_page(
                 - min(left[1], right[1]),
             ]
         strokes = [s for w in pts_line for s in w]
-        if kind == "slanted_line" and lj == li:
+        if on("slanted_line", lj):
             base = line_["baseline"]
             shear = np.tan(np.radians(25.0))
             strokes = [
@@ -307,7 +316,7 @@ def build_page(
             ]
         if kind in FACTOR_TRUTH_LINE and lj == li:
             truth = _box(strokes)
-        if kind == "tilted_line" and lj == li:
+        if on("tilted_line", lj):
             box = _box(strokes)
             cx, cy = box[0], line_["baseline"]
             strokes = [_rotate(s, cx, cy, TILT_DEG) for s in strokes]
@@ -331,9 +340,7 @@ def build_page(
     far = np.concatenate(ink).max(0)
     width = max(PAGE_W, int(far[0]) + MARGIN)
     height = max(PAGE_H, int(far[1]) + MARGIN)
-    rules = (
-        ruling([l["baseline"] for l in lines], width) if ruled else None
-    )
+    rules = ruling([l["baseline"] for l in lines], width) if ruled else None
     img = (
         _photo(ink, width, height, rng, rules)
         if style == "photo"
@@ -354,6 +361,8 @@ def build_page(
                 "poly": _quad(corners),
             }
         )
+    if len(kinds) > 1:
+        truth = None
     if truth is not None:
         truth = [int(round(v)) for v in truth]
     return img, hand_lines, truth
@@ -368,6 +377,27 @@ FACTOR_TRUTH_LINE = (
     "wavy_line",
     "slanted_line",
     "shaky_line",
+)
+# Mistakes that change a whole line (mistake_lines spreads them).
+LINE_KINDS = FACTOR_TRUTH_LINE + ("tilted_line",)
+# A poor page: every mistake at once, for comparing poor writing with
+# neat (scripts/score_ranges.py). Left out: the wide gap (the narrow gap
+# takes the same place) and the scribbled word, which is meant for the
+# factors read from the reader's confidence; these pages are measured
+# without the reader.
+POOR = (
+    "narrow_gap",
+    "wide_letters",
+    "low_word",
+    "big_word",
+    "tall_letter",
+    "open_loops",
+    "tall_ascenders",
+    "indented_line",
+    "wavy_line",
+    "slanted_line",
+    "shaky_line",
+    "tilted_line",
 )
 
 

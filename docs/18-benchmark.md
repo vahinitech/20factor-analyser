@@ -220,6 +220,163 @@ percentile may not rise. On 21 October 2026, on ruled pages:
 9.1.) The 90th percentile is above the 1.0 of #157's stability test,
 which the drawn-letter version of it (`test_zone_ruling.py`) meets.
 
+## Setting the scales from neat writing (#197)
+
+Most factors turn a measured spread into a score along a straight line,
+`10 x (1 - spread / scale)`, and the scale is set by hand in
+`backend/scoring_parts/` (`WORD_GAP_SCALE` 1.0, `LETTER_GAP_SCALE` 0.5,
+`SLANT_SCALE` 40, the size scale 0.60 and others). How high neat writing scores is that
+setting, apart from whether the factor sees a mistake at all. The UJI
+pages cannot set it: their page maker spaces letters with plus or minus
+30% random gaps, so they are not neat writing. The scales stay as they
+are until a set of pages that the owner or a teacher calls neat exists.
+
+`scripts/calibrate.py` is the tool for that set:
+
+```
+python scripts/calibrate.py                     # every neat reference set
+python scripts/calibrate.py --neat <set> --json report.json
+python scripts/calibrate.py --write             # keep the passing scales
+```
+
+For each factor with a scale it reads the spread on every neat page,
+replayed from the kept reader output as `check` does (no models), and
+proposes the tightest scale that puts the set's median at 9.0 and its
+10th percentile at 8.5 or above, the Strong band (`--target`,
+`--strong`). Then it scores the planted-mistake pages of
+`factor_tests.py` with each proposed scale and checks every mistake is
+still caught at least as often as `benchmarks/factors/expected.json`
+requires. Legibility (18) and Overall Neatness (20) blend other factors,
+so they are checked with every passing proposal applied together.
+Factor 6 is unstable (#194) and parked: its numbers are shown and no
+scale is proposed. It takes about a quarter of an hour, like `factors`.
+
+The tool changes no scale. `--write` keeps the passing proposals in
+`backend/score_scales.json`; the scoring code does not read that file
+yet. Reading it is a later change, after the owner has reviewed the
+table, and that change runs `benchmark.py update` so the pull request
+shows every score that moves.
+
+### Adding a neat reference set
+
+A neat set is a benchmark set like any other (see "Adding a set"): a
+folder under `benchmarks/` with `set.json`, `source.md`, `pages/*.jpg`
+and `reader/*.json`, captured with `capture --set <name>` in the
+analyser image. Its `set.json` says what it is for:
+
+```json
+{
+ "description": "Ten pages a teacher calls neat, ...",
+ "role": "neat-reference",
+ "source": "source.md",
+ ...
+}
+```
+
+- Only a set marked `"role": "neat-reference"` sets scales. A set named
+  with `--neat` that is not marked is refused.
+- `source.md` says who wrote the pages, who called them neat and when,
+  and the licence: the pages need one that allows them in a public
+  repository.
+- **A child's writing is never committed to `benchmarks/`.** With the
+  family's written consent, a child's neat pages can make a set kept
+  outside the repository (`--root <folder>`, see "A set kept outside the
+  repository"); without it they are not used at all. Adult writing (the
+  owner's, a teacher's) can be committed with the writer's licence.
+- Give `set.json` the sentences the pages carry, as the UJI set does, so
+  `check` can count the lines scored.
+
+### Reading the table
+
+| Column | Meaning |
+|---|---|
+| Scale | The constant, or the number written into the formula |
+| Current, Proposed | Today's scale and the tightest one that meets the target |
+| Neat spread (median) | The raw measurement on the neat pages, before scaling |
+| Neat median, Neat p10 | The neat pages' scores, before → after |
+| Planted caught | Per planted mistake: share caught before → after (and the share needed) |
+
+The verdicts:
+
+- **ok**: the neat pages reach the target and every planted mistake is
+  still caught. Only these are written by `--write`.
+- **loses a planted mistake**: the scale that lifts neat writing to 9
+  would hide a mistake the factor catches today. Not proposed; the
+  factor's measurement needs work first.
+- **target out of reach**: no scale between a tenth of today's and ten
+  times it gets there, usually because a penalty term (words off their
+  line or size) or a fallback measurement holds the score down.
+- **not limited by the neat set**: neat pages score in the Strong band
+  even at a tenth of today's scale; the scale stays.
+- **planted check short before any change**: the planted check already
+  fails on this code, so `factors` needs fixing before any proposal.
+- **parked**: factor 6 (#194).
+
+The tool also checks itself: at today's scales it must give every score
+the scorer gave on every page, and each factor's score must stop falling
+exactly at the scale it holds. Either check failing means the tool is
+out of step with `scoring_parts/`; it says which factor and exits with
+an error.
+
+`factor-tests.yml` runs the tool on the UJI pages as if they were neat
+(`--tool-test`), only to show it works end to end. The job summary says
+so above the table. Those proposals are never applied, and `--write`
+refuses a tool test.
+
+### The engraved model pages (`neat-penmanship`, 21 October 2026)
+
+`benchmarks/neat-penmanship` holds eight crops of running sentences
+from two public-domain penmanship manuals: A. N. Palmer, *The Palmer
+Method of Business Writing* (1915), and C. P. Zaner, *Zaner Method
+Writing: Arm Movement, Manual 144* (1925 printing of the 1915 edition).
+`source.md` has the titles, the scans, the rights statements and what
+was cropped. They are engraved model pages of adult cursive, the ideal
+end of the range and not children's everyday writing, so the table they
+give is a reference for the owner, not a scale to apply. No scale was
+changed with them.
+
+The reader output was captured once with the live reader in the
+analyser image, as for any set. What it shows is the main result: **the
+reader reads this joined, engraved cursive in fragments.** It scored 26
+of the 39 written lines, with a character error rate of 31.8%, and read
+the small-writing crop (`zaner-090-small-writing`) as six punctuation
+marks. Many lines come back as several short pieces ("Thi", "This is",
+"cmen"). The factors are then measured on the pieces' boxes:
+
+- Margin Discipline (10) scores 0 on five pages: the pieces start
+  anywhere along a line, and the copies indent each paragraph.
+- Line Quality (4) is still the spread of line box widths, so pieces of
+  every length score it down (median 4.4).
+- Size (5), Word Spacing (8), Letter Spacing (9) and Ascender/Descender
+  Control (6) read joined letters, long loops and tall capitals that
+  the measures were not built around: their medians are 1.1 to 5.5.
+
+So these pages cannot set the scales either: on most factors the
+measurement, not the scale, is what holds them down. Seven pages have a
+measured score of exactly 0, which `check` refuses, so the set is not
+in `ci.yml`'s `check` step; `expected.json` and `reading.json` keep
+today's numbers for the record, and the `calibration` job of
+`factor-tests.yml` runs `calibrate.py` and `score_ranges.py` on it.
+
+### Neat, ordinary and poor side by side
+
+`python scripts/score_ranges.py` scores four groups with today's code
+and gives each factor's median and range per group:
+
+- **neat**: the sets marked `"role": "neat-reference"`;
+- **uji**: the 20 UJI benchmark pages;
+- **clean**: the 20 planted-page writers with nothing planted;
+- **poor**: the same writers with every mistake in
+  `planted_pages.POOR` on one page (narrow gap, letters apart, a sunken
+  word, a big word, a tall letter, open loops, long ascenders, an
+  indented, wavy, slanted, shaky and sinking line; line mistakes spread
+  over the lines, `planted_pages.mistake_lines`).
+
+Clean and poor pages are measured without the reader, as `factors`
+measures them, so the factors read from the reader's confidence (1, 2,
+19, and part of 18) cannot tell them apart. The `calibration` job
+writes the table to its summary.
+
 ## Is this pull request slower than main?
 
 A pull request that changes `backend/` gets a `paired-timing` job in

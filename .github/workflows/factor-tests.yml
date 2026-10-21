@@ -17,9 +17,12 @@ on:
       - 'backend/baseline_track.py'
       - 'scripts/planted_pages.py'
       - 'scripts/factor_tests.py'
+      - 'scripts/calibrate.py'
+      - 'scripts/score_ranges.py'
       - 'scripts/variation_study.py'
       - 'scripts/benchmark.py'
       - 'benchmarks/factors/**'
+      - 'benchmarks/neat-penmanship/**'
       - 'benchmarks/factors-ruled/**'
   schedule:
     - cron: '0 4 * * 1'
@@ -56,3 +59,47 @@ jobs:
       - name: Factor 6 on ruled pages, caught and steady
         if: success() || failure()
         run: python scripts/benchmark.py factors --ruled
+
+  # The calibration tool (scripts/calibrate.py, #197) end to end, with
+  # the UJI pages standing in for a neat reference set (they are not
+  # neat writing, so the proposals only show the tool works), then on
+  # the engraved model pages, and every factor on neat, UJI, clean and
+  # poor pages side by side. Nothing here is applied to a scale.
+  calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Cache the UJI letters
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vahini/ujipenchars2.txt
+          key: uji-cc56f72f8477e763
+      - name: Calibration tool test on the UJI pages (not neat writing)
+        run: |
+          python scripts/calibrate.py --neat uji-clean --tool-test \
+            --json "$RUNNER_TEMP/calibration/calibration.json"
+      # The neat reference set (benchmarks/neat-penmanship): engraved model
+      # pages, a reference for the owner, never applied (docs/18-benchmark.md).
+      - name: Calibration on the neat reference set (a reference only)
+        if: success() || failure()
+        run: |
+          python scripts/calibrate.py \
+            --json "$RUNNER_TEMP/calibration/neat-calibration.json"
+      - name: Every factor on neat, UJI, clean and poor pages
+        if: success() || failure()
+        run: |
+          python scripts/score_ranges.py \
+            --json "$RUNNER_TEMP/calibration/score-ranges.json"
+      - name: Keep the tool test's report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-tool-test
+          path: ${{ runner.temp }}/calibration
+          if-no-files-found: ignore
