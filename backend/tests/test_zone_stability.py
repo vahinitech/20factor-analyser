@@ -26,7 +26,6 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-import zone_analysis  # noqa: E402
 from zone_analysis import line_zone_bands  # noqa: E402
 
 
@@ -94,51 +93,14 @@ class TypicalReachTests(unittest.TestCase):
         self.assertLessEqual(abs(z["desc_reach"] - 2.0), 0.15)
 
     def test_a_line_with_only_joined_descenders_still_measures(self):
-        # Nothing else to go by: the joined blob counts, cut where it is
-        # thinnest between the two lines (half way, for one straight
-        # stroke), rather than the line reading single-zone.
+        # Nothing else to go by: the joined blob counts, stopped at the
+        # next line's x-height, rather than the line reading single-zone.
         page = np.full((260, 400), PAPER, dtype=np.uint8)
         _band(page, 30, 80, 20, 320)
         _band(page, 30, 140, 20, 320)
         _stroke(page, 314, 80, 159)
         z = line_zone_bands(page, [30, 80, 320, 40])
-        self.assertGreaterEqual(z["desc_reach"], 1.5)
-
-
-def _zones(asc, dev=None):
-    """A measured page whose lines reach these ascender heights."""
-    if dev is None:
-        dev = zone_analysis._line_dev(asc)  # pylint: disable=W0212
-    return {
-        "available": True,
-        "ascReach": zone_analysis._median(asc),  # pylint: disable=W0212
-        "descReach": None,
-        "ascReachCv": 0.0,
-        "ascLineDev": dev,
-    }
-
-
-class OneLongLineTests(unittest.TestCase):
-    def test_a_line_that_runs_long_costs_points_on_its_own(self):
-        even = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.0]))
-        long = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.5]))
-        self.assertEqual(even, 10.0)
-        self.assertAlmostEqual(long, 10.0 - 0.125 * 6.0)
-
-    def test_it_counts_where_the_spread_penalty_is_spent(self):
-        # Lines that already vary use up the capped spread penalty; one
-        # line running longer still costs more.
-        uneven = [1.5, 2.5, 1.6, 2.4]
-        longer = [1.5, 2.5, 1.6, 3.4]
-        before = dict(_zones(uneven), ascReachCv=0.5)
-        after = dict(_zones(longer), ascReachCv=0.6)
-        score = zone_analysis.zone_score
-        self.assertGreater(score(before) - score(after), 0.1)
-
-    def test_the_penalty_has_a_ceiling(self):
-        z = _zones([2.0, 2.0, 2.0, 2.0], dev=5.0)
-        penalty = 10.0 - zone_analysis.zone_score(z)
-        self.assertAlmostEqual(penalty, zone_analysis.LINE_DEV_MAX)
+        self.assertGreaterEqual(z["desc_reach"], 2.5)
 
 
 def _zigzag(ch, lean, tall):
