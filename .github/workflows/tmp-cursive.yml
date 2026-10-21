@@ -21,13 +21,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
-      - name: Tests with per-test contexts
-        run: |
-          python -m coverage run --branch --context=x -m unittest discover -s backend/tests -t . > /dev/null 2>&1 || true
-          echo skip
       - name: Contexts of the two lines
         run: |
-          python -m coverage run --branch -m unittest discover -s backend/tests -t . > /dev/null 2>&1 || true
           cat > /tmp/rc <<'RC'
           [run]
           branch = True
