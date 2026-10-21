@@ -23,10 +23,10 @@ Checked on `main` at d24cf63 (20 October 2026):
 
 | What | Where | What it covers |
 |---|---|---|
-| Whole request time | `_with_meta`, `ppocr-server.py:530`, `:696`, `:998` | one number per request, no steps |
+| Whole request time | `_with_meta`, `server/app.py:530`, `:696`, `:998` | one number per request, no steps |
 | Engine time per line | `recognizer.py:306-315`, `engine_speed_snapshot` in `/health` | hybrid engines only, information only since #112 |
 | Memory plan | `capacity.py`, [13-api-and-capacity.md](13-api-and-capacity.md) | scan slots from the container limit |
-| Peak memory under load | `backend/load_test.py` on stage | by hand |
+| Peak memory under load | `backend/tools/load_test.py` on stage | by hand |
 | Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` (replaced by discovery in #228) | 38 of 46 test files |
 | Coverage | none (since #232: section 6) | |
 | Profiler | none | |
@@ -61,7 +61,7 @@ runs; one that finds a real bug gets its own issue.
 
 ## 2. Stage timings on every scan (#229)
 
-Built in #229: `backend/perf.py`, and `stage_timings` in `/health`. The
+Built in #229: `backend/server/perf.py`, and `stage_timings` in `/health`. The
 stages are `decode`, `detect` (and `detect.ink` when rows are found from
 the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
 one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
@@ -73,7 +73,7 @@ request's context on the scan thread (`scan_slots.run`), so concurrent
 scans never mix their numbers, except the container's memory, which is
 shared.
 
-A small module, `backend/perf.py`, standard library only:
+A small module, `backend/server/perf.py`, standard library only:
 
 ```python
 with perf.stage("read.rung", rung="paddle", lines=len(todo)):

@@ -40,7 +40,7 @@ OCR text as a secondary signal.
 
 - **20-factor geometry engine.** Deterministic computer vision, not a
   language model. Runs on the recognition server
-  (`backend/ppocr-server.py`); the browser sends the photo and
+  (`backend/server/app.py`); the browser sends the photo and
   renders the result.
 - **Handwriting-only rule.** Printed text is detected and excluded from
   scoring and from the reference crops shown as evidence. Never scored,

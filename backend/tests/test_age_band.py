@@ -15,17 +15,17 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import age_band  # noqa: E402
-import compact_reports  # noqa: E402
-import contract_schemas  # noqa: E402
-import entitlements  # noqa: E402
-from report_contract import public_report  # noqa: E402
+from server import age_band  # noqa: E402
+from report import compact_reports  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from server import entitlements  # noqa: E402
+from report.report_contract import public_report  # noqa: E402
 from backend.tests.test_comparison_data import read_payload  # noqa: E402
 from backend.tests.test_schemas import realistic_payload  # noqa: E402
 
 
 def load_server():
-    path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+    path = Path(__file__).resolve().parents[1] / "server/app.py"
     spec = importlib.util.spec_from_file_location("age_band_server", path)
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)

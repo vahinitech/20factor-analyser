@@ -83,7 +83,7 @@ disable=
 #                           installed in every environment (e.g. the CI
 #                           "python-tests" job installs only the light
 #                           core requirements).
-#   wrong-import-position:  ppocr-server.py must set env vars and extend
+#   wrong-import-position:  server/app.py must set env vars and extend
 #                           sys.path before importing its sibling helper
 #                           modules (ocr_backends, classify); see the
 #                           comment at the top of that file.

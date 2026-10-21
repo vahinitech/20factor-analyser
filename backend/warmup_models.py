@@ -23,7 +23,7 @@
 import os
 
 from languages import stages
-from model_map import parse_model_map
+from reading.model_map import parse_model_map
 
 
 def parse_langs(raw):

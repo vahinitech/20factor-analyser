@@ -51,7 +51,7 @@ needed.
 run the extra specialist recognisers is measured, not guessed: each engine
 call is timed, and once it measures slower than a threshold it is skipped
 for the rest of that scan and for a cooldown period, falling back to
-paddle's own reading. See `backend/README.md`'s hybrid-mode section.
+paddle's own reading. See the hybrid-mode section of [06](06-reading-engines.md#engine-settings-and-modes).
 
 ## What was explored and not built
 

@@ -3,8 +3,8 @@
 How an operator gives a family or a teacher a Pro trial, turns it into paid
 Pro, renews it, moves the person back to Free, replaces a lost key and
 answers "my key stopped working". Every step uses the commands in
-[`backend/subscription_admin.py`](../backend/subscription_admin.py) and
-follows the rules in [`backend/entitlements.py`](../backend/entitlements.py)
+[`backend/server/subscription_admin.py`](../backend/server/subscription_admin.py) and
+follows the rules in [`backend/server/entitlements.py`](../backend/server/entitlements.py)
 and [`backend/API-V2.md`](../backend/API-V2.md). Read
 [13 API and capacity](13-api-and-capacity.md) and
 [15 Persistence](15-persistence.md) first if the stack is new to you.
@@ -87,7 +87,7 @@ one of these for the session:
 
 ```bash
 C=vahini-analyser-stage   # or vahini-analyser-prod
-admin() { docker exec "$C" python /app/backend/subscription_admin.py --db /data/entitlements/subscriptions.sqlite "$@"; }
+admin() { docker exec "$C" python /app/backend/server/subscription_admin.py --db /data/entitlements/subscriptions.sqlite "$@"; }
 ```
 
 Two commands look without changing anything; both open the ledger

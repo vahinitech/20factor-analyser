@@ -15,7 +15,7 @@ If you only read two sections, read the **Glossary** and the **FAQ**.
 
 **Where the code lives** (for developers): the CV pipeline and the 20-factor scoring run
 **server-side** in Python; the browser is the recognition client + report renderer.
-- `backend/ppocr-server.py`: the thin FastAPI layer serving `POST /report-python` and the
+- `backend/server/app.py`: the thin FastAPI layer serving `POST /report-python` and the
   other recognition endpoints; the CV, OCR and scoring logic itself lives in sibling modules:
   `computer_vision.py` (image decode/crop/layout), `detector.py` + `recognizer.py` (finding and
   reading handwriting across the pluggable `ocr_backends.py` engines), and `scoring.py`

@@ -6,7 +6,7 @@
 # What each factor needs lives in factor_needs.py (#207); this adds the
 # one rule it does not hold, Word Spacing's three gaps.
 
-import factor_needs
+from scoring_parts import needs as factor_needs
 
 _MIN_WORD_GAPS = 3
 # Why a factor is not measured, by the kind its missing need gives

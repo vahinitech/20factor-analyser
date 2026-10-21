@@ -12,8 +12,8 @@ import unittest
 from unittest.mock import patch, AsyncMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import entitlements
-from report_contract import factor_output, public_report, legacy_report
+from server import entitlements
+from report.report_contract import factor_output, public_report, legacy_report
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
@@ -133,7 +133,7 @@ class ReportAccessTests(unittest.TestCase):
             self.assertIsNone(factor_output(factor)["score"]["value"])
 
     def test_http_projection_and_recheck(self):
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location(
             "access_test_server", path
         )
@@ -170,7 +170,7 @@ class ReportAccessTests(unittest.TestCase):
             self.assertEqual(denied.status_code, 401)
 
     def test_expiry_during_inference(self):
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location(
             "expiry_test_server", path
         )
@@ -196,7 +196,7 @@ class ReportAccessTests(unittest.TestCase):
             self.assertNotIn("PRIVATE", response.text)
 
     def test_evidence_cache_rechecks_revocation(self):
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location(
             "cache_access_server", path
         )
@@ -222,7 +222,7 @@ class ReportAccessTests(unittest.TestCase):
     def test_entitlements_run_outside_event_loop(self):
         import asyncio
 
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location(
             "thread_access_server", path
         )
@@ -260,7 +260,7 @@ class ReportAccessTests(unittest.TestCase):
         import io
         from starlette.datastructures import UploadFile
 
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location(
             "decode_thread_server", path
         )

@@ -14,10 +14,10 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import compact_reports
-import contract_schemas
-import entitlements
-import practice_catalog
+from report import compact_reports
+from report import contract_schemas
+from server import entitlements
+from report import practice_catalog
 from fastapi.testclient import TestClient
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -408,7 +408,7 @@ class IdentityPractice(unittest.TestCase):
         self.addCleanup(env.stop)
 
     def test_me_returns_the_tier_numbers(self):
-        path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+        path = Path(__file__).resolve().parents[1] / "server/app.py"
         spec = importlib.util.spec_from_file_location("practice_server", path)
         server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(server)

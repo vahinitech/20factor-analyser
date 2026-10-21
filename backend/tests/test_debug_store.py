@@ -15,8 +15,10 @@ import unittest
 SERVER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, SERVER_DIR)
 
-import debug_store  # noqa: E402  pylint: disable=wrong-import-position
-from daily_limit import (  # noqa: E402  pylint: disable=wrong-import-position
+from server import (
+    debug_store,
+)  # noqa: E402  pylint: disable=wrong-import-position
+from server.daily_limit import (  # noqa: E402  pylint: disable=wrong-import-position
     DailyLimit,
 )
 
@@ -65,7 +67,7 @@ class EndpointTests(unittest.TestCase):
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location(
             "ppocr_server_debug_store",
-            os.path.join(SERVER_DIR, "ppocr-server.py"),
+            os.path.join(SERVER_DIR, "server/app.py"),
         )
         cls.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mod)

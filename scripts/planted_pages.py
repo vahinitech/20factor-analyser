@@ -644,13 +644,13 @@ _SERVER = []
 
 def real_reader():
     """The reader exactly as the server sets it up: loading
-    backend/ppocr-server.py runs its recognizer.configure() and backend
+    backend/server/app.py runs its recognizer.configure() and backend
     registry from the same environment. Calling recognizer directly
     skips that and reads with library defaults (other models, and
     repeated lines from the image variants)."""
     if not _SERVER:
         spec = importlib.util.spec_from_file_location(
-            "planted_server", os.path.join(ROOT, "backend", "ppocr-server.py")
+            "planted_server", os.path.join(ROOT, "backend", "server/app.py")
         )
         server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(server)
@@ -659,8 +659,12 @@ def real_reader():
 
 
 def run_page(img, hand_lines, ocr):
-    import computer_vision  # pylint: disable=import-outside-toplevel
-    import letter_geometry  # pylint: disable=import-outside-toplevel
+    from vision import (
+        computer_vision,
+    )  # pylint: disable=import-outside-toplevel
+    from vision import (
+        letter_geometry,
+    )  # pylint: disable=import-outside-toplevel
     import scoring  # pylint: disable=import-outside-toplevel
 
     if ocr:
@@ -685,7 +689,7 @@ def run_page(img, hand_lines, ocr):
         for r in analysis["results"]
     }
     places = {n: regions[n].get("places", []) for n in ("1", "5", "7", "8")}
-    # The letter-level measurement (backend/letter_geometry.py), kept
+    # The letter-level measurement (backend/vision/letter_geometry.py), kept
     # beside today's marks so the two can be compared on the same pages.
     geo = letter_geometry.measure_page(img, hand_lines)
     places["5L"] = letter_geometry.size_marks(hand_lines, geo)

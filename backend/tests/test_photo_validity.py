@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image, ImageOps
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-import computer_vision
+from vision import computer_vision
 import scoring
 from backend.tests.test_server_pipeline import _load_server
 

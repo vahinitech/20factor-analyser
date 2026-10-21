@@ -27,8 +27,8 @@ REPO = os.path.dirname(SERVER_DIR)
 sys.path.insert(0, SERVER_DIR)
 
 import config  # noqa: E402
-import ocr_backends  # noqa: E402
-import recognizer  # noqa: E402
+from reading import ocr_backends  # noqa: E402
+from reading import recognizer  # noqa: E402
 import warmup_models  # noqa: E402
 from languages import registry, stages  # noqa: E402
 

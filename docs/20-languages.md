@@ -26,18 +26,18 @@ letter lists and `[A-Za-z]` tests. Each module decided for itself what
 | `backend/scoring.py:620` | `BOWL_LETTERS = set("abdegopq")` |
 | `backend/scoring.py:673` | `_LATIN_ONLY = (3, 6)`, factors that count Latin letters |
 | `backend/scoring.py:744` | about 5 letters per word as the ideal (factor 15) |
-| `backend/zone_analysis.py:55-57` | ascenders `[bdfhklt]`, descenders `[gjpqy]`, `[A-Za-z]` |
-| `backend/letter_geometry.py:43` | x-height letters `acemnorsuvwxz` |
-| `backend/tbar_analysis.py:35-36` | the `tt` and `t[lhkb]` patterns |
-| `backend/finishing_letters.py:22-24` | finishing letters `adhilmnrtu`, words `[A-Za-z]+` |
-| `backend/style_analysis.py:44,56,69` | cursive check only above 90% ASCII letters |
-| `backend/coach_tips.py:65` | `_latin_share`, gating seven tips at 0.9 (lines 264 to 612) |
-| `backend/classify.py:49,200,291` | English form words, uppercase share, `[A-Z]{5,}` |
-| `backend/computer_vision.py:275,865` | fallback lines tagged `"en"`, `[A-Za-z]` letter count |
-| `backend/line_recovery.py:188,252` | `lang="en"` defaults |
-| `backend/recognizer.py:53,232` | `_INDIC_LANGS` sends te/hi/ta/kn/ml to Surya, the rest to TrOCR |
-| `backend/ocr_backends.py:55` | a line is Telugu if any character is in U+0C00 to U+0C7F |
-| `backend/ocr_backends.py:661` | TrOCR model fixed to `microsoft/trocr-base-handwritten` (English) |
+| `backend/vision/zone_analysis.py:55-57` | ascenders `[bdfhklt]`, descenders `[gjpqy]`, `[A-Za-z]` |
+| `backend/vision/letter_geometry.py:43` | x-height letters `acemnorsuvwxz` |
+| `backend/vision/tbar_analysis.py:35-36` | the `tt` and `t[lhkb]` patterns |
+| `backend/vision/finishing_letters.py:22-24` | finishing letters `adhilmnrtu`, words `[A-Za-z]+` |
+| `backend/vision/style_analysis.py:44,56,69` | cursive check only above 90% ASCII letters |
+| `backend/report/coach_tips.py:65` | `_latin_share`, gating seven tips at 0.9 (lines 264 to 612) |
+| `backend/reading/classify.py:49,200,291` | English form words, uppercase share, `[A-Z]{5,}` |
+| `backend/vision/computer_vision.py:275,865` | fallback lines tagged `"en"`, `[A-Za-z]` letter count |
+| `backend/reading/line_recovery.py:188,252` | `lang="en"` defaults |
+| `backend/reading/recognizer.py:53,232` | `_INDIC_LANGS` sends te/hi/ta/kn/ml to Surya, the rest to TrOCR |
+| `backend/reading/ocr_backends.py:55` | a line is Telugu if any character is in U+0C00 to U+0C7F |
+| `backend/reading/ocr_backends.py:661` | TrOCR model fixed to `microsoft/trocr-base-handwritten` (English) |
 
 The line numbers are from when this design was written. The letter facts
 have since moved to the language packs (#223), and `scoring.py` is split
@@ -292,7 +292,7 @@ engine is down.
 ### 6.1 A reader for handwritten Telugu (2026-10-20)
 
 PP-OCRv5's Telugu model reads print; on handwriting it returned Latin
-fragments. `backend/telugu_reader.py` is a reader trained on handwriting:
+fragments. `backend/reading/telugu_reader.py` is a reader trained on handwriting:
 a small convolutional network with two bidirectional LSTM layers and CTC,
 about 1.3 million weights stored as 8-bit integers, run in numpy like
 `print_hand.py`, so the same crop gives the same text and the image needs
@@ -806,7 +806,7 @@ Escalation is about doubt; fallback is about a rung that cannot answer
 - If a line needs a rung that is down, the server does not skip to the
   next rung or settle for the last accepted answer. It refuses the page
   with `ocr_unavailable` and `Retry-After`, as it already does when the
-  reader fails (`ppocr-server.py:333-345`). The refusal is not cached and
+  reader fails (`server/app.py:333-345`). The refusal is not cached and
   does not use a free check.
 - A remote rung (a GPU service or an API) gets a circuit breaker: after a
   run of failures it is marked down for a set time, so pages that need it
@@ -888,7 +888,7 @@ ladders. An unread line is "Not measured" for every factor that needs
 graphemes (section 8), and still counts for the factors that need only
 rows.
 
-As built (#219): the loop is `backend/escalation.py`. Two parts wait for
+As built (#219): the loop is `backend/reading/escalation.py`. Two parts wait for
 other work. First, the acceptance test checks confidence and script share
 against `reading.accept_confidence` in the line's pack. No pack sets that
 limit until `rank_stages.py` calibrates one (section 19, gap 5), so a
@@ -915,7 +915,7 @@ How each step's time, memory and calls are measured, and how CI catches a
 step that grows too fast, is [21-performance-and-coverage.md](21-performance-and-coverage.md).
 
 What the analyser does today ([13-api-and-capacity.md](13-api-and-capacity.md),
-`backend/capacity.py`): at start-up it works out how many scans can run at
+`backend/server/capacity.py`): at start-up it works out how many scans can run at
 once as the smallest of three limits, memory, cores and GPUs, capped at
 16. It counts 1100 MB for the loaded process, 600 MB of working memory per
 running scan and 200 MB for each extra engine copy, all overridable. The
@@ -957,7 +957,7 @@ What changes when ladders arrive:
 1. **Every stage declares what it uses.** `stages.json` gains `device`
    (`cpu`, `gpu` or `remote`), `load_mb` (resident once loaded),
    `work_mb` (extra while it runs), `vram_mb` and `threads`, measured with
-   `backend/load_test.py` on stage, never guessed.
+   `backend/tools/load_test.py` on stage, never guessed.
 2. **Everything a CPU ladder can reach is loaded at start-up.** Today a
    Paddle language can be built the first time a request uses it
    (`recognizer.py:75-84`), which adds memory in the middle of a scan,

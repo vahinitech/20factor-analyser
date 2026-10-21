@@ -14,8 +14,8 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import entitlements
-import subscription_admin
+from server import entitlements
+from server import subscription_admin
 
 
 class SubscriptionAdminTests(unittest.TestCase):

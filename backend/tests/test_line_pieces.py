@@ -16,10 +16,10 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import classify  # noqa: E402
-import detector  # noqa: E402
-import line_recovery  # noqa: E402
-import recognizer  # noqa: E402
+from reading import classify  # noqa: E402
+from reading import detector  # noqa: E402
+from reading import line_recovery  # noqa: E402
+from reading import recognizer  # noqa: E402
 
 
 def line(text, box, score=0.9, **extra):

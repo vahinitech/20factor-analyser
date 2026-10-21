@@ -29,9 +29,9 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
   the slot cap and its one-thread-per-slot pool are what stopped
   simultaneous scans running the host out of memory (OOM kill on stage,
-  2026-10-07). `backend/capacity.py` sizes the slots from memory, cores and
+  2026-10-07). `backend/server/capacity.py` sizes the slots from memory, cores and
   GPUs with constants measured on the deploy box; change a constant only
-  with a load-test measurement (`backend/load_test.py`, stage only), and
+  with a load-test measurement (`backend/tools/load_test.py`, stage only), and
   never remove the cap. Model and numbers:
   #97 and `docs/13-api-and-capacity.md`.
 - **The bundle and the asset stamps are build output, never committed.**
@@ -111,7 +111,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 - **Practice is data: every exercise and tip belongs to a factor.** The
   practice catalogue ([docs/10-practice-framework.md](docs/10-practice-framework.md))
   holds one development area per factor (meaning, exercises with levels and
-  amounts, tips, worksheet, translations), in `backend/practice_catalog.py`,
+  amounts, tips, worksheet, translations), in `backend/report/practice_catalog.py`,
   checked on import and served with the factor catalogue. The score band
   sets the plan (tries a day for a week); the tier table sets how many exercises and tips a
   report shows. Reports, the website's factor pages and the app read the same
@@ -164,14 +164,14 @@ docker compose up -d --wait                   # full stack for live recognition 
 
 ## Architecture facts
 
-- `backend/ppocr-server.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/me`,
+- `backend/server/app.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/me`,
   `/api/v2/reports` and versioned public catalogues.
   `computer_vision.py` owns decode/crop/evidence previews; `geometry.py`
   owns the one shared clamp-box implementation (three crop paths depend on
   it — don't fork it).
 - Legacy evidence and score routes remain for compatibility. The hosted browser now uses `/api/v2/reports?format=compact&include=text` and a cached dictionary. Detailed crops are optional Pro evidence; test the changed route and its consumer, not an assumed legacy-only flow.
 - `pypdfium2` is used for PDF decode but reaches the image only
-  transitively — keep it explicitly pinned in `backend/requirements-core.txt`.
+  transitively — keep it explicitly pinned in `backend/requirements/core.txt`.
 - OCR backends are tiered (`requirements-{core,paddle,trocr,surya}.txt`);
   the default image = core + paddle. `VAHINI_OCR_BACKEND` selects at runtime.
 

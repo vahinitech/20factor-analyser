@@ -12,7 +12,7 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-import computer_vision as vision
+from vision import computer_vision as vision
 
 
 def line(x, y, w, h, rise=0, text="sample words"):

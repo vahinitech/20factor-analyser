@@ -38,12 +38,12 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 # pylint: disable=wrong-import-position,protected-access
-import compact_reports  # noqa: E402
-import computer_vision as vision  # noqa: E402
-import contract_schemas  # noqa: E402
-import report_store  # noqa: E402
+from report import compact_reports  # noqa: E402
+from vision import computer_vision as vision  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from server import report_store  # noqa: E402
 import scoring  # noqa: E402
-from daily_limit import DailyLimit  # noqa: E402
+from server.daily_limit import DailyLimit  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 SERVER_DIR = ROOT / "backend"
@@ -542,7 +542,7 @@ class EndpointTests(unittest.TestCase):
         if vision.cv2 is None:
             raise unittest.SkipTest("OpenCV unavailable")
         spec = importlib.util.spec_from_file_location(
-            "ppocr_server_report_store", SERVER_DIR / "ppocr-server.py"
+            "ppocr_server_report_store", SERVER_DIR / "server/app.py"
         )
         cls.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mod)

@@ -18,7 +18,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
-import recognizer  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    recognizer,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 from backend.tests.test_server_pipeline import (  # noqa: E402
     _hand_strip,
@@ -26,7 +28,7 @@ from backend.tests.test_server_pipeline import (  # noqa: E402
 
 
 def _load_server():
-    path = os.path.join(SERVER_DIR, "ppocr-server.py")
+    path = os.path.join(SERVER_DIR, "server/app.py")
     spec = importlib.util.spec_from_file_location(
         "ppocr_server_telugu_not_read", path
     )

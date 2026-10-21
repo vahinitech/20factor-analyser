@@ -9,11 +9,11 @@
 
 import numpy as np
 
-from coach_tips import pillar_summary, select_tips
-from finishing_letters import analyze_finishing_letters
-from style_analysis import analyze_style
-from tbar_analysis import analyze_tbars
-from zone_analysis import analyze_zones, zone_score
+from report.coach_tips import pillar_summary, select_tips
+from vision.finishing_letters import analyze_finishing_letters
+from vision.style_analysis import analyze_style
+from vision.tbar_analysis import analyze_tbars
+from vision.zone_analysis import analyze_zones, zone_score
 
 try:
     import cv2

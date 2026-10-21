@@ -9,18 +9,18 @@ it is the one to update when the code changes.
 
 The five free skills are the thread through it: Letter Formation (1), Size
 Consistency (5), Baseline Alignment (7), Word Spacing (8) and Legibility (18)
-(`FREE_FACTORS`, `backend/entitlements.py:14`).
+(`FREE_FACTORS`, `backend/server/entitlements.py:14`).
 
 ## 1. From upload to a picture we measure
 
 | Step | What happens | Code |
 |---|---|---|
-| Size limits | Request body over 6 MiB refused; file over 5 MiB refused (413) | `upload_limits.py:12-53`, `_read_upload` in `ppocr-server.py:183-187` |
+| Size limits | Request body over 6 MiB refused; file over 5 MiB refused (413) | `upload_limits.py:12-53`, `_read_upload` in `server/app.py:183-187` |
 | Busy server | No free scan slot: 503 with `Retry-After` | `scan_slots.py:61-70` |
 | Decode | JPEG, PNG, WebP; PDF uses page 1 only, drawn at 150 DPI | `computer_vision.to_numpy`, `computer_vision.py:39-99` |
 | Turn upright | The phone's EXIF orientation is applied, then RGB | `computer_vision.py:84` |
 | Shrink | Longest side at most `VAHINI_OCR_MAX_SIDE` (2200 by default, never under 960), LANCZOS. The website's stage compose file sets 2600; production uses the default | `config.py:96-98` |
-| Repeat answers | The same bytes within 180 s get the stored answer | `cache.py`, key built at `ppocr-server.py:835-840` |
+| Repeat answers | The same bytes within 180 s get the stored answer | `cache.py`, key built at `server/app.py:835-840` |
 
 The shrunk, upright picture is the **processed image**. Every box in a report
 (`bbox`, `source_size`, `coordinate_space: "processed-image"`) is in its
@@ -115,10 +115,10 @@ depends only on the photo, so the same photo gives the same lines.
 
 | Case | Result | Code |
 |---|---|---|
-| Lines found, all printed | `no_handwriting` screen; not counted against the daily limit | `ppocr-server.py:633-648, 876-879` |
-| OCR engine failed | 503 `ocr_unavailable`; the page says try again. Never a score from a broken read | `ppocr-server.py:649-652` |
-| OCR ran and found nothing | Lines are found from ink alone (`cv-fallback`) and the report is made without the skills that need reading | `computer_vision.fallback_line_regions`, `computer_vision.py:166-248`; `ppocr-server.py:653-661` |
-| Still nothing | `no_handwriting`, "No handwriting found" | `ppocr-server.py:662-676` |
+| Lines found, all printed | `no_handwriting` screen; not counted against the daily limit | `server/app.py:633-648, 876-879` |
+| OCR engine failed | 503 `ocr_unavailable`; the page says try again. Never a score from a broken read | `server/app.py:649-652` |
+| OCR ran and found nothing | Lines are found from ink alone (`cv-fallback`) and the report is made without the skills that need reading | `computer_vision.fallback_line_regions`, `computer_vision.py:166-248`; `server/app.py:653-661` |
+| Still nothing | `no_handwriting`, "No handwriting found" | `server/app.py:662-676` |
 | Asked for as Telugu (`lang=te`), and fewer than three in four letters read are Telugu, or the reader's mean confidence is under 0.80 | `handwriting_not_read` screen; not counted against the daily limit. The Telugu reader returns Latin fragments on handwriting, so no report is made from them | `recognizer.telugu_not_read` |
 | Digits and maths signs are 35% or more of the letters, digits and signs read (at least 12 of them): a maths or science page | `not_writing_page` screen, "write four lines of English"; not counted against the daily limit | `recognizer.not_writing_page` |
 
@@ -234,7 +234,7 @@ There is **no calibrated probability** anywhere in a report. The API field
 | Signal | Where it comes from | What uses it |
 |---|---|---|
 | OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 2, 19; the printed check; dropping fragments |
-| Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`ppocr-server.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
+| Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`server/app.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
 | Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
 | Printed probability | Section 2, step 4 | Which lines are scored. The code says it is "a heuristic, not a calibrated confidence" (`classify.py:439-444`) |
 | Photo quality | Sharpness (Laplacian variance) and size, measured in the browser only (`app.js:629-658`) | A warning; the visitor may still go on |
@@ -297,7 +297,7 @@ The browser uses `object-fit: contain` so the crop is not cut off again during d
 
 ## 7. Choosing exact words and letters to circle
 
-`backend/marked_places.py` adds a `places` list to the evidence of skills
+`backend/vision/marked_places.py` adds a `places` list to the evidence of skills
 1, 5, 7, 8 and 18: up to three measurements that stand apart from the page
 (`role: "look"`) and at most one closest to the page's usual (`role:
 "keep"`, the writing to keep doing). Each place has its box, the
@@ -427,7 +427,7 @@ threshold. That change is not made; section 10 adds the better signal.
 
 ## 9. Measuring inside the line: letters, words and the baseline
 
-`backend/letter_geometry.py` measures what section 8 showed the line boxes
+`backend/vision/letter_geometry.py` measures what section 8 showed the line boxes
 cannot see. Per line:
 
 1. Binarise and take the ink blobs whose middle lies inside the line's box.
@@ -502,7 +502,7 @@ report's scores to these needs those choices made first.
 
 ## 10. Print or handwriting: a trained line reader
 
-`backend/print_hand.py` looks at a line's ink and gives a probability that
+`backend/reading/print_hand.py` looks at a line's ink and gives a probability that
 it is print. It does not replace the printed check: it can only stop the
 two rules in section 8 that call a confidently read line print. When it
 sees handwriting (probability under 0.1), those rules do not apply to that
@@ -593,7 +593,7 @@ Small circles on a single letter need to know where each letter is. The
 line reader already knows: PaddleOCR's recogniser reads a line as a row of
 narrow columns and decides one character per column, and with
 `return_word_box` it reports the column every kept character came from.
-`backend/letter_boxes.py` maps each column back along the line's outline
+`backend/vision/letter_boxes.py` maps each column back along the line's outline
 to a point on the page (a quarter of a column back, measured below), and
 the half-way points between neighbouring letters give each letter its
 left and right edges. The column's own probability is a per-letter

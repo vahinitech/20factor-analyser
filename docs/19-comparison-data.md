@@ -6,7 +6,7 @@ family keeps both reports; the analyser keeps neither (photos are never
 stored, docs/15-persistence.md). This page lists what a version-2 report
 gives that comparison beyond the factor scores, where each value comes
 from, and what it does not claim. The fields are built by
-`backend/comparison_data.py` from what the scorer and the reader already
+`backend/report/comparison_data.py` from what the scorer and the reader already
 produced; nothing here measures the writing in a new way.
 
 Order of changes across repositories: this analyser change first, then the

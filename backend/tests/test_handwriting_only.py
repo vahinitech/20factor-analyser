@@ -45,7 +45,7 @@ SAMPLE_FILES = [
 
 
 def _load_server():
-    path = os.path.join(SERVER_DIR, "ppocr-server.py")
+    path = os.path.join(SERVER_DIR, "server/app.py")
     spec = importlib.util.spec_from_file_location(
         "ppocr_server_handwriting_only", path
     )
@@ -201,7 +201,7 @@ class TestHandwritingOnlyRule(unittest.TestCase):
             {"printed_hint": True, "text": f"label {i}"} for i in range(9)
         ]
         lines.append({"printed_hint": False, "text": "ramu kumar"})
-        import detector
+        from reading import detector
 
         kept = detector.prefer_handwritten(lines)
         self.assertEqual(len(kept), 1)
@@ -255,7 +255,7 @@ class TestHandwritingOnlyRule(unittest.TestCase):
 
     def test_factor_page_context_masks_excluded_printed_pixels(self):
         import base64
-        import computer_vision
+        from vision import computer_vision
 
         arr = np.full((180, 300, 3), 255, np.uint8)
         arr[10:40, 20:280] = [255, 0, 0]  # excluded printed header
@@ -322,7 +322,7 @@ class TestHandwritingOnlyRule(unittest.TestCase):
     def test_granularity_is_explicit_and_missing_classification_not_guessed(
         self,
     ):
-        import classify
+        from reading import classify
 
         lines = [
             {"text": "one word", "printed_prob": 0.1, "printed_hint": False},

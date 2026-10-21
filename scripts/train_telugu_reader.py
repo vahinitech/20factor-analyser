@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Train the handwritten Telugu reader (backend/telugu_reader.py).
+"""Train the handwritten Telugu reader (backend/reading/telugu_reader.py).
 
 Data: IIIT-INDIC-HW-WORDS-Telugu (CVIT, IIIT Hyderabad; Gongidi and
 Jawahar, ICDAR 2021; CC BY 4.0, https://ilocr.iiit.ac.in/dataset/23).
@@ -8,7 +8,7 @@ Each split is its zip as downloaded, or the folder it unpacks to; images
 are read straight from the zip, never unpacked to disk. The training
 split trains; the validation split picks the epoch; the test split is
 read once at the end, by the exported weights through
-backend/telugu_reader.py, the code the analyser runs.
+backend/reading/telugu_reader.py, the code the analyser runs.
 
 Half the training samples are words, half are lines of two to four words
 joined with a space, so the reader reads a whole row. Each sample is
@@ -45,7 +45,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
-import telugu_reader as tr  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    telugu_reader as tr,
+)  # noqa: E402  pylint: disable=wrong-import-position
 import train_guard  # noqa: E402  pylint: disable=wrong-import-position
 
 
@@ -255,7 +257,7 @@ def _q(a):
 
 
 def export(net, charset):
-    """The spec backend/telugu_reader.py loads: batch normalisation
+    """The spec backend/reading/telugu_reader.py loads: batch normalisation
     folded into each convolution, every tensor 8-bit."""
     mods = list(net.cnn)
     layers = []
@@ -341,7 +343,7 @@ def _edits(a, b):
 
 def score(model_np, split, limit, seed):
     """Character error rate in graphemes, and words read exactly, of the
-    exported weights through backend/telugu_reader.py."""
+    exported weights through backend/reading/telugu_reader.py."""
     rng = np.random.default_rng(seed)
     idx = rng.permutation(len(split.items))[: limit or None]
     edits = units = exact = n = 0

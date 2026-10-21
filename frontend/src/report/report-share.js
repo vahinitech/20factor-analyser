@@ -18,7 +18,7 @@
      PDF and opens https://wa.me/ with a note to attach it.
    - The PDF also carries, for the Pro comparison of two PDFs (owner,
      2026-10-16), data nobody sees on the printed pages: the stored
-     report's read-only receipt (backend/report_store.py) in the PDF's XMP
+     report's read-only receipt (backend/server/report_store.py) in the PDF's XMP
      metadata, which opens the record only through the Pro comparison
      (POST /api/v2/compare) and can never renew or delete it; the full
      token stays in this browser's saved checks (progress.js);

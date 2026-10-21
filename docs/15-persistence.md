@@ -3,7 +3,7 @@
 `analyser.html` will optionally post three kinds of record to a
 `/persist` service, if one is deployed in front of it: the uploaded image,
 the generated report, and lead-capture feedback. None of this lives in this
-repo. `ppocr-server.py` does not implement `/persist/*`, and
+repo. `server/app.py` does not implement `/persist/*`, and
 `docker-compose.yml` runs a single `analyser` service with no persistence
 service alongside it. If nothing answers at `/persist`, every call below
 fails silently and the app works exactly the same, since scoring and the
@@ -69,7 +69,7 @@ success; everything else is optional.
 ## Stage debug storage (the analyser's one write)
 
 The analyser itself never keeps a photo, with one switch for stage only.
-`backend/debug_store.py` keeps each answered upload's photo and response
+`backend/server/debug_store.py` keeps each answered upload's photo and response
 when both `VAHINI_DEBUG_STORE=1` and `VAHINI_DEBUG_STORE_DIR` are set:
 
 ```
@@ -97,7 +97,7 @@ exception to, and the exception's limits, are in
 
 So a family can compare a later check with an earlier one, the analyser
 keeps a small record of every successful compact report (owner decision,
-2026-10-16; `backend/report_store.py`). It is on when
+2026-10-16; `backend/server/report_store.py`). It is on when
 `VAHINI_REPORT_STORE_DIR` names a writable folder:
 
 ```

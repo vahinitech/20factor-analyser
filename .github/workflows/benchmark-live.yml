@@ -18,14 +18,14 @@ name: Benchmark (live reader)
 on:
   pull_request:
     paths:
-      - 'backend/recognizer.py'
-      - 'backend/escalation.py'
+      - 'backend/reading/recognizer.py'
+      - 'backend/reading/escalation.py'
       - 'backend/languages/ladders.json'
-      - 'backend/ocr_backends.py'
-      - 'backend/detector.py'
-      - 'backend/line_recovery.py'
-      - 'backend/layout_filter.py'
-      - 'backend/classify.py'
+      - 'backend/reading/ocr_backends.py'
+      - 'backend/reading/detector.py'
+      - 'backend/reading/line_recovery.py'
+      - 'backend/reading/layout_filter.py'
+      - 'backend/reading/classify.py'
       - 'backend/config.py'
       - 'backend/requirements*.txt'
       - 'deployment/Dockerfile'

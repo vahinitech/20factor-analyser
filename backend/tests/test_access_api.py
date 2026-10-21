@@ -14,9 +14,9 @@ from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi.testclient import TestClient
-import access_api
-import contract_schemas
-import entitlements
+from server import access_api
+from report import contract_schemas
+from server import entitlements
 
 BASE = access_api.PREFIX
 TOKEN = "t" * 40
@@ -24,12 +24,12 @@ SERVER = None
 
 
 def load_server():
-    """Import ppocr-server.py once; it is slow and has no side effects."""
+    """Import server/app.py once; it is slow and has no side effects."""
     global SERVER  # pylint: disable=global-statement
     if SERVER is None:
         spec = importlib.util.spec_from_file_location(
             "access_api_test_server",
-            Path(__file__).resolve().parents[1] / "ppocr-server.py",
+            Path(__file__).resolve().parents[1] / "server/app.py",
         )
         SERVER = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(SERVER)

@@ -41,7 +41,7 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 
 def load_server():
     spec = importlib.util.spec_from_file_location(
-        "sample_server", os.path.join(ROOT, "backend", "ppocr-server.py")
+        "sample_server", os.path.join(ROOT, "backend", "server/app.py")
     )
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)

@@ -1,5 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-// A stored report's receipt (backend/report_store.py) travels from the
+// A stored report's receipt (backend/server/report_store.py) travels from the
 // server's answer to the saved checks (progress.js), renews the earlier
 // receipts on the same host, and stays on the expanded report for the
 // shared PDF. With no receipt, nothing is renewed.

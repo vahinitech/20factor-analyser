@@ -16,7 +16,7 @@ first. The runner's speed cancels out of the ratio.
 It records CPU time (time.process_time) per page and per step: decoding
 the photo, finding the hand lines from the kept reading, the layout pass
 and scoring. A step's time leaves out any other step it calls. Where the
-checkout has backend/perf.py (#229), each page also runs inside a
+checkout has backend/server/perf.py (#229), each page also runs inside a
 perf.scan(), and its stages' CPU time gets a table of its own; a stage
 there includes the stages inside it.
 
@@ -155,7 +155,7 @@ def worker(checkout, sets):
     clock = Clock()
     _wrap_steps(clock)
     try:
-        perf = importlib.import_module("perf")
+        perf = importlib.import_module("server.perf")
     except ImportError:
         perf = None
     pages, skipped, stages = {}, [], {}
@@ -332,7 +332,7 @@ def _stage_table(history):
     if not names:
         return []
     out = [
-        "\nStages from backend/perf.py (#229): CPU seconds of the thread, "
+        "\nStages from backend/server/perf.py (#229): CPU seconds of the thread, "
         "each including the stages inside it.\n",
         "| Stage | main | PR | PR / main |",
         "|---|---|---|---|",

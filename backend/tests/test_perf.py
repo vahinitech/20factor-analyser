@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Stage timings and call budgets (backend/perf.py, #229).
+"""Stage timings and call budgets (backend/server/perf.py, #229).
 
 A scan answers with a Server-Timing header of stage names and
 milliseconds, /health keeps each stage's p50 and p95 and still matches
@@ -30,11 +30,11 @@ ROOT = os.path.dirname(SERVER_DIR)
 sys.path.insert(0, SERVER_DIR)
 sys.path.insert(0, HERE)
 
-import computer_vision  # noqa: E402
-import contract_schemas  # noqa: E402
-import line_recovery  # noqa: E402
-import perf  # noqa: E402
-import recognizer  # noqa: E402
+from vision import computer_vision  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from reading import line_recovery  # noqa: E402
+from server import perf  # noqa: E402
+from reading import recognizer  # noqa: E402
 from test_escalation import _Fake, _line, _noise_page  # noqa: E402
 from test_server_pipeline import _hand_strip, _load_server  # noqa: E402
 

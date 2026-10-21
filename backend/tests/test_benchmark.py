@@ -14,7 +14,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
-import computer_vision  # noqa: E402
+from vision import computer_vision  # noqa: E402
 from test_line_pieces import line, page_with_lines  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))

@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
-import recognizer  # noqa: E402
+from reading import recognizer  # noqa: E402
 import scoring  # noqa: E402
 
 # పిల్లి పాలు తాగింది ("the cat drank milk") and the same line with the
@@ -150,7 +150,7 @@ PAGE = _flat_page()
 
 def _scores(reading, passage=None):
     """Factor scores for PAGE read as reading, with the passage aligned
-    the way the server does it (ppocr-server.py keeps the reading as
+    the way the server does it (server/app.py keeps the reading as
     text_as_read, then aligns)."""
     line = _line(reading)
     line.setdefault("text_as_read", line["text"])

@@ -3,302 +3,43 @@
      Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json -->
 # Recognition server
 
-This folder is the Python service that does all the work: text detection and
-recognition (pluggable OCR engines), the printed-vs-handwriting classifier,
-and the 20-factor scoring. The browser only uploads the image and renders the
-returned report.
-
-## Run it
+The Python service behind the analyser. It reads the page, measures the
+ink and returns the 20-factor report; the browser uploads a photo and
+draws what comes back.
 
 ```bash
-# from the repo root
-./backend/setup.sh            # venv + core deps + PaddleOCR (default)
-python backend/analyser-ocr-server.py
-# open http://localhost:8080
+./backend/setup.sh                      # venv, core packages and PaddleOCR
+python backend/analyser-ocr-server.py   # then open http://localhost:8080
 ```
 
-Or with Docker from the repo root:
+Docker: `docker compose up -d --build` from the repository root.
 
-```bash
-docker compose up -d --build
-# open http://localhost:8080
-```
+## What is where
 
-After pulling changes or editing a Dockerfile/requirements file, rebuild
-clean instead of relying on cached layers:
-
-```bash
-docker compose down
-docker compose build --no-cache
-docker compose up -d
-```
-
-Check it: `curl http://localhost:8080/health` lists every engine and whether
-it can run on this machine.
-
-The server speaks plain HTTP. `https://localhost:8080` cannot work (the TLS
-handshake fails before any redirect could run), so make sure the address bar
-says `http://`. Terminate TLS in a reverse proxy if you need HTTPS.
-
-Model weights download automatically on the first request for each language
-and are cached under `~/.paddlex`. If the machine is offline the scan still
-completes: the 20 factors are measured from geometry and the report says that
-words were not read.
-
-## Module layout
-
-| File | Job |
+| Folder or file | What it does |
 |---|---|
-| `analyser-ocr-server.py` | Serves the app under `/analyser` plus the APIs below, on one origin |
-| `ppocr-server.py` | The API routes: `/ocr`, `/analyze-vl`, `/report-python`, `/health` |
-| `config.py` | Every `VAHINI_*` env var, parsed once |
-| `ocr_backends.py` | One adapter per OCR engine behind a common interface |
-| `detector.py` | Preprocessing variants and candidate region filtering |
-| `recognizer.py` | Dispatches recognition across engines, refinement, passage alignment |
-| `classify.py` | Printed vs handwriting classifier |
-| `layout_filter.py` | Negative pre-filter dropping photos/seals/charts before classification |
-| `computer_vision.py` | Image decode, evidence crops, layout signals, OCR-free fallback |
-| `scoring.py` | The 20-factor model: factor catalogue and `build_analysis` |
-| `scoring_parts/` | Its measurements, per-section formulas, "Not measured" rules and advisory checks |
-| `cache.py`, `geometry.py`, `model_map.py`, `gpu_detect.py` | Small shared helpers |
+| `analyser-ocr-server.py` | Starts the service: the app under `/analyser` and the API |
+| `config.py` | Every `VAHINI_*` setting, read once |
+| `scoring.py`, `scoring_parts/` | The 20 factors: inputs, formulas and "Not measured" rules |
+| `server/` | The API (`app.py`), keys, daily limits, capacity, caches, the report store |
+| `reading/` | From photo to text: detection, the readers, printed or handwritten |
+| `vision/` | Measurements from the ink: lines, letters, zones, slant, spacing |
+| `languages/` | Language packs, recognition stages and ladders |
+| `report/` | The report, practice and coaching, and the JSON Schema generator |
+| `schemas/`, `catalogs/` | API contracts and versioned report dictionaries (both generated) |
+| `models/`, `perf/` | Small trained models; per-page cost budgets |
+| `requirements.txt`, `requirements/` | The default install; one file per engine tier |
+| `warmup_models.py` | Downloads and warms the models before the first scan |
+| `tools/` | Run by hand: the SBOM, a load test, engine timing |
+| `tests/` | `python -m unittest discover -s backend/tests -t .` |
 
-## OCR engines
+## Read more
 
-Pick the engine with one env var: `VAHINI_OCR_BACKEND`.
+- Engines, settings, hybrid mode and the layout filter: [docs/06](../docs/06-reading-engines.md#engine-settings-and-modes)
+- Settings, pointing a website at it, keeping models between deployments: [docs/14](../docs/14-build.md#running-the-service)
+- The API: [API-V2.md](API-V2.md); capacity: [docs/13](../docs/13-api-and-capacity.md)
+- Benchmarks: [docs/18](../docs/18-benchmark.md)
 
-| Value | Engine | Best at | CPU speed | Install |
-|---|---|---|---|---|
-| `paddle` (default) | PaddleOCR PP-OCRv5 | printed text, fast private default | 1 to 3 s | `requirements-paddle.txt` |
-| `trocr` | TrOCR (Microsoft) | English handwriting | 1 to 4 s/line | `requirements-trocr.txt` |
-| `surya` | Surya 2 (Datalab) | multilingual and Indic handwriting | slow | `requirements-surya.txt` |
-| `hybrid` | paddle + trocr + surya | mixed pages: printed AND handwriting, any of the languages above | 1 to 4 s/handwriting line | `requirements-trocr.txt` + `requirements-surya.txt` |
-| `paddleocr-vl` | PaddleOCR-VL | strong handwriting, needs GPU | impractical | ships in `paddleocr` |
-| `auto` | best of the installed engines | | | |
-
-Every engine maps to the same response shape, so the app never changes when
-you switch. In `trocr` and `hybrid` mode, paddle still detects and classifies
-every line (that decision stays centralised in `classify.py`); only the
-*handwriting* lines get re-read by a specialist, and paddle keeps doing what
-it's already good at on the printed ones. `trocr` mode always re-reads with
-TrOCR; `hybrid` mode picks the specialist per line by script: English to
-TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya: so a mixed-language
-page gets the right engine for each line instead of one engine for the whole
-page.
-
-That routing, and the model each engine reads with, is data:
-`backend/languages/stages.json` (checked against `stages.schema.json` when
-the server starts). Its `scripts` part lists the languages of each script
-and the engine that re-reads that script; a language it does not name reads
-as Latin, so it goes to TrOCR. Its `stages` part has one entry per engine,
-script and device with the facts the ladders (#219) will be built from:
-quality, cost, memory, threads and maturity, all `unmeasured` until
-`backend/load_test.py` and the benchmark measure them on stage. The default
-Paddle recognition models (`VAHINI_OCR_REC_MODEL_MAP`) and the TrOCR model
-(`VAHINI_TROCR_MODEL`) come from the same file, and both variables still
-override it. `GET /health`'s `recognition` field gives the file's sha256
-and the device each engine resolved to (`null` until the engine is built).
-
-`backend/languages/ladders.json` is built from that table by
-`python scripts/rank_stages.py` and committed (#219, design in
-`docs/20-languages.md`, section 17.2). For each mode and script it lists
-the stages that may read a handwriting line, cheapest first: the Paddle
-stage that found the line, then the stages a line is sent up to. In
-paddle mode that is Paddle alone, in trocr mode Paddle then TrOCR for
-every script, and in hybrid mode the stages ranked by the rules of 17.2.
-While a quality or a cost is `unmeasured`, a hybrid ladder cannot be
-ranked, so it is the route the stage table names (`basis: route`) and
-lists the stages that were not measured. The file records the sha256 of
-the stage table it was built from; after any change to `stages.json`,
-run the script again and commit both. CI runs it with `--check`.
-
-The re-read text is accepted when EITHER it agrees with paddle's own reading
-at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
-at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
-Paddle is not a handwriting specialist, which is the whole reason to
-re-read. On genuinely hard handwriting, requiring agreement with paddle's
-own possibly wrong reading would throw away real corrections, so a
-confident specialist reading is trusted on its own. The agreement path
-still guards against hallucination on low-confidence, made-up text.
-
-The re-reading is `backend/escalation.py`, driven by `ladders.json`
-(`docs/20-languages.md`, section 17.6). Each line climbs its ladder
-until a rung's reading passes the acceptance test. No language pack sets
-an acceptance limit yet (`reading.accept_confidence`), so a reading is
-accepted at the top rung only and every line is re-read, as before. Lines
-that reach the same rung on a page go in one call when the engine reads
-batches, and answers are cached per loaded engine by the crop's hash,
-the stage version and the prompt version. If a line needs an engine that
-cannot answer (not installed, failing, or a remote stage whose circuit
-breaker is open), the page is refused with `ocr_unavailable`, a 503 and
-`Retry-After: 60`, on `/ocr`, `/analyze-vl`, `/report-python` and
-`/api/v2/reports`. It is not cached and uses no free check. The line is
-never left with the lower reading, so one photo always gets the same
-score or a "try again". In the legacy payloads, each entry of
-`hand_lines` carries `trail` (`ladder`, `tried`, `answered`, `accepted`,
-and `held` when a line could not be sent up: `no_crop` or `line_limit`
-past 40 lines), and the payload carries `ladder`: the sha256 of
-`ladders.json` and `stages.json`, the version of each stage tried, and
-how many lines each stage answered.
-
-To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
-`docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
-llama.cpp). `hybrid` mode needs both.
-
-### Hybrid mode re-reads every line, every time
-
-Hybrid and trocr modes re-read every handwriting line (up to 40) on every
-scan. They used to skip an engine after one line slower than
-`VAHINI_HYBRID_MAX_MS_PER_LINE`, for the rest of the page and for
-`VAHINI_HYBRID_RETRY_SEC` afterwards, so the same photo could read
-differently on a busy server (#112). Speed no longer changes the result.
-`GET /health`'s `adaptive_engine_speed` still shows the measured
-milliseconds per line, and whether that is under
-`VAHINI_HYBRID_MAX_MS_PER_LINE`, so you can see whether this machine can
-afford hybrid mode. If it cannot, run `paddle`.
-
-**Proof a specialist engine actually ran, not just that hybrid mode was
-requested:** `POST /report-python`'s response has
-`analysis.recognition.refined_by`: a count per engine of how many
-handwriting lines it actually refined this scan (e.g.
-`{"trocr": 4, "surya": 1}`), and `refined_lines` for the total. An empty
-`{}` means no specialist touched any line this scan: check three things
-in order: (1) `VAHINI_OCR_BACKEND` is actually `hybrid` or `trocr` (the
-default is `paddle`, which never refines anything); (2) `GET /health`
-lists `trocr`/`surya` as available, not skipped (they must be baked into
-the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3) the
-engine's `recognize_crop` did not raise on these lines (a failing call
-keeps paddle's reading for that line).
-
-### Layout pre-filter (excludes photos, seals, charts: never handwriting)
-
-Before a page's detected lines reach the printed/handwriting classifier,
-an optional pass using PaddleOCR's own document-layout model (PP-DocLayout)
-drops anything that clearly isn't ink-on-paper content at all: photos,
-figures, charts, seals/stamps, and decorative header/footer images (e.g. a
-printed letterhead crest). It is a NEGATIVE filter only: it never
-restricts analysis to "text-labelled" regions, because that would also
-throw away genuine handwritten formulas and filled-in table cells, which
-PP-DocLayout tags `formula`/`table` regardless of whether a pen or a
-printer produced them. Those categories, along with captions and titles
-(a student's own handwritten caption is real text, not decoration), are
-always kept.
-
-This does not replace `classify.py`: PP-DocLayout's categories are
-document structure (title, text, table, formula, image, seal...), not a
-printed-vs-handwriting signal.
-
-Same speed-adaptive shape as hybrid mode, applied to picking a model
-size instead of an engine: tries the more accurate `PP-DocLayout-M` first,
-falls back to the cheaper `PP-DocLayout-S` if a real measured call is too
-slow, and disables filtering entirely (falls back to today's unfiltered
-behaviour) if even that is too slow: never a hard requirement. Building
-the model itself never blocks a request either: the first time it's
-needed, a background download starts and that request (and every one
-after it, until the download finishes) simply skips filtering for free.
-Run `python warmup_models.py` (or let the Docker image's startup warmup
-do it) so it's normally already built by the time real traffic arrives.
-Both model tiers are a few MB and download to the same model cache as
-PaddleOCR, so they persist across restarts the same way (see "Keep models
-on disk between deployments" below).
-
-| Env var | Default | What it does |
-|---|---|---|
-| `VAHINI_LAYOUT_FILTER` | `1` | turn the layout pre-filter off with `0` |
-| `VAHINI_LAYOUT_MAX_MS` | `800` | above this measured latency, drop from `PP-DocLayout-M` to `-S`, then to no filtering |
-
-Check `GET /health`'s `layout_filter` field for whether it's enabled and
-which model tier is actually built and ready on this machine.
-
-## Common settings
-
-| Env var | Default | What it does |
-|---|---|---|
-| `PORT` | `8080` | HTTP port |
-| `VAHINI_OCR_BACKEND` | `paddle` | engine, see the table above |
-| `VAHINI_OCR_LANGS` | `en,te` | languages to load; request one with `lang=` |
-| `VAHINI_OCR_GPU` | auto | force GPU (`1`) or CPU (`0`); unset auto-detects |
-| `VAHINI_OCR_VARIANTS` | `2` | max preprocessing variants for faint pages |
-| `VAHINI_PRINTED_THRESHOLD` | `0.58` | printed vs handwriting split; higher keeps more as handwriting |
-| `VAHINI_OCR_ENGINE_RETRY_SEC` | `300` | how long a failed engine build is remembered before retrying |
-| `VAHINI_OCR_ORIGINS` | `*` | CORS allowlist for cross-origin deployments |
-| `VAHINI_REFINE_MIN_SIM` | `0.70` | in `trocr`/`hybrid` mode, accept a re-read line if it's at least this similar to paddle's reading |
-| `VAHINI_REFINE_MIN_CONF` | `0.75` | in `trocr`/`hybrid` mode, accept a re-read line if the specialist's own confidence is at least this high, even if it disagrees with paddle |
-| `VAHINI_HYBRID_MAX_MS_PER_LINE` | `2500` | `/health` marks an engine slower than this per line as not `fast_enough`; information only, it never skips the engine |
-| `VAHINI_HYBRID_RETRY_SEC` | `600` | how long a speed measurement stays in `/health` |
-
-GPU is auto-detected per engine; force it per engine with `VAHINI_OCR_GPU`,
-`VAHINI_TROCR_GPU`, `VAHINI_SURYA_GPU`.
-
-## Pointing a website at it
-
-The client tries `window.VAHINI_OCR_ENDPOINT`, then same-origin `/ocr`, then
-`http://127.0.0.1:8080/ocr`. In production set one line before the bundle
-loads and reverse-proxy `/ocr` to this service:
-
-```html
-<script>window.VAHINI_OCR_ENDPOINT = "https://example.com/ocr";</script>
-```
-
-Requests are `multipart/form-data` with `image` and optional `lang`
-(`en`, `te`, `hi`, `ta`, `kn`, `ml`, or `auto`).
-
-## Keep models on disk between deployments
-
-Mount a host folder over the model cache so containers never re-download:
-
-```bash
-docker run --rm -p 8080:8080 \
-  -e PADDLE_PDX_CACHE_HOME=/opt/paddle-models \
-  -v /srv/paddle-models:/opt/paddle-models \
-  vahini/20factor-analyser:local
-```
-
-`docker-compose.yml` already does this with a named volume.
-
-## Benchmarks
-
-Real, measured numbers only: this project's whole premise is auditable
-geometry over guesswork, so a made-up speed table would contradict that.
-Run it yourself and paste the output here (or open a PR):
-
-```bash
-pip install -r backend/requirements-core.txt   # + whichever engine tiers you want measured
-python backend/benchmark_ocr.py
-```
-
-It runs the SAME production code path (`recognizer.collect_lines_paddle` /
-`recognizer.backend_recognize`) against the pages already committed under
-`tests/fixtures/samples/`, times every call, and prints a Markdown table:
-engine, sample, lines found, detection/recognition/total time, mean
-confidence. Engines you haven't installed are skipped with a note, not an
-error. See the script's own header comment for exactly what "detection"
-vs "recognition" means for a recogniser-only engine like TrOCR or Surya
-(PaddleOCR's API doesn't expose them as separately timeable steps, so one
-of the two is an estimate: clearly labelled as such in the output).
-
-`--samples <dir>` points it at a different folder of images, `--limit N`
-caps how many it runs, `--lang en|te|hi|...` picks the language.
-
-_No results are published here yet: be the first to run it on real
-hardware and send a PR with your table and CPU/GPU details._
-
-## Tests
-
-```bash
-pip install -r backend/requirements-core.txt
-python -m unittest discover -v -s backend/tests -t .
-```
-
-The suite covers the response contracts, the printed/handwriting split, the
-20-factor pipeline, engine failure recovery, the reference-image guarantees
-and the handwriting-only rule (printed text is never analysed; fully printed
-pages are refused with `no_handwriting`). It does not need paddle or torch
-installed.
-
-## One honest note
-
-OCR here is assistive. It labels what was written so the report can show it.
-It is never the basis of a factor score; the 20 factors are measured from the
-pixels whether or not any engine could read the words.
-
-*PaddleOCR is Apache-2.0, see /THIRD-PARTY-NOTICES.md.*
+Reading is assistive: it labels what was written so the report can show
+it. The 20 factors are measured from the pixels whether or not the words
+could be read. *PaddleOCR is Apache-2.0, see /THIRD-PARTY-NOTICES.md.*

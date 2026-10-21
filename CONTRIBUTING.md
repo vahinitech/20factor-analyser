@@ -53,7 +53,7 @@ discuss it before merging.
 python frontend/build_bundle.py
 
 # Python OCR/20-factor server
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 ```
 
 The packed bundle `frontend/scripts/core/engine.bundle.js` is generated from

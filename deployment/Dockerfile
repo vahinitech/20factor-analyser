@@ -18,7 +18,8 @@ WORKDIR /app/backend
 # via -r, so they must be present before install). Default image = core+paddle;
 # add trocr/surya tiers by extending this build if you need them (both are
 # needed for hybrid mode).
-COPY backend/requirements*.txt ./
+COPY backend/requirements.txt ./
+COPY backend/requirements ./requirements
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- Optional handwriting engines (baked in via build args) ------------------
@@ -34,7 +35,7 @@ RUN if [ "$VAHINI_WITH_TROCR" = "1" ] || [ "$VAHINI_WITH_SURYA" = "1" ]; then \
     fi
 
 # TrOCR deps + pre-download the handwriting model so the first request is
-# fast. requirements-trocr.txt pins transformers>=5.3.0 (a critical RCE
+# fast. requirements/trocr.txt pins transformers>=5.3.0 (a critical RCE
 # affects every earlier version); it is NOT confirmed whether 5.3.0+ still
 # has the "Couldn't instantiate the backend tokenizer" issue seen at 5.13.0
 # (microsoft/trocr-base-handwritten's Hub repo only ships a legacy tokenizer
@@ -43,7 +44,7 @@ RUN if [ "$VAHINI_WITH_TROCR" = "1" ] || [ "$VAHINI_WITH_SURYA" = "1" ]; then \
 # as torch/transformers being absent entirely), one optional engine's model
 # download must never block the whole image build.
 RUN if [ "$VAHINI_WITH_TROCR" = "1" ]; then \
-        pip install --no-cache-dir -r requirements-trocr.txt && \
+        pip install --no-cache-dir -r requirements/trocr.txt && \
         (python -c "from transformers import TrOCRProcessor, VisionEncoderDecoderModel; m='microsoft/trocr-base-handwritten'; TrOCRProcessor.from_pretrained(m); VisionEncoderDecoderModel.from_pretrained(m)" \
             || echo "[build] trocr pre-download failed -- will lazy-load on first request instead") ; \
     fi
@@ -51,7 +52,7 @@ RUN if [ "$VAHINI_WITH_TROCR" = "1" ]; then \
 # Surya deps + a source-built llama-server (its required CPU inference backend).
 ENV LLAMA_CPP_BINARY=/usr/local/bin/llama-server
 RUN if [ "$VAHINI_WITH_SURYA" = "1" ]; then \
-        pip install --no-cache-dir -r requirements-surya.txt && \
+        pip install --no-cache-dir -r requirements/surya.txt && \
         apt-get update && apt-get install -y --no-install-recommends build-essential cmake git && \
         git clone --depth 1 https://github.com/ggml-org/llama.cpp /tmp/llama.cpp && \
         cmake -S /tmp/llama.cpp -B /tmp/llama.cpp/build -DLLAMA_CURL=OFF -DGGML_NATIVE=OFF && \
@@ -83,7 +84,7 @@ RUN if [ -n "${VAHINI_OCR_PRELOAD_LANGS}" ]; then \
 # also runs the container read-only, with every Linux capability dropped
 # (vahini-web deploy/docker-compose.*.yml); the only writable places are /tmp
 # (HOME, Paddle's cache), the subscription database volume and the report
-# records volume (backend/report_store.py). The model, database and report
+# records volume (backend/server/report_store.py). The model, database and report
 # folders belong to this user, so a new volume starts with the right
 # owner. No .pyc files are written at runtime.
 RUN useradd --system --uid 10001 --home-dir /tmp --shell /usr/sbin/nologin vahini \

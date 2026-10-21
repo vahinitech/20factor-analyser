@@ -466,7 +466,7 @@ function applyServiceGate(){
   if (go) go.disabled = down || !state.imageEl;
 }
 
-/* Developer instructions (docker compose, ppocr-server.py) only make sense on
+/* Developer instructions (docker compose, server/app.py) only make sense on
    the machine running the server; visitors on vahinitech.com get plain words. */
 function onLocalHost(){
   return ['localhost','127.0.0.1','[::1]'].includes(location.hostname);
@@ -488,7 +488,7 @@ async function checkService(){
     detail.textContent = serviceUp
       ? 'Connected.'
       : (onLocalHost()
-        ? 'Start it with docker compose up -d, or python backend/ppocr-server.py. It reconnects automatically.'
+        ? 'Start it with docker compose up -d, or python backend/server/app.py. It reconnects automatically.'
         : 'The analyser is busy or offline. It reconnects by itself, or press Retry now.');
   }
   applyServiceGate();
@@ -696,7 +696,7 @@ async function runPipeline(){
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
       tips: serverDownTips([
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python backend/ppocr-server.py',
+        'Or start it directly: python backend/server/app.py',
         'Then reload this page and upload the photo again',
       ]),
     });
@@ -796,7 +796,7 @@ async function runPipeline(){
   }
   if (pyReport && pyReport.error_code === 'daily_limit'){
     // The free tier allows a few checks a day per connection; a Pro access
-    // key is never limited (backend/daily_limit.py).
+    // key is never limited (backend/server/daily_limit.py).
     showReject({
       outcome: 'daily_limit',
       reason: 'Today\u2019s free checks are used',
@@ -866,7 +866,7 @@ async function runPipeline(){
         + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
       tips: serverDownTips([
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python backend/ppocr-server.py',
+        'Or start it directly: python backend/server/app.py',
         'Then reload this page and upload the photo again',
       ]),
     });
@@ -1156,7 +1156,7 @@ async function finishIMU(){
         + (onLocalHost() ? ' Start the server and capture again.' : ''),
       tips: serverDownTips([
         'Run the server: docker compose up -d',
-        'Or start it directly: python backend/ppocr-server.py',
+        'Or start it directly: python backend/server/app.py',
       ]),
     });
     return;

@@ -6,7 +6,7 @@
 # on main. Informational only: timings never fail it (shared runners are
 # noisy), only an error in the script does. Weekly, by hand, and on pull
 # requests labelled `perf`. GitHub's runners only, never the production
-# host; the server's real memory is backend/load_test.py on stage.
+# host; the server's real memory is backend/tools/load_test.py on stage.
 name: Profile
 
 on:
@@ -39,7 +39,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r backend/requirements-core.txt
+      - run: pip install -r backend/requirements/core.txt
       - name: Last successful profile on main
         env:
           GH_TOKEN: ${{ github.token }}

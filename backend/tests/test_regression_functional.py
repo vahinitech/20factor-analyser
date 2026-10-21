@@ -20,10 +20,12 @@ except Exception:
 
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
-SERVER_FILE = SERVER_DIR / "ppocr-server.py"
+SERVER_FILE = SERVER_DIR / "server/app.py"
 sys.path.insert(0, str(SERVER_DIR))
 
-import detector  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    detector,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 # White-box tests deliberately reach into module-private helpers below.
 # pylint: disable=protected-access
@@ -87,7 +89,7 @@ def _load_server_module():
         "vahini_ppocr_server_test", str(SERVER_FILE)
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError("Unable to load ppocr-server.py")
+        raise RuntimeError("Unable to load server/app.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 

@@ -51,7 +51,7 @@
   const results = [];
   const add = (ok, name, detail) => { results.push({ ok:!!ok, name, detail:detail||'' }); };
 
-  /* ---- Build a server-shaped analysis object (mirrors ppocr-server.py
+  /* ---- Build a server-shaped analysis object (mirrors server/app.py
      _build_python_analysis: results[], sections[], overall, topWeak, topStrong). ---- */
   const SECTIONS = [
     { id:'structure', name:'Structure',           weight:0.30, blurb:'Letter shapes, size & control' },

@@ -17,7 +17,7 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from tbar_analysis import analyze_tbars, line_tbar_events  # noqa: E402
+from vision.tbar_analysis import analyze_tbars, line_tbar_events  # noqa: E402
 
 H_M = 16  # x-height in px
 H_U = 16  # ascender rise above the midline

@@ -77,7 +77,7 @@ const server = spawn('./node_modules/.bin/http-server', ['.', '-p', String(PORT)
 const results = [];
 const add = (ok, name, detail = '') => results.push({ ok: !!ok, name, detail: typeof detail === 'string' ? detail : JSON.stringify(detail) });
 const TELUGU = /[ఀ-౿]/;
-const python = readFileSync('backend/practice_catalog.py', 'utf8');
+const python = readFileSync('backend/report/practice_catalog.py', 'utf8');
 const AVOID_TE = [...python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/)[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 const AVOID = /\b(weak|poor|bad|wrong|problem|inadequate|fail|lowest|mistake)/i;
 

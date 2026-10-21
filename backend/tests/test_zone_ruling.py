@@ -19,7 +19,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-import zone_analysis as za  # noqa: E402
+from vision import zone_analysis as za  # noqa: E402
 
 
 def _load(name):

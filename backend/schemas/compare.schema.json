@@ -56,5 +56,5 @@
     }
   },
   "title": "POST /api/v2/compare response: two stored reports",
-  "description": "The two stored records, in the order sent, and what makes them hard to compare. Pro only; nothing new is stored (backend/report_store.py comparison_notes)."
+  "description": "The two stored records, in the order sent, and what makes them hard to compare. Pro only; nothing new is stored (backend/server/report_store.py comparison_notes)."
 }

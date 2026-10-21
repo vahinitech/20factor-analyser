@@ -20,7 +20,7 @@ spec.loader.exec_module(script)
 
 
 def summary(reader_calls=3, lines=4):
-    """A stage summary as backend/perf.py's Scan.summary() gives it."""
+    """A stage summary as backend/server/perf.py's Scan.summary() gives it."""
     return {
         "decode": {
             "runs": 1,

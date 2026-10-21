@@ -151,5 +151,5 @@
     }
   },
   "title": "GET /api/v2/reports/{id} response: a stored report",
-  "description": "What is kept of a compact report so a later check can be compared with it: scores, comparability counts and where each factor was measured. Never the photo, a cut-out, the words read, a caption, a file name, an access key, an address or a time of day (backend/report_store.py)."
+  "description": "What is kept of a compact report so a later check can be compared with it: scores, comparability counts and where each factor was measured. Never the photo, a cut-out, the words read, a caption, a file name, an access key, an address or a time of day (backend/server/report_store.py)."
 }

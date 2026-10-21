@@ -28,7 +28,7 @@ flowchart LR
 | Part | What it does | Where |
 |---|---|---|
 | Browser app | Takes the photo, sends it, draws the report and practice sheet. Scoring is not done in the browser. | `frontend/src/app/app.js`, `frontend/src/engine/*.js`, `frontend/src/report/report-render.js`; bundled by `frontend/build_bundle.py` |
-| Analyser server | Reads the page, scores the 20 factors, builds evidence and practice | `backend/analyser-ocr-server.py` (starts it), `backend/ppocr-server.py` (endpoints) |
+| Analyser server | Reads the page, scores the 20 factors, builds evidence and practice | `backend/analyser-ocr-server.py` (starts it), `backend/server/app.py` (endpoints) |
 | Website nginx | Routes, rate limits, body limits, caching | vahini-web `deploy/nginx.conf` |
 | Persist service | Stores anonymous counts, feedback and pages a family chose to keep. Never the photo, unless the family ticks "Keep my pages". | vahini-web `services/persist-api/server.js` |
 | Playground | Demonstration of the pen motion models | imu2text `playground/` |
@@ -46,7 +46,7 @@ flowchart LR
 | `/health`, `/ocr/health` | GET | Engine readiness, languages, scan capacity |
 | `/analyser/*` | GET | The browser app (HTML never cached) |
 
-Source: `ppocr-server.py:249-264, 434, 575-586, 882, 905, 920-953, 956`;
+Source: `server/app.py:249-264, 434, 575-586, 882, 905, 920-953, 956`;
 `analyser-ocr-server.py:31-84`.
 
 ## 2. What happens to one photo
@@ -116,9 +116,9 @@ factors 13 to 16 only when pen data exists.
 |---|---|---|
 | Reading (production) | English, Telugu | vahini-web `deploy/docker-compose.prod.yml` (`VAHINI_OCR_LANGS=en,te`) |
 | Reading (stage) | English | `docker-compose.stage.yml` |
-| Accepted by the server | en, te, hi, ta, kn, ml; anything not configured falls back to the configured list | `ppocr-server.py:16-17`, `recognizer.py:63-71` |
+| Accepted by the server | en, te, hi, ta, kn, ml; anything not configured falls back to the configured list | `server/app.py:16-17`, `recognizer.py:63-71` |
 | Report text | English, Telugu (Telugu strings are a draft until a native speaker checks them) | `frontend/src/report/i18n.js:13`, `changelog.d/print-in-telugu.md` |
-| Practice catalogue | English and Telugu exercises | `backend/practice_catalog.py:14-17` |
+| Practice catalogue | English and Telugu exercises | `backend/report/practice_catalog.py:14-17` |
 | Letter-zone measurement (factor 6) | Latin letters only; needs 12 or more | `zone_analysis.py:27-29, 190-196` |
 
 The website's worksheet library also has pages for cursive, Hindi, Kannada,
@@ -258,7 +258,7 @@ are limited to 3 a day per address; Pro keys are not limited.
 
 2,500 MB container with no swap, 4 cores, 1 scan at a time and 4 waiting,
 the committed sample photo. Source: `docs/13-api-and-capacity.md:49-57`,
-`backend/load_test.py`.
+`backend/tools/load_test.py`.
 
 | Sent at once | Read | Refused (503) | Median | Slowest | Reports a minute |
 |---|---|---|---|---|---|
@@ -322,9 +322,9 @@ exact, 95.32% in the top three (`results/drawing_reader/summary.json`).
 ### Not measured yet
 
 - **Reading accuracy on handwriting.** No character or word error rate has
-  been recorded for any engine; `backend/benchmark_ocr.py` exists but no
-  results are stored (`backend/README.md:210-235`). The speed figures in
-  `backend/README.md:68-75` are estimates.
+  been recorded for any engine; `backend/tools/benchmark_ocr.py` exists but no
+  results are stored (docs/06, "Engine settings and modes"). The speed figures in
+  in docs/06, "Engine settings and modes", are estimates.
 - **GPU speed and throughput** (`capacity.py:19`).
 - **Agreement with teachers** on which places and practice matter.
 - **Score accuracy** against any external judgement of handwriting.

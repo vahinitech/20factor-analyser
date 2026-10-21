@@ -14,13 +14,13 @@ from pathlib import Path
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import compact_reports
-import contract_schemas
-import entitlements
-import generate_schemas
-import practice_catalog
+from report import compact_reports
+from report import contract_schemas
+from server import entitlements
+from report import generate_schemas
+from report import practice_catalog
 from fastapi import HTTPException
-from report_contract import FACTOR_IDS, public_report
+from report.report_contract import FACTOR_IDS, public_report
 
 ROOT = Path(__file__).resolve().parents[1]
 CARD = {
@@ -237,7 +237,7 @@ class HealthShapeTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location(
-            "ppocr_server_for_schema", ROOT / "ppocr-server.py"
+            "ppocr_server_for_schema", ROOT / "server/app.py"
         )
         cls.server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.server)

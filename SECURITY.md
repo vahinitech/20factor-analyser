@@ -39,7 +39,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 2026-10-09.
 
 **Sizes, checked before anything is decoded**
-- 5 MiB per file and 6 MiB per request (`backend/upload_limits.py`), counted
+- 5 MiB per file and 6 MiB per request (`backend/server/upload_limits.py`), counted
   as the bytes arrive. vahini-web's nginx refuses more than 6 MB first.
 - 24 million pixels at most, read from the file header before decoding
   (`computer_vision._check_dimensions`): a decompression bomb never expands.
@@ -56,7 +56,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
   convenience: each format is another decoder an attacker can reach through
   the public `/ocr`. `backend/tests/test_image_formats.py` sends eleven
   others and fails if one is decoded.
-- Pillow is pinned to an exact version (`requirements-core.txt`). A Pillow
+- Pillow is pinned to an exact version (`requirements/core.txt`). A Pillow
   bump is a security change: read its release notes and run the image tests.
 
 **Nothing kept**
@@ -66,7 +66,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 - The website never sends the photo to its own store; only a family that
   ticks "Keep my pages" keeps one, encrypted, in vahini-web
   (`services/persist-api/lib/keepstore.js`).
-- Report records (`backend/report_store.py`, owner decision 2026-10-16):
+- Report records (`backend/server/report_store.py`, owner decision 2026-10-16):
   with `VAHINI_REPORT_STORE_DIR` set, each successful compact report keeps
   a small record so a later check can be compared with it: the scores, the
   comparability counts, where each factor was measured (numbers) and the
@@ -82,7 +82,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
   family can delete one with its receipt. `backend/tests/test_report_store.py`
   is the proof: it puts a page naming a child and a school through the real
   route and searches every byte written.
-- One exception, for stage only: debug storage (`backend/debug_store.py`,
+- One exception, for stage only: debug storage (`backend/server/debug_store.py`,
   owner decision 2026-10-15). With `VAHINI_DEBUG_STORE=1` and
   `VAHINI_DEBUG_STORE_DIR` both set, each answered upload keeps its photo
   and the answer sent back, under `<dir>/analyser/<date>/`, until someone
@@ -100,10 +100,10 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 
 **Abuse limits**
 - Free tier: 3 checks a day per IP address, Pro never limited
-  (`backend/daily_limit.py`). `X-Real-IP` is trusted only from a private peer.
+  (`backend/server/daily_limit.py`). `X-Real-IP` is trusted only from a private peer.
   nginx adds 12 checks a minute per IP.
 - Scans run one at a time with a short queue inside a memory-limited
-  container (`backend/scan_slots.py`, `backend/capacity.py`).
+  container (`backend/server/scan_slots.py`, `backend/server/capacity.py`).
 
 **The container**
 - Runs as user 10001, never root (`deployment/Dockerfile`, checked by
