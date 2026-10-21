@@ -377,11 +377,14 @@ def measure_line(gray, line):  # pylint: disable=too-many-locals
                 )
     letter_gaps = []
     for wd in words:
-        # Gaps between the letters (or joined pieces) inside the word.
-        letter_gaps.extend(
+        # Gaps between the letters (or joined pieces) inside the word,
+        # kept per word too: Letter Spacing compares each gap with its
+        # own word's.
+        wd["letter_gaps"] = [
             max(0.0, float(b[0] - a[2])) / line_xh
             for a, b in zip(wd["spans"], wd["spans"][1:])
-        )
+        ]
+        letter_gaps.extend(wd["letter_gaps"])
         wd["slant"] = _slant(
             mask[:, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0]
         )

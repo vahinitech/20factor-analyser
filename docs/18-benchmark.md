@@ -201,6 +201,25 @@ mistake, and fails when a factor catches its mistake less often than
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
 
+`factors --ruled` does the same for factor 6 on pages with a printed
+four-line ruling (`planted_pages.build_page(ruled=True)`: the ascender
+line, a dashed midline, the baseline and the descender line under each
+line, drawn with no random numbers, so the writing is the same as on
+the unruled page). It checks the planted long ascenders against
+`benchmarks/factors-ruled/expected.json`, and how far factor 6 moves
+between two pages of the same passage by one writer
+(`variation_study.synthetic_pairs`, two pairs a writer): the 90th
+percentile may not rise. On 21 October 2026, on ruled pages:
+
+| | Caught | Same passage: median | 90th percentile | Largest |
+|---|---|---|---|---|
+| Measured against the ruling | 0.85 | 0.2 | 1.31 | 6.4 |
+| Measured from the ink, as before | 0.60 | 1.15 | 5.33 | 9.4 |
+
+(Unruled pages, from the ink: caught 0.75, same passage 1.4, 4.54 and
+9.1.) The 90th percentile is above the 1.0 of #157's stability test,
+which the drawn-letter version of it (`test_zone_ruling.py`) meets.
+
 ## Is this pull request slower than main?
 
 A pull request that changes `backend/` gets a `paired-timing` job in

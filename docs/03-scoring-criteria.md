@@ -58,9 +58,9 @@ score falls linearly and hits zero at the stated limit.
 | 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
-| 8 | Word Spacing | consistency of word gaps, in line heights: gaps between detected segments sharing a row, plus the widest (words − 1) ink gaps inside each line. Not measured below three gaps | `10 · (1 − min(1, gap CV / 1.4))` | ≈1.0 x-h, CV ≤0.25 |
-| 9 | Letter Spacing | intra-word spacing proxy: char-width consistency | `10 · (1 − min(1, char-width CV / 1.2))` | gap CV ≤0.30 |
-| 10 | Margin Discipline | left-edge consistency after page-tilt correction | `10 · (1 − min(1, left CV / 0.55))` | left CV ≤0.05 |
+| 8 | Word Spacing | word gaps inside each line, in line heights (where every letter stands apart, placed from the text; otherwise the widest words − 1 ink gaps): their mean distance from the median gap, as a share of it, and the share of gaps under half or over twice the median (#197). Not measured below three gaps | `10 · (1 − min(1, spread / 1.0)) − 2 · min(1, odd share / 0.10)` | ≈1.0 x-h, CV ≤0.25 |
+| 9 | Letter Spacing | gaps between the letters inside each word, in small letters: their median distance from their own word's median gap, as a share of it (at least 0.1 of a small letter); the share of gaps over twice their word's; and the share of words whose median gap is over twice the page's (#197). Below five gaps: char-width consistency | `10 · (1 − min(1, spread / 0.5)) − 1 · min(1, odd share / 0.20) − 3 · min(1, words apart / 0.10)` (stand-in: `10 · (1 − min(1, char-width CV / 1.2))`) | gap CV ≤0.30 |
+| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
 | 12 | Vertical Alignment | line-to-line tilt spread | `10 · (1 − min(1, angle std / 10))` | tilt CV ≤0.20 |
 | 13 | Speed Consistency | speed proxy from stroke/line-width regularity | `10 · (1 − min(1, width CV / 0.85))` | velocity CV ≤0.20 |
@@ -95,6 +95,19 @@ paper does not count as reach; reach =
 - Pages that can't support the measurement fall back to a tall-letter
   share proxy, and the report's `zoneProfile.method` field says which
   path produced the numbers, and why.
+- **On printed ruling** (a worksheet's guide lines, a four-line
+  notebook; #194) the bands come from the paper. A rule is a thin row
+  darker than the paper above and below it across most of the writing
+  (a dashed midline counts). Each line's small-letter band is the gap
+  between two rules that holds its small letters, with 1.5 times the
+  ink per row of the gaps either side; the ruling is taken out of the
+  ink, and the line's reach is the median over its letters that rise
+  more than half a band above it (and, for tails, below it), in ruled
+  x-heights. A line with no tall letter is left out of the ascender
+  side, and likewise for tails. The page uses the ruling when at least
+  half its lines, and two or more, are on it; otherwise, and on paper
+  with one dotted rule per line, it is measured from the ink as above.
+  `zoneProfile.method` says "the printed guide lines".
 
 ## Honesty rules — what a score does and doesn't claim
 
