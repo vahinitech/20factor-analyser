@@ -365,7 +365,9 @@ class TestServerReadInPieces(unittest.TestCase):
             stack.enter_context(
                 mock.patch.object(server.classify, "classify_lines", _kept)
             )
-            stack.enter_context(mock.patch.object(server, "_READ_LETTERS", None))
+            stack.enter_context(
+                mock.patch.object(server, "_READ_LETTERS", None)
+            )
             scan = getattr(server, "_report_python_process")
             return scan(self.arr, b"", "en", "")
 
