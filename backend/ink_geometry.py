@@ -62,8 +62,9 @@ LETTER_GROUP = 5
 # - FRAGMENT_SHORT_SHARE of the boxes or more are short: under
 #   FRAGMENT_SHORT of their own row's ink width.
 # A page whose median row holds fewer than FRAGMENT_PIECES lines, none
-# under FRAGMENT_SHORT of the widest line, is read whole without looking
-# at its ink (_plainly_whole), so most pages cost nothing more.
+# under FRAGMENT_SHORT of the widest line, the widest spanning
+# FRAGMENT_COVER of the page or more, is read whole without looking at
+# its ink (_plainly_whole), so most pages cost nothing more.
 # Set from every page of benchmarks/uji-clean (none of which may cross
 # them) and the neat penmanship pages of #276; `benchmark.py fragments`
 # prints each page's numbers against them.
@@ -529,15 +530,17 @@ def _reader_groups(read, floor=0.0):
     return groups, line_h
 
 
-def _plainly_whole(groups):
+def _plainly_whole(groups, page_w):
     """Whether the page was read whole without looking at its ink: under
-    FRAGMENT_PIECES lines on the median row, and no line under
-    FRAGMENT_SHORT of the widest. Such a page cannot have short pieces,
-    so most pages cost no more than this."""
+    FRAGMENT_PIECES lines on the median row, no line under
+    FRAGMENT_SHORT of the widest, and the widest at least FRAGMENT_COVER
+    of the page's width (a page read only as each row's first word has
+    lines all alike). Most pages cost no more than this."""
     widths = [l["box"][2] for g in groups for l in g]
     per_row = float(np.median([len(g) for g in groups]))
     short = min(widths) < FRAGMENT_SHORT * max(widths)
-    return per_row < FRAGMENT_PIECES and not short
+    narrow = max(widths) < FRAGMENT_COVER * page_w
+    return per_row < FRAGMENT_PIECES and not short and not narrow
 
 
 def _left(line):
@@ -601,7 +604,8 @@ def fragment_rows(arr, lines):
     (recognizer.extract_hand_lines)."""
     read = [l for l in lines if _has_size(l)]
     groups = _reader_groups(read)[0] if read else []
-    if len(groups) < FRAGMENT_MIN_ROWS or _plainly_whole(groups):
+    page_w = arr.shape[1]
+    if len(groups) < FRAGMENT_MIN_ROWS or _plainly_whole(groups, page_w):
         cover = {**_NO_ROWS, "rows": len(groups), "pieces": len(read)}
         return [], {**cover, "fragments": False, "looked": False}
     rows, cover = reader_rows(arr, lines)

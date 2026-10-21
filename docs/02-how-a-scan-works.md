@@ -128,32 +128,38 @@ depends only on the photo, so the same photo gives the same lines.
 scoring, so word counts come from the passage.
 
 **Rows from the ink instead of the reader's lines.** Two kinds of page are
-measured on rows found from the ink (`ink_geometry.py`: rows, baselines,
-letter sizes and, with a passage, word gaps) instead of the reader's line
-boxes. The response says which in `analysis.recognition`: `ink_rows` is
-true and `ink_reason` says why.
+not measured on the reader's line boxes as they come. The response says
+which in `analysis.recognition`: `ink_rows` is true and `ink_reason` says
+why.
 
 - `language`: the check asked for a language named in
-  `VAHINI_INK_GEOMETRY_LANGS` (Telugu; empty by default). Nothing is read.
+  `VAHINI_INK_GEOMETRY_LANGS` (Telugu; empty by default). Rows, baselines,
+  letter sizes and, with a passage, word gaps come from the ink alone
+  (`ink_geometry.find_rows`); nothing is read. The factors that need what
+  was read (1, 2, 3, 9, 17, 18, 19) are "Not measured".
 - `read_in_fragments` (#277): the reader read the page in pieces. Joined
   cursive comes back as short pieces ("Thi", "cmen") with the rest of each
-  row unread, and the factors used to be measured on the pieces' boxes:
-  neat penmanship scored Margin Discipline 0 on five of eight pages. After
-  step 6 the reader's boxes, printed lines included, are laid on the
-  page's ink rows (`ink_geometry.fragment_rows`). The page is read in
-  pieces when it has two ink rows or more and any of: the boxes span under
-  60% of the rows' ink width, the median row holds three boxes or more, or
-  half the boxes or more are under half their own row's ink width. The
-  rows then go through the printed check and are measured as in the
-  Telugu mode. The reader's lines still give the text, the passage match
-  and the recognition block. The thresholds are the `FRAGMENT_*` constants;
-  `scripts/benchmark.py fragments` prints each benchmark page's numbers
-  against them, and CI fails if a real benchmark page would be read in
-  pieces.
+  row unread, and the factors used to be measured on the pieces' boxes.
+  After step 6 the reader's handwriting lines are grouped into rows (lines
+  overlapping in height by 45% of the shorter one), each row is widened to
+  the ink on it (blobs whose middle lies within 0.6 of a line of the row's),
+  and the reader's numbers are compared with the rows
+  (`ink_geometry.fragment_rows`). The page is read in pieces when it has
+  two rows or more and any of: the reader's boxes span under 60% of the
+  rows' ink width, the median row holds three boxes or more, or half the
+  boxes or more are under half their own row's ink width. Such a page is
+  measured on the widened rows, each carrying its pieces' text and mean
+  confidence, by the same measures as any read line (sections 3 and 9);
+  the reader's own lines still give the text, the passage match and the
+  recognition block. Rows nothing was read on are not measured. To keep
+  the cost down, a page whose median row holds fewer than three lines,
+  none under half the widest, the widest spanning 60% of the page or
+  more, is taken as read whole without looking at its ink.
 
-On ink rows the factors that need what was read (1, 2, 3, 9, 17, 18, 19)
-are "Not measured", Ascender / Descender (6) only from zone bands, and
-Word Spacing (8) only when a typed passage gives each row its words.
+The thresholds are the `FRAGMENT_*` constants in `ink_geometry.py`.
+`scripts/benchmark.py fragments` prints each benchmark page's numbers
+against them, and CI fails if a page of a real-handwriting set would be
+read in pieces.
 
 ## 3. Measuring inside a line: ink components
 
