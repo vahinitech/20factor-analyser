@@ -25,23 +25,35 @@ English/Latin writing-style rule only (the cursive/print/mixed craft
 is a Latin-script convention): gated the same way zone_analysis gates
 on Latin text, unavailable otherwise.
 
-Pure numpy (no cv2/scipy - components via a small flood fill on the
-word crop only). Same honesty contract as zone/tbar analysis.
+Components are labelled by OpenCV on the word crop only (the small
+flood fill below stays as the reference and the fallback when cv2 is
+missing; both give the same count). Same honesty contract as zone/tbar
+analysis.
 """
 
 from collections import deque
 
 import numpy as np
 
+try:
+    import cv2
+except ImportError:  # pragma: no cover - cv2 ships in core
+    cv2 = None
+
+import languages
 from zone_analysis import MIN_XHEIGHT_PX, binarise, dense_band
+
+# What counts as a Latin letter: the language pack (backend/languages).
+_PACK = languages.language()
+_LETTERS = _PACK.letter_set("letter")
 
 # Word-cluster segmentation: gaps at or above the word-gap floor split
 # words; anything narrower stays part of the same word cluster.
 WORD_GAP_XH = 0.9
 # Minimum share of Latin letters (of all alphabetic characters, page-
-# wide) required to run the style check - matches the threshold
+# wide) required to run the style check - the same pack value
 # coach_tips.py's _latin_share gates English-only lessons on.
-MIN_LATIN_SHARE = 0.9
+MIN_LATIN_SHARE = _PACK.get("min_script_share")
 # Components smaller than this many pixels are dots/noise (i-dots,
 # specks) and are not counted as pen lifts.
 MIN_COMPONENT_PX = 6
@@ -53,7 +65,7 @@ DOMINANT_SHARE = 0.65
 
 
 def _is_latin_letter(c):
-    return c.isascii() and c.isalpha()
+    return c in _LETTERS
 
 
 def _latin_letter_count(word):
@@ -61,17 +73,31 @@ def _latin_letter_count(word):
 
 
 def _latin_share(text):
-    """Share of Latin/ASCII letters among all alphabetic characters in
-    `text`. Same convention as coach_tips.py's _latin_share."""
-    letters = [c for c in str(text or "") if c.isalpha()]
-    if not letters:
-        return 0.0
-    latin = sum(1 for c in letters if c.isascii())
-    return latin / float(len(letters))
+    """Share of Latin letters among all alphabetic characters in `text`.
+    Same convention as coach_tips.py's _latin_share."""
+    return _PACK.share(text)
 
 
 def _components(ink):
-    """Count 8-connected ink components of at least MIN_COMPONENT_PX."""
+    """Count 8-connected ink components of at least MIN_COMPONENT_PX.
+
+    cv2 labels the same 8-connected components as _components_flood
+    (labelling is a partition of the ink, whatever order it runs in),
+    in C instead of a Python loop per pixel: the loop was half of the
+    benchmark replay's time (#231)."""
+    if cv2 is None:
+        return _components_flood(ink)
+    n, _, stats, _ = cv2.connectedComponentsWithStats(
+        ink.astype(np.uint8), connectivity=8
+    )
+    # Label 0 is the background.
+    areas = stats[1:n, cv2.CC_STAT_AREA]
+    return int(np.count_nonzero(areas >= MIN_COMPONENT_PX))
+
+
+def _components_flood(ink):
+    """The original pure-Python flood fill: the reference _components
+    is tested against, and the fallback without cv2."""
     h, w = ink.shape
     seen = np.zeros((h, w), dtype=bool)
     count = 0

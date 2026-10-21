@@ -232,6 +232,13 @@ def public_report(payload, access):
             if len(selected) == 3:
                 break
         report["worksheets"] = selected
+    if payload.get("ruleset"):
+        # The hash of the packs and the request's profile, never the
+        # profile itself (languages/profile.py).
+        report["ruleset"] = payload["ruleset"]
+    if payload.get("age_band"):
+        # Echoed as sent; no score reads it yet (#212, #216).
+        report["age_band"] = payload["age_band"]
     if payload.get("ok"):
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)

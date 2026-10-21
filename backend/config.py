@@ -12,6 +12,7 @@ from dataclasses import dataclass
 
 from model_map import parse_model_map
 from gpu_detect import resolve_use_gpu
+from languages import stages
 
 # Every value recognizer.collect_lines() handles. Anything else used to run
 # as paddle while /health reported the unknown name (vahini-web stage said
@@ -44,6 +45,7 @@ class Settings:
     allowed_origins: list
     refine_min_sim: float
     refine_min_conf: float
+    ink_geometry_langs: list
 
 
 def load() -> Settings:
@@ -67,9 +69,11 @@ def load() -> Settings:
             f"VAHINI_OCR_BACKEND={ocr_backend!r} is not one of "
             + ", ".join(OCR_BACKENDS)
         )
+    # The default ("en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec")
+    # comes from the Paddle stages in backend/languages/stages.json.
     rec_model_map_raw = os.environ.get(
         "VAHINI_OCR_REC_MODEL_MAP",
-        "en:PP-OCRv5_server_rec,te:te_PP-OCRv5_mobile_rec",
+        stages.table().default_rec_model_map(),
     )
     return Settings(
         use_gpu=resolve_use_gpu("VAHINI_OCR_GPU", engine="paddle"),
@@ -141,6 +145,17 @@ def load() -> Settings:
         refine_min_conf=float(
             os.environ.get("VAHINI_REFINE_MIN_CONF", "0.75")
         ),
+        # Languages whose handwriting is measured from the ink alone
+        # (ink_geometry.py) when a check asks for that language, because
+        # the reader cannot find its lines: on 20 pages of real Telugu
+        # handwriting PP-OCRv5 found 7 of 80 (docs/18-benchmark.md).
+        # Empty by default: the owner turns a language on when its
+        # scores are ready to show.
+        ink_geometry_langs=[
+            s.strip().lower()
+            for s in os.environ.get("VAHINI_INK_GEOMETRY_LANGS", "").split(",")
+            if s.strip()
+        ],
     )
 
 

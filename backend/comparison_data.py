@@ -7,7 +7,7 @@ reports side by side. It needs more than the factor scores: the section
 scores the engine already computes, and facts that say whether two pages
 can be compared at all. This module only reads what the scorer and the
 recogniser produced; it measures nothing new and stores nothing.
-docs/17-comparison-data.md explains each field.
+docs/19-comparison-data.md explains each field.
 """
 
 import math
@@ -81,7 +81,8 @@ def comparability(payload):
     written, in which script, and whether print was found on the page
     and left out. Counts come from the text as the report read it (a
     copied passage's words when the page was matched to one); with
-    nothing read they are null. No text, identifier or personal data."""
+    nothing read they are null. ruleset is the hash of the rules the page
+    was scored by. No text, identifier or personal data."""
     analysis = (payload or {}).get("analysis") or {}
     recognition = analysis.get("recognition") or {}
     text = str(payload.get("full_text") or "")
@@ -108,6 +109,11 @@ def comparability(payload):
         "page": "handwriting_with_print" if printed else "handwriting",
         "reading": recognition.get("level"),
         "passage_aligned": recognition.get("passage_aligned") is True,
+        # The rules the page was scored by: the language packs and the
+        # request's profile, as one hash (languages/profile.py). Two pages
+        # scored by different rules compare like two scripts. Null for a
+        # payload made before the hash was recorded.
+        "ruleset": payload.get("ruleset"),
     }
 
 

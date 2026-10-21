@@ -1,0 +1,172 @@
+# The real-handwriting benchmark with the real reader (docs/18-benchmark.md).
+#
+# ci.yml replays the reader output kept in benchmarks/<set>/reader/. This
+# reads every page again with the models in the analyser image and reports
+# how far the scores move from expected.json. It runs when the reader or
+# its models can change, every Monday, and by hand. When the reader really
+# changed, the new reading is in the "reading" artifact: copy it over
+# benchmarks/<set>/reader/, run `benchmark.py update` and commit both.
+#
+# It also times the reader (#252, scripts/live_timing.py): on a pull
+# request main's image and the PR's image read the same pages in the same
+# job, each container held to the production limit (2500m, no swap), and
+# the PR fails when its p95 page time is 15% above main's, its memory peak
+# 10% above, or any page passes 2500 MiB. The weekly run compares main
+# with its own last weekly run and only reports.
+name: Benchmark (live reader)
+
+on:
+  pull_request:
+    paths:
+      - 'backend/recognizer.py'
+      - 'backend/escalation.py'
+      - 'backend/languages/ladders.json'
+      - 'backend/ocr_backends.py'
+      - 'backend/detector.py'
+      - 'backend/line_recovery.py'
+      - 'backend/layout_filter.py'
+      - 'backend/classify.py'
+      - 'backend/config.py'
+      - 'backend/requirements*.txt'
+      - 'deployment/Dockerfile'
+      - 'scripts/benchmark.py'
+      - 'scripts/live_timing.py'
+      - '.github/workflows/benchmark-live.yml'
+      - 'benchmarks/**'
+  schedule:
+    - cron: '0 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read  # download the last weekly run's timings
+
+concurrency:
+  group: benchmark-live-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build analyser image (cached paddle layer, shared with CI)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          tags: vahini/20factor-analyser:local
+          load: true
+          cache-from: type=gha,scope=analyser
+          cache-to: type=gha,mode=max,scope=analyser
+      - name: Read every page again and compare
+        run: |
+          mkdir -p "$RUNNER_TEMP/reading" && chmod 777 "$RUNNER_TEMP/reading"
+          docker run --rm -e GITHUB_STEP_SUMMARY=/out/summary.md \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/reading:/out" -w /repo \
+            vahini/20factor-analyser:local \
+            python scripts/benchmark.py live --out /out/uji-clean
+      # Same photo, same score, whatever language the request names (#145).
+      # Report only until #145 is fixed: on 20 October 2026 only 4 of 21
+      # photos agreed, so failing here would block every reader PR for a
+      # difference main already has. Remove continue-on-error with the fix.
+      - name: Every page and the sample photo, read with auto and with en
+        if: success() || failure()
+        continue-on-error: true
+        run: |
+          docker run --rm -e GITHUB_STEP_SUMMARY=/out/langs.md \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/reading:/out" -w /repo \
+            vahini/20factor-analyser:local \
+            python scripts/benchmark.py langs --lang en \
+              --photo tests/fixtures/handwriting-sample.jpg
+      - name: Summary
+        if: always()
+        run: |
+          cat "$RUNNER_TEMP/reading/summary.md" >> "$GITHUB_STEP_SUMMARY" || true
+          cat "$RUNNER_TEMP/reading/langs.md" >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Keep the reading
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reading
+          path: ${{ runner.temp }}/reading
+          retention-days: 14
+      # Two passes a side, in the order main, PR, PR, main, so a slow
+      # stretch on the runner falls on both; each page keeps its fastest.
+      - name: Check out main for the timing
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          path: main-src
+      - name: Build main's analyser image
+        if: github.event_name == 'pull_request'
+        uses: docker/build-push-action@v6
+        with:
+          context: main-src
+          file: main-src/deployment/Dockerfile
+          tags: vahini/20factor-analyser:main
+          load: true
+          cache-from: type=gha,scope=analyser
+      - name: Time the reader, main and this PR, at the production limit
+        run: |
+          mkdir -p "$RUNNER_TEMP/timing" && chmod 777 "$RUNNER_TEMP/timing"
+          side() {
+            docker run --rm --memory 2500m --memory-swap 2500m \
+              -v "$1:/repo:ro" -v "$PWD/scripts/live_timing.py:/tools/live_timing.py:ro" \
+              -v "$RUNNER_TEMP/timing:/out" -w /repo "$2" \
+              python /tools/live_timing.py run --checkout /repo \
+                --set uji-clean --out "/out/$3.json"
+          }
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            side "$PWD/main-src" vahini/20factor-analyser:main main-1
+            side "$PWD" vahini/20factor-analyser:local pr-1
+            side "$PWD" vahini/20factor-analyser:local pr-2
+            side "$PWD/main-src" vahini/20factor-analyser:main main-2
+          else
+            side "$PWD" vahini/20factor-analyser:local pr-1
+            side "$PWD" vahini/20factor-analyser:local pr-2
+          fi
+      - name: Last weekly timing on main
+        if: github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          run=$(gh run list --repo "$GITHUB_REPOSITORY" \
+            --workflow benchmark-live.yml --branch main --status success \
+            --limit 20 --json databaseId,event \
+            --jq 'map(select(.event == "schedule"))[0].databaseId // empty')
+          if [ -n "$run" ] && gh run download "$run" \
+              --repo "$GITHUB_REPOSITORY" --name timing \
+              --dir "$RUNNER_TEMP/last"; then
+            echo "Comparing with run $run"
+          else
+            echo "No earlier weekly run on main to compare with"
+          fi
+      - name: Compare
+        run: |
+          t="$RUNNER_TEMP/timing"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            python3 scripts/live_timing.py compare \
+              --main "$t/main-1.json" "$t/main-2.json" \
+              --pr "$t/pr-1.json" "$t/pr-2.json"
+          elif ls "$RUNNER_TEMP"/last/pr-*.json >/dev/null 2>&1; then
+            python3 scripts/live_timing.py compare --report-only \
+              --base "last weekly run" \
+              --main "$RUNNER_TEMP"/last/pr-*.json \
+              --pr "$t/pr-1.json" "$t/pr-2.json"
+          else
+            python3 scripts/live_timing.py compare --report-only \
+              --base "this run" \
+              --main "$t/pr-1.json" --pr "$t/pr-2.json"
+          fi
+      - name: Keep the timings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: timing
+          path: ${{ runner.temp }}/timing
+          retention-days: 90
+          if-no-files-found: ignore

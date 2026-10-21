@@ -27,7 +27,9 @@ const CANDIDATES = [
 
 const VL_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/analyze-vl'));
 const REPORT_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/report-python'));
-const HEALTH_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/health'));
+// The server answers its health probe under the /ocr prefix a proxy routes
+// to it, so append (#34): '/health' alone reached the website, not the server.
+const HEALTH_CANDIDATES = CANDIDATES.map(u=>String(u).replace(/\/ocr$/, '/ocr/health'));
 
 let activeEndpoint = null;   // remembered after the first success
 let endpointAttempts = Object.create(null); // first-hit warmup can be slow
@@ -36,7 +38,9 @@ let lastServerError = '';
 /* Cheap reachability probe for the recognition server, used by the app
    controller to gate the upload UI: since scoring runs entirely server-side
    now, there is no point letting someone start a scan that can only fail.
-   Returns { ok, endpoint }: ok is true as soon as ANY candidate answers. */
+   Returns { ok, endpoint }: ok is true as soon as ANY candidate answers
+   with the server's JSON health payload ({ ok: true, ... }). An HTML page
+   with status 200 (a proxy's soft 404) is not the server (#34). */
 async function checkHealth(timeoutMs){
   timeoutMs = timeoutMs || 4000;
   for (const url of HEALTH_CANDIDATES){
@@ -46,8 +50,8 @@ async function checkHealth(timeoutMs){
       const res = await fetch(url, { method:'GET', signal:ctrl.signal });
       clearTimeout(t);
       if (!res.ok) continue;
-      let healthy = true;
-      try{ const j = await res.json(); if (j && j.ok === false) healthy = false; }catch(_e){ /* non-JSON 200 still counts as up */ }
+      let healthy = false;
+      try{ const j = await res.json(); healthy = !!(j && j.ok === true); }catch(_e){ /* not JSON: not the server */ }
       if (healthy) return { ok:true, endpoint:url };
     }catch(_e){ clearTimeout(t); }
   }

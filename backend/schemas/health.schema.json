@@ -106,6 +106,31 @@
     "adaptive_engine_speed": {
       "type": "object"
     },
+    "recognition": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stages_sha256",
+        "devices"
+      ],
+      "properties": {
+        "stages_sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "sha256 of backend/languages/stages.json, the table every recognition route comes from."
+        },
+        "devices": {
+          "type": "object",
+          "description": "The device each registered engine resolved to; null until the engine is built.",
+          "additionalProperties": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
     "debug_store": {
       "type": "boolean",
       "description": "true only on stage with debug storage provisioned: photos and answers are being kept (SECURITY.md)."
@@ -129,6 +154,68 @@
           "type": "array"
         }
       }
+    },
+    "stage_timings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scans",
+        "window",
+        "stages",
+        "budget_breaches"
+      ],
+      "properties": {
+        "scans": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "window": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "stages": {
+          "type": "object",
+          "description": "Each stage's milliseconds over the last window scans (backend/perf.py).",
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "samples",
+              "wall_ms_p50",
+              "wall_ms_p95",
+              "cpu_ms_p50",
+              "cpu_ms_p95"
+            ],
+            "properties": {
+              "samples": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "wall_ms_p50": {
+                "type": "number"
+              },
+              "wall_ms_p95": {
+                "type": "number"
+              },
+              "cpu_ms_p50": {
+                "type": "number"
+              },
+              "cpu_ms_p95": {
+                "type": "number"
+              }
+            }
+          }
+        },
+        "budget_breaches": {
+          "type": "object",
+          "description": "Pages over a budget in backend/perf/budgets.json since the server started, by budget:stage. Counted, never refused.",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      },
+      "description": "Stage timings of the scans since the server started, in memory: numbers only (#229)."
     }
   }
 }

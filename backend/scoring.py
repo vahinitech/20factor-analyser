@@ -8,135 +8,78 @@
 # AnalysisResult dataclasses the /report-python endpoint serializes. Nothing
 # here knows about OCR engines, HTTP, or image decoding; it only consumes
 # the `lines`/`layout` shapes computer_vision.py and the recognizer produce.
-
-import math
-import re
-from dataclasses import dataclass, field
+#
+# This file is the entry point and holds the factor catalogue (_SECTIONS,
+# _FACTOR_META, _FACTOR_EXTRAS) and build_analysis. vahini-web's
+# tools/gen-factor-pages.mjs reads _FACTOR_META and _FACTOR_EXTRAS from
+# this file as literal assignments, so they stay here, written out. The
+# measurements and formulas are in scoring_parts/ (see its __init__.py).
 
 import numpy as np
 
+import perf
 from plain_groups import build_coach_view, build_plain_groups
-from coach_tips import pillar_summary, select_tips
-from finishing_letters import analyze_finishing_letters
-from style_analysis import analyze_style
-from tbar_analysis import analyze_tbars
-from baseline_track import track_rows
-import letter_geometry
-from zone_analysis import analyze_zones, zone_score
-import computer_vision
+from scoring_parts import (
+    advisory,
+    availability,
+    dynamics,
+    spatial,
+    structure,
+    style,
+)
 
-try:
-    import cv2
-except Exception:
-    cv2 = None
+# Names other modules and tests import from scoring.
+from scoring_parts.availability import _MIN_WORD_GAPS, _UNMEASURED_REASONS
+from scoring_parts.dynamics import WORD_LETTERS
+from scoring_parts.features import (
+    BOWL_LETTERS,
+    MIN_BOWLS,
+    SIZE_OFF,
+    _extract_features,
+    _ink_features,
+    _stroke_features,
+    cv2,
+)
+from scoring_parts.page import (
+    _detilted_left_x,
+    _group_lines_by_rows,
+    _page_tilt_degrees,
+)
+from scoring_parts.results import AnalysisResult, FactorScore, SectionScore
+from scoring_parts.spatial import LETTER_GAP_SCALE, WAVE_SCALE
+from scoring_parts.stats import _band, _clamp10, _cv, _std, mean
+from scoring_parts.structure import BOWL_FULL
+from scoring_parts.style import SLANT_SCALE
 
-
-@dataclass
-class FactorScore:
-    n: int
-    sec: str
-    name: str
-    ex: str
-    target: str
-    tip: str
-    score: float
-    score100: int
-    band: str
-    value: str
-    evidence: str
-    based_on: str = None
-    conf: str = "measured"
-    imu_measured: bool = False
-    unmeasured: bool = False
-    unmeasured_reason: str = None
-    unmeasured_kind: str = None
-    scoring_inputs: dict = field(default_factory=dict)
-
-    def to_dict(self) -> dict:
-        return {
-            "n": self.n,
-            "sec": self.sec,
-            "name": self.name,
-            "ex": self.ex,
-            "target": self.target,
-            "conf": self.conf,
-            "tip": self.tip,
-            "score": self.score,
-            "score100": self.score100,
-            "band": self.band,
-            "value": self.value,
-            "evidence": self.evidence,
-            "imuMeasured": self.imu_measured,
-            "unmeasured": self.unmeasured,
-            "unmeasuredReason": self.unmeasured_reason,
-            "unmeasuredKind": self.unmeasured_kind,
-            "basedOn": self.based_on,
-            "scoringInputs": self.scoring_inputs,
-        }
-
-
-@dataclass
-class SectionScore:
-    id: str
-    name: str
-    weight: float
-    blurb: str
-    factors: list = field(default_factory=list)
-    avg: float = None
-    avg100: int = None
-
-    def to_dict(self) -> dict:
-        return {
-            "id": self.id,
-            "name": self.name,
-            "weight": self.weight,
-            "blurb": self.blurb,
-            "avg": self.avg,
-            "avg100": self.avg100,
-            "factors": [f.to_dict() for f in self.factors],
-            "scoredCount": sum(not f.unmeasured for f in self.factors),
-        }
-
-
-@dataclass
-class AnalysisResult:
-    results: list
-    sections: list
-    overall: int
-    overall_measured: int
-    measured_count: int
-    top_weak: list
-    top_strong: list
-    source: str = "python"
-    plain_groups: list = None
-    coach_view: dict = None
-    baseline_drift: dict = None
-    zone_profile: dict = None
-    tbar_profile: dict = None
-    style_profile: dict = None
-    coach_tips: list = None
-    tip_pillars: dict = None
-
-    def to_dict(self) -> dict:
-        return {
-            "results": [r.to_dict() for r in self.results],
-            "sections": [s.to_dict() for s in self.sections],
-            "overall": self.overall,
-            "overallMeasured": self.overall_measured,
-            "measuredCount": self.measured_count,
-            "topWeak": [r.to_dict() for r in self.top_weak],
-            "topStrong": [r.to_dict() for r in self.top_strong],
-            "source": self.source,
-            "plainGroups": self.plain_groups,
-            "coachView": self.coach_view,
-            "baselineDrift": self.baseline_drift,
-            "zoneProfile": self.zone_profile,
-            "tbarProfile": self.tbar_profile,
-            "styleProfile": self.style_profile,
-            "coachTips": self.coach_tips,
-            "tipPillars": self.tip_pillars,
-        }
-
+__all__ = [
+    "AnalysisResult",
+    "BOWL_FULL",
+    "BOWL_LETTERS",
+    "FactorScore",
+    "LETTER_GAP_SCALE",
+    "MIN_BOWLS",
+    "SIZE_OFF",
+    "SLANT_SCALE",
+    "SectionScore",
+    "WAVE_SCALE",
+    "WORD_LETTERS",
+    "_MIN_WORD_GAPS",
+    "_UNMEASURED_REASONS",
+    "_band",
+    "_clamp10",
+    "_cv",
+    "_detilted_left_x",
+    "_extract_features",
+    "_group_lines_by_rows",
+    "_ink_features",
+    "_page_tilt_degrees",
+    "_score_factor_map",
+    "_std",
+    "_stroke_features",
+    "build_analysis",
+    "cv2",
+    "mean",
+]
 
 _SECTIONS = [
     {
@@ -311,438 +254,112 @@ _FACTOR_EXTRAS = {
 }
 
 
-def mean(xs):
-    vals = [float(x) for x in xs if x is not None and np.isfinite(float(x))]
-    if not vals:
-        return 0.0
-    return float(sum(vals) / len(vals))
-
-
-def _std(xs):
-    vals = [float(x) for x in xs if x is not None and np.isfinite(float(x))]
-    if len(vals) < 2:
-        return 0.0
-    m = mean(vals)
-    v = sum((x - m) ** 2 for x in vals) / max(1, len(vals) - 1)
-    return float(math.sqrt(max(0.0, v)))
-
-
-def _cv(xs):
-    m = mean(xs)
-    if m <= 1e-9:
-        return 0.0
-    return float(_std(xs) / m)
-
-
-def _clamp10(v):
-    return float(max(0.0, min(10.0, v)))
-
-
-def _page_tilt_degrees(lines):
-    """Median signed line angle in degrees: a robust estimate of how much
-    the whole page is rotated in the photo (camera tilt), as distinct from
-    any one line's own slant. A single mis-detected line can't skew a
-    median the way it could skew a mean. Returns 0.0 when fewer than one
-    usable line angle exists (e.g. a very sparse page), which makes the
-    tilt correction that reads this a safe no-op rather than a guess."""
-    angles = []
-    for l in lines:
-        poly = l.get("poly") or []
-        if len(poly) >= 2:
-            x0, y0 = float(poly[0][0]), float(poly[0][1])
-            x1, y1 = float(poly[1][0]), float(poly[1][1])
-            dx = max(1e-6, x1 - x0)
-            angles.append(math.degrees(math.atan2(y1 - y0, dx)))
-    if not angles:
-        return 0.0
-    return float(np.median(angles))
-
-
-def _detilted_left_x(box, tilt_deg, w, h):
-    """A line's left-edge, vertically-centred point, rotated back around
-    the image centre by the page's own detected tilt. Undoes a uniform
-    camera rotation before Margin Discipline measures how consistent the
-    left margin actually is: without this, a page photographed at even a
-    slight angle has every line's raw pixel left-x drift across the page
-    from geometry alone, so a physically straight margin can measure as
-    inconsistent. tilt_deg=0.0 (nothing detected, or a genuinely flat
-    scan) leaves the point unchanged."""
-    x, y, _bw, bh = box[0], box[1], box[2], box[3]
-    lx = float(x)
-    ly = float(y) + max(1.0, float(bh)) * 0.5
-    cx, cy = float(w) * 0.5, float(h) * 0.5
-    rad = -math.radians(tilt_deg)
-    dx, dy = lx - cx, ly - cy
-    cos_t, sin_t = math.cos(rad), math.sin(rad)
-    return cx + dx * cos_t - dy * sin_t
-
-
-def _band(score):
-    if score >= 8.5:
-        return "strong"
-    if score >= 7.0:
-        return "good"
-    if score >= 4.5:
-        return "dev"
-    return "focus"
-
-
-def _group_lines_by_rows(lines):
-    if not lines:
-        return []
-    hs = [max(1.0, float((l.get("box") or [0, 0, 0, 0])[3])) for l in lines]
-    row_thr = max(14.0, mean(hs) * 0.75)
-    ordered = sorted(
-        lines, key=lambda l: float((l.get("box") or [0, 0, 0, 0])[1])
-    )
-    rows = []
-    for l in ordered:
-        b = l.get("box") or [0, 0, 0, 0]
-        y = float(b[1])
-        h = float(max(1.0, b[3]))
-        cy = y + (h * 0.5)
-        if not rows:
-            rows.append({"cy": cy, "items": [l]})
-            continue
-        if abs(cy - rows[-1]["cy"]) <= row_thr:
-            rows[-1]["items"].append(l)
-            rows[-1]["cy"] = mean(
-                [
-                    float((x.get("box") or [0, 0, 0, 0])[1])
-                    + float(max(1.0, (x.get("box") or [0, 0, 0, 0])[3])) * 0.5
-                    for x in rows[-1]["items"]
-                ]
-            )
-        else:
-            rows.append({"cy": cy, "items": [l]})
-    for r in rows:
-        r["items"].sort(key=lambda x: float((x.get("box") or [0, 0, 0, 0])[0]))
-    return rows
-
-
-def _extract_features(arr: np.ndarray, lines, layout):
-    h, w = arr.shape[:2]
-    boxes = [l.get("box") or [0, 0, 0, 0] for l in lines]
-    widths = [float(max(1.0, b[2])) for b in boxes]
-    heights = [float(max(1.0, b[3])) for b in boxes]
-    # See _detilted_left_x's docstring: corrects for camera tilt before
-    # margin consistency is measured, so Margin Discipline (factor 10)
-    # scores the handwriting and not the photo angle.
-    tilt_deg = _page_tilt_degrees(lines)
-    lefts = [
-        _detilted_left_x(b, tilt_deg, w, h) / max(1.0, float(w)) for b in boxes
-    ]
-    scores = [float(l.get("score", 0.0)) for l in lines]
-    texts = [str(l.get("text", "") or "") for l in lines]
-    n_lines = len(lines)
-
-    n_words = sum(len(re.findall(r"\S+", t)) for t in texts)
-    n_chars = sum(len(re.sub(r"\s+", "", t)) for t in texts)
-    char_w = (
-        [
-            widths[i] / max(1, len(re.sub(r"\s+", "", texts[i])))
-            for i in range(n_lines)
-        ]
-        if n_lines
-        else []
-    )
-
-    y_centers = [float(b[1] + b[3] * 0.5) / max(1.0, float(h)) for b in boxes]
-    line_spacing = []
-    if len(y_centers) >= 2:
-        ys = sorted(y_centers)
-        line_spacing = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
-
-    slopes = []
-    signed_slopes = []
-    for l in lines:
-        poly = l.get("poly") or []
-        if len(poly) >= 2:
-            x0, y0 = float(poly[0][0]), float(poly[0][1])
-            x1, y1 = float(poly[1][0]), float(poly[1][1])
-            dx = max(1e-6, x1 - x0)
-            ang = math.degrees(math.atan2(y1 - y0, dx))
-            slopes.append(abs(ang))
-            signed_slopes.append(ang)
-        # Lines without a usable poly are skipped entirely (not given a
-        # fake 0.0) so they don't silently pull line_slope_abs toward
-        # "level" while being excluded from line_slope_signed_med.
-
-    rows = _group_lines_by_rows(lines)
-    # Kalman-smoothed baseline per row (issue #31): every word informs
-    # the slope, instead of the first two vertices of one OCR polygon.
-    # Rows under 3 words are skipped; the poly-based estimate below
-    # remains the fallback so sparse pages behave exactly as before.
-    kf = track_rows(rows)
-    word_gaps = []
-    for r in rows:
-        items = r.get("items", [])
-        if len(items) < 2:
-            continue
-        row_h = mean(
-            [
-                float(max(1.0, (it.get("box") or [0, 0, 0, 0])[3]))
-                for it in items
-            ]
-        )
-        for i in range(len(items) - 1):
-            b1 = items[i].get("box") or [0, 0, 0, 0]
-            b2 = items[i + 1].get("box") or [0, 0, 0, 0]
-            gap = float(b2[0] - (b1[0] + b1[2]))
-            word_gaps.append(max(0.0, gap) / max(1.0, row_h))
-    # Gaps inside each OCR line, from ink. Without them a page read as
-    # one box per line had no gaps at all, and _cv([]) == 0 scored Word
-    # Spacing a perfect 10 whatever the spacing.
-    for l in lines:
-        line_gaps = computer_vision.line_word_gaps(arr, l)
-        if line_gaps:
-            line_h = float(max(1.0, (l.get("box") or [0, 0, 0, 1])[3]))
-            word_gaps.extend(g / line_h for g in line_gaps)
-
-    full = " ".join(texts)
-    digits_ratio = (
-        len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
-    )
-    loop_chars = len(re.findall(r"[aodpegqAODPEGQ]", full))
-    alpha_chars = len(re.findall(r"[A-Za-z]", full))
-    loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-    tall_chars = len(re.findall(r"[bdfhkltgjpqy]", full))
-    tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-
-    ink_cv = 0.0
-    if cv2 is not None:
-        gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-        vals = []
-        for b in boxes[:80]:
-            x, y, bw, bh = [int(round(v)) for v in b]
-            x0 = max(0, x)
-            y0 = max(0, y)
-            x1 = min(w, x + max(1, bw))
-            y1 = min(h, y + max(1, bh))
-            if x1 <= x0 or y1 <= y0:
-                continue
-            patch = gray[y0:y1, x0:x1]
-            if patch.size:
-                vals.append(float(np.std(patch.astype(np.float32))))
-        ink_cv = _cv(vals) if vals else 0.0
-
-    # Letter size from the small-letter height of each word, measured along
-    # its line's own baseline (letter_geometry.py). Line box heights grow
-    # with a line's slope, so they counted tilt as size (#135); they remain
-    # the fallback when fewer than three words can be measured.
-    word_xh = [
-        wd["xheight"]
-        for g in letter_geometry.measure_page(arr, lines)
-        if g
-        for wd in g["words"]
-        if wd["xheight"]
-    ]
-    size_by_words = len(word_xh) >= 3
-
-    return {
-        "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
-        "size_basis": "words" if size_by_words else "lines",
-        "size_count": len(word_xh) if size_by_words else n_lines,
-        "n_lines": n_lines,
-        "n_words": n_words,
-        "n_chars": n_chars,
-        "avg_score": mean(scores),
-        "height_cv": _cv(heights),
-        "width_cv": _cv(widths),
-        "char_w_cv": _cv(char_w),
-        "left_cv": _cv(lefts),
-        "line_slope_abs": mean(slopes),
-        "line_slope_std": _std(slopes),
-        # median SIGNED line angle: >0 means lines descend left-to-right
-        # (image y grows downward), i.e. the writing sinks below the rule
-        "line_slope_signed_med": (
-            float(np.median(kf["slopes_deg"]))
-            if kf["rows_used"]
-            else (float(np.median(signed_slopes)) if signed_slopes else 0.0)
-        ),
-        "baseline_wave_med": (
-            float(np.median(kf["waviness"])) if kf["rows_used"] else None
-        ),
-        "baseline_rows_tracked": kf["rows_used"],
-        "line_spacing_cv": _cv(line_spacing),
-        "word_gap_cv": _cv(word_gaps),
-        "word_gap_count": len(word_gaps),
-        "digits_ratio": digits_ratio,
-        "loop_ratio": loop_ratio,
-        "tall_ratio": tall_ratio,
-        "ink_cv": ink_cv,
-        "layout_complexity": float(
-            layout.get("layout_complexity", 0.0) or 0.0
-        ),
-    }
-
-
-_MIN_WORD_GAPS = 3
-_UNMEASURED_REASONS = {
-    "imu": "Requires time-series data from the sensor pen.",
-    "ocr": "Requires recognised text from the page.",
-    "insufficient": "Needs at least three measurable word gaps.",
-}
-
-
 def _score_factor_map(fx):
+    """The 20 factor scores by number, section by section in factor
+    order: Style last, since Legibility and Neatness blend the others."""
     s = {}
-    s[1] = _clamp10(
-        (fx["avg_score"] * 7.2) + ((1.0 - min(1.0, fx["height_cv"])) * 2.8)
-    )
-    s[2] = _clamp10(
-        5.4 + (1.0 - min(1.0, fx["char_w_cv"])) * 2.6 + (fx["avg_score"] * 2.0)
-    )
-    s[3] = _clamp10((min(1.0, fx["loop_ratio"] / 0.28)) * 10.0)
-    s[4] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.8)) * 10.0)
-    # Word x-heights vary less than line boxes did, so their full scale is
-    # 0.60 (a clean planted page scores about 7.8, as line boxes did).
-    size_scale = 0.60 if fx.get("size_basis") == "words" else 0.65
-    s[5] = _clamp10(
-        (1.0 - min(1.0, fx.get("size_cv", fx["height_cv"]) / size_scale))
-        * 10.0
-    )
-    s[6] = _clamp10(
-        (1.0 - min(1.0, abs(fx["tall_ratio"] - 0.34) / 0.34)) * 10.0
-    )
-    s[7] = _clamp10((1.0 - min(1.0, fx["line_slope_abs"] / 8.0)) * 10.0)
-    s[8] = _clamp10((1.0 - min(1.0, fx["word_gap_cv"] / 1.4)) * 10.0)
-    s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
-    s[10] = _clamp10((1.0 - min(1.0, fx["left_cv"] / 0.55)) * 10.0)
-    s[11] = _clamp10((1.0 - min(1.0, fx["line_slope_abs"] / 10.0)) * 10.0)
-    s[12] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 10.0)) * 10.0)
-    s[13] = _clamp10((1.0 - min(1.0, fx["width_cv"] / 0.85)) * 10.0)
-    s[14] = _clamp10((1.0 - min(1.0, fx["ink_cv"] / 0.95)) * 10.0)
-    s[15] = _clamp10(
-        (
-            1.0
-            - min(
-                1.0, abs((fx["n_chars"] / max(1, fx["n_words"])) - 5.0) / 5.0
-            )
-        )
-        * 10.0
-    )
-    s[16] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.4)) * 10.0)
-    s[17] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 12.0)) * 10.0)
-
-    # Composites leave Word Spacing out, and reweight the rest, when too
-    # few word gaps were measured for it to mean anything.
-    def _blend(parts):
-        live = [(w, s[k]) for k, w in parts if k != 8 or spacing_ok]
-        return sum(w * v for w, v in live) / sum(w for w, _ in live)
-
-    spacing_ok = fx.get("word_gap_count", 3) >= _MIN_WORD_GAPS
-    s[18] = _clamp10(_blend(((1, 0.35), (5, 0.25), (8, 0.20), (7, 0.20))))
-    s[19] = _clamp10(
-        (fx["avg_score"] * 7.5)
-        + ((1.0 - min(1.0, fx["digits_ratio"] / 0.5)) * 2.5)
-    )
-    s[20] = _clamp10(
-        _blend(((5, 0.30), (8, 0.20), (10, 0.20), (11, 0.15), (17, 0.15)))
-    )
+    structure.add_scores(fx, s)
+    spatial.add_scores(fx, s)
+    dynamics.add_scores(fx, s)
+    style.add_scores(fx, s)
     return s
 
 
+# The features each formula reads, reported in its scoring_inputs.
 _INPUT_FEATURES = {
     1: ("avg_score", "height_cv"),
     2: ("char_w_cv", "avg_score"),
-    3: ("loop_ratio",),
+    3: ("bowl_share", "loop_ratio"),
     4: ("width_cv",),
-    5: ("size_cv",),
+    5: ("size_cv", "words_off_size"),
     6: ("tall_ratio",),
-    7: ("line_slope_abs",),
+    7: ("line_slope_abs", "words_off_line"),
     8: ("word_gap_cv", "word_gap_count"),
-    9: ("char_w_cv",),
+    9: ("letter_gap_cv", "char_w_cv"),
     10: ("left_cv",),
-    11: ("line_slope_abs",),
+    11: ("line_slope_abs", "line_wave"),
     12: ("line_slope_std",),
     13: ("width_cv",),
     14: ("ink_cv",),
     15: ("n_chars", "n_words"),
     16: ("char_w_cv",),
-    17: ("line_slope_std",),
+    17: ("slant_std", "line_slope_std"),
     18: (),
     19: ("avg_score", "digits_ratio"),
     20: (),
 }
 
 
-# Factors whose inputs come from OCR output: recognition confidence
-# (1, 19), recognised characters (2, 3, 6, 9, 15, 16), line polygon angles
-# (7, 11, 12, 17), word boxes within a row (8), and the composites built on
-# them (18, 20). Line-band height, width and left edge (4, 5, 10, 13) are
-# still measured from the ink when recognition is unavailable.
-_NEEDS_RECOGNITION = frozenset(
-    (1, 2, 3, 6, 7, 8, 9, 11, 12, 15, 16, 17, 18, 19, 20)
-)
-
-
 def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
     if not lines:
         raise ValueError("No handwriting regions available to score")
-    fx = _extract_features(arr, lines, layout)
-    scores = _score_factor_map(fx)
+    with perf.stage("features", lines=len(lines)) as step:
+        fx = _extract_features(arr, lines, layout)
+        step.size(words=fx.get("n_words"), letters=fx.get("n_chars"))
+    with perf.stage("scoring", lines=len(lines)):
+        return _analysis(arr, lines, fx)
 
-    # Three-zone letter-size rule (the coaches' 1:2 proportion): when the
-    # page supports it, Factor 6 is scored from measured zone geometry
-    # instead of the tall-letter-share proxy. zone_analysis.py.
-    zones = None
-    try:
-        if cv2 is not None:
-            gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-        else:
-            # Same RGB->gray weights as classify.py's _gray, so zone
-            # measurement stays consistent whether or not cv2 is
-            # available in the environment.
-            gray = np.dot(
-                np.asarray(arr[..., :3], dtype=np.float64),
-                [0.299, 0.587, 0.114],
-            ).astype(np.uint8)
-        zones = analyze_zones(gray, lines)
-    except Exception as e:
-        # Keep the failure honest: zoneProfile.method should say WHY
-        # the proxy was used instead of silently swallowing it.
-        zones = {
-            "available": False,
-            "reason": f"zone analysis failed: {e}",
-        }
-    # Cross-bar craft rule (double-t shared bar, t-bar overshoot):
-    # advisory observations from tbar_analysis.py - they feed evidence
-    # on factors 16 and 1, never silently change a score.
-    tbars = None
-    try:
-        tbars = analyze_tbars(gray, lines)
-    except Exception:
-        tbars = None
-    tbar_ok = bool(tbars and tbars.get("available"))
-    # Writing-style classification (cursive / print / mixed) and the
-    # ten-finishing-letters tip - both coach lessons, both advisory.
-    style = None
-    try:
-        style = analyze_style(gray, lines)
-    except Exception:
-        style = None
-    style_ok = bool(style and style.get("available"))
-    finishing = None
-    try:
-        finishing = analyze_finishing_letters(lines)
-    except Exception:
-        finishing = None
-    zone_based = bool(zones and zones.get("available"))
-    if zone_based:
-        zs = zone_score(zones)
-        if zs is not None:
-            scores[6] = round(float(zs), 1)
-        else:
-            zone_based = False
-    basis = {
+
+def _analysis(arr, lines, fx) -> AnalysisResult:
+    """The 20 factors, sections and advice from the page's features."""
+    scores = _score_factor_map(fx)
+    checks = advisory.run_checks(arr, lines)
+    zone_based = advisory.apply_zone_score(checks["zones"], scores)
+    supplied = availability.page_supplies(
+        lines, fx, zone_based, checks["style"]
+    )
+    basis = _based_on(fx)
+    results = [
+        _factor_result(n, fx, scores, supplied, basis, checks, zone_based)
+        for n in range(1, 21)
+    ]
+    sections, overall = _section_scores(results)
+    measured_results = [r for r in results if not r.unmeasured]
+    ranked = sorted(measured_results, key=lambda r: float(r.score))
+    top_weak = ranked[:3]
+    top_strong = sorted(
+        measured_results, key=lambda r: float(r.score), reverse=True
+    )[:4]
+    baseline_drift = advisory.add_baseline_drift(fx, results)
+    zone_profile = advisory.zone_profile(checks["zones"], zone_based, scores)
+
+    # Plain-language layer (issue #12) + the coaches' eight-aspect view
+    # (issue #21). Presentation only: nothing above rescored.
+    plain = build_plain_groups(results)
+    coach = build_coach_view(plain)
+    coach_tips, tip_pillars = advisory.coach_tips(
+        measured_results, checks, lines
+    )
+
+    return AnalysisResult(
+        results=results,
+        sections=sections,
+        overall=overall,
+        overall_measured=overall,
+        measured_count=len(measured_results),
+        top_weak=top_weak,
+        top_strong=top_strong,
+        plain_groups=plain,
+        coach_view=coach,
+        baseline_drift=baseline_drift,
+        zone_profile=zone_profile,
+        tbar_profile=advisory.profile(checks["tbars"]),
+        style_profile=advisory.profile(checks["style"]),
+        coach_tips=coach_tips,
+        tip_pillars=tip_pillars,
+    )
+
+
+def _based_on(fx):
+    """What each factor's measurement counted, for its basedOn line."""
+    return {
         1: f"{fx['n_chars']} letters",
         2: f"{fx['n_words']} words",
         3: f"{fx['n_chars']} letters",
         4: f"{fx['n_lines']} lines",
         5: (
-            f"{fx['size_count']} words"
-            if fx.get("size_basis") == "words"
+            f"{fx['size_count']} {fx['size_basis']}"
+            if fx.get("size_basis") in ("words", "letter groups")
             else f"{fx['n_lines']} lines"
         ),
         6: f"{fx['n_chars']} letters",
@@ -762,151 +379,72 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
         20: f"{fx['n_lines']} lines",
     }
 
-    # Lines from computer_vision.fallback_line_regions() (no OCR engine
-    # produced any line) carry empty text, a placeholder 0.0 confidence
-    # and level rectangles. Factors that read those inputs would publish
-    # 0.0 for letter formation and a perfect 10.0 for line angle that the
-    # page never produced, so they are reported as not measured instead.
-    cv_only = all(bool(l.get("cv_fallback")) for l in lines)
-    results = []
-    for n in range(1, 21):
-        sec, name, detail = _FACTOR_META[n]
-        ex, target, tip = _FACTOR_EXTRAS.get(
-            n,
-            (
-                "round",
-                "python-server estimate",
-                "Practice this factor with short daily drills and rescan after 3-5 days.",
-            ),
-        )
+
+def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
+    """Factor n as the report shows it: its score, or why it is not
+    measured, with its evidence and the inputs its score came from."""
+    sec, name, detail = _FACTOR_META[n]
+    ex, target, tip = _FACTOR_EXTRAS.get(
+        n,
+        (
+            "round",
+            "python-server estimate",
+            "Practice this factor with short daily drills and rescan after 3-5 days.",
+        ),
+    )
+    missing_kind = availability.missing_kind(n, fx, supplied)
+    if missing_kind is None:
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
-        motion_only = sec == "dynamics"
-        if motion_only:
-            score = 0.0
-            value = "Not measured"
-            evidence = "A still photo cannot measure pen motion or pressure."
-        needs_ocr = (
-            cv_only
-            and not motion_only
-            and n in _NEEDS_RECOGNITION
-            and not (n == 6 and zone_based)
-        )
-        few_gaps = (
-            n == 8
-            and not needs_ocr
-            and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS
-        )
-        if few_gaps:
-            score = 0.0
-            value = "Not measured"
-            evidence = (
-                "Fewer than three gaps between words could be measured on "
-                "this page."
-            )
-        if needs_ocr:
-            score = 0.0
-            value = "Not measured"
-            evidence = (
-                "Text recognition did not read this page, so this factor "
-                "could not be measured."
-            )
-        if n == 6 and zone_based:
-            parts = []
-            if zones.get("ascReach") is not None:
-                parts.append(f"ascenders reach {zones['ascReach']:.1f}x")
-            if zones.get("descReach") is not None:
-                parts.append(f"descenders reach {zones['descReach']:.1f}x")
-            evidence = (
-                "Measured zone bands over "
-                f"{zones['linesUsed']} lines: {', '.join(parts)} the "
-                "x-height (the 1:2 rule targets 2.0x)."
-            )
-            if zones.get("flags"):
-                evidence += f" Flags: {', '.join(zones['flags'])}."
-        if n == 15 and style_ok:
-            sh = style["shares"]
-            evidence += (
-                f" Style check: {style['verdict']} "
-                f"(cursive {int(sh['cursive'] * 100)}%, print "
-                f"{int(sh['print'] * 100)}%, mixed "
-                f"{int(sh['mixed'] * 100)}% of words)."
-            )
-            if style["verdict"] == "mixed":
-                evidence += (
-                    " Joining in places and lifting in others makes "
-                    "words break apart - pick cursive or print and "
-                    "stay with it."
-                )
-        if (
-            n == 16
-            and tbar_ok
-            and (tbars["sharedBars"] or tbars["separateBars"])
-        ):
-            evidence += (
-                " Cross-bar check: "
-                f"{tbars['sharedBars']} shared double-t bar(s), "
-                f"{tbars['separateBars']} crossed with separate "
-                "lifts (one extended bar per side-by-side tt saves "
-                "a pen lift)."
-            )
-        if n == 1 and tbar_ok and tbars["overshoots"]:
-            evidence += (
-                f" Cross-bar check: {tbars['overshoots']} t-bar(s) "
-                "ride over the neighbouring tall letter - limit the "
-                "bar to the t stem."
-            )
-        missing_kind = (
-            "imu"
-            if motion_only
-            else "ocr" if needs_ocr else "insufficient" if few_gaps else None
-        )
-        if motion_only:
-            scoring_inputs = {"method": "sensor_required", "features": {}}
-        elif needs_ocr:
-            scoring_inputs = {"method": "recognition_required", "features": {}}
-        elif few_gaps:
-            scoring_inputs = {
-                "method": "insufficient_data",
-                "features": {"word_gap_count": fx.get("word_gap_count", 0)},
-            }
-        elif n == 6 and zone_based:
-            scoring_inputs = {"method": "zone_geometry", "profile": zones}
-        else:
-            scoring_inputs = {
-                "method": "image_heuristic",
-                "features": {key: fx[key] for key in _INPUT_FEATURES[n]},
-                "component_scores": {
-                    str(key): scores[key]
-                    for key in {
-                        18: (1, 5, 8, 7),
-                        20: (5, 8, 10, 11, 17),
-                    }.get(n, ())
-                },
-            }
-        results.append(
-            FactorScore(
-                n=n,
-                sec=sec,
-                name=name,
-                ex=ex,
-                target=target,
-                tip=tip,
-                score=score,
-                score100=int(round(score * 10)),
-                band=_band(score),
-                value=value,
-                evidence=evidence,
-                based_on=None if missing_kind else basis.get(n),
-                conf=missing_kind or "measured",
-                unmeasured=missing_kind is not None,
-                unmeasured_reason=_UNMEASURED_REASONS.get(missing_kind),
-                unmeasured_kind=missing_kind,
-                scoring_inputs=scoring_inputs,
-            )
-        )
+    else:
+        score = 0.0
+        value = "Not measured"
+        evidence = availability.unmeasured_evidence(missing_kind)
+    evidence = advisory.factor_evidence(n, evidence, checks, zone_based)
+    if missing_kind is not None:
+        scoring_inputs = availability.unmeasured_inputs(missing_kind, fx)
+    elif n == 6 and zone_based:
+        scoring_inputs = {
+            "method": "zone_geometry",
+            "profile": checks["zones"],
+        }
+    else:
+        scoring_inputs = {
+            "method": "image_heuristic",
+            "features": {key: fx[key] for key in _INPUT_FEATURES[n]},
+            "component_scores": {
+                str(key): scores[key]
+                for key in {
+                    18: (1, 5, 8, 7),
+                    20: (5, 8, 10, 11, 17),
+                }.get(n, ())
+            },
+        }
+    return FactorScore(
+        n=n,
+        sec=sec,
+        name=name,
+        ex=ex,
+        target=target,
+        tip=tip,
+        score=score,
+        score100=int(round(score * 10)),
+        band=_band(score),
+        value=value,
+        evidence=evidence,
+        based_on=None if missing_kind else basis.get(n),
+        conf=missing_kind or "measured",
+        unmeasured=missing_kind is not None,
+        unmeasured_reason=_UNMEASURED_REASONS.get(missing_kind),
+        unmeasured_kind=missing_kind,
+        scoring_inputs=scoring_inputs,
+    )
 
+
+def _section_scores(results):
+    """The four sections and the overall score. A section's score is the
+    mean of its measured factors."""
     sections = []
     for sec_meta in _SECTIONS:
         fs = [r for r in results if r.sec == sec_meta["id"]]
@@ -941,145 +479,4 @@ def build_analysis(arr: np.ndarray, lines, layout) -> AnalysisResult:
             sum(float(s.avg100 or 0) * float(s.weight) for s in live_sections)
         )
     )
-    measured_results = [r for r in results if not r.unmeasured]
-    ranked = sorted(measured_results, key=lambda r: float(r.score))
-    top_weak = ranked[:3]
-    top_strong = sorted(
-        measured_results, key=lambda r: float(r.score), reverse=True
-    )[:4]
-
-    # Baseline drift DIRECTION (issue #21): coaches teach climbing vs
-    # sinking, not just "misaligned". Positive signed angle = the lines
-    # descend left-to-right (sinking below the rule). A tilted photo
-    # shows the same signature, so the wording carries that caveat.
-    drift_deg = float(fx.get("line_slope_signed_med", 0.0))
-    if drift_deg > 0.8:
-        drift_dir = "sinking"
-    elif drift_deg < -0.8:
-        drift_dir = "climbing"
-    else:
-        drift_dir = "level"
-    baseline_drift = {
-        "direction": drift_dir,
-        "degrees": round(abs(drift_deg), 1),
-        "note": (
-            "Lines stay level across the page."
-            if drift_dir == "level"
-            else (
-                f"Lines tend to keep {drift_dir} by about "
-                f"{abs(drift_deg):.1f} degrees left to right. "
-                "(A tilted photo shows the same sign: scan flat to be sure.)"
-            )
-        ),
-    }
-    for r in results:
-        if r.n == 7 and drift_dir != "level":
-            r.evidence = (
-                f"{r.evidence} Direction: {drift_dir} "
-                f"~{abs(drift_deg):.1f} deg across the page."
-            )
-        if r.n == 7 and fx.get("baseline_rows_tracked"):
-            wave = fx.get("baseline_wave_med")
-            r.evidence += (
-                " Baseline tracked word-by-word across "
-                f"{fx['baseline_rows_tracked']} line(s) with a smoothing "
-                "filter (issue #31)"
-                + (
-                    f"; word baselines scatter about the track by "
-                    f"{wave * 100:.0f}% of the line height."
-                    if wave is not None
-                    else "."
-                )
-            )
-
-    # Zone profile (issue #21): the two things a coach actually checks —
-    # upper/lower reach (factor 6, Ascender/Descender Control) and
-    # middle-zone stability (factor 5, Size Consistency, i.e. letter-
-    # height consistency used as the proxy for a steady x-height band).
-    # Measured projection-profile zone bands are used when the page
-    # supports them, the proxy otherwise - the method field always says
-    # which one produced the numbers.
-    # Both branches always populate the same key set (measured keys are
-    # null/empty in the proxy case) so API consumers don't have to
-    # special-case the schema on zone_based; upperLowerReach is kept in
-    # both for backward compatibility with pre-measurement consumers.
-    if zone_based:
-        zone_profile = {
-            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
-            "ascenderReach": zones.get("ascReach"),
-            "descenderReach": zones.get("descReach"),
-            "targetReach": zones.get("targetReach"),
-            "xHeightPx": zones.get("xHeightPx"),
-            "flags": zones.get("flags", []),
-            "middleStability": round(float(scores.get(5, 0.0)), 1),
-            "method": (
-                "measured: per-line ink projection profiles -> zone "
-                f"bands over {zones['linesUsed']} lines (1:2 rule)"
-            ),
-        }
-    else:
-        zone_profile = {
-            "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
-            "ascenderReach": None,
-            "descenderReach": None,
-            "targetReach": None,
-            "xHeightPx": None,
-            "flags": [],
-            "middleStability": round(float(scores.get(5, 0.0)), 1),
-            "method": (
-                "proxy from tall-letter share and letter-height "
-                "statistics"
-                + (
-                    f" ({zones['reason']})"
-                    if zones and zones.get("reason")
-                    else ""
-                )
-            ),
-        }
-
-    # Plain-language layer (issue #12) + the coaches' eight-aspect view
-    # (issue #21). Presentation only: nothing above rescored.
-    plain = build_plain_groups(results)
-    coach = build_coach_view(plain)
-
-    # Coach tips: the library will hold hundreds of lesson-derived
-    # tips, so the engine (coach_tips.py) ranks them by this page's
-    # measured scores and keeps only the top few - each with a 'why'
-    # naming the measurement that earned it the slot. Advisory report
-    # content, never a score input.
-    tip_ctx = {
-        "scores": {r.n: r.score for r in measured_results},
-        "style": style,
-        "finishing": finishing,
-        "text": " ".join(str(l.get("text", "") or "") for l in lines),
-    }
-    coach_tips, _tip_library = select_tips(tip_ctx)
-    # The TIP diagnosis (Techniques / Interest / Practice): which leg
-    # of the skill is short on THIS page, from the measured factors.
-    tip_pillars = pillar_summary(tip_ctx)
-
-    return AnalysisResult(
-        results=results,
-        sections=sections,
-        overall=overall,
-        overall_measured=overall,
-        measured_count=len(measured_results),
-        top_weak=top_weak,
-        top_strong=top_strong,
-        plain_groups=plain,
-        coach_view=coach,
-        baseline_drift=baseline_drift,
-        zone_profile=zone_profile,
-        tbar_profile=(
-            tbars
-            if tbars is not None
-            else {"available": False, "reason": "analysis unavailable"}
-        ),
-        style_profile=(
-            style
-            if style is not None
-            else {"available": False, "reason": "analysis unavailable"}
-        ),
-        coach_tips=coach_tips,
-        tip_pillars=tip_pillars,
-    )
+    return sections, overall

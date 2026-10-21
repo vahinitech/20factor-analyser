@@ -58,9 +58,15 @@ class TestLetterSize(unittest.TestCase):
         self.assertTrue(f["basedOn"].endswith("words"))
 
     def test_a_sloping_line_does_not_lower_letter_size(self):
-        flat = size_score(*page("clean", seed=4))["score"]
-        tilted = size_score(*page("tilted_line", seed=4))["score"]
-        self.assertLess(abs(flat - tilted), 0.6)
+        # Averaged over six pages: one page's words shift by a column or
+        # two either way, and a single seed sat on the limit.
+        diffs = [
+            size_score(*page("clean", seed=seed))["score"]
+            - size_score(*page("tilted_line", seed=seed))["score"]
+            for seed in range(6)
+        ]
+        self.assertLess(abs(sum(diffs) / len(diffs)), 0.3)
+        self.assertLess(max(abs(d) for d in diffs), 0.8)
 
 
 class TestPageMeasurements(unittest.TestCase):

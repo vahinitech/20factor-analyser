@@ -51,13 +51,26 @@
         "lang": {
           "type": "string",
           "default": "auto",
-          "pattern": "^([a-z]{2,8}|auto)$"
+          "pattern": "^(auto|[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?(,[a-z]{2,8}(-[A-Z][a-z]{3})?(-[A-Z]{2})?)*)$",
+          "description": "auto, or BCP 47 tags separated by commas: en, en,te, te-Telu-IN. The server reads each tag by its language subtag, so te-Telu-IN reads as te."
         },
         "expected_text": {
           "type": "string",
           "default": "",
           "maxLength": 20000,
           "description": "Optional copied reference passage for passage-verified recognition."
+        },
+        "profile": {
+          "type": "string",
+          "default": "",
+          "maxLength": 16384,
+          "description": "Optional school, class and child profile as JSON text: $defs/layers of backend/languages/profile.schema.json, at most 16384 bytes in UTF-8. Sent with each request and never stored; the response carries only its hash as ruleset. A refused profile is HTTP 413 or 422 before the photo is read."
+        },
+        "age_band": {
+          "type": "string",
+          "default": "",
+          "pattern": "^(([3-9]|1[0-8])-([3-9]|1[0-8]))?$",
+          "description": "Optional writer's age as two whole-year ages from 3 to 18, the first below the second, such as 6-7. Never a birth date. Echoed in the report as age_band and not stored; no score uses it yet (#216). A refused band is HTTP 422 before the photo is read."
         }
       }
     },

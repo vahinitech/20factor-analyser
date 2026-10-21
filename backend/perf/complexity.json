@@ -1,0 +1,69 @@
+{
+  "$comment": "How fast each function that runs once per page may grow (docs/21-performance-and-coverage.md, section 4; #230). n: what the input is measured in. declared: the big O. base: the smallest size scripts/complexity.py runs (then 2, 4 and 8 times it); inner: calls per timed run, for functions much faster than a millisecond. why: required for anything above O(n log n). CI fits the slope of log CPU time against log n and fails when it is more than tolerance above the declared class. Model inference is not listed: its cost is fixed per crop, and backend/perf.py counts the crops.",
+  "version": 1,
+  "tolerance": 0.3,
+  "repeats": 5,
+  "functions": {
+    "computer_vision.to_numpy": {
+      "n": "pixels",
+      "declared": "O(n)",
+      "base": 4
+    },
+    "detector.merge_lines": {
+      "n": "readings",
+      "declared": "O(n^2)",
+      "base": 50,
+      "why": "Each reading is compared with every reading kept so far, to drop repeats from the image variants and line recovery. A page has tens of readings, not thousands."
+    },
+    "detector.region_filter_lines": {
+      "n": "lines",
+      "declared": "O(n)",
+      "base": 1000
+    },
+    "detector.join_row_pieces": {
+      "n": "pieces",
+      "declared": "O(n^2)",
+      "base": 64,
+      "why": "Each piece is compared with every row found so far, and the rows grow with the pieces. A page has tens of pieces."
+    },
+    "classify.classify_lines": {
+      "n": "lines",
+      "declared": "O(n)",
+      "base": 4
+    },
+    "line_recovery.missed_regions": {
+      "n": "pixels",
+      "declared": "O(n)",
+      "base": 4
+    },
+    "ink_geometry.find_rows": {
+      "n": "pixels",
+      "declared": "O(n^2)",
+      "base": 4,
+      "why": "Each row's outline is found with np.isin over the whole page, and each ink blob is matched to every row middle, so the work is pixels times rows, and rows grow with a page's height. A page has at most a few dozen rows; cropping each row's mask to its blobs' box would make it O(n)."
+    },
+    "escalation.climb": {
+      "n": "lines",
+      "declared": "O(n)",
+      "base": 5,
+      "inner": 20
+    },
+    "recognizer.align_to_expected": {
+      "n": "graphemes",
+      "declared": "O(n^2)",
+      "base": 24,
+      "inner": 50,
+      "why": "Edit distance (difflib.SequenceMatcher) between the line read and its passage line, every pair of graphemes in the worst case. A line is under a hundred graphemes. Measured below 200 graphemes: there difflib starts junking common letters (autojunk), which hides the quadratic case on long synthetic lines."
+    },
+    "computer_vision.vl_analyze": {
+      "n": "lines",
+      "declared": "O(n)",
+      "base": 4
+    },
+    "scoring.build_analysis": {
+      "n": "lines",
+      "declared": "O(n)",
+      "base": 4
+    }
+  }
+}

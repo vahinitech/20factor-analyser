@@ -86,7 +86,7 @@ OCR text as a secondary signal.
 | Feedback endpoint not centralised | Lead-capture data from the PDF download dialog is stored in the browser's local storage and posted to `/persist/feedback`, but nothing in this repo implements that service | Deploy a feedback-capture backend and point the deployment's reverse proxy at it; see `docs/15-persistence.md` |
 | No real IMU pen data | The four Dynamics factors are estimated from a photo, not measured from pen motion | Capture from the dual-IMU sensor pen |
 | Indic geometry thresholds tuned on Latin samples | Telugu and Hindi quality scores are less reliable than English | Refit the reference bands on Indic handwriting samples |
-| Letter-shape factors assume Latin letterforms | Loop closure and ascender/descender proxies (a/o/e/g, b/d/f/h/k/l/t/g/j/p/q/y) are not meaningful for Telugu | Script-aware letter models |
+| Letter-shape factors assume Latin letterforms | Loop closure and ascender/descender proxies (a/o/e/g, b/d/f/h/k/l/t/g/j/p/q/y) are not meaningful for Telugu | Script-aware letter models from language packs ([20-languages.md](20-languages.md)) |
 | No calibration against human coach ratings | Two blended factors use fixed weights, not a model fit to how a coach would actually score them | Collect rated samples, fit a regression |
 | No full perspective correction | A page photographed at an angle has each line's pixel position drift across the page from camera geometry alone, not the handwriting. Margin Discipline (factor 10) is corrected for this (the page's median line tilt is estimated and undone before its left-margin measurement, `scoring._page_tilt_degrees`/`_detilted_left_x`); Baseline Alignment and Line Straightness (factors 7, 11) measure absolute line slope the same way and share the same exposure, not yet corrected. Sizes and margins are also relative to the page image, not millimetres | Apply the same tilt correction to factors 7 and 11; page-quad unwarp for real-world millimetre units |
 
@@ -112,7 +112,9 @@ OCR text as a secondary signal.
 ### Longer-term
 7. Live IMU pen integration for real Dynamics factors, not estimates.
 8. Script-aware letter models for the loop-closure and letter-formation
-   factors across Telugu, Hindi, Tamil and Kannada.
+   factors across Telugu, Hindi, Tamil and Kannada. The design and build
+   order for this, and for German and the English variants, is
+   [20-languages.md](20-languages.md).
 9. Age and grade norm bands, and behaviour indicators such as hesitant or
    rushed writing, only once real IMU data exists, and always labelled as
    indicators, never as a diagnosis.

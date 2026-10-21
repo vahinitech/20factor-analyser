@@ -19,16 +19,23 @@
     "test:keep": "node tests/keep-my-pages.mjs",
     "test:daily-limit": "node tests/daily-limit.mjs",
     "test:ocr-unavailable": "node tests/ocr-unavailable.mjs",
+    "test:handwriting-not-read": "node tests/handwriting-not-read.mjs",
+    "test:telugu-choice": "node tests/telugu-choice.mjs",
     "test:notice-art": "node tests/notice-art.mjs",
+    "test:not-writing-page": "node tests/not-writing-page.mjs",
     "sbom:update": "python backend/update_sbom.py",
     "sbom:check": "python backend/update_sbom.py --check",
     "test:practice": "node tests/practice-report.mjs",
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
-    "test:share-embed": "node tests/report-share-embed.mjs"
+    "test:print-popup": "node tests/print-popup.mjs",
+    "test:share-embed": "node tests/report-share-embed.mjs",
+    "test:unit": "for t in tests/*.test.mjs; do echo \"== $t\"; node \"$t\" || exit 1; done",
+    "coverage:frontend": "c8 npm run -s test:unit"
   },
   "devDependencies": {
+    "c8": "12.0.0",
     "http-server": "^14.1.1",
     "playwright": "^1.63.0"
   }

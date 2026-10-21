@@ -62,6 +62,8 @@ SCRIPTS = {"latin", "telugu", "devanagari", "mixed", "other"}
 PAGES = {"handwriting", "handwriting_with_print"}
 READING = {"passage-verified", "high", "moderate", "low", "unavailable"}
 LANG_RE = re.compile(r"^[a-z]{2,3}([_-][A-Za-z]{2,4})?$")
+# The hash of the rules the page was scored by (comparability.ruleset).
+RULESET_RE = re.compile(r"^[0-9a-f]{64}$")
 SECTION_RE = re.compile(r"^[a-z_]{1,24}$")
 CATALOG_RE = re.compile(r"^[0-9a-f]{20}$")
 SHAPES = {"box", "line"}
@@ -144,6 +146,12 @@ def _sections(report):
     return out
 
 
+def _ruleset(value):
+    if isinstance(value, str) and RULESET_RE.match(value):
+        return value
+    return None
+
+
 def _comparability(facts):
     facts = facts if isinstance(facts, dict) else {}
     return {
@@ -162,6 +170,7 @@ def _comparability(facts):
         "page": _label(facts.get("page"), PAGES),
         "reading": _label(facts.get("reading"), READING),
         "passage_aligned": facts.get("passage_aligned") is True,
+        "ruleset": _ruleset(facts.get("ruleset")),
     }
 
 

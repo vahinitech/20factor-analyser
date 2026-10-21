@@ -1,0 +1,378 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vahinitech.com/schemas/language-profile.schema.json",
+  "title": "School, class or child profile",
+  "description": "Teaching choices layered on the language packs: packs, then school, then class, then child (docs/20-languages.md, section 18.1). Fixed fields and literal lists only: no code, no regular expressions. Every field says how it changes what came before, with set, add or remove. There is no field for health, diagnosis, ability or a child's name; a name may appear only as an exception word. $defs/layers is the request's profile field; $defs/resolved is the ruleset after every layer.",
+  "$ref": "#/$defs/profile",
+  "$defs": {
+    "profile": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "$ref": "#/$defs/id"
+        },
+        "version": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "letter_model": {
+          "description": "The letter model the class is taught, one the pack lists in letter_models.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "set"
+          ],
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/id"
+            }
+          }
+        },
+        "ruling": {
+          "description": "The paper the class writes on.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "set"
+          ],
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/rulingName"
+            }
+          }
+        },
+        "variants": {
+          "description": "For each letter, the forms the class accepts, from the forms the pack lists for it. An empty list says the letter is not taught yet: it leaves every letter class, and a factor that counts letters of an emptied class is Not measured.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/variantMap"
+            },
+            "add": {
+              "$ref": "#/$defs/variantChange"
+            },
+            "remove": {
+              "$ref": "#/$defs/variantChange"
+            }
+          }
+        },
+        "word_lists": {
+          "description": "Class word lists and dictation lists, by name.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/wordListMap"
+            },
+            "add": {
+              "$ref": "#/$defs/wordListChange"
+            },
+            "remove": {
+              "$ref": "#/$defs/wordListChange"
+            }
+          }
+        },
+        "exceptions": {
+          "description": "Words that are right as written (names, class words) and what not to read as words. They change the script and language decision and the language skills only, never a geometry factor.",
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/exceptionLists"
+            },
+            "add": {
+              "$ref": "#/$defs/exceptionChange"
+            },
+            "remove": {
+              "$ref": "#/$defs/exceptionChange"
+            }
+          }
+        },
+        "checks": {
+          "description": "Which language-skill checks run (#221). Never an input to a factor score.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "set"
+          ],
+          "properties": {
+            "set": {
+              "$ref": "#/$defs/checkMap"
+            }
+          }
+        }
+      }
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,39}$"
+    },
+    "rulingName": {
+      "enum": [
+        "four_line",
+        "single_line",
+        "plain"
+      ]
+    },
+    "word": {
+      "description": "One literal word, compared as written. Never read as a pattern.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 40,
+      "pattern": "^\\S+$"
+    },
+    "letter": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1
+    },
+    "forms": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/id"
+      }
+    },
+    "someForms": {
+      "$ref": "#/$defs/forms",
+      "minItems": 1
+    },
+    "words": {
+      "type": "array",
+      "maxItems": 200,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/word"
+      }
+    },
+    "someWords": {
+      "$ref": "#/$defs/words",
+      "minItems": 1
+    },
+    "skipName": {
+      "enum": [
+        "digits",
+        "formulas"
+      ]
+    },
+    "skips": {
+      "type": "array",
+      "maxItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "$ref": "#/$defs/skipName"
+      }
+    },
+    "someSkips": {
+      "$ref": "#/$defs/skips",
+      "minItems": 1
+    },
+    "variantMap": {
+      "type": "object",
+      "maxProperties": 60,
+      "propertyNames": {
+        "$ref": "#/$defs/letter"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/forms"
+      }
+    },
+    "variantChange": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 60,
+      "propertyNames": {
+        "$ref": "#/$defs/letter"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/someForms"
+      }
+    },
+    "wordListMap": {
+      "type": "object",
+      "maxProperties": 20,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/words"
+      }
+    },
+    "wordListChange": {
+      "type": "object",
+      "minProperties": 1,
+      "maxProperties": 20,
+      "propertyNames": {
+        "$ref": "#/$defs/id"
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/someWords"
+      }
+    },
+    "exceptionLists": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "words": {
+          "$ref": "#/$defs/words"
+        },
+        "skip": {
+          "$ref": "#/$defs/skips"
+        }
+      }
+    },
+    "exceptionChange": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "words": {
+          "$ref": "#/$defs/someWords"
+        },
+        "skip": {
+          "$ref": "#/$defs/someSkips"
+        }
+      }
+    },
+    "checkMap": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "spelling": {
+          "enum": [
+            "on",
+            "off",
+            "word_list"
+          ]
+        },
+        "grammar": {
+          "enum": [
+            "on",
+            "off"
+          ]
+        },
+        "phonetic": {
+          "enum": [
+            "on",
+            "off"
+          ]
+        }
+      }
+    },
+    "layers": {
+      "description": "The request's profile field: one profile per level, applied school, then class, then child. A child's profile may only set the letter model the child was taught (section 18.1); the language comes from the request's lang.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "school": {
+          "$ref": "#/$defs/profile"
+        },
+        "class": {
+          "$ref": "#/$defs/profile"
+        },
+        "child": {
+          "$ref": "#/$defs/profile",
+          "propertyNames": {
+            "enum": [
+              "profile",
+              "version",
+              "letter_model"
+            ]
+          }
+        }
+      }
+    },
+    "resolved": {
+      "description": "The ruleset's profile part after every layer. Lists are sorted; the ruleset hash is taken over this and the pack hash.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "letter_model",
+        "ruling",
+        "variants",
+        "word_lists",
+        "exceptions",
+        "checks"
+      ],
+      "properties": {
+        "letter_model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/id"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "ruling": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/rulingName"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "variants": {
+          "$ref": "#/$defs/variantMap"
+        },
+        "word_lists": {
+          "$ref": "#/$defs/wordListMap"
+        },
+        "exceptions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "words",
+            "skip"
+          ],
+          "properties": {
+            "words": {
+              "$ref": "#/$defs/words"
+            },
+            "skip": {
+              "$ref": "#/$defs/skips"
+            }
+          }
+        },
+        "checks": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "spelling": {
+              "enum": [
+                "on",
+                "off",
+                "word_list"
+              ]
+            },
+            "grammar": {
+              "enum": [
+                "on",
+                "off"
+              ]
+            },
+            "phonetic": {
+              "enum": [
+                "on",
+                "off"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

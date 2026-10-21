@@ -23,6 +23,7 @@ so slots no longer queue on one engine's lock.
 
 import asyncio
 import collections
+import contextvars
 import functools
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -121,6 +122,11 @@ EXECUTOR = ThreadPoolExecutor(
 
 
 async def run(fn, *args):
-    """Run blocking scan work on the scan pool (use inside slot())."""
+    """Run blocking scan work on the scan pool (use inside slot()). The
+    request's context goes with it, so the stages it runs are timed for
+    this request (perf.py)."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(EXECUTOR, functools.partial(fn, *args))
+    context = contextvars.copy_context()
+    return await loop.run_in_executor(
+        EXECUTOR, context.run, functools.partial(fn, *args)
+    )

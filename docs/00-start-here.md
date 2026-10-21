@@ -39,7 +39,11 @@ to the ones it builds on.
 | 14 | [Build](14-build.md) | How the browser bundle is made |
 | 15 | [Persistence](15-persistence.md) | What is stored, and where |
 | 16 | [Roadmap](16-roadmap.md) | What it can and cannot do yet, and what is next |
-| 17 | [Comparison data](17-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
+| 17 | [Access and trials](17-access-and-trials.md) | Giving a Pro trial, turning it into paid Pro, renewing, moving back to Free, replacing a lost key, and the owner decisions still open |
+| 18 | [The real-handwriting benchmark](18-benchmark.md) | How every change is checked against real pages: the kept reader output, expected scores, what may not get worse, and the live run with the models |
+| 19 | [Comparison data](19-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
+| 20 | [Languages](20-languages.md) | The design for more scripts and languages: language packs, the per-line script decision, what each factor needs, maturity levels, and the build order |
+| 21 | [Performance, complexity and coverage](21-performance-and-coverage.md) | The design for timing every scan step, budgets on large calls, recording each function's growth (big O) in CI, a profiling job, and coverage with a ratchet |
 
 ## Elsewhere
 
@@ -48,7 +52,8 @@ to the ones it builds on.
 - Server set-up and engines: [backend/README.md](../backend/README.md).
 - Practice framework details: [practice-framework/](practice-framework/).
 - Worked examples and the sample report generator: [examples/](examples/).
-- Superseded notes on earlier report layouts, kept for the record:
+- Superseded notes on earlier report layouts, and dated notes such as the
+  real-photo evaluation of 19 October 2026, kept for the record:
   [history/](history/).
 - Changes: [CHANGELOG.md](../CHANGELOG.md). Contributing:
   [CONTRIBUTING.md](../CONTRIBUTING.md). Security: [SECURITY.md](../SECURITY.md).

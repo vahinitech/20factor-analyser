@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
-import fs from 'node:fs';
 import vm from 'node:vm';
+import { runSource } from './run-source.mjs';
 import assert from 'node:assert/strict';
 const calls=[];let tier='free',status=200,practice;
 const window={location:{href:'https://example.test/analyser/',origin:'https://example.test'},fetch:async(url,options)=>{calls.push({url,options});return {ok:status===200,json:async()=>({access:{tier},practice})};}};
 const context={window,URL};vm.createContext(context);
-vm.runInContext(fs.readFileSync('frontend/src/engine/account.js','utf8'),context);
+runSource('frontend/src/engine/account.js',context);
 const account=window.VahiniAccount;
 let request=await account.request('/api/v2/reports?format=compact&include=text,evidence');
 assert.equal(new URL(request.url).searchParams.get('include'),'text,evidence');

@@ -1,0 +1,50 @@
+# Each factor against a mistake planted for it (scripts/factor_tests.py,
+# docs/02-how-a-scan-works.md section 13): how often each catches its
+# mistake may not fall below benchmarks/factors/expected.json. About a
+# quarter of an hour, so it runs when the measuring can change, weekly
+# and by hand, not on every pull request.
+name: Factor tests
+
+on:
+  pull_request:
+    paths:
+      - 'backend/scoring.py'
+      - 'backend/scoring_parts/**'
+      - 'backend/letter_geometry.py'
+      - 'backend/computer_vision.py'
+      - 'backend/zone_analysis.py'
+      - 'backend/marked_places.py'
+      - 'backend/baseline_track.py'
+      - 'scripts/planted_pages.py'
+      - 'scripts/factor_tests.py'
+      - 'scripts/benchmark.py'
+      - 'benchmarks/factors/**'
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factor-tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  factors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Cache the UJI letters
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vahini/ujipenchars2.txt
+          key: uji-cc56f72f8477e763
+      - name: Every factor catches its planted mistake as often as before
+        run: python scripts/benchmark.py factors

@@ -152,6 +152,11 @@ class TestHandwritingOnlyRule(unittest.TestCase):
         from fastapi.testclient import TestClient
 
         cls.client = TestClient(cls.mod.app)
+        # The stubbed collect_lines below is the whole reader's output, so
+        # nothing is read again where it found no line (line_recovery.py).
+        # Without this the recovery step would use whatever paddleocr
+        # module another test left loaded.
+        cls.mod._READ_REGION = None
         # recognizer is a sys.modules singleton shared across test modules:
         # restore the real collect_lines when this class finishes.
         cls.addClassCleanup(
@@ -244,6 +249,9 @@ class TestHandwritingOnlyRule(unittest.TestCase):
         # regions feed the report's evidence showcase
         for reg in j.get("regions", []):
             self.assertNotIn(str(reg.get("text", "")).lower(), MUST_EXCLUDE)
+        # The form's printed words beside the writing are not writing the
+        # reader left unread: the page is not read in pieces (#277).
+        self.assertIsNone(j["analysis"]["recognition"]["ink_reason"])
 
     def test_factor_page_context_masks_excluded_printed_pixels(self):
         import base64

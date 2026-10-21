@@ -268,6 +268,12 @@
     "comparability": {
       "$ref": "common.schema.json#/definitions/comparability"
     },
+    "ruleset": {
+      "$ref": "common.schema.json#/definitions/ruleset"
+    },
+    "age_band": {
+      "$ref": "common.schema.json#/definitions/ageBand"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,

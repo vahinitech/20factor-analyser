@@ -145,6 +145,7 @@ NESTED_KEYS = {
     "page",
     "reading",
     "passage_aligned",
+    "ruleset",
     "photo_width",
     "photo_height",
     "factors",
@@ -157,6 +158,7 @@ NESTED_KEYS = {
 STRING_SHAPES = [
     re.compile(r"^[0-9]{4}-[0-9]{2}-[0-9]{2}$"),  # the day
     re.compile(r"^[0-9a-f]{20}$"),  # the catalogue version
+    re.compile(r"^[0-9a-f]{64}$"),  # the ruleset hash
     re.compile(r"^[a-z_-]{1,24}$"),  # enum labels and section ids
 ]
 
@@ -242,6 +244,17 @@ class RecordTests(unittest.TestCase):
             if region.get("caption"):
                 self.assertNotIn(region["caption"], dumped)
         self.assertFalse(re.search(r"[A-Za-z0-9+/=]{41,}", dumped))
+
+    def test_the_ruleset_hash_is_kept_and_nothing_else_is(self):
+        # main added comparability.ruleset after this store was written:
+        # the hash of the scoring rules is kept, any other string dropped.
+        for given, kept in (("ab" * 32, "ab" * 32), ("Vahini, Grade 3", None)):
+            report = dict(self.report)
+            report["comparability"] = dict(
+                self.report["comparability"], ruleset=given
+            )
+            record = report_store.record_from(report, date(2026, 10, 3))
+            self.assertEqual(record["comparability"]["ruleset"], kept)
 
     def test_free_records_hold_only_free_scores(self):
         record = report_store.record_from(

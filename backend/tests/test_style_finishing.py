@@ -13,8 +13,11 @@ import sys
 
 import numpy as np
 
+from backend.tests import function_tests
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import style_analysis  # noqa: E402
 from finishing_letters import analyze_finishing_letters  # noqa: E402
 from style_analysis import analyze_style  # noqa: E402
 
@@ -106,6 +109,59 @@ def test_sparse_page_is_unavailable():
     assert out["available"] is False
 
 
+# --- cv2 components match the flood fill they replaced (#231) ----------------
+
+
+def _line_crops():
+    """Ink masks shaped like line crops: the drawn words, the same with
+    specks below MIN_COMPONENT_PX, diagonal-only joins (8-connected,
+    not 4) and seeded random ink at a few densities."""
+    page, _ = _make_page(
+        [(5, True), (4, False), (5, True), (6, False)], "a b c d"
+    )
+    crops = [page[20:80, :] < 128]
+    specked = crops[0].copy()
+    specked[5, 5] = specked[50, 300] = True  # 1 px
+    specked[10:12, 100:102] = True  # 4 px
+    specked[30:32, 480:483] = True  # 6 px, counts
+    crops.append(specked)
+    diag = np.zeros((24, 40), dtype=bool)
+    for i in range(12):
+        diag[2 + i, 3 + i] = True  # one 12 px stroke, corner to corner
+        diag[20 - i, 20 + i] = True
+    crops.append(diag)
+    rng = np.random.default_rng(231)
+    for density in (0.05, 0.2, 0.45, 0.6):
+        crops.append(rng.random((40, 160)) < density)
+    return crops
+
+
+def test_cv2_components_match_flood_fill():
+    assert style_analysis.cv2 is not None  # the fast path is tested
+    fast = style_analysis._components
+    flood = style_analysis._components_flood
+    for ink in _line_crops():
+        assert fast(ink) == flood(ink)
+        # word crops are column slices of the line, so not contiguous
+        assert fast(ink[:, 3:-3]) == flood(ink[:, 3:-3])
+
+
+def test_line_word_styles_same_with_and_without_cv2():
+    page, lines = _make_page(
+        [(5, True), (4, False), (5, True), (6, False)],
+        "these words keep switching",
+    )
+    box, text = lines[0]["box"], lines[0]["text"]
+    fast = style_analysis.line_word_styles(page, box, text)
+    saved = style_analysis.cv2
+    style_analysis.cv2 = None
+    try:
+        slow = style_analysis.line_word_styles(page, box, text)
+    finally:
+        style_analysis.cv2 = saved
+    assert fast and fast == slow
+
+
 # --- the ten finishing letters ----------------------------------------------
 
 
@@ -165,3 +221,7 @@ def test_build_analysis_reports_style_and_tips():
         assert "one-style-only" in ids
         f15 = [r for r in d["results"] if r["n"] == 15][0]
         assert "Style check" in f15["evidence"]
+
+
+# unittest discovery collects TestCase classes only (#228).
+FunctionTests = function_tests(globals())

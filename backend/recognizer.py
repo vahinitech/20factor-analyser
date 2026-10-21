@@ -24,16 +24,21 @@
 
 import difflib
 import re
-import time
+import unicodedata
 
 import numpy as np
 
 import config
+import lang_tags
 import ocr_backends
 import classify
 import detector
 import computer_vision
 import layout_filter
+import line_recovery
+import escalation
+import perf
+from languages import graphemes, ladders, stages
 
 _CFG = {
     "ocr_langs": ["en"],
@@ -46,11 +51,6 @@ _CFG = {
     "refine_min_conf": 0.75,
 }
 
-# Languages Surya is documented to handle well (Indic + English); anything
-# else routes to TrOCR, which is an English-only handwriting checkpoint
-# (microsoft/trocr-base-handwritten).
-_INDIC_LANGS = {"te", "hi", "ta", "kn", "ml"}
-
 
 def configure(**kwargs):
     """Set the recognizer's dispatch config once at startup. Unknown keys
@@ -61,7 +61,7 @@ def configure(**kwargs):
 
 
 def resolve_langs(lang: str):
-    req = (lang or "").strip().lower()
+    req = lang_tags.engine_langs(lang)
     ocr_langs = _CFG["ocr_langs"]
     if not req or req == "auto":
         return ocr_langs or ["en"]
@@ -91,23 +91,40 @@ def collect_lines_paddle(arr: np.ndarray, lang: str):
         engine, err = _build_engine(ocr_backends.get_engine, lg)
         if err:
             last_err = err
-        engine_safe, err_safe = _build_engine(ocr_backends.get_engine_safe, lg)
-        if err_safe:
-            last_err = err_safe
-        if engine is None and engine_safe is None:
-            continue  # try the next configured language
+        # The safe engine is a second copy of the reader's models, used only
+        # when the normal engine cannot read, so it is built only then: when
+        # the normal engine failed to build, or failed on a variant (#173).
+        engine_safe, safe_tried = None, False
+        if engine is None:
+            engine_safe, err_safe = _build_engine(
+                ocr_backends.get_engine_safe, lg
+            )
+            safe_tried = True
+            if err_safe:
+                last_err = err_safe
+            if engine_safe is None:
+                continue  # try the next configured language
         for variant in detector.variants(
             arr, _CFG["max_variants"], _CFG["adv_preproc"]
         ):
             got = False
             if engine is not None:
                 try:
+                    perf.count("reader_calls")
                     lines.extend(ocr_backends.run(engine, variant, lg))
                     got = True
                 except Exception as e:
                     last_err = str(e)
+            if not got and not safe_tried:
+                # The variant's error stays the one reported, as when the
+                # safe engine was built before the variants were read.
+                engine_safe, _err = _build_engine(
+                    ocr_backends.get_engine_safe, lg
+                )
+                safe_tried = True
             if not got and engine_safe is not None:
                 try:
+                    perf.count("reader_calls")
                     lines.extend(ocr_backends.run(engine_safe, variant, lg))
                 except Exception as e2:
                     last_err = str(e2)
@@ -132,9 +149,13 @@ def backend_recognize(name: str, arr: np.ndarray, lang: str):
         return [], reason
     try:
         paddle = ocr_backends.get_backend("paddle")
-        lines = be.recognize(
-            arr, (lang or "en"), resolve_langs(lang), detect_fn=paddle.detect
-        )
+        with perf.stage("detect." + name):
+            lines = be.recognize(
+                arr,
+                (lang or "en"),
+                resolve_langs(lang),
+                detect_fn=paddle.detect,
+            )
         return lines, ""
     except Exception as e:
         return [], str(e)
@@ -153,7 +174,8 @@ def collect_lines(arr: np.ndarray, lang: str):
     mode = ocr_backend if ocr_backend in config.OCR_BACKENDS else "paddle"
     compare = {}
 
-    paddle_lines, paddle_err = collect_lines_paddle(arr, lang)
+    with perf.stage("detect", pixels=int(arr.shape[0] * arr.shape[1])):
+        paddle_lines, paddle_err = collect_lines_paddle(arr, lang)
     if mode == "paddle":
         return paddle_lines, paddle_err, "paddle", compare
 
@@ -218,26 +240,76 @@ def collect_lines(arr: np.ndarray, lang: str):
 def _refine_engine_for_line(line_lang: str, backend_name: str) -> str:
     """Which registered engine should re-read a handwriting line.
 
-    In "hybrid" mode, route by script: Surya is documented to handle Indic
-    scripts well; TrOCR's checkpoint (microsoft/trocr-base-handwritten) is
-    English-only, so anything else goes to TrOCR. Only Telugu is currently
-    auto-detected per line (see ocr_backends._TELUGU); other Indic scripts
-    route to Surya when the request itself was made with that `lang=`. Any
-    other mode (e.g. "trocr") uses that single named engine for every line,
-    unchanged from before.
+    In "hybrid" mode, route by script, as backend/languages/stages.json
+    says: Telugu, Hindi, Tamil, Kannada and Malayalam go to Surya, and
+    Latin, the script of any language the table does not name, goes to
+    TrOCR. Only Telugu is currently auto-detected per line (see
+    ocr_backends._TELUGU); other Indic scripts route to Surya when the
+    request itself was made with that `lang=`. The route depends on the
+    line's language and the committed table only, never on how fast an
+    engine has been (#112). Any other mode (e.g. "trocr") uses that single
+    named engine for every line, unchanged from before.
     """
     if backend_name != "hybrid":
         return backend_name
-    return "surya" if (line_lang or "en") in _INDIC_LANGS else "trocr"
+    return stages.table().refine_engine(line_lang or "en")
+
+
+def _crop_reader(raw_bytes, proc_arr):
+    """crop_for(line) for the escalation loop: the line's box cut from the
+    FULL-RESOLUTION original (paddle's working image is downscaled, and
+    the full image reads materially better), padded 6% across and 25% up
+    and down plus 6 px. The photo is decoded on the first crop asked for.
+    None for a line with no usable box, or when the photo cannot be
+    decoded: such a line keeps the reader's reading, as it always has."""
+    ph = float(max(1, proc_arr.shape[0]))
+    pw = float(max(1, proc_arr.shape[1]))
+    full = []
+
+    def crop_for(line):
+        if not full:
+            try:
+                with perf.stage("decode.full") as step:
+                    full.append(
+                        np.array(computer_vision.decode_image(raw_bytes))
+                    )
+                    step.size(pixels=full[0].shape[0] * full[0].shape[1])
+            except Exception:
+                full.append(None)
+        img = full[0]
+        box = line.get("box") or [0, 0, 0, 0]
+        if img is None or len(box) < 4:
+            return None
+        oh, ow = img.shape[0], img.shape[1]
+        sx, sy = ow / pw, oh / ph
+        x, y, w, h = [float(v) for v in box[:4]]
+        padx = int(w * sx * 0.06) + 6
+        pady = int(h * sy * 0.25) + 6
+        x0 = max(0, int(x * sx) - padx)
+        y0 = max(0, int(y * sy) - pady)
+        x1 = min(ow, int((x + w) * sx) + padx)
+        y1 = min(oh, int((y + h) * sy) + pady)
+        if x1 <= x0 or y1 <= y0:
+            return None
+        return img[y0:y1, x0:x1]
+
+    return crop_for
+
+
+def _guard(lower, text, conf):
+    return escalation.trusted(
+        lower, text, conf, _CFG["refine_min_sim"], _CFG["refine_min_conf"]
+    )
 
 
 def refine_handwriting_text(
     raw_bytes: bytes, proc_arr: np.ndarray, hand_lines, backend_name: str
 ):
-    """Re-recognise each handwriting crop with a stronger, script-appropriate
-    engine and accept its text when EITHER holds:
-      - it roughly agrees with paddle's reading, or
-      - the specialist engine's OWN confidence is high.
+    """Send each handwriting line up its ladder (backend/languages/
+    ladders.json, escalation.py) and keep a higher rung's text when
+    EITHER holds:
+      - it roughly agrees with the lower rung's reading, or
+      - the higher engine's OWN confidence is high.
 
     Why two acceptance paths, not just agreement: TrOCR/Surya are
     language-model recognisers that produce excellent text on clear input
@@ -250,83 +322,24 @@ def refine_handwriting_text(
     confident specialist reading is trusted even when it disagrees with
     paddle. (The agreement check is Latin-only — non-Latin scripts strip to
     an empty string and always score 0 — so Indic refinements rely on the
-    confidence path.) Crops are taken from the FULL-RESOLUTION original
-    (paddle's working image is downscaled), which materially improves
-    recognition.
+    confidence path.)
 
-    Every handwriting line (up to 40) is re-read, every time. The engines
-    used to be skipped after one slow line, for the rest of the page and
-    for VAHINI_HYBRID_RETRY_SEC afterwards, so the text read from one photo
-    depended on server load (#112). Calls are still timed for /health's
-    adaptive_engine_speed, which is information only. A machine too slow
-    for every line should not run hybrid or trocr mode.
+    The ladders for paddle, trocr and hybrid mode give every line the
+    engines it got before them: paddle alone, TrOCR, or TrOCR for Latin
+    and Surya for the Indic scripts. Every handwriting line (up to 40) is
+    re-read, every time: the engines used to be skipped after one slow
+    line, so the text read from one photo depended on server load (#112).
+    A line that needs an engine that cannot answer refuses the page
+    (escalation.RungDown); it is never left with the lower reading
+    instead. Calls are still timed for /health's adaptive_engine_speed,
+    which is information only.
     """
-    try:
-        full = np.array(computer_vision.decode_image(raw_bytes))
-    except Exception:
-        return
-
-    ph = float(max(1, proc_arr.shape[0]))
-    pw = float(max(1, proc_arr.shape[1]))
-    oh, ow = full.shape[0], full.shape[1]
-    sx, sy = ow / pw, oh / ph
-
-    ready = {}  # engine name -> backend, or None if unavailable (cached)
-
-    def _get_ready(name):
-        if name not in ready:
-            be = ocr_backends.get_backend(name)
-            ok = False
-            if be is not None and hasattr(be, "recognize_crop"):
-                try:
-                    ok, _reason = be.available()
-                except Exception:
-                    ok = False
-            ready[name] = be if ok else None
-        return ready[name]
-
-    for l in hand_lines[:40]:
-        engine_name = _refine_engine_for_line(l.get("lang"), backend_name)
-        be = _get_ready(engine_name)
-        if be is None:
-            continue
-        box = l.get("box") or [0, 0, 0, 0]
-        if len(box) < 4:
-            continue
-        x, y, w, h = [float(v) for v in box[:4]]
-        padx = int(w * sx * 0.06) + 6
-        pady = int(h * sy * 0.25) + 6
-        x0 = max(0, int(x * sx) - padx)
-        y0 = max(0, int(y * sy) - pady)
-        x1 = min(ow, int((x + w) * sx) + padx)
-        y1 = min(oh, int((y + h) * sy) + pady)
-        if x1 <= x0 or y1 <= y0:
-            continue
-        crop = full[y0:y1, x0:x1]
-        t0 = time.perf_counter()
-        try:
-            cand, conf = be.recognize_crop(crop)
-        except Exception:
-            continue
-        # Only a successful call counts as a speed measurement (for
-        # /health): an exception is a reliability problem, not a latency
-        # one, and recording it would let an instant crash look "fast".
-        ocr_backends.record_engine_speed(
-            engine_name, (time.perf_counter() - t0) * 1000.0
-        )
-        cand = (cand or "").strip()
-        # TrOCR often appends a stray " ." — drop trailing isolated punctuation.
-        cand = re.sub(r"\s*[.·,]+\s*$", "", cand).strip()
-        if not cand:
-            continue
-        base = str(l.get("text", "") or "").strip()
-        a = re.sub(r"[^a-z0-9]", "", base.lower())
-        b = re.sub(r"[^a-z0-9]", "", cand.lower())
-        sim = difflib.SequenceMatcher(None, a, b).ratio() if (a and b) else 0.0
-        conf = float(conf or 0.0)
-        if sim >= _CFG["refine_min_sim"] or conf >= _CFG["refine_min_conf"]:
-            l["text"] = cand
-            l["refined_by"] = engine_name
+    escalation.climb(
+        hand_lines,
+        backend_name,
+        _crop_reader(raw_bytes, proc_arr) if raw_bytes else lambda _l: None,
+        _guard,
+    )
 
 
 def extract_hand_lines(
@@ -334,28 +347,152 @@ def extract_hand_lines(
     raw_lines,
     raw_bytes: bytes = None,
     refine_backend: str = None,
+    read_region=None,
 ):
-    """Shared post-processing: merge → region-filter → drop non-text-ink
-    layout regions (image/figure/chart/seal) → classify printed vs
-    handwriting → keep handwriting, minus OCR noise fragments → optionally
-    refine handwriting text with a stronger engine. Returns (all_lines,
-    hand_lines).
+    """Shared post-processing: merge repeated readings → region-filter →
+    drop non-text-ink layout regions (image/figure/chart/seal) → read the
+    writing the detector missed (when read_region is given) → classify
+    printed vs handwriting → keep handwriting, minus OCR noise fragments →
+    join the pieces of each line → optionally refine handwriting text
+    with a stronger engine. Returns (all_lines, hand_lines).
+
+    read_region(crop, lang) -> lines | None is the scan's own reader
+    (ocr_backends.read_region); see line_recovery.py.
     """
-    lines = detector.region_filter_lines(
-        detector.merge_lines(raw_lines), arr.shape
-    )
-    lines = layout_filter.filter_excluded_regions(
-        lines, layout_filter.excluded_regions(arr)
-    )
-    classify.classify_lines(arr, lines)
-    hand_lines = detector.prefer_handwritten(lines)
-    cleaned = [l for l in hand_lines if not detector.is_noise_line(l)]
-    # Fail-open: never empty the set just because noise filtering was strict.
-    if cleaned:
-        hand_lines = cleaned
-    if refine_backend in ("trocr", "hybrid") and raw_bytes:
+    with perf.stage("merge", lines=len(raw_lines)):
+        lines = detector.region_filter_lines(
+            detector.merge_lines(raw_lines), arr.shape
+        )
+    with perf.stage("layout", lines=len(lines)):
+        lines = layout_filter.filter_excluded_regions(
+            lines, layout_filter.excluded_regions(arr)
+        )
+    if read_region is not None and lines:
+        lang = str(lines[0].get("lang") or "en")
+        with perf.stage("recovery", lines=len(lines)):
+            lines = line_recovery.add_missed(arr, lines, read_region, lang)
+    with perf.stage("printed", lines=len(lines)):
+        classify.classify_lines(arr, lines)
+        hand_lines = detector.prefer_handwritten(lines)
+        cleaned = [l for l in hand_lines if not detector.is_noise_line(l)]
+        # Fail-open: never empty the set because noise filtering was strict.
+        if cleaned:
+            hand_lines = cleaned
+    with perf.stage("join", lines=len(hand_lines)):
+        hand_lines = detector.join_row_pieces(hand_lines)
+    if refine_backend in ladders.MODES:
         refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
     return lines, hand_lines
+
+
+# Telugu handwriting is not read yet. On 60 handwritten Telugu pages
+# (IIIT-INDIC-HW-WORDS, 2026-10-19) the Telugu reader returned 395 Latin
+# letters against 123 Telugu ones ("es aons", "aase"), and the server still
+# built a full report from them. A page asked for as Telugu (lang "te", not
+# with "en") is refused unless at least three in four of the letters read
+# are Telugu and the reader's mean confidence is 0.80 or more. The pages
+# that were mostly Telugu letters still read at 0.61 to 0.70 and lost half
+# their lines ("గవం నింబారు" for "గమనించారు సబ్జెక్టులో"); printed Telugu
+# reads at 0.96 to 1.0. The line tag cannot decide this: ocr_backends tags
+# every line the Telugu reader read as "te", Latin or not, and under "auto"
+# that reader also runs on short English pages. So only the request turns
+# the check on, and English and "auto" scans are unchanged.
+TELUGU_MIN_SHARE = 0.75
+TELUGU_MIN_CONFIDENCE = 0.80
+_TELUGU_CHAR = re.compile(r"[\u0C00-\u0C7F]")
+_LATIN_CHAR = re.compile(r"[A-Za-z]")
+
+
+def telugu_not_read(lang, hand_lines):
+    """Return the letter counts when a page asked for as Telugu was not
+    really read, or None when it passes or was not asked for as Telugu.
+    Lines with no text were not read at all (cv-fallback, or rows found
+    from the ink); a page of only those keeps its own path."""
+    asked = set(lang_tags.engine_langs(str(lang or "")).split(","))
+    if "te" not in asked or "en" in asked:
+        return None
+    read = [l for l in hand_lines if str(l.get("text") or "").strip()]
+    if not read:
+        return None
+    text = " ".join(str(l["text"]) for l in read)
+    telugu = len(_TELUGU_CHAR.findall(text))
+    latin = len(_LATIN_CHAR.findall(text))
+    confidence = sum(float(l.get("score") or 0.0) for l in read) / len(read)
+    if (
+        telugu
+        and telugu >= TELUGU_MIN_SHARE * (telugu + latin)
+        and confidence >= TELUGU_MIN_CONFIDENCE
+    ):
+        return None
+    return {
+        "telugu_letters": telugu,
+        "latin_letters": latin,
+        "reading_confidence": round(confidence, 3),
+    }
+
+
+# A maths, accounts or number page is not a writing page. Children scan
+# their maths and science notebooks, and the check used to score sums and
+# formulas as if they were sentences: the factors count letters, words and
+# word gaps, so a page of "3x4=12" gave a report about nothing it could
+# measure. A page is refused when digits and maths signs make up at least
+# 35% of what was read. On the 200 GNHK pages (2026-10-19 readings, lang
+# auto and en) the four pages at or above that were a shopping list with
+# prices, an accounting journal, an address and an unreadable scrap; no
+# page written in sentences reached it (below them: a three-letter scrap
+# at 0.33, then mixed notes and a measurement list at 0.25 and less,
+# all still scored). A page with
+# fewer than 12 such characters read is too short to judge and keeps its
+# own path. Letters include combining marks, so Telugu vowel signs count
+# as letters, not as symbols.
+NUMBERS_MAX_SHARE = 0.35
+NUMBERS_MIN_CHARS = 12
+_MATHS_SIGNS = frozenset("+=×÷*/^<>√π∑∫%")
+
+
+def not_writing_page(hand_lines):
+    """Return the counts when the page read is mostly numbers and sums,
+    or None when it is a writing page or too short to judge. Lines with
+    no text (cv-fallback, rows found from the ink) carry no reading and
+    are not judged."""
+    letters = numbers = 0
+    for line in hand_lines:
+        for ch in str(line.get("text") or ""):
+            if unicodedata.category(ch)[0] in "LM":
+                letters += 1
+            elif ch.isdigit() or ch in _MATHS_SIGNS:
+                numbers += 1
+    counted = letters + numbers
+    if counted < NUMBERS_MIN_CHARS:
+        return None
+    if numbers < NUMBERS_MAX_SHARE * counted:
+        return None
+    return {
+        "page_kind": "maths",
+        "letters_read": letters,
+        "numbers_read": numbers,
+    }
+
+
+_WORD = re.compile(r"\w")
+
+
+def _match_units(text):
+    """The graphemes a passage line is compared by: NFC, lower case,
+    letters, digits and their marks, one space between words. Python's
+    \\w does not match combining marks, so the old \\w-only filter
+    dropped every vowel sign and virama: పిల్లి compared as పలల and
+    a missing vowel sign was invisible (#209). Latin text gives one unit
+    per letter, so English matches are what they were."""
+    text = unicodedata.normalize("NFC", str(text or "")).lower()
+    kept = "".join(
+        ch
+        for ch in text
+        if ch == " "
+        or _WORD.match(ch)
+        or unicodedata.category(ch).startswith("M")
+    )
+    return graphemes.split(re.sub(" +", " ", kept).strip())
 
 
 def align_to_expected(hand_lines, expected_text):
@@ -380,19 +517,14 @@ def align_to_expected(hand_lines, expected_text):
     if not exp_lines or not hand_lines:
         return None
 
-    def _norm(s):
-        return re.sub(
-            r"\s+", " ", re.sub(r"[^\w ]", "", str(s or "").lower())
-        ).strip()
-
     matches = []
     for hl in hand_lines:
-        rec = _norm(hl.get("text", ""))
+        rec = _match_units(hl.get("text", ""))
         if not rec:
             continue
         best_i, best_r = -1, 0.0
         for i, el in enumerate(exp_lines):
-            r = difflib.SequenceMatcher(None, rec, _norm(el)).ratio()
+            r = difflib.SequenceMatcher(None, rec, _match_units(el)).ratio()
             if r > best_r:
                 best_r, best_i = r, i
         if best_i >= 0 and best_r >= 0.45:

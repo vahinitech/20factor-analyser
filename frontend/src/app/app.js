@@ -254,9 +254,9 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   server_down, too_large, invalid_file, key_problem, account_unavailable,
-   too_big, heic, unreadable, pdf_unreadable, photo_warning, pdf_pages) to an
-   image path on this site. vahinitech.com fills it from its own drawings;
+   handwriting_not_read, not_writing_page, server_down, too_large, invalid_file, key_problem,
+   account_unavailable, too_big, heic, unreadable, pdf_unreadable,
+   photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
    paths are used. */
 function noticeArt(code){
@@ -517,10 +517,13 @@ function showProcStagePreview(img){
 /* ---------- expected passage ---------- */
 function setupPassages(){
   const list = $('#passage-list');
-  list.innerHTML = PASSAGES.map((p,i)=>`<div class="passage ${i===0?'sel':''}" data-id="${p.id}">
+  list.innerHTML = PASSAGES.map(p=>`<div class="passage" data-id="${p.id}">
     <div class="pt">${p.title}</div><div class="pp">${p.text.replace(/\n/g,'<br>')}</div></div>`).join('')
     + `<div class="passage" data-id="custom"><div class="pt">Custom passage</div><textarea id="custom-text" placeholder="Type the exact text the writer copied…"></textarea></div>`;
-  state.expected = PASSAGES[0].text;
+  // No passage until the writer picks one. The server rewrites any read
+  // line that is close enough to the passage into the passage itself, so a
+  // default passage would quietly "correct" a child's own words.
+  state.expected = '';
   list.addEventListener('click', e=>{
     const card = e.target.closest('.passage'); if(!card) return;
     $$('.passage').forEach(c=>c.classList.remove('sel')); card.classList.add('sel');
@@ -825,6 +828,35 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'handwriting_not_read'){
+    // Asked for as Telugu, but the reader returned mostly Latin letters.
+    // A report on lines it invented would not describe this writing.
+    showReject({
+      outcome: 'handwriting_not_read',
+      reason: 'We could not read the writing on this page',
+      detail: 'The check reads English handwriting. It cannot read handwritten Telugu yet, so it did not score this page. This did not use up one of your free checks.',
+      tips: [
+        'Write four lines in English and check that page',
+        'If the page is in English, choose English above and run it again',
+      ],
+    });
+    return;
+  }
+  if (pyReport && pyReport.error_code === 'not_writing_page'){
+    // Mostly numbers and sums: a maths or science notebook page. The
+    // factors measure letters, words and word gaps, so it is not scored.
+    showReject({
+      outcome: 'not_writing_page',
+      reason: 'This looks like a maths or science page',
+      detail: 'It is mostly numbers, sums or formulas. The check measures handwriting in sentences, so it could not score the 20 factors on this page. This did not use up one of your free checks.',
+      tips: [
+        'Write four lines of English, in sentences, on lined paper',
+        'Take a photo of that page and check it',
+        'Need lines to copy? Open More options, then \u201cNot sure what to write or photograph?\u201d',
+      ],
+    });
+    return;
+  }
   if (!pyReport || pyReport.ok === false || !pyReport.analysis){
     const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
     showReject({
@@ -928,11 +960,35 @@ function setupKeepPages(){
    and off, with a note saying why. A ticked box and no email question
    looked like the email bug (owner, stage, 2026-10-11). */
 function keepForSample(isSample){
+  writeLangForSample(isSample);
   const box = $('#keep-pages'), row = $('#keep-email-row'), note = $('#keep-sample-note');
   if (!box) return;
   if (isSample){ box.checked = false; if (row) row.hidden = true; keepEmailError(''); }
   box.disabled = !!isSample;
   if (note) note.hidden = !isSample;
+}
+/* "The page is written in": English keeps lang=auto, as before; Telugu
+   sends lang=te, which the server refuses with handwriting_not_read until
+   Telugu is scored (#172). The note says so as soon as Telugu is picked,
+   before Run. The sample page is English, so it is checked as English. */
+function setWriteLang(value){
+  const te = value === 'te';
+  window.VAHINI_OCR_LANG = te ? 'te' : 'auto';
+  const note = $('#write-lang-note');
+  if (note) note.hidden = !te;
+}
+function setupWriteLang(){
+  const radios = document.querySelectorAll('input[name="write-lang"]');
+  radios.forEach(r=>r.addEventListener('change', ()=>{ if (r.checked) setWriteLang(r.value); }));
+  const picked = document.querySelector('input[name="write-lang"]:checked');
+  if (picked) setWriteLang(picked.value);
+}
+function writeLangForSample(isSample){
+  const en = document.querySelector('input[name="write-lang"][value="en"]');
+  const te = document.querySelector('input[name="write-lang"][value="te"]');
+  if (!en || !te) return;
+  if (isSample){ en.checked = true; setWriteLang('en'); }
+  te.disabled = !!isSample;
 }
 function keepEmailError(text){
   const e = $('#keep-email-error'), i = $('#keep-email');
@@ -1006,6 +1062,9 @@ function renderNextSteps(analysis){
     cal.dataset.url = URL.createObjectURL(new Blob([ics], { type:'text/calendar' }));
     cal.href = cal.dataset.url;
   }
+  // "See all 20 skills" only on a Free report.
+  const pro = $('#ns-pro');
+  if (pro) pro.hidden = ((analysis && analysis.access) || {}).tier === 'pro';
   box.hidden = false;
 }
 
@@ -1280,7 +1339,7 @@ function renderCaseStudies(){
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
-  setupUploadDrop(); setupKeepPages(); setupPassages(); setupLogo();
+  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead

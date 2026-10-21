@@ -19,7 +19,8 @@ If you only read two sections, read the **Glossary** and the **FAQ**.
   other recognition endpoints; the CV, OCR and scoring logic itself lives in sibling modules:
   `computer_vision.py` (image decode/crop/layout), `detector.py` + `recognizer.py` (finding and
   reading handwriting across the pluggable `ocr_backends.py` engines), and `scoring.py`
-  (`_extract_features` → `_score_factor_map` → `build_analysis`, the 20-factor scorer).
+  (`_extract_features` → `_score_factor_map` → `build_analysis`, the 20-factor scorer,
+  with its measurements and per-section formulas in `scoring_parts/`).
 - `frontend/src/report/report-render.js`: renders the report from the server's `analysis`.
 - `frontend/src/app/app.js`: capture → upload → render flow (calls `/report-python`).
 - `frontend/src/engine/imu.js`: the **IMU pen** (smart pen) live-capture simulation.

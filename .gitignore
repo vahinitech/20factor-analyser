@@ -49,3 +49,8 @@ test-results/
 
 # Build output: the image build and CI produce it (frontend/build_bundle.py).
 frontend/scripts/core/engine.bundle.js
+
+# Coverage reports and data (CI uploads them as artifacts).
+/coverage/
+/.coverage
+/.coverage.*

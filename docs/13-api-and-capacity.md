@@ -4,8 +4,8 @@ Reviewed on 2026-09-11. The combined service is `backend/analyser-ocr-server.py`
 
 | Endpoint | Method and input | Behavior |
 |---|---|---|
-| `/health` | GET | Service and model availability metadata. HTTP 200 alone does not prove an OCR model is ready; inspect `backends`. |
-| `/ocr/health` | GET | Combined-server compatibility alias for `/health`. |
+| `/health` | GET | Service and model availability metadata. HTTP 200 alone does not prove an OCR model is ready; inspect `backends`. `stage_timings` holds each scan stage's p50 and p95 over the last 512 scans and how often a page broke a budget (numbers only, reset on restart). |
+| `/ocr/health` | GET | The same as `/health`, under the `/ocr` prefix a proxy routes to the server; the browser probes this one. |
 | `/ocr` | POST multipart `image`, optional `lang`, `det`, `rec` | Recognized handwriting. `det` and `rec` are accepted compatibility fields; currently they do not disable detection or recognition. |
 | `/analyze-vl` | POST multipart `image`, optional `lang` | Handwriting regions, context and factor evidence. |
 | `/report-python` | POST multipart `image`, optional `lang`, `expected_text` | Factor scores, evidence and recognition metadata. |
@@ -65,3 +65,10 @@ The separately CDN-loaded PDF.js was 3.11.174, affected by [CVE-2024-4367](https
 `sbom.spdx.json` is a source inventory: exact npm lockfile packages and integrity checksums, CDN assets, and declared Python core/default-engine dependencies. Python ranges are recorded as constraints rather than pretending to be installed versions. It is not a complete deployed-container inventory; OS packages, resolved Python transitives, optional OCR tiers and model weights require a build-time SBOM. Paddle/model upgrades were not made without real-model compatibility and performance evidence.
 
 Use `python backend/update_sbom.py` to refresh and `python backend/update_sbom.py --check` to detect drift. CI checks drift, and this revision was validated with `pyspdxtools -i sbom.spdx.json`. The writing guidance in `skills.md` now requires evidence provenance and scoped concurrency/dependency claims.
+
+Per-step timings, call budgets, growth checks and profiling are designed in
+[21-performance-and-coverage.md](21-performance-and-coverage.md). Every
+scan route (`/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/reports`)
+answers with a `Server-Timing` header of stage names and milliseconds, and
+writes one `[perf]` line of numbers per scan to the server log
+(`backend/perf.py`, #229).
