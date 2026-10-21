@@ -503,6 +503,8 @@ function modelHTML(kind, example){
       return `<div class="md md-pairs">${pairs.map(p=>`<span class="md-pair">${hand(p)}</span>`).join('')}</div>`;
     }
     case 'margin': return '<div class="md md-margin"><i></i><i></i><i></i></div>';
+    case 'ovals': return '<div class="md md-ovals"><svg viewBox="0 0 300 40" aria-hidden="true"><g transform="translate(6 0) skewX(-16)"><ellipse cx="32" cy="20" rx="8" ry="16"/><ellipse cx="34" cy="20" rx="8" ry="16"/><ellipse cx="36" cy="20" rx="8" ry="16"/><ellipse cx="82" cy="20" rx="8" ry="16"/><ellipse cx="84" cy="20" rx="8" ry="16"/><ellipse cx="86" cy="20" rx="8" ry="16"/><ellipse cx="132" cy="20" rx="8" ry="16"/><ellipse cx="134" cy="20" rx="8" ry="16"/><ellipse cx="136" cy="20" rx="8" ry="16"/><ellipse cx="182" cy="20" rx="8" ry="16"/><ellipse cx="184" cy="20" rx="8" ry="16"/><ellipse cx="186" cy="20" rx="8" ry="16"/></g><path class="md-way" d="M247 20 A11 11 0 1 0 236 31 M236 31 l-5 -4 M236 31 l-5 4"/><path class="md-way" d="M265 20 A11 11 0 1 1 276 31 M276 31 l5 -4 M276 31 l5 4"/></svg></div>';
+    case 'push-pulls': return '<div class="md md-push-pulls"><svg viewBox="0 0 300 40" aria-hidden="true"><path d="M24 36 L35 4 M29 36 L40 4 M34 36 L45 4 M39 36 L50 4 M84 36 L95 4 M89 36 L100 4 M94 36 L105 4 M99 36 L110 4 M144 36 L155 4 M149 36 L160 4 M154 36 L165 4 M159 36 L170 4"/><path class="md-way" d="M236 34 L248 6 M248 6 l-5 4 M248 6 l1 6 M236 34 l5 -4 M236 34 l-1 -6"/></svg></div>';
     case 'waves': return '<div class="md md-waves"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M4 12 H140"/><path d="M160 22 c12 -16 24 16 36 0 s24 16 36 0 s24 16 36 0"/><path d="M4 30 H140"/></svg></div>';
     case 'page': return '<div class="md md-page"><span class="md-sheet"><i></i><i></i><i></i><i></i></span></div>';
     default: return '';
@@ -991,5 +993,5 @@ function wirePrintFit(host){
 }
 
 if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
-global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','page']) };
+global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','ovals','push-pulls','page']) };
 })(window);
