@@ -49,6 +49,15 @@ ZONE_FULL_ERR = 0.35
 ZONE_ZERO_ERR = 1.00
 # Over-emphasis ("heavy importance to a zone") beyond this reach.
 ZONE_HEAVY_REACH = 3.2
+# One line whose tall letters (or tails) run long against the page's
+# other lines (#194): how far, in x-heights, a line's reach may stray
+# from the page's median reach before it costs points, and how much
+# further loses LINE_DEV_MAX points. This is apart from the
+# line-to-line spread penalty (capped at 2), which one line on a page
+# of several moves little.
+LINE_DEV_FREE = 0.25
+LINE_DEV_SCALE = 0.25
+LINE_DEV_MAX = 3.0
 # A line needs a middle band at least this tall (pixels) to be usable.
 MIN_XHEIGHT_PX = 6
 # Row-density fractions defining the bands.
@@ -313,6 +322,8 @@ def analyze_zones(gray, lines):
         "descReach": round(_median(desc), 2) if has_desc else None,
         "ascReachCv": round(_cv(asc), 3) if has_asc else None,
         "descReachCv": round(_cv(desc), 3) if has_desc else None,
+        "ascLineDev": round(_line_dev(asc), 3) if has_asc else None,
+        "descLineDev": round(_line_dev(desc), 3) if has_desc else None,
     }
     # The coach's three mistakes, named.
     flags = []
@@ -326,6 +337,20 @@ def analyze_zones(gray, lines):
             flags.append("upper-heavy" if key == "ascReach" else "lower-heavy")
     out["flags"] = sorted(set(flags))
     return out
+
+
+def _line_dev(reaches):
+    """How far the line that strays most is from the page's median
+    reach, in x-heights."""
+    mid = _median(reaches)
+    return max(abs(r - mid) for r in reaches)
+
+
+def _line_dev_penalty(dev):
+    """Points lost for one line's reach straying LINE_DEV_FREE or more
+    from the page's median."""
+    over = max(0.0, dev - LINE_DEV_FREE)
+    return min(LINE_DEV_MAX, over / LINE_DEV_SCALE * LINE_DEV_MAX)
 
 
 def _reach_score(reach):
@@ -343,17 +368,20 @@ def zone_score(z):
 
     Mean reach credit over the zones the text actually uses, minus a
     consistency penalty (up to 2 points) when reach varies line to
-    line. Only call when z['available'] is True."""
+    line, and up to LINE_DEV_MAX more when one line's reach strays from
+    the page's median (#194). Only call when z['available'] is True."""
     credits = []
     cvs = []
-    if z.get("ascReach") is not None:
-        credits.append(_reach_score(z["ascReach"]))
-        cvs.append(z.get("ascReachCv") or 0.0)
-    if z.get("descReach") is not None:
-        credits.append(_reach_score(z["descReach"]))
-        cvs.append(z.get("descReachCv") or 0.0)
+    devs = []
+    for key in ("asc", "desc"):
+        if z.get(key + "Reach") is None:
+            continue
+        credits.append(_reach_score(z[key + "Reach"]))
+        cvs.append(z.get(key + "ReachCv") or 0.0)
+        devs.append(z.get(key + "LineDev") or 0.0)
     if not credits:
         return None
     base = 10.0 * (sum(credits) / len(credits))
     penalty = min(2.0, (max(cvs) / 0.35) * 2.0) if cvs else 0.0
+    penalty += _line_dev_penalty(max(devs)) if devs else 0.0
     return max(0.0, min(10.0, base - penalty))

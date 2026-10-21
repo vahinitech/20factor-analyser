@@ -26,6 +26,7 @@ import numpy as np
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
+import zone_analysis  # noqa: E402
 from zone_analysis import line_zone_bands  # noqa: E402
 
 
@@ -101,6 +102,35 @@ class TypicalReachTests(unittest.TestCase):
         _stroke(page, 314, 80, 159)
         z = line_zone_bands(page, [30, 80, 320, 40])
         self.assertGreaterEqual(z["desc_reach"], 2.5)
+
+
+def _zones(asc):
+    """A measured page whose lines reach these ascender heights."""
+    return {
+        "available": True,
+        "ascReach": zone_analysis._median(asc),  # pylint: disable=W0212
+        "descReach": None,
+        "ascReachCv": 0.0,
+        "ascLineDev": zone_analysis._line_dev(asc),  # pylint: disable=W0212
+    }
+
+
+class OneLongLineTests(unittest.TestCase):
+    def test_a_line_that_runs_long_costs_points_on_its_own(self):
+        even = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.0]))
+        long = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.5]))
+        self.assertEqual(even, 10.0)
+        self.assertLess(long, even - 2.0)
+
+    def test_small_differences_between_lines_are_free(self):
+        z = _zones([2.0, 1.9, 2.1, 2.2])
+        self.assertEqual(zone_analysis.zone_score(z), 10.0)
+
+    def test_the_penalty_has_a_ceiling(self):
+        z = _zones([2.0, 2.0, 2.0, 4.0])
+        self.assertEqual(z["ascLineDev"], 2.0)
+        penalty = 10.0 - zone_analysis.zone_score(z)
+        self.assertAlmostEqual(penalty, zone_analysis.LINE_DEV_MAX)
 
 
 def _zigzag(ch, lean, tall):
