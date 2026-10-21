@@ -71,5 +71,21 @@ window.VahiniWorksheetCatalog = [
       4,
       17
     ]
+  },
+  {
+    "id": "clear-numbers",
+    "title": "Clear numbers",
+    "factors": [
+      19,
+      1
+    ]
+  },
+  {
+    "id": "letter-families",
+    "title": "Letter families",
+    "factors": [
+      1,
+      6
+    ]
   }
 ];
