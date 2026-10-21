@@ -442,9 +442,11 @@ def reader_rows(arr, lines):
     """The reader's lines as whole rows, widened to the ink on each row,
     and how much of each row the reader read: (rows, cover).
 
-    Lines overlapping in height are one row (_reader_groups). Each ink
-    blob (_blobs) joins the row whose middle is nearest its own, when it
-    lies within ROW_REACH lines of it; ink far from every line (a row
+    Lines overlapping in height are one row (_reader_groups). A line
+    height is the median of the lines read with letters (on a page read
+    only as specks, the ink's line height). Each ink blob (_blobs) joins
+    the row whose middle is nearest its own, when it lies within
+    ROW_REACH lines of it; ink far from every line (a row
     nothing was read on) is left out, and so is a row narrower than
     ROW_MIN_WIDTH of the page. A row is shaped like a reader line: the
     box and outline of its ink and its lines, its lines' text left to
@@ -460,9 +462,15 @@ def reader_rows(arr, lines):
     page = _page_ink(arr) if read else None
     if page is None:
         return [], dict(_NO_ROWS)
-    # A row read as specks ("." and ",") still has a line's height.
-    groups, line_h = _reader_groups(read, page["line_h"])
-    line_h = max(page["line_h"], line_h)
+    # A line's height is the reader's, from the lines it read letters on;
+    # on a page read only as specks ("." and ","), the ink's.
+    lettered = [l for l in read if _letters(l) >= 2]
+    floor = 0.0 if lettered else page["line_h"]
+    groups, line_h = _reader_groups(read, floor)
+    if lettered:
+        line_h = float(np.median([l["box"][3] for l in lettered]))
+    else:
+        line_h = max(page["line_h"], line_h)
     page_w = page["labels"].shape[1]
     middles = [float(np.median([_centre(l) for l in g])) for g in groups]
     stats = page["stats"]
@@ -541,6 +549,10 @@ def _plainly_whole(groups, page_w):
     short = min(widths) < FRAGMENT_SHORT * max(widths)
     narrow = max(widths) < FRAGMENT_COVER * page_w
     return per_row < FRAGMENT_PIECES and not short and not narrow
+
+
+def _letters(line):
+    return sum(1 for ch in str(line.get("text") or "") if ch.isalpha())
 
 
 def _left(line):
