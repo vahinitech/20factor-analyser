@@ -54,7 +54,7 @@ ZONE_HEAVY_REACH = 3.2
 # distance from the page's median reach, up to LINE_DEV_MAX. Apart from
 # the line-to-line spread penalty, which is capped at 2 points and so
 # no longer moves on a page whose lines already vary.
-LINE_DEV_RATE = 3.0
+LINE_DEV_RATE = 6.0
 LINE_DEV_MAX = 3.0
 # A line needs a middle band at least this tall (pixels) to be usable.
 MIN_XHEIGHT_PX = 6
