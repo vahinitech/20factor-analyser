@@ -121,7 +121,8 @@ jobs:
             scripts/complexity.py backend/tests/test_complexity.py \
             backend/perf.py backend/tests/test_perf.py \
             scripts/perf_budgets.py backend/tests/test_work_counts.py \
-            scripts/paired_timing.py backend/tests/test_paired_timing.py
+            scripts/paired_timing.py backend/tests/test_paired_timing.py \
+            scripts/bench_history.py backend/tests/test_bench_history.py
       - name: Verify immutable report dictionary
         run: python backend/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
@@ -290,6 +291,74 @@ jobs:
           name: complexity
           path: complexity.md
           if-no-files-found: warn
+
+  # Slow drift (#254, scripts/bench_history.py): each push to main adds a
+  # line per benchmark set to history/<set>.jsonl on the bench-history
+  # branch; each pull request is compared with the median of the last ten
+  # lines. Accuracy that falls fails; time, memory or work creeping up
+  # more than 15% is flagged, since the lines come from different runners
+  # and the paired-timing job already compares with main on one runner.
+  history:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    concurrency:
+      group: bench-history-${{ github.event_name }}-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    permissions:
+      contents: write  # a push to main appends to the bench-history branch
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: The history so far
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          url="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if ! git clone --quiet --depth 1 --branch bench-history "$url" "$RUNNER_TEMP/history"; then
+            mkdir -p "$RUNNER_TEMP/history"
+            git -C "$RUNNER_TEMP/history" init --quiet -b bench-history
+            git -C "$RUNNER_TEMP/history" remote add origin "$url"
+          fi
+      - name: Measure this commit
+        run: |
+          mkdir -p "$RUNNER_TEMP/now"
+          for set in $(python backend/languages/registry.py --benchmark-sets); do
+            # Work counts, once perf_budgets.py writes them (#250).
+            python scripts/perf_budgets.py check --set "$set" \
+              --results "$RUNNER_TEMP/work" >/dev/null 2>&1 || true
+            python scripts/bench_history.py collect --set "$set" \
+              --work "$RUNNER_TEMP/work" --out "$RUNNER_TEMP/now/$set.json"
+          done
+      - name: Against the last ten main runs
+        if: github.event_name == 'pull_request'
+        run: |
+          status=0
+          for f in "$RUNNER_TEMP"/now/*.json; do
+            python scripts/bench_history.py check \
+              --history "$RUNNER_TEMP/history" "$f" || status=1
+          done
+          exit $status
+      - name: Add this commit to the history
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          cd "$RUNNER_TEMP/history"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          for f in "$RUNNER_TEMP"/now/*.json; do
+            python "$GITHUB_WORKSPACE/scripts/bench_history.py" append \
+              --history . "$f"
+          done
+          git add history
+          git commit --quiet -m "history: ${GITHUB_SHA::7}"
+          for try in 1 2 3; do
+            if git push --quiet origin HEAD:bench-history; then exit 0; fi
+            git pull --quiet --rebase origin bench-history || true
+          done
+          exit 1
 
   e2e:
     runs-on: ubuntu-latest

@@ -331,6 +331,32 @@ that reads slightly differently) is not blocked forever: the PR updates
 pages moved, by how much and why, as [18-benchmark.md](18-benchmark.md)
 already asks for scores. The point is that nothing moves silently.
 
+### History of main and slow drift (built in #254)
+
+The `history` job in `ci.yml` (`scripts/bench_history.py`) measures every
+commit it runs on, per benchmark set: the replay's CPU seconds (the
+median of three passes) and memory peak, the reading's character error
+rate, the written lines scored, the mean overall score, the agreement
+with the ranking by eye, each planted mistake's catch rate (from
+`benchmarks/factors/expected.json`) and, once #250 is on `main`, the
+total work count. Numbers only.
+
+- **On a push to main** the job adds one line per set to
+  `history/<set>.jsonl` on the `bench-history` branch (JSON lines: commit,
+  date, the numbers). The first push creates the branch.
+- **On a pull request** it compares the pull request with the median of
+  the last ten lines. It fails when accuracy falls: the error rate more
+  than 0.2 points up (the reading gate's tolerance), fewer written lines
+  scored, the eye agreement more than 0.05 down, or any catch rate lower.
+  CPU, memory or work more than 15% above the median is flagged in the
+  summary and as a warning, not failed: the lines come from different
+  runners, whose speed differs by tens of percent, and gate 2 already
+  compares each pull request with main on one runner. A run of small
+  slowdowns shows as a flag on the pull request that crosses 15% and as a
+  rising row in the trend.
+- **Both** write a trend table to the job summary: each number over the
+  last 50 runs as a row of bars, oldest first, and its latest value.
+
 ### Accuracy against people, not only against ourselves
 
 Every gate above compares the analyser with its own past. That catches
