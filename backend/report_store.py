@@ -285,8 +285,16 @@ class ReportStore:
         return self.folder is not None
 
     def _path(self, ident):
-        # Ids are checked before they reach a path.
-        return os.path.join(self.folder, "reports", ident + ".json")
+        """The file for one record. Only a 32-hex id makes a path, and
+        the resolved path must stay inside the reports folder, so a
+        receipt from a request can never name another file."""
+        if not (isinstance(ident, str) and ID_RE.fullmatch(ident)):
+            raise ValueError("not a record id")
+        folder = os.path.realpath(os.path.join(self.folder, "reports"))
+        path = os.path.realpath(os.path.join(folder, ident + ".json"))
+        if not path.startswith(folder + os.sep):
+            raise ValueError("record path outside the store")
+        return path
 
     def _expires(self):
         return (self.today() + timedelta(days=KEEP_DAYS)).isoformat()
@@ -370,7 +378,7 @@ class ReportStore:
             return False
         try:
             os.remove(self._path(ident))
-        except OSError:
+        except (OSError, ValueError):
             return False
         return True
 
@@ -388,7 +396,7 @@ class ReportStore:
             stored["expires"] = self._expires()
             try:
                 _replace(self._path(ident), _dump(stored))
-            except OSError as exc:
+            except (OSError, ValueError) as exc:
                 log.warning("report store: not renewed: %s", exc)
                 continue
             renewed += 1

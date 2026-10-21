@@ -245,6 +245,17 @@ class RecordTests(unittest.TestCase):
                 self.assertNotIn(region["caption"], dumped)
         self.assertFalse(re.search(r"[A-Za-z0-9+/=]{41,}", dumped))
 
+    def test_a_record_path_never_leaves_the_store(self):
+        # CodeQL: the id in a receipt comes from the request. Only a
+        # 32-hex id makes a path, and it resolves inside reports/.
+        with tempfile.TemporaryDirectory() as folder:
+            store = report_store.ReportStore(folder)
+            inside = os.path.realpath(os.path.join(folder, "reports"))
+            self.assertTrue(store._path("a" * 32).startswith(inside))
+            for ident in ("../" + "a" * 29, "a" * 31, "A" * 32, None, ""):
+                with self.assertRaises(ValueError):
+                    store._path(ident)
+
     def test_the_ruleset_hash_is_kept_and_nothing_else_is(self):
         # main added comparability.ruleset after this store was written:
         # the hash of the scoring rules is kept, any other string dropped.
