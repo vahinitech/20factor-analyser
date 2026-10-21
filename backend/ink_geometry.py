@@ -611,4 +611,8 @@ def fragment_rows(arr, lines):
     rows, cover = reader_rows(arr, lines)
     cover["fragments"] = read_in_fragments(cover)
     cover["looked"] = True
+    if cover["fragments"]:
+        import traceback, sys
+        print("FRAGDBG", cover, file=sys.stderr)
+        traceback.print_stack(limit=10)
     return (rows if cover["fragments"] else []), cover

@@ -17,6 +17,10 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
+      - name: Which tests read in pieces
+        run: |
+          python -m unittest discover -s backend/tests -t . > "$RUNNER_TEMP/ut.txt" 2>&1 || true
+          grep -A 14 FRAGDBG "$RUNNER_TEMP/ut.txt" | grep -E "FRAGDBG|File .*tests/" | head -80
       - name: Black diff
         run: black --diff --line-length 79 backend/*.py backend/tests/*.py || true
       - name: Diagnostics
