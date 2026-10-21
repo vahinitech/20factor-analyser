@@ -17,6 +17,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
+      - name: Diagnostics
+        run: python scripts/tmp_diag.py neat-penmanship
       - name: Each page against the thresholds
         run: |
           python scripts/benchmark.py fragments --set uji-clean
