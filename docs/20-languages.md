@@ -363,7 +363,8 @@ are replaced by this one rule.
 Needs: `rows` (ink rows with baselines), `words` (word boxes), `graphemes`
 (read graphemes with boxes), `confidence` (reader confidence), `zones` (the
 pack's zone model fitted to the page), `classes` (a letter class from the
-pack), `sensor` (pen data).
+pack), `sensor` (pen data), `apart` (letters written apart: not joined
+cursive, #277).
 
 | # | Factor | Needs | Notes |
 |---|---|---|---|
@@ -375,7 +376,7 @@ pack), `sensor` (pen data).
 | 6 | Ascender / Descender Control | zones | becomes "zone control" per script (see section 10) |
 | 7 | Baseline Alignment | rows | |
 | 8 | Word Spacing | words | from a passage when the script has no reliable word reader |
-| 9 | Letter Spacing | rows or graphemes | |
+| 9 | Letter Spacing | graphemes, apart | joined cursive has pen lifts, not letter gaps: "Not measured" (#277) |
 | 10 | Margin Discipline | rows | |
 | 11 | Line Straightness | rows | |
 | 12 | Vertical Alignment | rows | |
