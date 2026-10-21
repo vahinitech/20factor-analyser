@@ -17,6 +17,7 @@ on:
       - 'backend/baseline_track.py'
       - 'scripts/planted_pages.py'
       - 'scripts/factor_tests.py'
+      - 'scripts/calibrate.py'
       - 'scripts/benchmark.py'
       - 'benchmarks/factors/**'
   schedule:
@@ -48,3 +49,34 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Every factor catches its planted mistake as often as before
         run: python scripts/benchmark.py factors
+
+  # The calibration tool (scripts/calibrate.py, #197) end to end, with
+  # the UJI pages standing in for a neat reference set. They are not
+  # neat writing, so the proposals only show the tool works; they are
+  # never applied. The real run waits for neat pages.
+  calibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements-core.txt
+      - name: Cache the UJI letters
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vahini/ujipenchars2.txt
+          key: uji-cc56f72f8477e763
+      - name: Calibration tool test on the UJI pages (not neat writing)
+        run: |
+          python scripts/calibrate.py --neat uji-clean --tool-test \
+            --json "$RUNNER_TEMP/calibration/calibration.json"
+      - name: Keep the tool test's report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-tool-test
+          path: ${{ runner.temp }}/calibration
+          if-no-files-found: ignore

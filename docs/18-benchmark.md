@@ -197,6 +197,109 @@ mistake, and fails when a factor catches its mistake less often than
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
 
+## Setting the scales from neat writing (#197)
+
+Most factors turn a measured spread into a score along a straight line,
+`10 x (1 - spread / scale)`, and the scale is set by hand in
+`backend/scoring_parts/` (`LETTER_GAP_SCALE` 2.5, `SLANT_SCALE` 40, the
+size scale 0.60 and others). How high neat writing scores is that
+setting, apart from whether the factor sees a mistake at all. The UJI
+pages cannot set it: their page maker spaces letters with plus or minus
+30% random gaps, so they are not neat writing. The scales stay as they
+are until a set of pages that the owner or a teacher calls neat exists.
+
+`scripts/calibrate.py` is the tool for that set:
+
+```
+python scripts/calibrate.py                     # every neat reference set
+python scripts/calibrate.py --neat <set> --json report.json
+python scripts/calibrate.py --write             # keep the passing scales
+```
+
+For each factor with a scale it reads the spread on every neat page,
+replayed from the kept reader output as `check` does (no models), and
+proposes the tightest scale that puts the set's median at 9.0 and its
+10th percentile at 8.5 or above, the Strong band (`--target`,
+`--strong`). Then it scores the planted-mistake pages of
+`factor_tests.py` with each proposed scale and checks every mistake is
+still caught at least as often as `benchmarks/factors/expected.json`
+requires. Legibility (18) and Overall Neatness (20) blend other factors,
+so they are checked with every passing proposal applied together.
+Factor 6 is unstable (#194) and parked: its numbers are shown and no
+scale is proposed. It takes about a quarter of an hour, like `factors`.
+
+The tool changes no scale. `--write` keeps the passing proposals in
+`backend/score_scales.json`; the scoring code does not read that file
+yet. Reading it is a later change, after the owner has reviewed the
+table, and that change runs `benchmark.py update` so the pull request
+shows every score that moves.
+
+### Adding a neat reference set
+
+A neat set is a benchmark set like any other (see "Adding a set"): a
+folder under `benchmarks/` with `set.json`, `source.md`, `pages/*.jpg`
+and `reader/*.json`, captured with `capture --set <name>` in the
+analyser image. Its `set.json` says what it is for:
+
+```json
+{
+ "description": "Ten pages a teacher calls neat, ...",
+ "role": "neat-reference",
+ "source": "source.md",
+ ...
+}
+```
+
+- Only a set marked `"role": "neat-reference"` sets scales. A set named
+  with `--neat` that is not marked is refused.
+- `source.md` says who wrote the pages, who called them neat and when,
+  and the licence: the pages need one that allows them in a public
+  repository.
+- **A child's writing is never committed to `benchmarks/`.** With the
+  family's written consent, a child's neat pages can make a set kept
+  outside the repository (`--root <folder>`, see "A set kept outside the
+  repository"); without it they are not used at all. Adult writing (the
+  owner's, a teacher's) can be committed with the writer's licence.
+- Give `set.json` the sentences the pages carry, as the UJI set does, so
+  `check` can count the lines scored.
+
+### Reading the table
+
+| Column | Meaning |
+|---|---|
+| Scale | The constant, or the number written into the formula |
+| Current, Proposed | Today's scale and the tightest one that meets the target |
+| Neat spread (median) | The raw measurement on the neat pages, before scaling |
+| Neat median, Neat p10 | The neat pages' scores, before → after |
+| Planted caught | Per planted mistake: share caught before → after (and the share needed) |
+
+The verdicts:
+
+- **ok**: the neat pages reach the target and every planted mistake is
+  still caught. Only these are written by `--write`.
+- **loses a planted mistake**: the scale that lifts neat writing to 9
+  would hide a mistake the factor catches today. Not proposed; the
+  factor's measurement needs work first.
+- **target out of reach**: no scale between a tenth of today's and ten
+  times it gets there, usually because a penalty term (words off their
+  line or size) or a fallback measurement holds the score down.
+- **not limited by the neat set**: neat pages score in the Strong band
+  even at a tenth of today's scale; the scale stays.
+- **planted check short before any change**: the planted check already
+  fails on this code, so `factors` needs fixing before any proposal.
+- **parked**: factor 6 (#194).
+
+The tool also checks itself: at today's scales it must give every score
+the scorer gave on every page, and each factor's score must stop falling
+exactly at the scale it holds. Either check failing means the tool is
+out of step with `scoring_parts/`; it says which factor and exits with
+an error.
+
+`factor-tests.yml` runs the tool on the UJI pages as if they were neat
+(`--tool-test`), only to show it works end to end. The job summary says
+so above the table. Those proposals are never applied, and `--write`
+refuses a tool test.
+
 ## Is this pull request slower than main?
 
 A pull request that changes `backend/` gets a `paired-timing` job in
