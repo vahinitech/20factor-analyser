@@ -851,14 +851,15 @@ def _ink_lines(arr, expected_text):
     return rows, hand
 
 
-def _fragment_lines(arr, hand_lines):
+def _fragment_lines(arr, lines, hand_lines):
     """The rows to measure when the reader read the page in pieces
     (joined cursive, #277), else None: its lines as whole rows, widened
     to the ink on each row (ink_geometry.fragment_rows). The reader's
     lines still give the text, the passage match and the recognition
-    block."""
+    block. The ink of the lines found printed is not the writing's."""
+    printed = [l for l in lines if l.get("printed_hint")]
     with perf.stage("fragments", lines=len(hand_lines)):
-        rows, _cover = ink_geometry.fragment_rows(arr, hand_lines)
+        rows, _cover = ink_geometry.fragment_rows(arr, hand_lines, printed)
     for row in rows:
         row.setdefault("text_as_read", row["text"])
     return rows or None
@@ -994,7 +995,7 @@ def _report_python_process(
         if selected_backend == "ink-geometry":
             ink_reason = "language"
         elif selected_backend != "cv-fallback":
-            rows = _fragment_lines(arr, hand_lines)
+            rows = _fragment_lines(arr, lines, hand_lines)
             if rows:
                 score_lines, ink_reason = rows, "read_in_fragments"
 
