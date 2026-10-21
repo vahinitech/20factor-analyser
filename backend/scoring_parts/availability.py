@@ -9,6 +9,12 @@
 import factor_needs
 
 _MIN_WORD_GAPS = 3
+# A page whose rows were found from the ink (ink_geometry.py: a language
+# whose letters the reader cannot read yet) shows its layout only: size,
+# baseline, word spacing, margin, line straightness and neatness. The
+# factors that read letters, and the line-band stand-ins for stroke
+# smoothness (4) and lean (12), wait for that language's reader.
+INK_LAYOUT = (5, 7, 8, 10, 11, 20)
 # Why a factor is not measured, by the kind its missing need gives
 # (factor_needs.py).
 _UNMEASURED_REASONS = {
@@ -16,6 +22,7 @@ _UNMEASURED_REASONS = {
     "ocr": "Requires recognised text from the page.",
     "insufficient": "Needs at least three measurable word gaps.",
     "script": "Reads English letters; not measured on this script.",
+    "letters_later": "Reads the letters; this language's are not read yet.",
 }
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
@@ -31,6 +38,10 @@ _UNMEASURED_EVIDENCE = {
     "ocr": (
         "Text recognition did not read this page, so this factor "
         "could not be measured."
+    ),
+    "letters_later": (
+        "This page was measured from the shape of its writing. Reading "
+        "its letters comes next, and this score comes with it."
     ),
 }
 
@@ -49,10 +60,13 @@ def page_supplies(lines, fx, zone_based):
 
 def missing_kind(n, fx, supplied):
     """Why factor n is not measured on this page ("imu", "ocr",
-    "insufficient" or "script"), or None when it is measured."""
+    "insufficient", "script" or "letters_later"), or None when it is
+    measured."""
     # The one check (factor_needs.py): which need, if any, this page
     # did not supply for this factor.
     lacking = factor_needs.missing_kind(n, supplied)
+    if fx.get("ink_rows") and n not in INK_LAYOUT and lacking != "imu":
+        return "letters_later"
     if lacking is not None:
         return lacking
     if n == 8 and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS:
@@ -70,6 +84,8 @@ def unmeasured_inputs(kind, fx):
         return {"method": "sensor_required", "features": {}}
     if kind == "ocr":
         return {"method": "recognition_required", "features": {}}
+    if kind == "letters_later":
+        return {"method": "reader_coming", "features": {}}
     if kind == "script":
         return {
             "method": "script_not_supported",

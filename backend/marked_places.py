@@ -180,6 +180,12 @@ def _size_places(lines):
 
 
 def _line_angle(item):
+    if "ink_angle" in item:
+        # A row found from the ink: the slope ink_geometry.py measured and
+        # scored, None for a row too short to have one. Its outline is the
+        # smallest rectangle around the ink, tilted by tall letters.
+        angle = item["ink_angle"]
+        return None if angle is None else float(angle)
     poly = item.get("poly") or []
     if len(poly) < 2:
         return None
@@ -332,14 +338,18 @@ def free_skill_places(arr, accepted, rows):
     """{"1": [...], "5": [...], "7": [...], "8": [...], "18": [...]} for
     accepted handwriting lines (computer_vision._factor_region_map's
     list, already numbered). Skills that need reading get no places when
-    nothing was read (the cv-fallback path)."""
+    nothing was read (the cv-fallback path); rows found from the ink
+    still get their measured slope."""
     read = any(str(l.get("text") or "").strip() for l in accepted)
     geo = letter_geometry.measure_page(arr, accepted)
     by_word = _word_size_places(accepted, geo)
     places = {"5": by_word if by_word is not None else _size_places(accepted)}
     if read:
         places["1"] = _reading_places(accepted)
+    if read or any("ink_angle" in l for l in accepted):
+        # Rows found from the ink carry their measured slope.
         places["7"] = _angle_places(accepted)
+    if read:
         places["8"] = _gap_places(arr, accepted, rows)
         places["18"] = _legibility_places(places)
     return places
@@ -369,18 +379,20 @@ def page_measurements(arr, accepted, read_letters=None):
         (item, a)
         for item in accepted
         if (a := _line_angle(item)) is not None
-        and len(item.get("poly") or []) >= 4
+        and (item.get("ink_baseline") or len(item.get("poly") or []) >= 4)
     ]
     if angled:
         item, angle = sorted(angled, key=lambda p: (-p[1], p[0]["box"][1]))[0]
-        poly = item["poly"]
+        poly = item.get("poly") or []
+        # Rows found from the ink draw their measured baseline.
+        drawn = item.get("ink_baseline") or [poly[3], poly[2]]
         out["slope"] = {
             "mean_deg": round(float(np.mean([a for _, a in angled])), 2),
             "line": {
                 "region_id": item["evidence_id"],
                 "bbox": [int(v) for v in item["box"]],
                 "angle": round(float(angle), 2),
-                "baseline": _point_pairs([poly[3], poly[2]]),
+                "baseline": _point_pairs(drawn),
             },
         }
     banded = [

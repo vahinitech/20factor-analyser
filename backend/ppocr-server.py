@@ -847,6 +847,8 @@ def _ink_lines(arr, expected_text):
         classify.classify_lines(arr, rows)
     hand = [r for r in rows if not r.get("printed_hint")]
     ink_geometry.expect_words(hand, expected_text)
+    with perf.stage("measure.ink", lines=len(hand)):
+        ink_geometry.mark_rows(arr, hand)
     return rows, hand
 
 

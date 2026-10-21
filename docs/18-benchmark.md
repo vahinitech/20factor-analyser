@@ -307,13 +307,35 @@ measures from the ink:
   row. Rows found: **59 of 59 pages, every line** (20 clean, 20 with a
   sinking last line, 19 with a wide gap), against 7 of 80 lines read by
   PP-OCRv5.
-- **Baseline**, through the bottoms of the row's letters, leaving out
-  the strokes that sit wholly below the row's middle (vottulu, written
-  apart in Telugu). On clean pages the median row slope is 0.8 degrees,
-  with 0.6 rows a page at 2 degrees or more (English letter level: 0.5);
-  part of that is real, as these pages place each word from its own
-  scan. A last line sinking 4 degrees measures 3.3 and is the steepest
-  row, over 2 degrees, on **14 of 20** pages (English: 18 of 20).
+- **Baseline.** A row slopes when a line through its letters' middles
+  (each letter's ink centroid) and a line through their lower edges (the
+  90th percentile of each letter's ink rows) slope the same way; the
+  smaller of the two is the row's slope, and when they disagree the row
+  is level. The strokes that sit wholly below the row's middle (vottulu,
+  written apart in Telugu) are left out, unless they are as tall as a
+  letter: then they are the low end of a sinking line. A row of fewer
+  than six letters has no slope (over a word or two it is the word's own
+  lean). Measured on 20 October 2026, against the lowest ink alone as
+  before:
+
+  | Pages | Sinking line found | False slope marks a clean page | Steepest clean row |
+  |---|---|---|---|
+  | The 20 above, before | 14 of 20 | 0.6 | 5.9 degrees |
+  | The 20 above, now | **18 of 20** | 0.45 | 4.4 degrees |
+  | 20 new pages (seed 1), before | 13 of 20 | 0.95 | 17.0 degrees |
+  | 20 new pages (seed 1), now | 16 of 20 | 0.65 | 6.5 degrees |
+
+  "Found" means the planted line is the steepest row and at 2 degrees or
+  more, which is what the report marks. The rule was chosen on the first
+  20 pages, so the second 20 (same five writers, other words and
+  layouts, `PAGES_SEED=1`) are the fairer number. Most of the pages
+  still missed are honest: the page maker sets each word on its own
+  densest band, so a word written uphill in its scan stays uphill, and
+  on those pages the planted line ends up rising, level or under 2
+  degrees, or another line really does slope more (on `w9_p2` a "clean"
+  line rises about 5 degrees by eye). A line sinking 9
+  degrees or more splits into two rows, which `find_rows` does not yet
+  join.
 - **Size** compares the median height of every five letters: one letter
   alone varies with its shape (a top mark joined or not), so groups of
   five. Clean pages: median spread 0.16, a Size score near 7.4. The set
@@ -327,9 +349,22 @@ measures from the ink:
   planted wide gap is the widest on **6 of 6** pages where it is real
   (13 planted gaps fell at a line's end, with no word after). Without a
   passage, word gaps are set only when the page's gaps fall into two
-  clear groups, and Word Spacing is "Not measured" otherwise.
+  clear groups, and Word Spacing is "Not measured" otherwise. Splitting
+  each row at gaps over 1.5 times its own median gap was tried (20
+  October): it finds the planted gap on 6 of 6 and 7 of 7 pages, but
+  gives the right number of words in only 20 of 80 rows, because it
+  splits words at their wider letter gaps. That is not good enough to
+  score, so it is not used.
 - Factors that need the words read (Letter Formation, Legibility,
   Character Distinction, loops and letter zones) stay "Not measured".
+  Since 21 October 2026 (draft, waiting for the owner's review) such a
+  page scores its layout only: Size, Baseline Alignment, Word Spacing
+  (with the passage), Margin, Line Straightness and Neatness. Smoothness
+  (4) and Vertical Alignment (12), which ink rows gave only from line
+  bands, wait with the letter skills (`unmeasuredKind` `letters_later`),
+  and the report names those "coming next". The slope the report marks
+  and draws is the one scored (`ink_geometry.mark_rows`), not the angle
+  of the row's outline.
 
 `scripts/ink_geometry_eval.py <pages folder>` gives these numbers from
 the page maker's folder (`--known-words` for the passage case), and the

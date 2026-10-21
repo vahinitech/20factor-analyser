@@ -11,10 +11,12 @@ trust. The geometry of the writing does not need the words read:
    row, give the row middles; every blob, small strokes included, goes
    to the nearest middle. A line sinking across the page stays one row,
    and a consonant written below the line (a vattu) stays with its row.
-2. Baseline (measure_row): a straight line through the bottoms of the
-   row's letters, without the strokes lying wholly below the row's
+2. Baseline (measure_row): the slope the row's letters agree on, from
+   a line through their middles and one through their lower edges
+   (_row_slope), without the short strokes lying wholly below the row's
    middle (Telugu writes vottulu apart). Theil-Sen, so one odd letter
-   cannot tilt it.
+   cannot tilt it; a row of fewer than MIN_SLOPE_LETTERS letters has
+   no slope.
 3. Size: each letter's height is its blob's; the median of every
    LETTER_GROUP letters is compared, as one letter alone varies with its
    shape.
@@ -50,6 +52,9 @@ MIN_WORD_SHARE = 0.1
 MAX_WORD_SHARE = 0.6
 MIN_WORDS_FOR_GAPS = 3
 LETTER_GROUP = 5
+MIN_SLOPE_LETTERS = 6  # letters a row needs before it has a slope
+LOW_EDGE_PCT = 90  # a letter's lower edge: this percentile of its ink rows
+FULL_HEIGHT = 0.9  # of the row's typical letter: never a stroke below it
 
 
 def _ink(gray, line_h):
@@ -184,20 +189,48 @@ def _peaks(profile, spacing):
     return sorted(chosen)
 
 
+def _row_slope(page, letters):
+    """The slope a row's letters agree on, as the eye sees a line sink:
+    a straight line through the letters' middles (each letter's ink
+    centroid) and one through their lower edges (the 90th percentile of
+    each letter's ink rows; the lowest pixel follows a hooked vowel
+    sign). Both Theil-Sen. When the two slope the same way the smaller
+    is the row's; when they disagree the row is level. On Telugu test
+    pages with one line sinking 4 degrees this finds it more often than
+    the lowest ink alone, with fewer false marks (docs/18-benchmark.md).
+    None with fewer than MIN_SLOPE_LETTERS letters: over a word or two
+    the slope is the word's own lean, not the line's."""
+    if len(letters) < MIN_SLOPE_LETTERS:
+        return None
+    stats, labels = page["stats"], page["labels"]
+    xs, mids, lows = [], [], []
+    for i in letters:
+        x, y, w, h = (int(v) for v in stats[i, :4])
+        yy, xx = np.nonzero(labels[y : y + h, x : x + w] == i)
+        xs.append(x + float(xx.mean()))
+        mids.append(y + float(yy.mean()))
+        lows.append(y + float(np.percentile(yy, LOW_EDGE_PCT)))
+    a = _theil_sen(xs, mids)[0]
+    b = _theil_sen(xs, lows)[0]
+    if a * b <= 0:
+        return 0.0
+    return a if abs(a) < abs(b) else b
+
+
 def measure_row(page, row):
     """Baseline, angle, letter height and ink clusters of one ink row, or
     None. page: _page_ink's result; row: find_rows's. Words and their
     gaps are set by measure_page, which splits gaps page-wide.
 
     The row's letters are its ink blobs at least half as tall as its
-    typical blob, without those lying wholly below the row's middle
-    (consonants written below the line, which Telugu writes as separate
-    strokes). The baseline is a straight line through the letters'
-    bottoms (Theil-Sen: one odd letter cannot tilt it); the bottoms of
-    the lowest ink, used for English, follow those consonants and
-    measured clean lines up to 9.5 degrees. A letter's height is its
-    blob's: Telugu's body with the mark on top (talakattu) when joined,
-    the same for every letter that has one."""
+    typical blob, without the shorter ones lying wholly below the row's
+    middle (consonants written below the line, which Telugu writes as
+    separate strokes). A full-height letter below the middle is the end
+    of a sinking line and stays. The angle is _row_slope's (None for a
+    row too short to have one); the baseline is drawn at that angle
+    through the letters' bottoms. A letter's height is its blob's:
+    Telugu's body with the mark on top (talakattu) when joined, the same
+    for every letter that has one."""
     stats = page["stats"]
     ids = [i for i in row.get("blobs", []) if 0 < i < len(stats)]
     if len(ids) < 2:
@@ -205,12 +238,21 @@ def measure_row(page, row):
     heights = np.array([stats[i, cv2.CC_STAT_HEIGHT] for i in ids], float)
     big = [i for i, hh in zip(ids, heights) if hh >= 0.5 * np.median(heights)]
     mid = float(np.median([stats[i, 1] + stats[i, 3] / 2.0 for i in big]))
-    letters = [i for i in big if stats[i, 1] < mid]
+    full = FULL_HEIGHT * float(np.median([stats[i, 3] for i in big]))
+    letters = [i for i in big if stats[i, 1] < mid or stats[i, 3] >= full]
     if len(letters) < 2:
         return None
     xs = [stats[i, 0] + stats[i, 2] / 2.0 for i in letters]
     ys = [float(stats[i, 1] + stats[i, 3]) for i in letters]
-    slope, icpt = _theil_sen(xs, ys)
+    slope = _row_slope(page, letters)
+    if slope is None:
+        icpt = float(np.median(ys))
+        angle = signed = None
+    else:
+        icpt = float(np.median([y - slope * x for x, y in zip(xs, ys)]))
+        signed = math.degrees(math.atan(slope))
+        angle = abs(signed)
+    draw = 0.0 if slope is None else slope
     letter_h = float(np.median([stats[i, 3] for i in letters]))
     # Clusters: blobs overlapping left to right, one akshara or more.
     spans = []
@@ -226,11 +268,11 @@ def measure_row(page, row):
     right = float(max(stats[i, 0] + stats[i, 2] for i in ids))
     return {
         "baseline": [
-            [left, slope * left + icpt],
-            [right, slope * right + icpt],
+            [left, draw * left + icpt],
+            [right, draw * right + icpt],
         ],
-        "angle": abs(math.degrees(math.atan(slope))),
-        "signed_angle": math.degrees(math.atan(slope)),
+        "angle": angle,
+        "signed_angle": signed,
         "letter_height": letter_h,
         "letters": [
             {
@@ -353,6 +395,18 @@ def expect_words(rows, expected_text):
         row["words_expected"] = len(text.split())
 
 
+def mark_rows(arr, rows):
+    """Write each row's measured slope and baseline onto it ("ink_angle",
+    None for a row too short to have one, and "ink_baseline"), so the
+    report marks and draws the slope that was scored (marked_places.py)
+    and not the angle of the row's outline."""
+    known = [r.get("words_expected") for r in rows]
+    geo = measure_page(arr, rows, known if all(known) else None)
+    for row, g in zip(rows, geo):
+        row["ink_angle"] = g["angle"] if g else None
+        row["ink_baseline"] = g["baseline"] if g else None
+
+
 def letter_groups(g):
     """A row's letter heights, as the median of every LETTER_GROUP
     letters left to right: the size the eye compares, steady whether or
@@ -372,8 +426,8 @@ def page_features(arr, rows):
     known = [r.get("words_expected") for r in rows]
     geo = measure_page(arr, rows, known if all(known) else None)
     bodies = [h for g in geo if g for h in letter_groups(g)]
-    angles = [g["angle"] for g in geo if g]
-    signed = [g["signed_angle"] for g in geo if g]
+    angles = [g["angle"] for g in geo if g and g["angle"] is not None]
+    signed = [g["signed_angle"] for g in geo if g and g["angle"] is not None]
     gaps = [gp["gap"] for g in geo if g for gp in g["gaps"]]
     words = sum(len(g["words"]) for g in geo if g) if all(known) else 0
     return {
