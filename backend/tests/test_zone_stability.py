@@ -94,14 +94,15 @@ class TypicalReachTests(unittest.TestCase):
         self.assertLessEqual(abs(z["desc_reach"] - 2.0), 0.15)
 
     def test_a_line_with_only_joined_descenders_still_measures(self):
-        # Nothing else to go by: the joined blob counts, stopped at the
-        # next line's x-height, rather than the line reading single-zone.
+        # Nothing else to go by: the joined blob counts, cut where it is
+        # thinnest between the two lines (half way, for one straight
+        # stroke), rather than the line reading single-zone.
         page = np.full((260, 400), PAPER, dtype=np.uint8)
         _band(page, 30, 80, 20, 320)
         _band(page, 30, 140, 20, 320)
         _stroke(page, 314, 80, 159)
         z = line_zone_bands(page, [30, 80, 320, 40])
-        self.assertGreaterEqual(z["desc_reach"], 2.5)
+        self.assertGreaterEqual(z["desc_reach"], 1.5)
 
 
 def _zones(asc, dev=None):

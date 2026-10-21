@@ -172,15 +172,14 @@ def line_zone_bands(gray, box):
     h_u = max(0, midline - asc_top)
     h_l = max(0, desc_bot - baseline)
     limits = _neighbour_bands(profile, midline, baseline)
-    cuts = _valleys(profile, midline, baseline, limits)
-    own = _own_ink_reach(ink, midline, baseline, limits, False, cuts)
+    own = _own_ink_reach(ink, midline, baseline, limits)
     every = (h_u, h_l)
     if own is not None:
         # The padded crop reaches into the lines above and below on
         # closely ruled paper; their descenders and ascenders read as
         # this line's reach (4.0x on tests' handwriting-sample.jpg).
         h_u, h_l = own
-        every = _own_ink_reach(ink, midline, baseline, limits, True, cuts)
+        every = _own_ink_reach(ink, midline, baseline, limits, True)
 
     return {
         "h_m": int(h_m),
@@ -218,23 +217,17 @@ def _neighbour_bands(profile, midline, baseline):
     return (max(above) if above else None, min(below) if below else None)
 
 
-def _valleys(profile, midline, baseline, limits):
-    """Where this line ends and each neighbour begins, as rows of the
-    crop: the row with the least ink between this line's band and the
-    neighbour's (top limit, bottom limit). A tall letter that touches
-    the line above is cut there, so its own part counts as its reach and
-    the gap up to the neighbour's band does not (#194). Of rows with
-    equally little ink, the one nearest the neighbour. (up, down), None
-    where there is no neighbour or no row between."""
-    top_limit, bottom_limit = limits
-    up = down = None
-    if top_limit is not None and top_limit + 1 < midline:
-        rows = profile[top_limit + 1 : midline]
-        up = top_limit + 1 + int(np.argmin(rows))
-    if bottom_limit is not None and baseline + 1 < bottom_limit:
-        rows = profile[baseline + 1 : bottom_limit][::-1]
-        down = bottom_limit - 1 - int(np.argmin(rows))
-    return up, down
+def _narrowest_row(labels, label, x0, width, rows):
+    """The row, of rows (a range), where blob `label` has the least ink
+    in its own columns: where a letter touching the next line is
+    thinnest, most often the point the two letters meet. Of rows equally
+    thin, the middle one. None when the range is empty."""
+    if len(rows) == 0:
+        return None
+    part = labels[rows.start : rows.stop, x0 : x0 + width] == label
+    widths = part.sum(axis=1)
+    thin = np.nonzero(widths == widths.min())[0]
+    return rows.start + int(thin[len(thin) // 2])
 
 
 def _typical_reach(reaches, h_m, joined_too=False):
@@ -260,20 +253,19 @@ def _typical_reach(reaches, h_m, joined_too=False):
 
 
 def _own_ink_reach(
-    ink, midline, baseline, limits=(None, None), joined_too=False, cuts=None
+    ink, midline, baseline, limits=(None, None), joined_too=False
 ):
     """Ascender and descender reach (pixels above the midline, below
     the baseline) of the ink blobs that belong to this line: those
     covering at least half of its x-height band. A neighbour's tail can
     dip into the band's edge but does not span it. A letter that touches
     the line above or below joins it into one blob; such a blob is
-    marked joined and cut at the row with the least ink between the two
-    lines (cuts, from _valleys), or else at the neighbour's x-height band
-    (limits, from _neighbour_bands). None when cv2 is unavailable or no
+    marked joined and cut at its own thinnest row between the two lines'
+    bands (limits, from _neighbour_bands). None when cv2 is unavailable or no
     blob qualifies."""
     if cv2 is None:
         return None
-    n, _, stats, _ = cv2.connectedComponentsWithStats(
+    n, labels, stats, _ = cv2.connectedComponentsWithStats(
         (ink > 0).astype(np.uint8), connectivity=8
     )
     h_m = baseline - midline + 1
@@ -287,11 +279,20 @@ def _own_ink_reach(
             continue
         joined_up = top_limit is not None and top <= top_limit
         joined_down = bottom_limit is not None and bottom >= bottom_limit
-        up_cut, down_cut = cuts or (None, None)
+        x0 = int(stats[i, cv2.CC_STAT_LEFT])
+        width = int(stats[i, cv2.CC_STAT_WIDTH])
         if joined_up:
-            top = top_limit + 1 if up_cut is None else up_cut + 1
+            # Cut where the blob is thinnest between the two lines, so
+            # its own part is this line's reach (#194).
+            cut = _narrowest_row(
+                labels, i, x0, width, range(top_limit + 1, midline)
+            )
+            top = top_limit + 1 if cut is None else cut + 1
         if joined_down:
-            bottom = bottom_limit - 1 if down_cut is None else down_cut - 1
+            cut = _narrowest_row(
+                labels, i, x0, width, range(baseline + 1, bottom_limit)
+            )
+            bottom = bottom_limit - 1 if cut is None else cut - 1
         ups.append((max(0, midline - top), joined_up))
         downs.append((max(0, bottom - baseline), joined_down))
     if not ups:
