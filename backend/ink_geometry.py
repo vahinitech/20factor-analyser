@@ -64,7 +64,8 @@ LETTER_GROUP = 5
 # A page whose median row holds fewer than FRAGMENT_PIECES lines, none
 # under FRAGMENT_SHORT of the widest line, the widest spanning
 # FRAGMENT_COVER of the page or more, is read whole without looking at
-# its ink (_plainly_whole), so most pages cost nothing more.
+# its ink (_plainly_whole), so most pages cost nothing more. Nor is a
+# page with as many printed lines as handwriting lines (a form).
 # Set from every page of benchmarks/uji-clean (none of which may cross
 # them) and the neat penmanship pages of #276; `benchmark.py fragments`
 # prints each page's numbers against them.
@@ -622,11 +623,18 @@ def fragment_rows(arr, lines, printed=()):
     whole (_plainly_whole) and its ink was not looked at. lines: the
     reader's handwriting lines, after the pieces of each line are joined
     (recognizer.extract_hand_lines); printed: the lines it found printed,
-    whose ink is not the writing's."""
+    whose ink is not the writing's. A page with as many printed lines as
+    handwriting lines or more is a form or a printed page written on:
+    its unread ink is mostly print, so it is not read in pieces."""
     read = [l for l in lines if _has_size(l)]
     groups = _reader_groups(read)[0] if read else []
     page_w = arr.shape[1]
-    if len(groups) < FRAGMENT_MIN_ROWS or _plainly_whole(groups, page_w):
+    form = len(printed) >= len(read)
+    if (
+        form
+        or len(groups) < FRAGMENT_MIN_ROWS
+        or _plainly_whole(groups, page_w)
+    ):
         cover = {**_NO_ROWS, "rows": len(groups), "pieces": len(read)}
         return [], {**cover, "fragments": False, "looked": False}
     rows, cover = reader_rows(arr, lines, printed)
