@@ -433,7 +433,6 @@ def page_features(arr, rows):
     }
 
 
-
 def _centre(line):
     return line["box"][1] + line["box"][3] / 2.0
 
@@ -443,11 +442,13 @@ def reader_rows(arr, lines):
     and how much of each row the reader read: (rows, cover).
 
     Lines overlapping in height are one row (_reader_groups). Each ink
-    blob (_blobs) joins the row whose middle is nearest its own, when it lies within
-    ROW_REACH lines of it; ink far from every line (a row nothing was
-    read on) is left out. A row is shaped like a reader line: the box
-    and outline of its ink and its lines, its lines' text left to right
-    and their mean confidence, so it is measured as any read line is.
+    blob (_blobs) joins the row whose middle is nearest its own, when it
+    lies within ROW_REACH lines of it; ink far from every line (a row
+    nothing was read on) is left out, and so is a row narrower than
+    ROW_MIN_WIDTH of the page. A row is shaped like a reader line: the
+    box and outline of its ink and its lines, its lines' text left to
+    right and their mean confidence, so it is measured as any read line
+    is.
 
     cover: {"rows", "pieces", "cover", "per_row", "short"}. cover is the
     share of the rows' ink width the reader's boxes span; per_row the
@@ -458,9 +459,10 @@ def reader_rows(arr, lines):
     page = _page_ink(arr) if read else None
     if page is None:
         return [], dict(_NO_ROWS)
-    groups, line_h = _reader_groups(read)
     # A row read as specks ("." and ",") still has a line's height.
+    groups, line_h = _reader_groups(read, page["line_h"])
     line_h = max(page["line_h"], line_h)
+    page_w = page["labels"].shape[1]
     middles = [float(np.median([_centre(l) for l in g])) for g in groups]
     stats = page["stats"]
     ink = [[] for _ in groups]
@@ -477,6 +479,8 @@ def reader_rows(arr, lines):
             [b for _a, b in spans] + [stats[i, 0] + stats[i, 2] for i in ids]
         )
         width = float(x1 - x0)
+        if width < ROW_MIN_WIDTH * page_w:
+            continue  # a speck read on its own, as find_rows leaves out
         total += width
         covered += _union(spans)
         short += sum(1 for a, b in spans if b - a < FRAGMENT_SHORT * width)
@@ -502,15 +506,17 @@ def reader_rows(arr, lines):
     }
 
 
-def _reader_groups(read):
+def _reader_groups(read, floor=0.0):
     """(rows, line height): top to bottom, a reader's line joins the row
     above when they overlap in height by ROW_OVERLAP of the shorter (a
     capital's flourish read on its own sits half a line higher); a line
-    height is the lines' median height."""
+    height is the lines' median height. A line counts as at least floor
+    tall, about its middle."""
     line_h = float(np.median([l["box"][3] for l in read]))
     groups, bands = [], []
     for line in sorted(read, key=_centre):
-        y0, h = line["box"][1], line["box"][3]
+        h = max(float(line["box"][3]), floor)
+        y0 = _centre(line) - h / 2.0
         if bands:
             top, bottom = bands[-1]
             shared = min(bottom, y0 + h) - max(top, y0)
@@ -530,10 +536,8 @@ def _plainly_whole(groups):
     so most pages cost no more than this."""
     widths = [l["box"][2] for g in groups for l in g]
     per_row = float(np.median([len(g) for g in groups]))
-    return (
-        per_row < FRAGMENT_PIECES
-        and min(widths) >= FRAGMENT_SHORT * max(widths)
-    )
+    short = min(widths) < FRAGMENT_SHORT * max(widths)
+    return per_row < FRAGMENT_PIECES and not short
 
 
 def _left(line):
