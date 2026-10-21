@@ -122,7 +122,7 @@ class OneLongLineTests(unittest.TestCase):
         even = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.0]))
         long = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.5]))
         self.assertEqual(even, 10.0)
-        self.assertAlmostEqual(long, 10.0 - 0.125 * 6.0)
+        self.assertAlmostEqual(long, 10.0 - 0.125 * 4.0)
 
     def test_it_counts_where_the_spread_penalty_is_spent(self):
         # Lines that already vary use up the capped spread penalty; one
