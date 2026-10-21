@@ -366,9 +366,7 @@ def _ruled_lines(gray, lines):
     if len(boxes) < 2:
         return None
     x0 = max(0, int(min(float(b[0]) for b in boxes)))
-    x1 = min(
-        gray.shape[1], int(max(float(b[0]) + float(b[2]) for b in boxes))
-    )
+    x1 = min(gray.shape[1], int(max(float(b[0]) + float(b[2]) for b in boxes)))
     rules, mask = find_ruling(gray, x0, x1)
     if len(rules) < 2:
         return None
