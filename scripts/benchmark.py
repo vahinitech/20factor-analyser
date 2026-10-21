@@ -946,10 +946,10 @@ def cmd_fragments(args):
     from being measured from the ink as read in pieces (#277). --page
     limits it to the pages named; --none fails when any page is read in
     pieces (a set that must stay on the reader's lines)."""
-    import ink_geometry as ig
-
     folder, meta = _load_set(args.set)
     _apply_settings(meta)
+    import ink_geometry as ig
+
     if _ink_mode(meta):
         _report(f"{args.set}: measured from the ink, nothing read.")
         return 0
