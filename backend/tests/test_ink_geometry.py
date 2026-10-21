@@ -359,9 +359,14 @@ class TestServerReadInPieces(unittest.TestCase):
                     server.recognizer, "extract_hand_lines", extract
                 )
             )
-            # The printed check is not what is tested here.
+            # The printed check is not what is tested here, and no OCR
+            # engine reads the least-sure letters again (a failed engine
+            # load would stay failed for the tests after this one).
             stack.enter_context(
                 mock.patch.object(server.classify, "classify_lines", _kept)
+            )
+            stack.enter_context(
+                mock.patch.object(server, "_READ_LETTERS", None)
             )
             scan = getattr(server, "_report_python_process")
             return scan(self.arr, b"", "en", "")

@@ -191,8 +191,9 @@ def _score(arr, raw, reader, meta):
     import ink_geometry
     import scoring
 
-    _found, hand = _reader_lines(arr, raw, reader, meta)
-    rows, _cover = ink_geometry.fragment_rows(arr, hand)
+    found, hand = _reader_lines(arr, raw, reader, meta)
+    printed = [l for l in found if l.get("printed_hint")]
+    rows, _cover = ink_geometry.fragment_rows(arr, hand, printed)
     measured = rows or hand
     layout = computer_vision.vl_analyze(arr, measured, False)["layout"]
     analysis = scoring.build_analysis(arr, measured, layout).to_dict()
@@ -965,7 +966,7 @@ def cmd_fragments(args):
         ) as f:
             reader = json.load(f)
         try:
-            _found, hand = _reader_lines(arr, raw, reader, meta)
+            found, hand = _reader_lines(arr, raw, reader, meta)
         except MissingRead:
             out.append(f"| {page} | reads a crop not kept | | | | | |")
             continue
@@ -973,8 +974,9 @@ def cmd_fragments(args):
             out.append(f"| {page} | no handwriting read | | | | | |")
             continue
         # The numbers even where the server does not look at the ink.
-        _rows, c = ig.reader_rows(arr, hand)
-        decided = ig.fragment_rows(arr, hand)[1]
+        printed = [l for l in found if l.get("printed_hint")]
+        _rows, c = ig.reader_rows(arr, hand, printed)
+        decided = ig.fragment_rows(arr, hand, printed)[1]
         if decided["fragments"]:
             in_pieces.append(page)
         verdict = "yes" if decided["fragments"] else "no"

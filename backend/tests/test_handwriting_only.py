@@ -249,6 +249,9 @@ class TestHandwritingOnlyRule(unittest.TestCase):
         # regions feed the report's evidence showcase
         for reg in j.get("regions", []):
             self.assertNotIn(str(reg.get("text", "")).lower(), MUST_EXCLUDE)
+        # The form's printed words beside the writing are not writing the
+        # reader left unread: the page is not read in pieces (#277).
+        self.assertIsNone(j["analysis"]["recognition"]["ink_reason"])
 
     def test_factor_page_context_masks_excluded_printed_pixels(self):
         import base64
