@@ -12,6 +12,9 @@ import json
 import sys
 from pathlib import Path
 
+from age_band import BAND_PATTERN
+from age_band import ERROR_CODE as AGE_BAND_CODE
+from age_band import PATTERN as AGE_BAND_PATTERN
 from entitlements import FREE_FACTORS, STATUSES, TIERS
 from languages.profile import CODES as PROFILE_CODES
 from languages.profile import MAX_BYTES as PROFILE_BYTES
@@ -537,6 +540,15 @@ def common():
                     "itself."
                 ),
             },
+            "ageBand": {
+                "type": "string",
+                "pattern": BAND_PATTERN,
+                "description": (
+                    "The request's age_band as sent, when it sent one: two "
+                    "whole-year ages, such as 6-7. Not used by any score "
+                    "yet (#216); never a birth date, never stored."
+                ),
+            },
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -959,6 +971,7 @@ def expanded():
             },
             "comparability": ref("comparability"),
             "ruleset": ref("ruleset"),
+            "age_band": ref("ageBand"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -1147,6 +1160,7 @@ def compact():
             "coaching": {"type": "array", "items": ref("coachingCard")},
             "comparability": ref("comparability"),
             "ruleset": ref("ruleset"),
+            "age_band": ref("ageBand"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,
@@ -1441,6 +1455,20 @@ def error():
                         },
                     },
                     {
+                        "type": "object",
+                        "description": (
+                            "422: the request's age_band is not two "
+                            "whole-year ages, the first below the second."
+                        ),
+                        "required": ["error_code", "error", "field"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"const": AGE_BAND_CODE},
+                            "error": {"type": "string", "minLength": 1},
+                            "field": {"const": "age_band"},
+                        },
+                    },
+                    {
                         "type": "array",
                         "minItems": 1,
                         "description": "FastAPI request validation errors.",
@@ -1470,8 +1498,9 @@ def error():
             "FastAPI's HTTPException shape. 401 invalid or revoked "
             "credential, 403 paid include= fields requested by Free, 404 "
             "unknown catalogue version, 413 upload or profile too large, "
-            "422 unsupported include field, invalid form/query or a "
-            "refused profile (detail.error_code says which), 429 the free "
+            "422 unsupported include field, invalid form/query, a "
+            "refused profile or age_band (detail.error_code says which), "
+            "429 the free "
             "tier's daily checks for this connection are used (a Pro key "
             "is never limited; Retry-After gives the seconds to midnight, "
             "India time), 503 "
@@ -1607,6 +1636,19 @@ def request():
                             "response carries only its hash as ruleset. "
                             "A refused profile is HTTP 413 or 422 before "
                             "the photo is read."
+                        ),
+                    },
+                    "age_band": {
+                        "type": "string",
+                        "default": "",
+                        "pattern": AGE_BAND_PATTERN,
+                        "description": (
+                            "Optional writer's age as two whole-year ages "
+                            "from 3 to 18, the first below the second, "
+                            "such as 6-7. Never a birth date. Echoed in "
+                            "the report as age_band and not stored; no "
+                            "score uses it yet (#216). A refused band is "
+                            "HTTP 422 before the photo is read."
                         ),
                     },
                 },
