@@ -49,6 +49,13 @@ ZONE_FULL_ERR = 0.35
 ZONE_ZERO_ERR = 1.00
 # Over-emphasis ("heavy importance to a zone") beyond this reach.
 ZONE_HEAVY_REACH = 3.2
+# One line whose tall letters (or tails) run long against the page's
+# other lines (#194): points lost per x-height of the lines' mean
+# distance from the page's median reach, up to LINE_DEV_MAX. Apart from
+# the line-to-line spread penalty, which is capped at 2 points and so
+# no longer moves on a page whose lines already vary.
+LINE_DEV_RATE = 6.0
+LINE_DEV_MAX = 3.0
 # A line needs a middle band at least this tall (pixels) to be usable.
 MIN_XHEIGHT_PX = 6
 # Row-density fractions defining the bands.
@@ -164,14 +171,16 @@ def line_zone_bands(gray, box):
     asc_top, desc_bot = int(rows[0]), int(rows[-1])
     h_u = max(0, midline - asc_top)
     h_l = max(0, desc_bot - baseline)
-    own = _own_ink_reach(
-        ink, midline, baseline, _neighbour_bands(profile, midline, baseline)
-    )
+    limits = _neighbour_bands(profile, midline, baseline)
+    cuts = _valleys(profile, midline, baseline, limits)
+    own = _own_ink_reach(ink, midline, baseline, limits, False, cuts)
+    every = (h_u, h_l)
     if own is not None:
         # The padded crop reaches into the lines above and below on
         # closely ruled paper; their descenders and ascenders read as
         # this line's reach (4.0x on tests' handwriting-sample.jpg).
         h_u, h_l = own
+        every = _own_ink_reach(ink, midline, baseline, limits, True, cuts)
 
     return {
         "h_m": int(h_m),
@@ -179,6 +188,11 @@ def line_zone_bands(gray, box):
         "h_l": int(h_l),
         "asc_reach": (h_u + h_m) / float(h_m),
         "desc_reach": (h_l + h_m) / float(h_m),
+        # With the tall letters that touch a neighbouring line too
+        # (clipped at its band), for comparing this line with the page's
+        # others (#194).
+        "asc_reach_all": (every[0] + h_m) / float(h_m),
+        "desc_reach_all": (every[1] + h_m) / float(h_m),
     }
 
 
@@ -204,7 +218,26 @@ def _neighbour_bands(profile, midline, baseline):
     return (max(above) if above else None, min(below) if below else None)
 
 
-def _typical_reach(reaches, h_m):
+def _valleys(profile, midline, baseline, limits):
+    """Where this line ends and each neighbour begins, as rows of the
+    crop: the row with the least ink between this line's band and the
+    neighbour's (top limit, bottom limit). A tall letter that touches
+    the line above is cut there, so its own part counts as its reach and
+    the gap up to the neighbour's band does not (#194). Of rows with
+    equally little ink, the one nearest the neighbour. (up, down), None
+    where there is no neighbour or no row between."""
+    top_limit, bottom_limit = limits
+    up = down = None
+    if top_limit is not None and top_limit + 1 < midline:
+        rows = profile[top_limit + 1 : midline]
+        up = top_limit + 1 + int(np.argmin(rows))
+    if bottom_limit is not None and baseline + 1 < bottom_limit:
+        rows = profile[baseline + 1 : bottom_limit][::-1]
+        down = bottom_limit - 1 - int(np.argmin(rows))
+    return up, down
+
+
+def _typical_reach(reaches, h_m, joined_too=False):
     """The usual reach of one line's tall (or hanging) letters.
 
     reaches: (pixels, joined) per blob, joined when the blob runs into
@@ -216,21 +249,26 @@ def _typical_reach(reaches, h_m):
     only when the line has no other tall letter, clipped at the
     neighbour's band. With no tall blob at all the line has no reach to
     speak of, and its largest overshoot is kept (the single-zone
-    case)."""
+    case). With joined_too the joined blobs count like the others: the
+    line's reach for comparing it with the page's other lines, since
+    a line of ascenders written too long reaches the line above (#194)."""
     tall = [(r, joined) for r, joined in reaches if r >= REACH_MIN_FRAC * h_m]
-    free = [r for r, joined in tall if not joined]
+    free = [r for r, joined in tall if not joined or joined_too]
     if free or tall:
         return int(round(float(np.median(free or [r for r, _ in tall]))))
     return max([0] + [r for r, _ in reaches])
 
 
-def _own_ink_reach(ink, midline, baseline, limits=(None, None)):
+def _own_ink_reach(
+    ink, midline, baseline, limits=(None, None), joined_too=False, cuts=None
+):
     """Ascender and descender reach (pixels above the midline, below
     the baseline) of the ink blobs that belong to this line: those
     covering at least half of its x-height band. A neighbour's tail can
     dip into the band's edge but does not span it. A letter that touches
     the line above or below joins it into one blob; such a blob is
-    marked joined and its reach stops at the neighbour's x-height band
+    marked joined and cut at the row with the least ink between the two
+    lines (cuts, from _valleys), or else at the neighbour's x-height band
     (limits, from _neighbour_bands). None when cv2 is unavailable or no
     blob qualifies."""
     if cv2 is None:
@@ -249,15 +287,19 @@ def _own_ink_reach(ink, midline, baseline, limits=(None, None)):
             continue
         joined_up = top_limit is not None and top <= top_limit
         joined_down = bottom_limit is not None and bottom >= bottom_limit
+        up_cut, down_cut = cuts or (None, None)
         if joined_up:
-            top = top_limit + 1
+            top = top_limit + 1 if up_cut is None else up_cut + 1
         if joined_down:
-            bottom = bottom_limit - 1
+            bottom = bottom_limit - 1 if down_cut is None else down_cut - 1
         ups.append((max(0, midline - top), joined_up))
         downs.append((max(0, bottom - baseline), joined_down))
     if not ups:
         return None
-    return _typical_reach(ups, h_m), _typical_reach(downs, h_m)
+    return (
+        _typical_reach(ups, h_m, joined_too),
+        _typical_reach(downs, h_m, joined_too),
+    )
 
 
 def _median(vals):
@@ -304,6 +346,8 @@ def analyze_zones(gray, lines):
 
     asc = [z["asc_reach"] for z in per_line]
     desc = [z["desc_reach"] for z in per_line]
+    asc_all = [z["asc_reach_all"] for z in per_line]
+    desc_all = [z["desc_reach_all"] for z in per_line]
     out = {
         "available": True,
         "linesUsed": len(per_line),
@@ -313,6 +357,8 @@ def analyze_zones(gray, lines):
         "descReach": round(_median(desc), 2) if has_desc else None,
         "ascReachCv": round(_cv(asc), 3) if has_asc else None,
         "descReachCv": round(_cv(desc), 3) if has_desc else None,
+        "ascLineDev": round(_line_dev(asc_all), 3) if has_asc else None,
+        "descLineDev": round(_line_dev(desc_all), 3) if has_desc else None,
     }
     # The coach's three mistakes, named.
     flags = []
@@ -326,6 +372,20 @@ def analyze_zones(gray, lines):
             flags.append("upper-heavy" if key == "ascReach" else "lower-heavy")
     out["flags"] = sorted(set(flags))
     return out
+
+
+def _line_dev(reaches):
+    """The lines' mean distance from the page's median reach, in
+    x-heights. Each line is measured against the page, so one line
+    whose tall letters run long always adds to it; the mean, not the
+    largest, so one short line read badly does not set it."""
+    mid = _median(reaches)
+    return sum(abs(r - mid) for r in reaches) / len(reaches)
+
+
+def _line_dev_penalty(dev):
+    """Points lost for the lines' reach straying from the page's."""
+    return min(LINE_DEV_MAX, dev * LINE_DEV_RATE)
 
 
 def _reach_score(reach):
@@ -343,17 +403,20 @@ def zone_score(z):
 
     Mean reach credit over the zones the text actually uses, minus a
     consistency penalty (up to 2 points) when reach varies line to
-    line. Only call when z['available'] is True."""
+    line, and up to LINE_DEV_MAX more as the lines' reach strays from
+    the page's median (#194). Only call when z['available'] is True."""
     credits = []
     cvs = []
-    if z.get("ascReach") is not None:
-        credits.append(_reach_score(z["ascReach"]))
-        cvs.append(z.get("ascReachCv") or 0.0)
-    if z.get("descReach") is not None:
-        credits.append(_reach_score(z["descReach"]))
-        cvs.append(z.get("descReachCv") or 0.0)
+    devs = []
+    for key in ("asc", "desc"):
+        if z.get(key + "Reach") is None:
+            continue
+        credits.append(_reach_score(z[key + "Reach"]))
+        cvs.append(z.get(key + "ReachCv") or 0.0)
+        devs.append(z.get(key + "LineDev") or 0.0)
     if not credits:
         return None
     base = 10.0 * (sum(credits) / len(credits))
     penalty = min(2.0, (max(cvs) / 0.35) * 2.0) if cvs else 0.0
+    penalty += _line_dev_penalty(max(devs)) if devs else 0.0
     return max(0.0, min(10.0, base - penalty))
