@@ -300,6 +300,60 @@ an error.
 so above the table. Those proposals are never applied, and `--write`
 refuses a tool test.
 
+### The engraved model pages (`neat-penmanship`, 21 October 2026)
+
+`benchmarks/neat-penmanship` holds eight crops of running sentences
+from two public-domain penmanship manuals: A. N. Palmer, *The Palmer
+Method of Business Writing* (1915), and C. P. Zaner, *Zaner Method
+Writing: Arm Movement, Manual 144* (1925 printing of the 1915 edition).
+`source.md` has the titles, the scans, the rights statements and what
+was cropped. They are engraved model pages of adult cursive, the ideal
+end of the range and not children's everyday writing, so the table they
+give is a reference for the owner, not a scale to apply. No scale was
+changed with them.
+
+The reader output was captured once with the live reader in the
+analyser image, as for any set. What it shows is the main result: **the
+reader reads this joined, engraved cursive in fragments.** It scored 26
+of the 39 written lines, with a character error rate of 31.8%, and read
+the small-writing crop (`zaner-090-small-writing`) as six punctuation
+marks. Many lines come back as several short pieces ("Thi", "This is",
+"cmen"). The factors are then measured on the pieces' boxes:
+
+- Margin Discipline (10) scores 0 on five pages: the pieces start
+  anywhere along a line, and the copies indent each paragraph.
+- Line Quality (4) is still the spread of line box widths, so pieces of
+  every length score it down (median 4.4).
+- Size (5), Word Spacing (8), Letter Spacing (9) and Ascender/Descender
+  Control (6) read joined letters, long loops and tall capitals that
+  the measures were not built around: their medians are 1.1 to 5.5.
+
+So these pages cannot set the scales either: on most factors the
+measurement, not the scale, is what holds them down. Seven pages have a
+measured score of exactly 0, which `check` refuses, so the set is not
+in `ci.yml`'s `check` step; `expected.json` and `reading.json` keep
+today's numbers for the record, and the `calibration` job of
+`factor-tests.yml` runs `calibrate.py` and `score_ranges.py` on it.
+
+### Neat, ordinary and poor side by side
+
+`python scripts/score_ranges.py` scores four groups with today's code
+and gives each factor's median and range per group:
+
+- **neat**: the sets marked `"role": "neat-reference"`;
+- **uji**: the 20 UJI benchmark pages;
+- **clean**: the 20 planted-page writers with nothing planted;
+- **poor**: the same writers with every mistake in
+  `planted_pages.POOR` on one page (narrow gap, letters apart, a sunken
+  word, a big word, a tall letter, open loops, long ascenders, an
+  indented, wavy, slanted, shaky and sinking line; line mistakes spread
+  over the lines, `planted_pages.mistake_lines`).
+
+Clean and poor pages are measured without the reader, as `factors`
+measures them, so the factors read from the reader's confidence (1, 2,
+19, and part of 18) cannot tell them apart. The `calibration` job
+writes the table to its summary.
+
 ## Is this pull request slower than main?
 
 A pull request that changes `backend/` gets a `paired-timing` job in
