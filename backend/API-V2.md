@@ -60,7 +60,7 @@ Responses contain:
 - `summary`: legacy overall score out of 100, factor counts and score-basis description. The legacy aggregate can include image proxies.
 - `factors`: stable `id`, `number`, `name`, `section_id`, `status`, `score`, `reason` and `measurement`. Pro also gets `practice`.
 - `locked_factors`: IDs and `required_tier`, without restricted data.
-- `recognition`: recognized text; Pro also receives recognition metadata.
+- `recognition`: recognized text; Pro also receives recognition metadata. In it, `ink_rows` is true when the factors were measured on rows found from the ink instead of the reader's lines, and `ink_reason` says why: `language` (a language set in `VAHINI_INK_GEOMETRY_LANGS`) or `read_in_fragments` (the reader read the page in pieces, as it does joined cursive; #277). A code, no text.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
 - Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).

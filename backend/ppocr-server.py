@@ -851,6 +851,20 @@ def _ink_lines(arr, expected_text):
     return rows, hand
 
 
+def _fragment_lines(arr, lines, hand_lines):
+    """The rows to measure when the reader read the page in pieces
+    (joined cursive, #277), else None: its lines as whole rows, widened
+    to the ink on each row (ink_geometry.fragment_rows). The reader's
+    lines still give the text, the passage match and the recognition
+    block. The ink of the lines found printed is not the writing's."""
+    printed = [l for l in lines if l.get("printed_hint")]
+    with perf.stage("fragments", lines=len(hand_lines)):
+        rows, _cover = ink_geometry.fragment_rows(arr, hand_lines, printed)
+    for row in rows:
+        row.setdefault("text_as_read", row["text"])
+    return rows or None
+
+
 def _report_python_process(
     arr, raw, lang, expected_text, include_evidence=True, ruleset=None
 ):
@@ -973,16 +987,28 @@ def _report_python_process(
         rec_langs = [l["lang"] for l in hand_lines]
         printed_hints = [bool(l["printed_hint"]) for l in hand_lines]
 
+        # What the factors are measured on: the reader's lines, or rows
+        # found from the ink, and why (recognition.ink_reason). A page
+        # the reader read in pieces (joined cursive, #277) is measured on
+        # whole rows of its ink; the reader's lines give the text above.
+        score_lines, ink_reason = hand_lines, None
+        if selected_backend == "ink-geometry":
+            ink_reason = "language"
+        elif selected_backend != "cv-fallback":
+            rows = _fragment_lines(arr, lines, hand_lines)
+            if rows:
+                score_lines, ink_reason = rows, "read_in_fragments"
+
         vl = (
-            _vl_analyze(arr, hand_lines)
+            _vl_analyze(arr, score_lines)
             if include_evidence
-            else _vl_analyze(arr, hand_lines, include_evidence=False)
+            else _vl_analyze(arr, score_lines, include_evidence=False)
         )
         # The profile reaches the scorer through factor_needs, for this
         # call only: a class it emptied leaves its factors Not measured.
         with profiles.applied(ruleset):
             analysis = scoring.build_analysis(
-                arr, hand_lines, vl.get("layout", {})
+                arr, score_lines, vl.get("layout", {})
             ).to_dict()
         factor_needs.explain(analysis, ruleset)
     except escalation.RungDown as exc:
@@ -1089,6 +1115,10 @@ def _report_python_process(
             "assistive_only": not passage_aligned,
             "passage_aligned": passage_aligned,
             "passage_match": (align_info or {}).get("passage_match"),
+            # Measured on rows found from the ink, and why: "language"
+            # (VAHINI_INK_GEOMETRY_LANGS) or "read_in_fragments" (#277).
+            "ink_rows": ink_reason is not None,
+            "ink_reason": ink_reason,
             "note": (
                 "The 20 factors are measured from the geometry of the "
                 "writing and do not depend on reading the words."

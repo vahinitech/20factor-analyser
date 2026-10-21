@@ -127,6 +127,44 @@ depends only on the photo, so the same photo gives the same lines.
 (`recognizer.align_to_expected`, `recognizer.py:361-416`). That happens before
 scoring, so word counts come from the passage.
 
+**Rows from the ink instead of the reader's lines.** Two kinds of page are
+not measured on the reader's line boxes as they come. The response says
+which in `analysis.recognition`: `ink_rows` is true and `ink_reason` says
+why.
+
+- `language`: the check asked for a language named in
+  `VAHINI_INK_GEOMETRY_LANGS` (Telugu; empty by default). Rows, baselines,
+  letter sizes and, with a passage, word gaps come from the ink alone
+  (`ink_geometry.find_rows`); nothing is read. The factors that need what
+  was read (1, 2, 3, 9, 17, 18, 19) are "Not measured".
+- `read_in_fragments` (#277): the reader read the page in pieces. Joined
+  cursive comes back as short pieces ("Thi", "cmen") with the rest of each
+  row unread, and the factors used to be measured on the pieces' boxes.
+  After step 6 the reader's handwriting lines are grouped into rows (lines
+  overlapping in height by 45% of the shorter one), each row is widened to
+  the ink on it (blobs whose middle lies within 0.6 of a line of the row's,
+  leaving out ink inside the lines the reader found printed, such as a
+  form's words beside the writing),
+  and the reader's numbers are compared with the rows
+  (`ink_geometry.fragment_rows`). The page is read in pieces when it has
+  two rows or more and any of: the reader's boxes span under 60% of the
+  rows' ink width, the median row holds three boxes or more, or half the
+  boxes or more are under half their own row's ink width. Such a page is
+  measured on the widened rows, each carrying its pieces' text and mean
+  confidence, by the same measures as any read line (sections 3 and 9);
+  the reader's own lines still give the text, the passage match and the
+  recognition block. Rows nothing was read on are not measured. To keep
+  the cost down, a page whose median row holds fewer than three lines,
+  none under half the widest, the widest spanning 60% of the page or
+  more, is taken as read whole without looking at its ink. So is a page
+  where the reader found as many printed lines as handwriting lines or
+  more: a form written on, whose unread ink is mostly print.
+
+The thresholds are the `FRAGMENT_*` constants in `ink_geometry.py`.
+`scripts/benchmark.py fragments` prints each benchmark page's numbers
+against them, and CI fails if a page of a real-handwriting set would be
+read in pieces.
+
 ## 3. Measuring inside a line: ink components
 
 To see words and letters inside a line box, the analyser looks at the ink
@@ -787,7 +825,10 @@ What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/feature
   have one (a, b, d, e, g, o, p, q); full marks at 90%.
 - **Letter Spacing (9)** was the spread of line width per character. It
   is now the spread of the gaps between the letters (or joined pieces)
-  inside words.
+  inside words. On a page the style check calls joined cursive
+  (`style_analysis.py`) those gaps are pen lifts, not letter gaps, so it
+  is "Not measured" there (#277; `scoring_inputs.method` is
+  `letters_joined`).
 - **Line Straightness (11)** was the line angle again, the same as
   Baseline. It now also loses up to 5 points as a line's letters wander
   off its fitted baseline (median distance, tails left out), worst line.

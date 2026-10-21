@@ -285,6 +285,19 @@ python scripts/benchmark.py update  --root ~/eval-data/benchmarks --set telugu-i
 of one list of sentences; text is matched in any script. Such a set runs
 by hand on a machine that holds it, never in CI.
 
+## Pages read in pieces (#277)
+
+The reader reads joined cursive in pieces, and such a page is measured on
+whole rows of its ink instead ([02-how-a-scan-works.md](02-how-a-scan-works.md),
+section 2). The replay does the same. `benchmark.py fragments --set <name>`
+prints, for each page, how the reader's lines sit on the rows: rows,
+lines, the share of the rows' ink the lines span, lines per row, the share
+of short lines, and whether the page counts as read in pieces. CI runs it
+with `--none` on every real-handwriting set: no UJI page may be read in
+pieces, and the table in the job summary shows how far each page is from
+the thresholds (on 21 October 2026 the closest was UPV_W21: lines span 75%
+of its rows, a quarter of them short).
+
 ## Telugu (19 October 2026)
 
 Twenty pages of real Telugu handwriting (five writers, words from

@@ -190,6 +190,15 @@ jobs:
           name: benchmark-results
           path: ${{ runner.temp }}/benchmark-results
           if-no-files-found: ignore
+      # A page read in pieces is measured from the ink (#277). No page
+      # of these sets may be: each page's numbers against the thresholds
+      # go to the job summary.
+      - name: No real page read in pieces
+        run: |
+          sets=$(python backend/languages/registry.py --benchmark-sets)
+          for set in $sets; do
+            python scripts/benchmark.py fragments --set "$set" --none
+          done
       # Each page through the server's own scan with perf.py recording:
       # a page over a budget in backend/perf/budgets.json fails (#229),
       # and so does any work count above benchmarks/<set>/work.json

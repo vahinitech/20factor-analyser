@@ -305,7 +305,9 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
     scores = _score_factor_map(fx)
     checks = advisory.run_checks(arr, lines)
     zone_based = advisory.apply_zone_score(checks["zones"], scores)
-    supplied = availability.page_supplies(lines, fx, zone_based)
+    supplied = availability.page_supplies(
+        lines, fx, zone_based, checks["style"]
+    )
     basis = _based_on(fx)
     results = [
         _factor_result(n, fx, scores, supplied, basis, checks, zone_based)
