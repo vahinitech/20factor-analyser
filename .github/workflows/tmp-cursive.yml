@@ -17,6 +17,8 @@ jobs:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
+      - name: Black diff
+        run: black --diff --line-length 79 backend/*.py backend/tests/*.py || true
       - name: Diagnostics
         run: python scripts/tmp_diag.py neat-penmanship
       - name: Each page against the thresholds
