@@ -1,0 +1,259 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "palmer-092-specimen": {
+   "lines": [
+    "Thi",
+    "This is",
+    "cmen",
+    "hP",
+    "theF al rer",
+    "mmams",
+    "id hT",
+    "con nes",
+    "ease ama end urance."
+   ],
+   "overall": 61,
+   "repeats": 0,
+   "scores": {
+    "1": 8.4,
+    "10": 0.0,
+    "11": 9.7,
+    "12": 9.7,
+    "17": 6.9,
+    "18": 6.7,
+    "19": 8.7,
+    "2": 8.7,
+    "20": 4.3,
+    "3": 10.0,
+    "4": 2.3,
+    "5": 3.2,
+    "6": 1.2,
+    "7": 8.1,
+    "8": null,
+    "9": 3.6
+   },
+   "sentences_found": 3,
+   "unmatched": 6
+  },
+  "palmer-093-practice": {
+   "lines": [
+    "Ihismotsomuc theamount ofp prac-",
+    "tice,as theh kind of prc racti za un",
+    "Iristh con nstan ort to acquire pre-",
+    "cision tha ads to osuccessinwritin"
+   ],
+   "overall": 69,
+   "repeats": 0,
+   "scores": {
+    "1": 9.3,
+    "10": 0.0,
+    "11": 4.6,
+    "12": 9.7,
+    "17": 8.9,
+    "18": 6.7,
+    "19": 9.4,
+    "2": 9.8,
+    "20": 3.9,
+    "3": 10.0,
+    "4": 9.9,
+    "5": 3.6,
+    "6": 3.1,
+    "7": 6.0,
+    "8": null,
+    "9": 10.0
+   },
+   "sentences_found": 4,
+   "unmatched": 0
+  },
+  "zaner-088-spacing": {
+   "lines": [
+    "aci tuueen lette terss should",
+    "widerth thaninlet etters, andl ketiveen",
+    "wordsiuidesth hanbe ketiueen tters."
+   ],
+   "overall": 76,
+   "repeats": 0,
+   "scores": {
+    "1": 9.1,
+    "10": 10.0,
+    "11": 9.4,
+    "12": 9.9,
+    "17": 8.8,
+    "18": 7.6,
+    "19": 9.1,
+    "2": 9.6,
+    "20": 7.4,
+    "3": 10.0,
+    "4": 8.6,
+    "5": 3.9,
+    "6": 0.0,
+    "7": 9.7,
+    "8": null,
+    "9": 1.1
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "zaner-090-small-writing": {
+   "lines": [
+    ".",
+    ")",
+    "\u2212",
+    "!",
+    "\u2212",
+    ","
+   ],
+   "overall": 38,
+   "repeats": 0,
+   "scores": {
+    "1": 5.8,
+    "10": 0.0,
+    "11": 1.1,
+    "12": 0.0,
+    "17": 0.0,
+    "18": 4.0,
+    "19": 6.7,
+    "2": 8.3,
+    "20": 2.0,
+    "3": null,
+    "4": 5.9,
+    "5": 4.7,
+    "6": null,
+    "7": 0.0,
+    "8": null,
+    "9": 7.3
+   },
+   "sentences_found": 0,
+   "unmatched": 6
+  },
+  "zaner-093-short-loops": {
+   "lines": [
+    "many people pref er few shart loops,",
+    "simplecapitals, round ding mimimum",
+    "letters, andnaourulin"
+   ],
+   "overall": 64,
+   "repeats": 0,
+   "scores": {
+    "1": 8.5,
+    "10": 0.0,
+    "11": 7.8,
+    "12": 9.8,
+    "17": 9.0,
+    "18": 6.1,
+    "19": 9.3,
+    "2": 9.7,
+    "20": 4.9,
+    "3": 10.0,
+    "4": 7.2,
+    "5": 3.3,
+    "6": 4.9,
+    "7": 4.7,
+    "8": 6.8,
+    "9": 1.0
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "zaner-095-good-writing": {
+   "lines": [
+    "Goodsitinaisnaretha",
+    "od",
+    "ii mae",
+    "accompl slishment;itis anadenmeed.",
+    "ther.passporttogood business.positions."
+   ],
+   "overall": 56,
+   "repeats": 0,
+   "scores": {
+    "1": 8.0,
+    "10": 0.0,
+    "11": 6.0,
+    "12": 9.7,
+    "17": 9.2,
+    "18": 6.2,
+    "19": 8.9,
+    "2": 8.7,
+    "20": 4.9,
+    "3": 10.0,
+    "4": 1.5,
+    "5": 4.2,
+    "6": 1.0,
+    "7": 5.2,
+    "8": 6.6,
+    "9": 0.0
+   },
+   "sentences_found": 3,
+   "unmatched": 2
+  },
+  "zaner-096-commercial-asset": {
+   "lines": [
+    "assetth atisworth much hmorethan",
+    "itcasts toacqure.",
+    "dication thatits possessoris",
+    "industrious, andsystematic.",
+    "a comlination",
+    "inental andmannal tainin ng and",
+    "th",
+    "ain",
+    "secardn"
+   ],
+   "overall": 57,
+   "repeats": 0,
+   "scores": {
+    "1": 9.0,
+    "10": 2.0,
+    "11": 8.1,
+    "12": 8.5,
+    "17": 7.2,
+    "18": 6.1,
+    "19": 9.4,
+    "2": 9.7,
+    "20": 4.7,
+    "3": 10.0,
+    "4": 1.5,
+    "5": 3.7,
+    "6": 0.1,
+    "7": 5.8,
+    "8": 4.4,
+    "9": 1.0
+   },
+   "sentences_found": 6,
+   "unmatched": 3
+  },
+  "zaner-097-good-handwriting": {
+   "lines": [
+    "hassessianbecauseit semex",
+    "hana ereadew.",
+    "anduuiti",
+    "comes",
+    "esona trade ena anda con-",
+    "anion andprotectiont."
+   ],
+   "overall": 59,
+   "repeats": 0,
+   "scores": {
+    "1": 8.7,
+    "10": 6.0,
+    "11": 9.3,
+    "12": 9.4,
+    "17": 7.7,
+    "18": 5.0,
+    "19": 9.1,
+    "2": 9.2,
+    "20": 4.3,
+    "3": 10.0,
+    "4": 2.9,
+    "5": 1.8,
+    "6": 2.9,
+    "7": 7.6,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "sentences_found": 4,
+   "unmatched": 2
+  }
+ },
+ "set": "neat-penmanship"
+}

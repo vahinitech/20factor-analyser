@@ -548,6 +548,13 @@ def diff_table(expected, results):
     )
 
 
+def _written_lines(meta, page):
+    """How many lines were written on a page: its own text when the set
+    gives one (page_text), else the set's lines_per_page."""
+    text = meta.get("page_text", {}).get(page)
+    return len(text) if text else meta["lines_per_page"]
+
+
 def summary(meta, results):
     """The free factors and overall per page, as markdown."""
     head = ["Page", "Lines", "Overall"] + [f"F{n}" for n in FREE]
@@ -555,7 +562,7 @@ def summary(meta, results):
     for page, r in results.items():
         cells = [
             page,
-            f"{r['sentences_found']}/{meta['lines_per_page']}",
+            f"{r['sentences_found']}/{_written_lines(meta, page)}",
             str(r["overall"]),
         ] + [_fmt(r["scores"][str(n)]) for n in FREE]
         out.append("| " + " | ".join(cells) + " |")
@@ -579,7 +586,7 @@ def cmd_check(args):
     table = diff_table(expected, results)
     _report(f"## Benchmark `{args.set}`\n")
     found = sum(r["sentences_found"] for r in results.values())
-    total = meta["lines_per_page"] * len(results)
+    total = sum(_written_lines(meta, page) for page in results)
     _report(f"Written lines scored: {found} of {total}.")
     eye = eye_agreement(meta, results)
     if eye is not None:
