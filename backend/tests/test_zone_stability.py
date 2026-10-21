@@ -104,14 +104,16 @@ class TypicalReachTests(unittest.TestCase):
         self.assertGreaterEqual(z["desc_reach"], 2.5)
 
 
-def _zones(asc):
+def _zones(asc, dev=None):
     """A measured page whose lines reach these ascender heights."""
+    if dev is None:
+        dev = zone_analysis._line_dev(asc)  # pylint: disable=W0212
     return {
         "available": True,
         "ascReach": zone_analysis._median(asc),  # pylint: disable=W0212
         "descReach": None,
         "ascReachCv": 0.0,
-        "ascLineDev": zone_analysis._line_dev(asc),  # pylint: disable=W0212
+        "ascLineDev": dev,
     }
 
 
@@ -120,15 +122,20 @@ class OneLongLineTests(unittest.TestCase):
         even = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.0]))
         long = zone_analysis.zone_score(_zones([2.0, 2.0, 2.0, 2.5]))
         self.assertEqual(even, 10.0)
-        self.assertLess(long, even - 2.0)
+        self.assertAlmostEqual(long, 10.0 - 0.125 * 3.0)
 
-    def test_small_differences_between_lines_are_free(self):
-        z = _zones([2.0, 1.9, 2.1, 2.2])
-        self.assertEqual(zone_analysis.zone_score(z), 10.0)
+    def test_it_counts_where_the_spread_penalty_is_spent(self):
+        # Lines that already vary use up the capped spread penalty; one
+        # line running longer still costs more.
+        uneven = [1.5, 2.5, 1.6, 2.4]
+        longer = [1.5, 2.5, 1.6, 3.4]
+        before = dict(_zones(uneven), ascReachCv=0.5)
+        after = dict(_zones(longer), ascReachCv=0.6)
+        drop = zone_analysis.zone_score(before) - zone_analysis.zone_score(after)
+        self.assertGreater(drop, 0.1)
 
     def test_the_penalty_has_a_ceiling(self):
-        z = _zones([2.0, 2.0, 2.0, 4.0])
-        self.assertEqual(z["ascLineDev"], 2.0)
+        z = _zones([2.0, 2.0, 2.0, 2.0], dev=5.0)
         penalty = 10.0 - zone_analysis.zone_score(z)
         self.assertAlmostEqual(penalty, zone_analysis.LINE_DEV_MAX)
 

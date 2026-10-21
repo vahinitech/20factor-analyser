@@ -50,13 +50,11 @@ ZONE_ZERO_ERR = 1.00
 # Over-emphasis ("heavy importance to a zone") beyond this reach.
 ZONE_HEAVY_REACH = 3.2
 # One line whose tall letters (or tails) run long against the page's
-# other lines (#194): how far, in x-heights, a line's reach may stray
-# from the page's median reach before it costs points, and how much
-# further loses LINE_DEV_MAX points. This is apart from the
-# line-to-line spread penalty (capped at 2), which one line on a page
-# of several moves little.
-LINE_DEV_FREE = 0.25
-LINE_DEV_SCALE = 0.25
+# other lines (#194): points lost per x-height of the lines' mean
+# distance from the page's median reach, up to LINE_DEV_MAX. Apart from
+# the line-to-line spread penalty, which is capped at 2 points and so
+# no longer moves on a page whose lines already vary.
+LINE_DEV_RATE = 3.0
 LINE_DEV_MAX = 3.0
 # A line needs a middle band at least this tall (pixels) to be usable.
 MIN_XHEIGHT_PX = 6
@@ -340,17 +338,17 @@ def analyze_zones(gray, lines):
 
 
 def _line_dev(reaches):
-    """How far the line that strays most is from the page's median
-    reach, in x-heights."""
+    """The lines' mean distance from the page's median reach, in
+    x-heights. Each line is measured against the page, so one line
+    whose tall letters run long always adds to it; the mean, not the
+    largest, so one short line read badly does not set it."""
     mid = _median(reaches)
-    return max(abs(r - mid) for r in reaches)
+    return sum(abs(r - mid) for r in reaches) / len(reaches)
 
 
 def _line_dev_penalty(dev):
-    """Points lost for one line's reach straying LINE_DEV_FREE or more
-    from the page's median."""
-    over = max(0.0, dev - LINE_DEV_FREE)
-    return min(LINE_DEV_MAX, over / LINE_DEV_SCALE * LINE_DEV_MAX)
+    """Points lost for the lines' reach straying from the page's."""
+    return min(LINE_DEV_MAX, dev * LINE_DEV_RATE)
 
 
 def _reach_score(reach):
@@ -368,7 +366,7 @@ def zone_score(z):
 
     Mean reach credit over the zones the text actually uses, minus a
     consistency penalty (up to 2 points) when reach varies line to
-    line, and up to LINE_DEV_MAX more when one line's reach strays from
+    line, and up to LINE_DEV_MAX more as the lines' reach strays from
     the page's median (#194). Only call when z['available'] is True."""
     credits = []
     cvs = []
