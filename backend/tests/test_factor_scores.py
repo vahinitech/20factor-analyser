@@ -12,7 +12,11 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 import scoring  # noqa: E402
-from scoring_parts.features import _margin_spread  # noqa: E402
+from scoring_parts.features import (  # noqa: E402
+    _letter_spacing,
+    _margin_spread,
+    _word_spacing,
+)
 
 BASE = {
     "avg_score": 0.9,
@@ -27,6 +31,8 @@ BASE = {
     "line_slope_abs": 0.5,
     "line_slope_std": 0.5,
     "word_gap_cv": 0.3,
+    "word_gap_spread": 0.1,
+    "word_gaps_odd": 0.0,
     "word_gap_count": 10,
     "left_cv": 0.02,
     "left_spread": 0.002,
@@ -36,6 +42,9 @@ BASE = {
     "digits_ratio": 0.0,
     "bowl_share": 1.0,
     "letter_gap_cv": 0.5,
+    "letter_gap_spread": 0.05,
+    "letter_gaps_odd": 0.0,
+    "words_spaced_off": 0.0,
     "line_wave": 0.01,
     "slant_std": 6.0,
     "words_off_line": 0.0,
@@ -60,7 +69,16 @@ class TestFactorScores(unittest.TestCase):
         self.assertLess(score(5, words_off_size=0.04), score(5) - 0.5)
 
     def test_uneven_letter_gaps_lower_letter_spacing(self):
-        self.assertLess(score(9, letter_gap_cv=1.0), score(9) - 1.5)
+        self.assertLess(score(9, letter_gap_spread=0.2), score(9) - 1.5)
+
+    def test_odd_letter_gaps_and_spaced_words_lower_letter_spacing(self):
+        self.assertLess(score(9, letter_gaps_odd=0.05), score(9) - 0.2)
+        self.assertLess(score(9, words_spaced_off=0.04), score(9) - 1.0)
+
+    def test_uneven_word_gaps_lower_word_spacing(self):
+        self.assertLess(score(8, word_gap_spread=0.6), score(8) - 4.0)
+        # One odd gap among twenty costs a point.
+        self.assertAlmostEqual(score(8, word_gaps_odd=0.05), score(8) - 1.0)
 
     def test_a_wavy_line_lowers_line_straightness(self):
         self.assertLess(score(11, line_wave=0.2), score(11) - 3.0)
@@ -71,7 +89,7 @@ class TestFactorScores(unittest.TestCase):
     def test_stand_ins_when_too_little_to_measure(self):
         for key, n in (
             ("bowl_share", 3),
-            ("letter_gap_cv", 9),
+            ("letter_gap_spread", 9),
             ("slant_std", 17),
         ):
             self.assertEqual(
@@ -119,3 +137,57 @@ class TestMarginSpread(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestSpacing(unittest.TestCase):
+    """Word and Letter Spacing (factors 8 and 9) from the gaps (#197)."""
+
+    def test_even_word_gaps_have_no_spread(self):
+        self.assertEqual(_word_spacing([0.2, 0.2, 0.2, 0.2]), (0.0, 0.0))
+
+    def test_word_spread_is_the_mean_distance_from_the_median(self):
+        spread, odd = _word_spacing([0.16, 0.2, 0.24, 0.2])
+        self.assertAlmostEqual(spread, 0.1)
+        self.assertEqual(odd, 0.0)
+
+    def test_a_narrow_or_wide_word_gap_stands_out(self):
+        even = [0.2] * 9
+        self.assertAlmostEqual(_word_spacing(even + [0.05])[1], 0.1)
+        self.assertAlmostEqual(_word_spacing(even + [0.6])[1], 0.1)
+        # A gap a little narrower is not odd.
+        self.assertEqual(_word_spacing(even + [0.12])[1], 0.0)
+
+    def test_too_few_word_gaps_measure_nothing(self):
+        self.assertEqual(_word_spacing([0.2, 0.9]), (0.0, 0.0))
+        self.assertEqual(_word_spacing([0.0, 0.0, 0.0]), (0.0, 0.0))
+
+    def test_even_letter_gaps_score_full_marks(self):
+        spread, odd, off = _letter_spacing([[0.2, 0.2, 0.2]] * 3)
+        self.assertEqual((spread, odd, off), (0.0, 0.0, 0.0))
+
+    def test_a_word_compared_with_itself(self):
+        # Each word even, one spaced a little wider than the other: no
+        # spread, nothing odd, no word off.
+        spread, odd, off = _letter_spacing([[0.2, 0.2, 0.2], [0.3, 0.3]])
+        self.assertEqual((spread, odd, off), (0.0, 0.0, 0.0))
+
+    def test_one_wide_gap_inside_a_word_is_odd(self):
+        spread, odd, _off = _letter_spacing([[0.2, 0.2, 0.2, 0.6], [0.2] * 4])
+        self.assertAlmostEqual(odd, 1 / 8)
+        # One gap cannot set the spread; it is counted as odd instead.
+        self.assertEqual(spread, 0.0)
+
+    def test_a_word_written_with_its_letters_apart(self):
+        words = [[0.2, 0.2, 0.2]] * 4 + [[0.6, 0.6, 0.6]]
+        self.assertAlmostEqual(_letter_spacing(words)[2], 0.2)
+
+    def test_tiny_gaps_are_compared_with_the_floor(self):
+        # Touching letters (gaps 0 and 0.02) are not a doubling.
+        spread, odd, _off = _letter_spacing([[0.0, 0.02, 0.01]] * 2)
+        self.assertLess(spread, 0.2)
+        self.assertEqual(odd, 0.0)
+
+    def test_too_few_letter_gaps_measure_nothing(self):
+        self.assertEqual(_letter_spacing([[0.2], [0.2, 0.2]]), (None,) * 3)
+        # Five gaps, but no word with two: nothing to compare inside.
+        self.assertEqual(_letter_spacing([[0.2]] * 5), (None,) * 3)

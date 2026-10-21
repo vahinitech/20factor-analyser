@@ -162,7 +162,7 @@ overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 | **1 Letter Formation** | `avg_score`: the mean OCR confidence of the handwriting lines; `height_cv`: how much line heights vary | `avg_score x 7.2 + (1 - height_cv) x 2.8` | Yes |
 | **5 Size Consistency** | `size_cv`: standard deviation / mean of each **word's small-letter height**, measured along its line's own baseline (`letter_geometry.py`; since 2026-10-13, #135), as the median height of the word's columns (section 9). Fewer than three words measured: line box heights, as before | `(1 - size_cv / 0.60) x 10` (line boxes: `/ 0.65`) | No |
 | **7 Baseline Alignment** | `line_slope_abs`: mean of each line's angle, from the first two corners of its polygon (the top edge) | `(1 - angle / 8 degrees) x 10` | Yes |
-| **8 Word Spacing** | `word_gap_cv`: variation of every word gap, each divided by its line's height. Gaps come from the ink inside each line (section 3). The space between two boxes left on one row is not a gap: after step 6 of section 2 those are further apart than any word gap (a column, or words never read), and one such space scored Word Spacing 0 on four UJI pages. Fewer than three gaps: "Not measured" | `(1 - word_gap_cv / 1.4) x 10` | Yes |
+| **8 Word Spacing** | `word_gap_spread`: every word gap, each divided by its line's height, and their mean distance from the median gap, as a share of it; `word_gaps_odd`: the share of gaps under half or over twice the median (#197). Gaps come from the ink inside each line (section 3). The space between two boxes left on one row is not a gap: after step 6 of section 2 those are further apart than any word gap (a column, or words never read), and one such space scored Word Spacing 0 on four UJI pages. Fewer than three gaps: "Not measured" | `(1 - word_gap_spread / 1.05) x 10 - 2 x min(1, word_gaps_odd / 0.10)` | Yes |
 | **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
 
 Code: features at `scoring_parts/features.py:41-203`, formulas in
@@ -787,7 +787,10 @@ What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/feature
   have one (a, b, d, e, g, o, p, q); full marks at 90%.
 - **Letter Spacing (9)** was the spread of line width per character. It
   is now the spread of the gaps between the letters (or joined pieces)
-  inside words.
+  inside words. Since #197 each gap is compared with its own word's
+  median gap (median distance, as a share of it), and up to 3 points go
+  as the share of words whose median gap is over twice the page's
+  reaches 10%: a word spaced apart as a whole is even inside itself.
 - **Line Straightness (11)** was the line angle again, the same as
   Baseline. It now also loses up to 5 points as a line's letters wander
   off its fitted baseline (median distance, tails left out), worst line.
