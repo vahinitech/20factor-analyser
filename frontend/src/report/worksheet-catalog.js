@@ -63,5 +63,13 @@ window.VahiniWorksheetCatalog = [
       10,
       20
     ]
+  },
+  {
+    "id": "warm-up-drills",
+    "title": "Warm-up drills",
+    "factors": [
+      4,
+      17
+    ]
   }
 ];

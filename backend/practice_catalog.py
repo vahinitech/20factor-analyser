@@ -156,6 +156,8 @@ MODELS = (
     "start-dots",
     "pairs",
     "waves",
+    "ovals",
+    "push-pulls",
     "page",
 )
 
@@ -412,6 +414,19 @@ FACTORS = {
                     "My lines are smooth, with no wobbles.",
                 ),
                 {7: 0.3},
+            ),
+            _ex(
+                4,
+                "strokes.ovals",
+                1,
+                ("Oval warm-up", "row", "any", "warm-up-drills", "ovals"),
+                (
+                    "Draw ovals between two lines, round and round. Count to"
+                    " ten without lifting. Then go the other way.",
+                    "",
+                    "My ovals are a similar size and lean the same way.",
+                ),
+                {5: 0.3, 17: 0.4},
             ),
             _ex(
                 4,
@@ -997,6 +1012,20 @@ FACTORS = {
             ),
             _ex(
                 17,
+                "slant.push-pull",
+                1,
+                ("Push-pull lines", "row", "any", "warm-up-drills", "push-pulls"),
+                (
+                    "Draw close up-and-down lines between two lines. Count to"
+                    " ten without lifting. Keep every line leaning the same"
+                    " way.",
+                    "",
+                    "My lines stay between the guides and lean one way.",
+                ),
+                {4: 0.5, 12: 0.4},
+            ),
+            _ex(
+                17,
                 "slant.slant-lines",
                 2,
                 ("Slant guides", "line", "latin", "slant", "slant"),
@@ -1255,6 +1284,14 @@ TELUGU_EXERCISES = {
         ),
         "check": "ప్రతి గీత ఒకే శుభ్రమైన గీత.",
     },
+    "strokes.ovals": {
+        "title": "అండాకారాలతో సన్నాహం",
+        "steps": (
+            "రెండు గీతల మధ్య గుండ్రంగా అండాకారాలు గీయండి. పెన్సిల్ ఎత్తకుండా "
+            "పది వరకు లెక్కించండి. తర్వాత వ్యతిరేక దిశలో గీయండి."
+        ),
+        "check": "నా అండాకారాలు ఒకే పరిమాణంలో ఉన్నాయి, ఒకే వైపు వాలాయి.",
+    },
     "size.two-line-ladder": {
         "title": "రెండు గీతల నిచ్చెన",
         "steps": (
@@ -1431,6 +1468,14 @@ TELUGU_EXERCISES = {
             "గీతలను అనుసరించండి."
         ),
         "check": "నా కిందికి గీతలు మార్గదర్శక గీతలను అనుసరించాయి.",
+    },
+    "slant.push-pull": {
+        "title": "పైకి కిందికి గీతలు",
+        "steps": (
+            "రెండు గీతల మధ్య దగ్గర దగ్గరగా పైకి కిందికి గీతలు గీయండి. పెన్సిల్ "
+            "ఎత్తకుండా పది వరకు లెక్కించండి. ప్రతి గీత ఒకే వైపు వాలాలి."
+        ),
+        "check": "నా గీతలు రెండు గీతల మధ్యే ఉన్నాయి, ఒకే వైపు వాలాయి.",
     },
     "read.read-it-back": {
         "title": "చదివి చూడండి",

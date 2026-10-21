@@ -164,7 +164,7 @@ try {
   // Page 2 draws what each exercise's steps say: one drawing per kind, the
   // one the catalogue names for the exercise.
   const drawings = await page.evaluate(() => VahiniReport.MODEL_KINDS.map(k => [k, (VahiniReport.modelHTML(k, 'a o') || '').includes('md-' + (k === 'start-dots' ? 'dots' : k))]));
-  add(drawings.length === 13 && drawings.every(([, ok]) => ok), 'Every drawing kind renders its own model', drawings);
+  add(drawings.length === 15 && drawings.every(([, ok]) => ok), 'Every drawing kind renders its own model', drawings);
   const modelOf = {}; catalogue.factors.forEach(f => (f.exercises || []).forEach(e => { modelOf[e.id] = e.model; }));
   add(free.rows.every(r => r.exercises.every((id, i) => r.models[i] === modelOf[id])), 'Each exercise shows the drawing the catalogue names for it', free.rows.map(r => [r.exercises, r.models]));
   add(await page.evaluate(() => [...document.querySelectorAll('.practice-row')].every(r => r.querySelector('.pr-turn-row .yt'))), 'Each skill has lines to try it, matching its drawing');
