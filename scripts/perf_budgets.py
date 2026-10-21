@@ -8,7 +8,8 @@ output as scripts/benchmark.py does, with backend/perf.py recording.
 Then it builds the Pro report (the practice stage) and checks the page
 against every budget in backend/perf/budgets.json:
 
-    python scripts/perf_budgets.py check [--set uji-clean]
+    python scripts/perf_budgets.py check [--set uji-clean] [--results d]
+    python scripts/perf_budgets.py update-work [--set uji-clean]
 
 It prints each stage's CPU time over the pages (the most any page took,
 and the cap) to stdout and to the job summary, and exits 1 when a page
@@ -16,6 +17,14 @@ broke a budget or was not scored. A stage's cap is set from this table:
 five times the slowest page on GitHub's runners, at least 100 ms, so a
 stage that becomes several times slower fails while runner noise does
 not. Scores are not checked here; the benchmark job checks them.
+
+It also counts each page's work (#250): every stage's runs, sizes and
+call counts (reader calls, model calls, pixels decoded, lines and words
+measured). Unlike time these are the same on every run of the same code,
+so `check` compares them with benchmarks/<set>/work.json and fails when
+any count on any page rises. A fall passes and asks for an update.
+`update-work` writes work.json; `--results` writes the counts this run
+found to <d>/<set>/work.json, so CI can hand them back.
 """
 
 # Scripts here print their results; the analyser modules are imported
@@ -118,7 +127,84 @@ def _cap(slowest_ms):
     )
 
 
-def check(name, limit=None):
+def work(summary):
+    """One page's work from its stage summary, as flat counts: each
+    stage's runs, its sizes and its call counts."""
+    out = {}
+    for stage, row in summary.items():
+        out[f"{stage}.runs"] = row["runs"]
+        for part in ("sizes", "counts"):
+            for key, value in row[part].items():
+                out[f"{stage}.{key}"] = value
+    return dict(sorted(out.items()))
+
+
+def work_changes(now, kept):
+    """(rises, falls): markdown rows for every count that moved against
+    work.json, page by page. A count a page did not have is 0."""
+    rises, falls = [], []
+    for page in sorted(set(now) | set(kept)):
+        new, old = now.get(page, {}), kept.get(page, {})
+        for key in sorted(set(new) | set(old)):
+            a, b = old.get(key, 0), new.get(key, 0)
+            if b > a:
+                rises.append(f"| {page} | {key} | {a} | {b} |")
+            elif b < a:
+                falls.append(f"| {page} | {key} | {a} | {b} |")
+    return rises, falls
+
+
+def _work_path(folder):
+    return os.path.join(folder, "work.json")
+
+
+def _write_work(path, pages):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(pages, f, indent=1, sort_keys=True)
+        f.write("\n")
+
+
+def work_report(folder, pages):
+    """Markdown lines comparing the run's counts with work.json, and
+    whether any count rose."""
+    path = _work_path(folder)
+    if not os.path.exists(path):
+        return [
+            "No work.json for this set yet; `perf_budgets.py update-work` "
+            "writes one.",
+            "",
+        ], False
+    with open(path, encoding="utf-8") as f:
+        kept = json.load(f)
+    rises, falls = work_changes(pages, kept)
+    head = ["| Page | Count | work.json | Now |", "|---|---|---|---|"]
+    out = []
+    if rises:
+        out += [
+            f"**{len(rises)} work count(s) rose.** Each is an extra call, "
+            "rung or pass on a page. If it is meant, run `perf_budgets.py "
+            "update-work`, commit work.json and say why in the pull request.",
+            "",
+            *head,
+            *rises,
+            "",
+        ]
+    if falls:
+        out += [
+            f"{len(falls)} work count(s) fell; run `perf_budgets.py "
+            "update-work` to keep the lower numbers.",
+            "",
+            *head,
+            *falls,
+            "",
+        ]
+    if not rises and not falls:
+        out += ["Every page's work matches work.json.", ""]
+    return out, bool(rises)
+
+
+def check(name, limit=None, results=None):
     """Replay every page of the set (the first `limit` pages, when
     given); returns (markdown lines, number of problems)."""
     folder, meta = benchmark._load_set(name)
@@ -132,9 +218,10 @@ def check(name, limit=None):
     # The first scan in a process pays for imports and tables read once;
     # it is replayed once before anything is measured.
     _replay(server, folder, pages[0], meta)
-    cpu, wall, problems = {}, {}, []
+    cpu, wall, problems, counted = {}, {}, [], {}
     for page in pages:
         summary, scored = _replay(server, folder, page, meta)
+        counted[page] = work(summary)
         if not scored:
             problems.append(f"| {page} | not scored | | | |")
         for item in perf.breaches(summary):
@@ -166,15 +253,43 @@ def check(name, limit=None):
             "|---|---|---|---|---|",
             *problems,
         ]
+    if results:
+        _write_work(os.path.join(results, name, "work.json"), counted)
+    if limit is None:
+        lines, rose = work_report(folder, counted)
+        out += ["", f"### Work per page, {name}", "", *lines]
+        return out, len(problems) + int(rose)
     return out, len(problems)
+
+
+def update_work(name):
+    """Replay the set and write its work.json."""
+    folder, meta = benchmark._load_set(name)
+    benchmark._apply_settings(meta)
+    os.environ.setdefault("VAHINI_OCR_PRELOAD_ON_START", "0")
+    server = _load_server()
+    pages = benchmark._pages(folder)
+    _replay(server, folder, pages[0], meta)
+    counted = {}
+    for page in pages:
+        summary, _scored = _replay(server, folder, page, meta)
+        counted[page] = work(summary)
+    _write_work(_work_path(folder), counted)
+    return [f"Wrote {_work_path(folder)} ({len(pages)} pages)."], 0
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("command", choices=["check"])
+    parser.add_argument("command", choices=["check", "update-work"])
     parser.add_argument("--set", default="uji-clean")
+    parser.add_argument(
+        "--results", help="also write this run's counts to <dir>/<set>/"
+    )
     args = parser.parse_args(argv)
-    lines, failed = check(args.set)
+    if args.command == "update-work":
+        lines, failed = update_work(args.set)
+    else:
+        lines, failed = check(args.set, results=args.results)
     text = "\n".join(lines) + "\n"
     print(text)
     summary = os.environ.get("GITHUB_STEP_SUMMARY")

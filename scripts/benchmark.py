@@ -13,6 +13,7 @@ it through the current code:
     python scripts/benchmark.py update           # accept new scores
     python scripts/benchmark.py capture          # analyser image: read again
     python scripts/benchmark.py live             # analyser image: compare
+    python scripts/benchmark.py langs            # analyser image: en = auto
     python scripts/benchmark.py planted [--update]  # planted mistakes
     python scripts/benchmark.py factors [--update]  # each factor's own
 
@@ -97,9 +98,13 @@ def _crop_key(crop):
 
 
 def _image(folder, page, meta):
+    return _image_file(os.path.join(folder, "pages", page + ".jpg"), meta)
+
+
+def _image_file(path, meta):
     import computer_vision
 
-    with open(os.path.join(folder, "pages", page + ".jpg"), "rb") as f:
+    with open(path, "rb") as f:
         raw = f.read()
     side = int(meta["settings"]["VAHINI_OCR_MAX_SIDE"])
     return raw, computer_vision.to_numpy(raw, max_side=side)
@@ -641,13 +646,16 @@ def _server():
 def read_page(server, folder, page, meta):
     """The reader's output for one page, as the server makes it: raw
     lines, layout regions, and every crop the line recovery reads."""
+    raw, arr = _image(folder, page, meta)
+    return read_image(server, raw, arr, meta["lang"], page)
+
+
+def read_image(server, raw, arr, lang, page):
+    """read_page for a decoded photo and a request language."""
     import layout_filter
     import recognizer
 
-    raw, arr = _image(folder, page, meta)
-    raw_lines, err, _backend, _meta = recognizer.collect_lines(
-        arr, meta["lang"]
-    )
+    raw_lines, err, _backend, _meta = recognizer.collect_lines(arr, lang)
     if err and not raw_lines:
         raise RuntimeError(f"{page}: the reader failed: {err}")
     reads = {}
@@ -744,6 +752,63 @@ def cmd_live(args):
     for p in worse:
         _report(f"- {p}")
     return 1 if (rows or worse) else 0
+
+
+def _moved(a, b):
+    """The scores that differ by more than LIVE_TOLERANCE between two
+    results, as "name a -> b"."""
+    moved = []
+    for n in ["overall"] + list(map(str, SCORED)):
+        x = a["overall"] if n == "overall" else a["scores"][n]
+        y = b["overall"] if n == "overall" else b["scores"][n]
+        scale = 10.0 if n == "overall" else 1.0
+        if (x is None) != (y is None) or (
+            x is not None and abs(x - y) > LIVE_TOLERANCE * scale
+        ):
+            moved.append(f"{n} {_fmt(x)} -> {_fmt(y)}")
+    return moved
+
+
+def cmd_langs(args):
+    """The same photo read with lang=auto and with a named language must
+    give the same lines and the same scores (#145): a named language once
+    read both image variants and kept most lines twice. Every page of the
+    set, and any --photo, is read both ways with the real models."""
+    folder, meta = _load_set(args.set)
+    _apply_settings(meta)
+    server = _server()
+    photos = [
+        (page, os.path.join(folder, "pages", page + ".jpg"))
+        for page in _pages(folder)
+    ]
+    photos += [(os.path.basename(p), p) for p in args.photo or []]
+    rows, failed = [], 0
+    for name, path in photos:
+        got = {}
+        for lang in ("auto", args.lang):
+            raw, arr = _image_file(path, meta)
+            reader = read_image(server, raw, arr, lang, name)
+            got[lang] = _score(arr, raw, reader, meta)
+        a, b = got["auto"], got[args.lang]
+        moved = _moved(a, b)
+        same = len(a["lines"]) == len(b["lines"]) and not moved
+        failed += not same
+        rows.append(
+            f"| {name} | {len(a['lines'])} | {len(b['lines'])} "
+            f"| {a['overall']} | {b['overall']} "
+            f"| {'same' if same else '; '.join(moved) or 'lines differ'} |"
+        )
+    _report(f"## The same photo with `auto` and `{args.lang}`\n")
+    _report(
+        f"| Photo | Lines, auto | Lines, {args.lang} | Overall, auto "
+        f"| Overall, {args.lang} | Scores |\n|---|---|---|---|---|---|\n"
+        + "\n".join(rows)
+    )
+    _report(
+        f"\n{len(photos) - failed} of {len(photos)} photos give the same "
+        f"line count and scores within {LIVE_TOLERANCE} (3 overall points)."
+    )
+    return 1 if failed else 0
 
 
 def cmd_planted(args):
@@ -862,6 +927,11 @@ def main(argv=None):
         )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
+    p = sub.add_parser("langs")
+    p.add_argument("--set", default="uji-clean")
+    p.add_argument("--root", help="a folder of sets outside the repository")
+    p.add_argument("--lang", default="en", help="the named language")
+    p.add_argument("--photo", action="append", help="another photo to read")
     for name in ("planted", "factors"):
         p = sub.add_parser(name)
         p.add_argument(
@@ -879,6 +949,7 @@ def main(argv=None):
         "update": cmd_update,
         "capture": cmd_capture,
         "live": cmd_live,
+        "langs": cmd_langs,
         "planted": cmd_planted,
         "factors": cmd_factors,
     }[args.cmd](args)

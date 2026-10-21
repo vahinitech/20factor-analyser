@@ -27,6 +27,13 @@ The profile is sent with every request and never stored, logged or sent to analy
 
 What a profile changes today: a letter whose accepted forms are set to an empty list (`{"variants": {"set": {"o": []}}}`) is not taught yet. When every letter that factor 3 (loops and bowls) or factor 6 (tall letters) counts is untaught, that factor is "Not measured", with the profile's reason, never a higher score. A profile may not take out every letter, or every small letter. Exception words, skip rules, word lists, checks, ruling and letter model are checked, resolved and hashed but not yet used: the script decision and the language skills that will read them are not built, and exception words never change a geometry factor.
 
+`age_band` (optional) is the writer's age as two whole-year ages from 3 to 18, the first below the second: `6-7`, `9-10`. It is never a birth date or a single exact age, so it says which age norms a page could be compared with and nothing more about the child. A band in any other form (`2019-05-01`, `7`, `7-6`, `06-07`) is HTTP 422 with `detail: {error_code: "age_band_invalid", error, field: "age_band"}`, before the photo is read or a free check is counted. A valid band is echoed as `age_band` at the top of the report, in both formats and on `/report-python`, and is not stored or logged. **No score uses it yet**: the age norms that will read it are #216, so the same photo gives the same scores and the same cache entry with any band or none.
+
+```bash
+curl --max-time 120 https://stage.vahinitech.com/api/v2/reports \
+  -F 'image=@handwriting.jpg' -F 'lang=en' -F 'age_band=6-7'
+```
+
 A refused profile answers before the photo is read and does not count against the free checks: HTTP 413 with `detail: {error_code: "profile_too_large", error, field}` over 16384 bytes, otherwise HTTP 422 with `error_code` one of `profile_not_json`, `profile_field_not_allowed` (a field a profile may not hold), `profile_list_too_long` (a list over its limit, alone or with the layers together), `profile_not_in_pack` (a letter model or form the pack does not list), `profile_empties_class` or `profile_invalid`. `field` says where, such as `class.exceptions.add.words`; the error never repeats what the profile holds.
 
 Use the same request with the customer's Bearer header for Pro. Never put credentials in query strings or bundle a shared Pro credential in the app. Each customer has their own revocable key.
@@ -58,6 +65,7 @@ Responses contain:
 - `limitations`: interpretation limits that clients should retain.
 - Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
 - `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, `passage_aligned`, and `ruleset`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
+- `age_band`: the request's age band as sent (for example `6-7`), only when the request sent one. Not used by any score yet.
 - `ruleset`: the sha256 of the rules the page was scored by, the language pack and the request's `profile`, on every report the scan produced (both tiers, both formats). Never the profile itself.
 
 Each factor score includes the original 0–10 value, normalized 0–100 value, scale boundaries and band. A missing or invalid score is null, never substituted with zero. Status is `estimated`, `proxy`, `measured` (sensor-supplied) or `unavailable`. The image endpoint does not accept sensor measurements. Pressure, speed, stroke order and pen lifts explicitly disclose what a still image cannot measure.
