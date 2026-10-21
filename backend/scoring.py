@@ -46,7 +46,11 @@ from scoring_parts.page import (
     _page_tilt_degrees,
 )
 from scoring_parts.results import AnalysisResult, FactorScore, SectionScore
-from scoring_parts.spatial import LETTER_GAP_SCALE, WAVE_SCALE
+from scoring_parts.spatial import (
+    LETTER_GAP_SCALE,
+    WAVE_SCALE,
+    WORD_GAP_SCALE,
+)
 from scoring_parts.stats import _band, _clamp10, _cv, _std, mean
 from scoring_parts.structure import BOWL_FULL
 from scoring_parts.style import SLANT_SCALE
@@ -62,6 +66,7 @@ __all__ = [
     "SLANT_SCALE",
     "SectionScore",
     "WAVE_SCALE",
+    "WORD_GAP_SCALE",
     "WORD_LETTERS",
     "_MIN_WORD_GAPS",
     "_UNMEASURED_REASONS",
@@ -274,9 +279,14 @@ _INPUT_FEATURES = {
     5: ("size_cv", "words_off_size"),
     6: ("tall_ratio",),
     7: ("line_slope_abs", "words_off_line"),
-    8: ("word_gap_cv", "word_gap_count"),
-    9: ("letter_gap_cv", "char_w_cv"),
-    10: ("left_cv",),
+    8: ("word_gap_spread", "word_gaps_odd", "word_gap_count"),
+    9: (
+        "letter_gap_spread",
+        "letter_gaps_odd",
+        "words_spaced_off",
+        "char_w_cv",
+    ),
+    10: ("left_spread",),
     11: ("line_slope_abs", "line_wave"),
     12: ("line_slope_std",),
     13: ("width_cv",),
@@ -305,7 +315,9 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
     scores = _score_factor_map(fx)
     checks = advisory.run_checks(arr, lines)
     zone_based = advisory.apply_zone_score(checks["zones"], scores)
-    supplied = availability.page_supplies(lines, fx, zone_based)
+    supplied = availability.page_supplies(
+        lines, fx, zone_based, checks["style"]
+    )
     basis = _based_on(fx)
     results = [
         _factor_result(n, fx, scores, supplied, basis, checks, zone_based)

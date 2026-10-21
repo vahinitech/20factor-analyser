@@ -6,11 +6,19 @@
 
 from scoring_parts.stats import _clamp10
 
-# Letter Spacing: the spread (std / mean) of the gaps between letters
-# that loses all marks; Line Straightness: the wander off the baseline,
-# in small letters, that loses its 5 points.
-LETTER_GAP_SCALE = 2.5
+# Word Spacing loses all marks when the word gaps stray from their
+# median, on average, by as much as the median; Letter Spacing when a
+# typical letter gap sits half its word's median gap away
+# (features._word_spacing, _letter_spacing, #197). How high neat
+# writing scores is set later from neat pages (scripts/calibrate.py).
+WORD_GAP_SCALE = 1.0
+LETTER_GAP_SCALE = 0.5
+# Line Straightness: the wander off the baseline, in small letters,
+# that loses its 5 points.
 WAVE_SCALE = 0.25
+# Margin Discipline: how far, as a share of the page width, the rows'
+# starts stray from the margin on average before every mark is lost.
+MARGIN_SCALE = 0.05
 
 
 def add_scores(fx, s):
@@ -21,14 +29,26 @@ def add_scores(fx, s):
         (1.0 - min(1.0, fx["line_slope_abs"] / 8.0)) * 10.0
         - 5.0 * min(1.0, (fx.get("words_off_line") or 0.0) / 0.25)
     )
-    s[8] = _clamp10((1.0 - min(1.0, fx["word_gap_cv"] / 1.4)) * 10.0)
-    if fx.get("letter_gap_cv") is not None:
+    # Less up to 2 points as the share of word gaps that stand out (under
+    # half or over twice the median) reaches 10%: one odd gap among
+    # twenty costs a point, as one word off size does for Size.
+    s[8] = _clamp10(
+        (1.0 - min(1.0, fx["word_gap_spread"] / WORD_GAP_SCALE)) * 10.0
+        - 2.0 * min(1.0, (fx.get("word_gaps_odd") or 0.0) / 0.10)
+    )
+    if fx.get("letter_gap_spread") is not None:
+        # Less up to 1 point as the share of letter gaps over twice their
+        # word's reaches 20%, and up to 3 as the share of words written
+        # with their letters apart reaches 10%.
+        spread = fx["letter_gap_spread"] / LETTER_GAP_SCALE
         s[9] = _clamp10(
-            (1.0 - min(1.0, fx["letter_gap_cv"] / LETTER_GAP_SCALE)) * 10.0
+            (1.0 - min(1.0, spread)) * 10.0
+            - 1.0 * min(1.0, (fx.get("letter_gaps_odd") or 0.0) / 0.20)
+            - 3.0 * min(1.0, (fx.get("words_spaced_off") or 0.0) / 0.10)
         )
     else:
         s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
-    s[10] = _clamp10((1.0 - min(1.0, fx["left_cv"] / 0.55)) * 10.0)
+    s[10] = _clamp10((1.0 - min(1.0, fx["left_spread"] / MARGIN_SCALE)) * 10.0)
     # A straight line is level and does not wave: the slope, less up to 5
     # points as the most wandering line's letters drift a quarter of a
     # small letter off their baseline.

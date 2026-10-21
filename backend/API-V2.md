@@ -38,6 +38,8 @@ A refused profile answers before the photo is read and does not count against th
 
 Use the same request with the customer's Bearer header for Pro. Never put credentials in query strings or bundle a shared Pro credential in the app. Each customer has their own revocable key.
 
+**Stored reports.** When the server keeps report records (`VAHINI_REPORT_STORE_DIR` set; `/health` says `report_store: true`), a successful `format=compact` report also carries `receipt: {id, token, expires}`. Keep it: it is the only way to read the record later, and it is never sent again. `GET /api/v2/reports/{id}` with header `X-Report-Token: <token>` returns the record (`schemas/stored-report.schema.json`): the day, tier, scores, sections, comparability counts and marks, never a photo or the words read. `DELETE` on the same URL with the same header deletes it. The receipt's `read_token` is for the shared PDF: it is refused by `GET`, `DELETE` and renew, and works only in `POST /api/v2/compare` (`Authorization: Bearer <Pro key>`, body `{"receipts": [{"id","token"}, {"id","token"}]}`, the earlier check first, either token), which returns `{before, after, notes}` (`schemas/compare.schema.json`). Without Pro it answers 403 before opening a record; 400 unless exactly two different receipts; 404 with `detail.side` when one opens nothing. It stores nothing. `POST /api/v2/reports/renew` with `{"receipts": [{"id", "token"}, ...]}` (at most 50) keeps each for another 12 months; send it after a new check. Unknown, expired or deleted records and a wrong token all answer 404. `format=expanded` keeps nothing. Details and the privacy rules: [docs/15-persistence.md](../docs/15-persistence.md#report-records-kept-for-every-family-no-personal-data).
+
 ## Access policy
 
 | Output | Free | Pro |
@@ -60,7 +62,7 @@ Responses contain:
 - `summary`: legacy overall score out of 100, factor counts and score-basis description. The legacy aggregate can include image proxies.
 - `factors`: stable `id`, `number`, `name`, `section_id`, `status`, `score`, `reason` and `measurement`. Pro also gets `practice`.
 - `locked_factors`: IDs and `required_tier`, without restricted data.
-- `recognition`: recognized text; Pro also receives recognition metadata.
+- `recognition`: recognized text; Pro also receives recognition metadata. In it, `ink_rows` is true when the factors were measured on rows found from the ink instead of the reader's lines, and `ink_reason` says why: `language` (a language set in `VAHINI_INK_GEOMETRY_LANGS`) or `read_in_fragments` (the reader read the page in pieces, as it does joined cursive; #277). A code, no text.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
 - Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).

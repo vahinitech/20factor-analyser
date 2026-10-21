@@ -262,6 +262,8 @@
                     "start-dots",
                     "pairs",
                     "waves",
+                    "ovals",
+                    "push-pulls",
                     "page"
                   ],
                   "description": "The drawing the report shows under 'Copy this'."
@@ -1285,6 +1287,8 @@
                       "start-dots",
                       "pairs",
                       "waves",
+                      "ovals",
+                      "push-pulls",
                       "page"
                     ],
                     "description": "The drawing the report shows under 'Copy this'."

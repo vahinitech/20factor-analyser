@@ -19,9 +19,11 @@ on:
       - 'scripts/factor_tests.py'
       - 'scripts/calibrate.py'
       - 'scripts/score_ranges.py'
+      - 'scripts/variation_study.py'
       - 'scripts/benchmark.py'
       - 'benchmarks/factors/**'
       - 'benchmarks/neat-penmanship/**'
+      - 'benchmarks/factors-ruled/**'
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
@@ -51,6 +53,12 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Every factor catches its planted mistake as often as before
         run: python scripts/benchmark.py factors
+      # Factor 6 on pages with a printed four-line ruling (#194): the
+      # planted long ascenders still caught, and the same passage twice
+      # by one writer within SAME_PASSAGE_LIMIT at the 90th percentile.
+      - name: Factor 6 on ruled pages, caught and steady
+        if: success() || failure()
+        run: python scripts/benchmark.py factors --ruled
 
   # The calibration tool (scripts/calibrate.py, #197) end to end, with
   # the UJI pages standing in for a neat reference set (they are not

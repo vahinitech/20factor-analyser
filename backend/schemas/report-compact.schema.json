@@ -262,6 +262,9 @@
         "$ref": "common.schema.json#/definitions/coachingCard"
       }
     },
+    "receipt": {
+      "$ref": "common.schema.json#/definitions/receipt"
+    },
     "comparability": {
       "$ref": "common.schema.json#/definitions/comparability"
     },

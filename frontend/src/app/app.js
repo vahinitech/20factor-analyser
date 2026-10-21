@@ -903,6 +903,9 @@ async function runPipeline(){
   const history = loadHistory(state.intake.writerName);
   const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
+  // The shared PDF carries this check's receipt and the page photo for the
+  // Pro comparison (report-share.js); a sample run is not the visitor's page.
+  if (window.VahiniReportShare) VahiniReportShare.setCheck(window.VAHINI_SAMPLE_RUN ? null : { receipt: pyReport.receipt, image: img });
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
   keepIfAsked(blob, window.VAHINI_CHECK_FACTS);

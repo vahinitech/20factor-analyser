@@ -94,13 +94,25 @@ SCALES = {
         "value": 8.0,
         "quiet": {"words_off_line": 0.0},
     },
-    8: {"feature": "word_gap_cv", "part": "spatial", "value": 1.4},
+    # Spacing and margins measure the distance to the median since #197
+    # and #201; the odd-gap terms keep their settings.
+    8: {
+        "feature": "word_gap_spread",
+        "part": "spatial",
+        "constant": "WORD_GAP_SCALE",
+        "quiet": {"word_gaps_odd": 0.0},
+    },
     9: {
-        "feature": "letter_gap_cv",
+        "feature": "letter_gap_spread",
         "part": "spatial",
         "constant": "LETTER_GAP_SCALE",
+        "quiet": {"letter_gaps_odd": 0.0, "words_spaced_off": 0.0},
     },
-    10: {"feature": "left_cv", "part": "spatial", "value": 0.55},
+    10: {
+        "feature": "left_spread",
+        "part": "spatial",
+        "constant": "MARGIN_SCALE",
+    },
     # The line's wave; its slope term (/ 10) keeps its setting.
     11: {
         "feature": "line_wave",

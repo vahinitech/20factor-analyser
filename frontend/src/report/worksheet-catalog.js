@@ -63,5 +63,29 @@ window.VahiniWorksheetCatalog = [
       10,
       20
     ]
+  },
+  {
+    "id": "warm-up-drills",
+    "title": "Warm-up drills",
+    "factors": [
+      4,
+      17
+    ]
+  },
+  {
+    "id": "clear-numbers",
+    "title": "Clear numbers",
+    "factors": [
+      19,
+      1
+    ]
+  },
+  {
+    "id": "letter-families",
+    "title": "Letter families",
+    "factors": [
+      1,
+      6
+    ]
   }
 ];

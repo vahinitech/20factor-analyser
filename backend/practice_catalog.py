@@ -156,6 +156,8 @@ MODELS = (
     "start-dots",
     "pairs",
     "waves",
+    "ovals",
+    "push-pulls",
     "page",
 )
 
@@ -265,6 +267,25 @@ FACTORS = {
                     "All my round letters start in the same place.",
                 ),
                 {3: 0.5, 2: 0.4},
+            ),
+            _ex(
+                1,
+                "shapes.humps-and-cups",
+                2,
+                (
+                    "Humps and cups",
+                    "row",
+                    "latin",
+                    "letter-families",
+                    "trace",
+                ),
+                (
+                    "Write n, m and h: go up and over. Then write i, u and"
+                    " w: go down and round.",
+                    "n m h i u w",
+                    "My humps are round and my cups are open.",
+                ),
+                {2: 0.5, 19: 0.3},
             ),
             _ex(
                 1,
@@ -415,6 +436,19 @@ FACTORS = {
             ),
             _ex(
                 4,
+                "strokes.ovals",
+                1,
+                ("Oval warm-up", "row", "any", "warm-up-drills", "ovals"),
+                (
+                    "Draw ovals between two lines, round and round. Count to"
+                    " ten without lifting. Then go the other way.",
+                    "",
+                    "My ovals are a similar size and lean the same way.",
+                ),
+                {5: 0.3, 17: 0.4},
+            ),
+            _ex(
+                4,
                 "strokes.light-grip",
                 2,
                 ("Light grip", "row", "any", "smooth-strokes", "trace"),
@@ -532,6 +566,25 @@ FACTORS = {
                     "Each part of every letter is on its floor.",
                 ),
                 {5: 0.6, 7: 0.4},
+            ),
+            _ex(
+                6,
+                "zones.hanging-tails",
+                3,
+                (
+                    "Hanging tails",
+                    "row",
+                    "latin",
+                    "letter-families",
+                    "zones",
+                ),
+                (
+                    "Write g, j, y and q. Take each tail below the line. Make"
+                    " the tails the same length.",
+                    "g j y q",
+                    "All my tails hang to the same depth.",
+                ),
+                {7: 0.3, 3: 0.3},
             ),
         ),
         "tips": (
@@ -997,6 +1050,26 @@ FACTORS = {
             ),
             _ex(
                 17,
+                "slant.push-pull",
+                1,
+                (
+                    "Push-pull lines",
+                    "row",
+                    "any",
+                    "warm-up-drills",
+                    "push-pulls",
+                ),
+                (
+                    "Draw close up-and-down lines between two lines. Count to"
+                    " ten without lifting. Keep every line leaning the same"
+                    " way.",
+                    "",
+                    "My lines stay between the guides and lean one way.",
+                ),
+                {4: 0.5, 12: 0.4},
+            ),
+            _ex(
+                17,
                 "slant.slant-lines",
                 2,
                 ("Slant guides", "line", "latin", "slant", "slant"),
@@ -1107,6 +1180,19 @@ FACTORS = {
                 ),
                 {6: 0.5, 1: 0.4},
             ),
+            _ex(
+                19,
+                "distinct.clear-numbers",
+                3,
+                ("Clear numbers", "row", "any", "clear-numbers", "pairs"),
+                (
+                    "Write 1 next to 7, then 4 next to 9. Give 7 a clear top"
+                    " bar. Keep the top of 4 open.",
+                    "1 7 4 9",
+                    "Nobody could mix up my numbers.",
+                ),
+                {1: 0.4, 5: 0.3},
+            ),
         ),
         "tips": (
             _tip(
@@ -1194,6 +1280,14 @@ TELUGU_EXERCISES = {
         ),
         "check": "నా గుండ్రని అక్షరాలన్నీ ఒకే చోట మొదలయ్యాయి.",
     },
+    "shapes.humps-and-cups": {
+        "title": "కొండలు, గిన్నెలు",
+        "steps": (
+            "n, m, h రాయండి: పైకి వెళ్లి గుండ్రంగా తిరగండి. తర్వాత i, u, w "
+            "రాయండి: కిందికి వెళ్లి గుండ్రంగా తిరగండి."
+        ),
+        "check": "నా కొండలు గుండ్రంగా, గిన్నెలు తెరిచి ఉన్నాయి.",
+    },
     "shapes.trace-then-write": {
         "title": "దిద్ది, తర్వాత రాయండి",
         "steps": (
@@ -1255,6 +1349,14 @@ TELUGU_EXERCISES = {
         ),
         "check": "ప్రతి గీత ఒకే శుభ్రమైన గీత.",
     },
+    "strokes.ovals": {
+        "title": "అండాకారాలతో సన్నాహం",
+        "steps": (
+            "రెండు గీతల మధ్య గుండ్రంగా అండాకారాలు గీయండి. పెన్సిల్ ఎత్తకుండా "
+            "పది వరకు లెక్కించండి. తర్వాత వ్యతిరేక దిశలో గీయండి."
+        ),
+        "check": "నా అండాకారాలు ఒకే పరిమాణంలో ఉన్నాయి, ఒకే వైపు వాలాయి.",
+    },
     "size.two-line-ladder": {
         "title": "రెండు గీతల నిచ్చెన",
         "steps": (
@@ -1291,6 +1393,14 @@ TELUGU_EXERCISES = {
             "దాని అంతస్తులో ఉంచండి."
         ),
         "check": "ప్రతి అక్షరం ప్రతి భాగం దాని అంతస్తులో ఉంది.",
+    },
+    "zones.hanging-tails": {
+        "title": "కిందికి వేలాడే తోకలు",
+        "steps": (
+            "g, j, y, q రాయండి. ప్రతి తోకను గీత కిందికి తీసుకెళ్లండి. తోకలన్నీ "
+            "ఒకే పొడవు ఉండాలి."
+        ),
+        "check": "నా తోకలన్నీ గీత కింద ఒకే లోతుకు వేలాడుతున్నాయి.",
     },
     "line.sit-on-the-line": {
         "title": "గీత పైన రాయండి",
@@ -1432,6 +1542,14 @@ TELUGU_EXERCISES = {
         ),
         "check": "నా కిందికి గీతలు మార్గదర్శక గీతలను అనుసరించాయి.",
     },
+    "slant.push-pull": {
+        "title": "పైకి కిందికి గీతలు",
+        "steps": (
+            "రెండు గీతల మధ్య దగ్గర దగ్గరగా పైకి కిందికి గీతలు గీయండి. పెన్సిల్ "
+            "ఎత్తకుండా పది వరకు లెక్కించండి. ప్రతి గీత ఒకే వైపు వాలాలి."
+        ),
+        "check": "నా గీతలు రెండు గీతల మధ్యే ఉన్నాయి, ఒకే వైపు వాలాయి.",
+    },
     "read.read-it-back": {
         "title": "చదివి చూడండి",
         "steps": (
@@ -1463,6 +1581,14 @@ TELUGU_EXERCISES = {
             "తెరిచి ఉంచండి."
         ),
         "check": "ప్రతి అక్షరం దానిలాగే కనిపిస్తోంది.",
+    },
+    "distinct.clear-numbers": {
+        "title": "స్పష్టమైన అంకెలు",
+        "steps": (
+            "1 పక్కన 7 రాయండి, తర్వాత 4 పక్కన 9 రాయండి. 7 పైన స్పష్టమైన "
+            "అడ్డగీత పెట్టండి. 4 పైభాగం తెరిచి ఉంచండి."
+        ),
+        "check": "నా అంకెలను ఎవరూ తికమక పడరు.",
     },
     "neat.clean-page": {
         "title": "శుభ్రమైన పేజీ",

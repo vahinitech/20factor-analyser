@@ -352,6 +352,37 @@
       "minimum": 0,
       "maximum": 100
     },
+    "receipt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "token",
+        "read_token",
+        "expires"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "token": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "description": "Reads, renews and deletes. Stays in the family's browser."
+        },
+        "read_token": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]{43}$",
+          "description": "Goes into the shared PDF. Opens the record only through POST /api/v2/compare with a Pro key; never reads alone, renews or deletes."
+        },
+        "expires": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        }
+      },
+      "description": "How the family reads this report back later (GET /api/v2/reports/{id} with header X-Report-Token). Random; only the token's SHA-256 is kept, and nothing links it to a person. Kept until expires, renewed by a later check (backend/report_store.py)."
+    },
     "catalogVersion": {
       "type": "string",
       "pattern": "^[0-9a-f]{20}$",
@@ -1060,6 +1091,23 @@
           ]
         },
         "passage_match": {},
+        "ink_rows": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ink_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "language",
+            "read_in_fragments",
+            null
+          ]
+        },
         "note": {
           "type": "string"
         }

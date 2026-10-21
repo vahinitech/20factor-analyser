@@ -75,7 +75,11 @@ a table of every number that moved:
 ```
 
 - **The move was meant.** Run `python scripts/benchmark.py update` and
-  commit `expected.json` with the change. The diff of `expected.json` is
+  commit `expected.json` with the change. Where the replay cannot run
+  (the shared production host), take the file from CI instead: the
+  `benchmark` job keeps what `update` would write as the
+  `benchmark-results` artifact (`check --results <dir>`); copy its
+  `<set>/expected.json` over the committed one. The diff of `expected.json` is
   the record: every score that moved is in the pull request, for the
   reviewer to see, and `git log -p benchmarks/uji-clean/expected.json` is
   the history of every page.
@@ -197,12 +201,31 @@ mistake, and fails when a factor catches its mistake less often than
 about a quarter of an hour, so `.github/workflows/factor-tests.yml` runs
 it when the measuring code changes, weekly and by hand.
 
+`factors --ruled` does the same for factor 6 on pages with a printed
+four-line ruling (`planted_pages.build_page(ruled=True)`: the ascender
+line, a dashed midline, the baseline and the descender line under each
+line, drawn with no random numbers, so the writing is the same as on
+the unruled page). It checks the planted long ascenders against
+`benchmarks/factors-ruled/expected.json`, and how far factor 6 moves
+between two pages of the same passage by one writer
+(`variation_study.synthetic_pairs`, two pairs a writer): the 90th
+percentile may not rise. On 21 October 2026, on ruled pages:
+
+| | Caught | Same passage: median | 90th percentile | Largest |
+|---|---|---|---|---|
+| Measured against the ruling | 0.85 | 0.2 | 1.31 | 6.4 |
+| Measured from the ink, as before | 0.60 | 1.15 | 5.33 | 9.4 |
+
+(Unruled pages, from the ink: caught 0.75, same passage 1.4, 4.54 and
+9.1.) The 90th percentile is above the 1.0 of #157's stability test,
+which the drawn-letter version of it (`test_zone_ruling.py`) meets.
+
 ## Setting the scales from neat writing (#197)
 
 Most factors turn a measured spread into a score along a straight line,
 `10 x (1 - spread / scale)`, and the scale is set by hand in
-`backend/scoring_parts/` (`LETTER_GAP_SCALE` 2.5, `SLANT_SCALE` 40, the
-size scale 0.60 and others). How high neat writing scores is that
+`backend/scoring_parts/` (`WORD_GAP_SCALE` 1.0, `LETTER_GAP_SCALE` 0.5,
+`SLANT_SCALE` 40, the size scale 0.60 and others). How high neat writing scores is that
 setting, apart from whether the factor sees a mistake at all. The UJI
 pages cannot set it: their page maker spaces letters with plus or minus
 30% random gaps, so they are not neat writing. The scales stay as they
@@ -437,6 +460,19 @@ python scripts/benchmark.py update  --root ~/eval-data/benchmarks --set telugu-i
 `set.json` may give each page its own written text (`page_text`) instead
 of one list of sentences; text is matched in any script. Such a set runs
 by hand on a machine that holds it, never in CI.
+
+## Pages read in pieces (#277)
+
+The reader reads joined cursive in pieces, and such a page is measured on
+whole rows of its ink instead ([02-how-a-scan-works.md](02-how-a-scan-works.md),
+section 2). The replay does the same. `benchmark.py fragments --set <name>`
+prints, for each page, how the reader's lines sit on the rows: rows,
+lines, the share of the rows' ink the lines span, lines per row, the share
+of short lines, and whether the page counts as read in pieces. CI runs it
+with `--none` on every real-handwriting set: no UJI page may be read in
+pieces, and the table in the job summary shows how far each page is from
+the thresholds (on 21 October 2026 the closest was UPV_W21: lines span 75%
+of its rows, a quarter of them short).
 
 ## Telugu (19 October 2026)
 

@@ -1,0 +1,19 @@
+{
+"same_passage": {
+"ruled": {
+"max": 6.4,
+"median": 0.2,
+"p90": 1.31,
+"pairs": 40
+},
+"unruled": {
+"max": 9.1,
+"median": 1.4,
+"p90": 4.54,
+"pairs": 40
+}
+},
+"tall_ascenders": {
+"6": 0.85
+}
+}

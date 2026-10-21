@@ -1131,6 +1131,9 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .md-margin i{ display:block; height:2px; width:55%; background:var(--v-paper-ink); opacity:.6; margin-left:2px; }
 .md-margin i:nth-child(2){ width:70%; } .md-margin i:nth-child(3){ width:40%; }
 .md-waves svg{ width:100%; height:80%; } .md-waves path{ fill:none; stroke:var(--v-paper-ink); stroke-width:2.2; stroke-linecap:round; }
+.md-ovals svg, .md-push-pulls svg{ width:100%; height:80%; } .md-ovals ellipse, .md-push-pulls path{ fill:none; stroke:var(--v-paper-ink); stroke-width:1.6; stroke-linecap:round; }
+.md-ovals path, .md-push-pulls path{ fill:none; }
+.md-ovals .md-way, .md-push-pulls .md-way{ stroke:var(--v-highlight); stroke-width:2; stroke-linejoin:round; }
 .md-page{ justify-content:flex-start; }
 .md-sheet{ display:flex; flex-direction:column; gap:4px; justify-content:center; width:90px; height:90%; border:1px solid var(--v-border-strong); border-radius:3px; padding:3px 8px 3px 16px; background:linear-gradient(var(--v-highlight),var(--v-highlight)) 11px 0/1px 100% no-repeat, var(--v-surface); }
 .md-sheet i{ display:block; height:2px; background:var(--v-paper-ink); opacity:.55; }

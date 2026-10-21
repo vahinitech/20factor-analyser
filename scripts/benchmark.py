@@ -16,6 +16,7 @@ it through the current code:
     python scripts/benchmark.py langs            # analyser image: en = auto
     python scripts/benchmark.py planted [--update]  # planted mistakes
     python scripts/benchmark.py factors [--update]  # each factor's own
+    python scripts/benchmark.py fragments        # read in pieces? (#277)
 
 check fails when any score, line or text differs from expected.json, and
 prints a table of what moved. Accepting a change is running update and
@@ -150,13 +151,11 @@ def _score_ink(arr, page, meta):
     }
 
 
-def _score(arr, raw, reader, meta):
-    """One page through the pipeline after the reader, from its kept
-    output. Returns the result kept in expected.json."""
-    import computer_vision
+def _reader_lines(arr, raw, reader, meta):
+    """(every line kept, handwriting lines) from the kept reader output,
+    as recognizer.extract_hand_lines gives them in the server."""
     import layout_filter
     import recognizer
-    import scoring
 
     recognizer.configure(
         ocr_langs=meta["settings"]["VAHINI_OCR_LANGS"].split(","),
@@ -175,13 +174,29 @@ def _score(arr, raw, reader, meta):
 
     try:
         lines = [dict(l) for l in reader["raw_lines"]]
-        _all, hand = recognizer.extract_hand_lines(
+        return recognizer.extract_hand_lines(
             arr, lines, raw_bytes=raw, read_region=read_region
         )
     finally:
         layout_filter.excluded_regions = real_regions
-    layout = computer_vision.vl_analyze(arr, hand, False)["layout"]
-    analysis = scoring.build_analysis(arr, hand, layout).to_dict()
+
+
+def _score(arr, raw, reader, meta):
+    """One page through the pipeline after the reader, from its kept
+    output. Returns the result kept in expected.json. A page the reader
+    read in pieces is measured on whole rows of its ink, as the server
+    does (ink_geometry.fragment_rows, #277); the lines kept are still
+    the reader's."""
+    import computer_vision
+    import ink_geometry
+    import scoring
+
+    found, hand = _reader_lines(arr, raw, reader, meta)
+    printed = [l for l in found if l.get("printed_hint")]
+    rows, _cover = ink_geometry.fragment_rows(arr, hand, printed)
+    measured = rows or hand
+    layout = computer_vision.vl_analyze(arr, measured, False)["layout"]
+    analysis = scoring.build_analysis(arr, measured, layout).to_dict()
     results = {r["n"]: r for r in analysis["results"]}
     return {
         "overall": analysis["overall"],
@@ -577,9 +592,38 @@ def _report(text):
             f.write(text + "\n")
 
 
+def _results(name, meta, results):
+    """What update writes to expected.json."""
+    return {
+        "set": name,
+        "eye_agreement": eye_agreement(meta, results),
+        "pages": results,
+    }
+
+
+def _write_results(path, data):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=1, sort_keys=True)
+        f.write("\n")
+
+
 def cmd_check(args):
     meta, results, problems = run_set(args.set)
     folder = os.path.join(SETS[0], args.set)
+    if args.results:
+        # The expected.json update would write, so a pull request that
+        # means to move scores can take it from CI's artifact.
+        _write_results(
+            os.path.join(args.results, args.set, "expected.json"),
+            _results(args.set, meta, results),
+        )
+        if not _ink_mode(meta):
+            base = _load_reading(args.set) or {}
+            _write_results(
+                os.path.join(args.results, args.set, "reading.json"),
+                ratchet(reading(meta, results), base),
+            )
     with open(os.path.join(folder, "expected.json"), encoding="utf-8") as f:
         expected = json.load(f)
     problems += _limits(meta, results, expected)
@@ -615,17 +659,11 @@ def cmd_update(args):
         for p in problems:
             print(p)
         return 1
-    out = {
-        "set": args.set,
-        "eye_agreement": eye_agreement(meta, results),
-        "pages": results,
-    }
     hard = _limits(meta, results, {})
-    with open(
-        os.path.join(folder, "expected.json"), "w", encoding="utf-8"
-    ) as f:
-        json.dump(out, f, indent=1, sort_keys=True)
-        f.write("\n")
+    _write_results(
+        os.path.join(folder, "expected.json"),
+        _results(args.set, meta, results),
+    )
     if not _ink_mode(meta):
         # The reading baseline only ever falls: a rise is reported, and
         # raising it is a hand edit with the reason in the pull request.
@@ -876,6 +914,91 @@ def cmd_planted(args):
     return 1 if (problems or changed) else 0
 
 
+# On printed ruling (#194): the mistakes factor 6 is measured against,
+# and how far it may move between two pages of the same passage by one
+# writer: no further than benchmarks/factors-ruled/expected.json keeps,
+# or than #157's limit when nothing is kept. On 21 October 2026 the
+# UJI writers' ruled pages moved 1.31 at the 90th percentile, above that
+# limit (and 5.33 with the ink-only measurement on the same pages).
+RULED_KINDS = ("tall_ascenders",)
+SAME_PASSAGE_LIMIT = 1.0
+SAME_PASSAGE_PAIRS = 2
+
+
+def ruled_spread(uji):
+    """Factor 6's move between two pages of the same passage by one
+    writer, on ruled and on unruled paper: the median, 90th percentile
+    and largest over every UJI writer's pairs."""
+    spec = importlib.util.spec_from_file_location(
+        "variation_study", os.path.join(ROOT, "scripts", "variation_study.py")
+    )
+    vs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vs)
+    planted = vs._planted()  # pylint: disable=protected-access
+    writers = planted.parse(planted.fetch(uji))
+    writers = {
+        w: letters
+        for w, letters in writers.items()
+        if all(
+            ch in letters
+            for s in planted.SENTENCES[:4]
+            for ch in s.replace(" ", "")
+        )
+    }
+    out = {}
+    for paper, ruled in (("ruled", True), ("unruled", False)):
+        pairs = vs.synthetic_pairs(
+            writers, SAME_PASSAGE_PAIRS, planted, ruled=ruled
+        )
+        moves = sorted(
+            abs(a[6] - b[6])
+            for _w, a, b in pairs
+            if a.get(6) is not None and b.get(6) is not None
+        )
+        out[paper] = {
+            "pairs": len(moves),
+            "median": _quantile(moves, 0.5),
+            "p90": _quantile(moves, 0.9),
+            "max": round(moves[-1], 2) if moves else None,
+        }
+    return out
+
+
+def _quantile(xs, q):
+    """The q quantile of sorted xs, interpolated as numpy does, to two
+    places; None for none."""
+    if not xs:
+        return None
+    pos = (len(xs) - 1) * q
+    lo = int(pos)
+    hi = min(lo + 1, len(xs) - 1)
+    return round(xs[lo] + (xs[hi] - xs[lo]) * (pos - lo), 2)
+
+
+def _spread_report(spread, kept):
+    """The same-passage table; a problem when the ruled pages' 90th
+    percentile rose over the one kept (kept: the expected file's), or
+    is over SAME_PASSAGE_LIMIT when none is kept."""
+    _report(
+        "\n### Factor 6, the same passage twice by one writer\n\n"
+        "| Paper | Pairs | Median move | 90th percentile | Largest |\n"
+        "|---|---|---|---|---|\n"
+        + "\n".join(
+            f"| {paper} | {s['pairs']} | {s['median']} | {s['p90']} "
+            f"| {s['max']} |"
+            for paper, s in spread.items()
+        )
+    )
+    p90 = spread["ruled"]["p90"]
+    limit = ((kept or {}).get("ruled") or {}).get("p90", SAME_PASSAGE_LIMIT)
+    if p90 is not None and p90 > limit:
+        return [
+            f"ruled pages: factor 6 moves {p90} at the 90th percentile "
+            f"between pages of the same passage, over {limit}"
+        ]
+    return []
+
+
 def cmd_factors(args):
     """Every factor against a mistake planted for it (scripts/
     factor_tests.py): how often each catches its mistake may not fall
@@ -885,14 +1008,17 @@ def cmd_factors(args):
     )
     ft = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ft)
-    kinds = list(ft.TARGETS)
+    kinds = list(RULED_KINDS if args.ruled else ft.TARGETS)
     with contextlib.redirect_stderr(io.StringIO()):
-        rows = ft.run(args.uji, kinds, False)
+        rows = ft.run(args.uji, kinds, False, ruled=args.ruled)
     now = {
         kind: {n: t.get("caught") for n, t in v["targets"].items()}
         for kind, v in ft.summarise(rows).items()
     }
-    path = os.path.join(SETS[0], "factors", "expected.json")
+    name = "factors-ruled" if args.ruled else "factors"
+    path = os.path.join(SETS[0], name, "expected.json")
+    if args.ruled:
+        now["same_passage"] = ruled_spread(args.uji)
     if args.update:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         _dump(path, now)
@@ -901,6 +1027,8 @@ def cmd_factors(args):
         old = json.load(f)
     problems, lines = [], []
     for kind, targets in sorted(now.items()):
+        if kind == "same_passage":
+            continue
         for n, caught in sorted(targets.items()):
             was = old.get(kind, {}).get(n)
             lines.append(f"| {kind} | {n} | {was} | {caught} |")
@@ -913,6 +1041,10 @@ def cmd_factors(args):
         "| Mistake | Factor | Expected | Now |\n|---|---|---|---|\n"
         + "\n".join(lines)
     )
+    if args.ruled:
+        problems += _spread_report(
+            now["same_passage"], old.get("same_passage")
+        )
     for p in problems:
         _report(f"- {p}")
     if not problems and now != old:
@@ -920,12 +1052,69 @@ def cmd_factors(args):
     return 1 if problems or now != old else 0
 
 
+def cmd_fragments(args):
+    """Each page's reader boxes against its ink rows (ink_geometry.
+    reader_cover) beside the FRAGMENT_* thresholds: how far each page is
+    from being measured from the ink as read in pieces (#277). --page
+    limits it to the pages named; --none fails when any page is read in
+    pieces (a set that must stay on the reader's lines)."""
+    folder, meta = _load_set(args.set)
+    _apply_settings(meta)
+    import ink_geometry as ig
+
+    if _ink_mode(meta):
+        _report(f"{args.set}: measured from the ink, nothing read.")
+        return 0
+    out = [
+        f"## Read in pieces? {args.set}\n",
+        f"In pieces: {ig.FRAGMENT_MIN_ROWS} rows or more, and cover "
+        f"under {ig.FRAGMENT_COVER}, {ig.FRAGMENT_PIECES} lines per row or "
+        f"more, or a short share of {ig.FRAGMENT_SHORT_SHARE} or more "
+        f"(a line under {ig.FRAGMENT_SHORT} of its row's ink).\n",
+        "| Page | Rows | Reader lines | Cover | Lines per row "
+        "| Short | In pieces |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    in_pieces = []
+    for page in args.page or _pages(folder):
+        raw, arr = _image(folder, page, meta)
+        with open(
+            os.path.join(folder, "reader", page + ".json"), encoding="utf-8"
+        ) as f:
+            reader = json.load(f)
+        try:
+            found, hand = _reader_lines(arr, raw, reader, meta)
+        except MissingRead:
+            out.append(f"| {page} | reads a crop not kept | | | | | |")
+            continue
+        if not hand:
+            out.append(f"| {page} | no handwriting read | | | | | |")
+            continue
+        # The numbers even where the server does not look at the ink.
+        printed = [l for l in found if l.get("printed_hint")]
+        _rows, c = ig.reader_rows(arr, hand, printed)
+        decided = ig.fragment_rows(arr, hand, printed)[1]
+        if decided["fragments"]:
+            in_pieces.append(page)
+        verdict = "yes" if decided["fragments"] else "no"
+        if not decided["looked"]:
+            verdict += ", ink not looked at"
+        out.append(
+            f"| {page} | {c['rows']} | {c['pieces']} | {c['cover']:.2f} "
+            f"| {c['per_row']:g} | {c['short']:.2f} | {verdict} |"
+        )
+    if args.none and in_pieces:
+        out.append(f"\n**Read in pieces: {', '.join(in_pieces)}.**")
+    _report("\n".join(out) + "\n")
+    return 1 if args.none and in_pieces else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n", maxsplit=1)[0]
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("check", "update", "capture", "live"):
+    for name in ("check", "update", "capture", "live", "fragments"):
         p = sub.add_parser(name)
         p.add_argument("--set", default="uji-clean")
         p.add_argument(
@@ -934,6 +1123,16 @@ def main(argv=None):
         )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
+        if name == "check":
+            p.add_argument(
+                "--results",
+                help="also write what update would to <dir>/<set>/",
+            )
+        if name == "fragments":
+            p.add_argument("--page", action="append", help="this page only")
+            p.add_argument(
+                "--none", action="store_true", help="fail on a page in pieces"
+            )
     p = sub.add_parser("langs")
     p.add_argument("--set", default="uji-clean")
     p.add_argument("--root", help="a folder of sets outside the repository")
@@ -948,6 +1147,12 @@ def main(argv=None):
             ),
         )
         p.add_argument("--update", action="store_true")
+        if name == "factors":
+            p.add_argument(
+                "--ruled",
+                action="store_true",
+                help="pages on printed ruling (factor 6, #194)",
+            )
     args = ap.parse_args(argv)
     if getattr(args, "root", None):
         SETS[0] = os.path.abspath(args.root)
@@ -959,6 +1164,7 @@ def main(argv=None):
         "langs": cmd_langs,
         "planted": cmd_planted,
         "factors": cmd_factors,
+        "fragments": cmd_fragments,
     }[args.cmd](args)
 
 

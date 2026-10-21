@@ -172,6 +172,211 @@ def _own_ink_extent(ink, midline, baseline):
     return min(tops), max(bottoms)
 
 
+# Printed ruling (#194): a worksheet's guide lines, or a notebook's
+# four-line ruling, give each line's small-letter band from the paper
+# instead of from the writing, so the band no longer moves with
+# whatever else changes in the line. A rule is a row of pixels at least
+# RULE_DARK grey levels darker than the paper RULE_THICK rows above and
+# below it (thin, so a letter's stroke does not count), on at least
+# RULE_COVER of the columns where the paper above and below is clear (a
+# dashed midline counts), on rows clear across 30% of the writing.
+RULE_DARK = 40
+RULE_THICK = 4
+RULE_COVER = 0.45
+# A line is on the ruling when one gap between two rules holds this
+# many times the ink per row of the gaps either side (_ruled_band).
+RULE_DENSE = 1.5
+# The page is measured against the ruling when at least this share of
+# its measurable lines is on it, and at least two lines are.
+RULED_SHARE = 0.5
+
+
+def find_ruling(gray, x0, x1):
+    """Printed ruling across columns x0 to x1 of the page: (rows, mask),
+    the rule rows (each the middle of its run of rows) and the rule's
+    pixels, to take out of the ink. ([], None) when there is none.
+
+    A pixel is on a rule when it is RULE_DARK darker than the pixels
+    RULE_THICK rows above and below it, and those two are paper. Only
+    such columns are counted: where a letter stands on or crosses the
+    rule, the column says nothing either way. The top and bottom edges
+    of a line of writing are not rules: one side of them is ink."""
+    if cv2 is None or x1 - x0 < 20:
+        return [], None
+    crop = np.ascontiguousarray(gray[:, x0:x1])
+    k = RULE_THICK
+    c = crop.astype(np.int16)
+    up = np.full_like(c, 255)
+    up[k:] = c[:-k]
+    down = np.full_like(c, 255)
+    down[:-k] = c[k:]
+    paper = cv2.dilate(crop, np.ones((2 * k + 1, 15), np.uint8))
+    light = paper.astype(np.int16) - RULE_DARK // 2
+    clear = (up >= light) & (down >= light)
+    thin = clear & (c < np.minimum(up, down) - RULE_DARK)
+    near = thin.copy()
+    near[1:] |= thin[:-1]
+    near[:-1] |= thin[1:]
+    counted = clear.sum(axis=1)
+    cover = near.sum(axis=1) / np.maximum(1, counted)
+    width = x1 - x0
+    rows = np.nonzero((cover >= RULE_COVER) & (counted >= 0.3 * width))[0]
+    if rows.size == 0:
+        return [], None
+    runs, start = [], rows[0]
+    for a, b in zip(rows, list(rows[1:]) + [None]):
+        if b is None or b != a + 1:
+            runs.append((int(start), int(a)))
+            start = b
+    centres = [(a + b) / 2.0 for a, b in runs]
+    # The rule's pixels: dark ones on its rows with paper above and
+    # below, so a letter crossing or ending on the rule keeps its ink.
+    dark = c < paper.astype(np.int16) - RULE_DARK
+    stroke = (up < light) | (down < light)
+    mask = np.zeros(gray.shape[:2], dtype=bool)
+    for a, b in runs:
+        lo, hi = max(0, a - 1), min(gray.shape[0], b + 2)
+        mask[lo:hi, x0:x1] = dark[lo:hi] & ~stroke[lo:hi]
+    return centres, mask
+
+
+def ruled_zone_bands(gray, box, rules, rule_mask):
+    """Zone geometry for one line measured against the printed ruling:
+    the two rules around its small letters (_ruled_band) are its
+    midline and baseline, and its letters' reach is taken from them.
+    None when the line is not written on the ruling."""
+    h_img, w_img = gray.shape[:2]
+    x, y, w, h = [int(round(float(v))) for v in box[:4]]
+    pad = max(4, h // 2)
+    clamped = clamp_box(x, y - pad, max(1, w), h + 2 * pad, w_img, h_img)
+    if clamped is None:
+        return None
+    x0, y0, x1, y1 = clamped
+    if y1 - y0 < MIN_XHEIGHT_PX:
+        return None
+    ink = binarise(gray[y0:y1, x0:x1]) & ~rule_mask[y0:y1, x0:x1]
+    profile = ink.sum(axis=1).astype(np.float64)
+    if float(profile.max()) < 3.0:
+        return None
+    band = _ruled_band(
+        profile,
+        [r - y0 for r in rules if y0 <= r < y1],
+        (y - y0, y + h - y0),
+    )
+    if band is None:
+        return None
+    top, bottom = band
+    h_m = bottom - top
+    reach = _ruled_reach(ink, top, bottom)
+    if reach is None:
+        return None
+    asc, desc = reach
+    return {
+        "h_m": int(round(h_m)),
+        "h_u": int(round(((asc or 1.0) - 1.0) * h_m)),
+        "h_l": int(round(((desc or 1.0) - 1.0) * h_m)),
+        "asc_reach": asc,
+        "desc_reach": desc,
+    }
+
+
+def _ruled_band(profile, rules, inside):
+    """The line's small-letter band on the ruling: of the gaps between
+    two neighbouring rules (at least MIN_XHEIGHT_PX apart) whose middle
+    lies inside the line's box (inside: its top and bottom rows), the one
+    with the most ink per row, when it holds RULE_DENSE times the ink per row
+    of the gaps either side. (top, bottom) in the profile's rows, or
+    None.
+
+    Small letters fill their band; only tall letters and tails cross the
+    bands above and below. Where one dotted rule runs under each line,
+    each gap holds a whole line of writing and no gap stands out, so
+    the page keeps the measurement from the ink. The band does not come
+    from the ink's own densest rows: a line of long ascenders thickens
+    the rows above the midline, and that band would leave the ruling."""
+    rules = sorted(rules)
+    gaps = [
+        (a, b) for a, b in zip(rules, rules[1:]) if b - a >= MIN_XHEIGHT_PX
+    ]
+    dens = [
+        float(profile[int(round(a)) : int(round(b))].mean()) for a, b in gaps
+    ]
+    mine = [
+        i
+        for i, (a, b) in enumerate(gaps)
+        if inside[0] <= (a + b) / 2 <= inside[1]
+    ]
+    if not mine:
+        return None
+    best = max(mine, key=lambda i: (dens[i], -i))
+    others = [dens[i] for i in (best - 1, best + 1) if 0 <= i < len(dens)]
+    if dens[best] <= 0 or not others:
+        return None
+    if dens[best] < RULE_DENSE * max(others):
+        return None
+    return gaps[best]
+
+
+# A letter rises above the ruled small-letter band (or hangs below it)
+# when it passes the band by more than this share of it.
+TALL_PAST = 0.5
+
+
+def _ruled_reach(ink, top, bottom):
+    """The line's ascender and descender reach against its ruled band
+    (rows top to bottom of the crop): the median over the letters that
+    rise above it, and over those that hang below, each in ruled
+    x-heights; None for a side no letter reaches, which says nothing
+    about how long that side's letters are. The line's own letters are the ink
+    blobs covering at least half of the band (_own_ink_extent).
+
+    The median, not the tallest letter: a tail from the line above that
+    touches one of this line's ascenders makes one blob as tall as both,
+    and whether it touches differs from one page of the same passage to
+    the next. A line whose tall letters are all longer still moves."""
+    if cv2 is None:
+        return None
+    n, _, stats, _ = cv2.connectedComponentsWithStats(
+        ink.astype(np.uint8), connectivity=8
+    )
+    h_m = bottom - top
+    need = 0.5 * h_m
+    ups, downs, own = [], [], 0
+    for i in range(1, n):
+        y0 = int(stats[i, cv2.CC_STAT_TOP])
+        y1 = y0 + int(stats[i, cv2.CC_STAT_HEIGHT]) - 1
+        if min(y1, bottom) - max(y0, top) + 1 < need:
+            continue
+        own += 1
+        if top - y0 > TALL_PAST * h_m:
+            ups.append((bottom - y0) / h_m)
+        if y1 - bottom > TALL_PAST * h_m:
+            downs.append((y1 - top) / h_m)
+    if not own:
+        return None
+    asc = float(np.median(ups)) if ups else None
+    desc = float(np.median(downs)) if downs else None
+    return asc, desc
+
+
+def _ruled_lines(gray, lines):
+    """Each line's zone bands measured against the page's printed
+    ruling, or None when the page is not ruled (RULED_SHARE)."""
+    boxes = [l.get("box") for l in lines if l.get("box")]
+    if len(boxes) < 2:
+        return None
+    x0 = max(0, int(min(float(b[0]) for b in boxes)))
+    x1 = min(gray.shape[1], int(max(float(b[0]) + float(b[2]) for b in boxes)))
+    rules, mask = find_ruling(gray, x0, x1)
+    if len(rules) < 2:
+        return None
+    per_line = [ruled_zone_bands(gray, b, rules, mask) for b in boxes]
+    per_line = [z for z in per_line if z is not None]
+    if len(per_line) < max(2, RULED_SHARE * len(boxes)):
+        return None
+    return per_line
+
+
 def _median(vals):
     return float(np.median(np.asarray(vals, dtype=np.float64)))
 
@@ -200,22 +405,30 @@ def analyze_zones(gray, lines):
             "reason": "not enough Latin letters to apply the zone rule",
         }
 
-    per_line = []
-    for l in lines:
-        b = l.get("box")
-        if not b:
-            continue
-        z = line_zone_bands(gray, b)
-        if z is not None:
-            per_line.append(z)
+    # On ruled paper the bands come from the printed lines; otherwise
+    # from each line's own ink, as before.
+    per_line = _ruled_lines(gray, lines)
+    ruled = per_line is not None
+    if not ruled:
+        per_line = []
+        for l in lines:
+            b = l.get("box")
+            if not b:
+                continue
+            z = line_zone_bands(gray, b)
+            if z is not None:
+                per_line.append(z)
     if len(per_line) < 2:
         return {
             "available": False,
             "reason": "too few measurable lines for zone bands",
         }
 
-    asc = [z["asc_reach"] for z in per_line]
-    desc = [z["desc_reach"] for z in per_line]
+    # A ruled line with no tall letter (or no tail) is left out of that
+    # side; when no line has one, the letters stay in one zone (1.0).
+    asc = [z["asc_reach"] for z in per_line if z["asc_reach"] is not None]
+    desc = [z["desc_reach"] for z in per_line if z["desc_reach"] is not None]
+    asc, desc = asc or [1.0], desc or [1.0]
     out = {
         "available": True,
         "linesUsed": len(per_line),
@@ -226,6 +439,8 @@ def analyze_zones(gray, lines):
         "ascReachCv": round(_cv(asc), 3) if has_asc else None,
         "descReachCv": round(_cv(desc), 3) if has_desc else None,
     }
+    if ruled:
+        out["ruled"] = True
     # The coach's three mistakes, named.
     flags = []
     for key, present in (("ascReach", has_asc), ("descReach", has_desc)):
