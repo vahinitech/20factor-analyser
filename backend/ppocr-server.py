@@ -70,6 +70,7 @@ import escalation  # each line up its ladder (#219)
 from languages import stages  # which engine reads each script (#208)
 from languages import ladders  # the order stages read a line (#219)
 from languages import profile as profiles  # school/class/child rules (#220)
+import age_band as age_bands  # optional age band, echoed only (#212)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -1142,6 +1143,31 @@ def _ruleset(profile):
         raise HTTPException(exc.status, exc.detail()) from None
 
 
+def _age_band(text):
+    """The request's age band, or HTTP 422 before the upload is read or
+    a free check is counted. Echoed in the report, never stored, and not
+    used by any score yet (#216)."""
+    try:
+        return age_bands.parse(text)
+    except ValueError as exc:
+        raise HTTPException(
+            422,
+            {
+                "error_code": age_bands.ERROR_CODE,
+                "error": str(exc),
+                "field": "age_band",
+            },
+        ) from None
+
+
+def _with_age_band(payload, band):
+    """The payload with the band echoed, on a copy: a cached payload is
+    shared by every request for the same photo, whatever its band."""
+    if not band:
+        return payload
+    return {**payload, "age_band": band}
+
+
 async def _report_payload(
     image, lang, expected_text, include_evidence=True, ruleset=None
 ):
@@ -1209,15 +1235,18 @@ async def report_python(
     lang: str = Form("auto"),
     expected_text: str = Form(""),
     profile: str = Form(""),
+    age_band: str = Form(""),
     authorization: str = Header(default=None),
 ):
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
     ruleset = _ruleset(profile)
+    band = _age_band(age_band)
     charge = DAILY.check(request, exempt=await _is_pro(authorization))
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
+    payload = _with_age_band(payload, band)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
         access = await run_in_threadpool(
@@ -1245,12 +1274,15 @@ async def api_identity(authorization: str = Header(default=None)):
 
 @app.post("/api/v2/reports")
 @debug_store.keeps("/api/v2/reports")
+# Each argument is one request field FastAPI fills in.
+# pylint: disable-next=too-many-arguments,too-many-positional-arguments
 async def api_report(
     request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
     expected_text: str = Form(""),
     profile: str = Form(""),
+    age_band: str = Form(""),
     authorization: str = Header(default=None),
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
@@ -1264,6 +1296,7 @@ async def api_report(
     if fields - {"text", "evidence"} and access["tier"] != "pro":
         raise HTTPException(403, "Requested report details require Pro")
     ruleset = _ruleset(profile)
+    band = _age_band(age_band)
     charge = DAILY.check(request, exempt=access["tier"] == "pro")
     if format == "compact":
         payload = await _report_payload(
@@ -1274,6 +1307,7 @@ async def api_report(
             ruleset=ruleset,
         )
         _spend_if_report(charge, payload)
+        payload = _with_age_band(payload, band)
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
@@ -1281,6 +1315,7 @@ async def api_report(
             return compact_reports.build_compact(payload, access, fields)
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
+    payload = _with_age_band(payload, band)
     access = await run_in_threadpool(entitlements.access_for, authorization)
     with perf.stage("practice"):
         return report_contract.public_report(payload, access)

@@ -87,6 +87,17 @@ class TestBenchmarkRules(unittest.TestCase):
         problems = bench._limits(meta, {"A": result(1)}, {})  # noqa
         self.assertTrue(any("under the floor" in p for p in problems))
 
+    def test_auto_and_a_named_language_agree_within_tolerance(self):
+        moved = bench._moved  # pylint: disable=W0212
+        self.assertEqual(moved(result(74), result(76, f5=8.2)), [])
+        self.assertEqual(
+            moved(result(74), result(70, f5=7.0)),
+            ["overall 74 -> 70", "5 8.0 -> 7.0"],
+        )
+        gone = result(74)
+        gone["scores"]["5"] = None
+        self.assertEqual(moved(result(74), gone), ["5 8.0 -> not measured"])
+
     def test_agreement_with_the_eye(self):
         meta = {"eye_ranking": ["A", "B", "C"]}
         good = {"A": result(90), "B": result(80), "C": result(70)}
