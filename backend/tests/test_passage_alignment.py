@@ -180,22 +180,18 @@ class TestPassageCannotRaiseLetterCounts(unittest.TestCase):
         # expect; the closed bowls are counted in the ink.
         self.assert_not_raised(3, "we see one moon", "we see the good moon")
 
-    @unittest.expectedFailure
     def test_loop_share_without_enough_bowls_comes_from_the_ink(self):
         # Factor 3 with fewer than three bowl letters falls back to the
         # share of loop letters in the text. With a passage that text is
-        # the passage, so its a's count as loops the ink never showed.
-        # Expected to fail until scoring counts this share from
-        # text_as_read (the PR for #209 describes the change).
+        # the passage, so its a's counted as loops the ink never showed;
+        # scoring now counts this share from text_as_read (#209).
         self.assert_not_raised(3, "i im it it", "i am at it")
 
-    @unittest.expectedFailure
     def test_tall_letter_share_comes_from_the_ink(self):
         # Factor 6 (Letter Zones) on a page too short for zone bands is
         # the share of tall letters in the text. With a passage, the t
-        # and h of "the" count though the ink has no tall letter.
-        # Expected to fail until scoring counts this share from
-        # text_as_read (the PR for #209 describes the change).
+        # and h of "the" counted though the ink has no tall letter;
+        # scoring now counts this share from text_as_read (#209).
         self.assert_not_raised(6, "we see one", "we see the")
 
 
