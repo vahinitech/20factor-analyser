@@ -16,6 +16,7 @@ it through the current code:
     python scripts/benchmark.py langs            # analyser image: en = auto
     python scripts/benchmark.py planted [--update]  # planted mistakes
     python scripts/benchmark.py factors [--update]  # each factor's own
+    python scripts/benchmark.py fragments        # read in pieces? (#277)
 
 check fails when any score, line or text differs from expected.json, and
 prints a table of what moved. Accepting a change is running update and
@@ -126,17 +127,14 @@ def _ink_mode(meta):
 def _score_ink(arr, page, meta):
     """One page measured from the ink, as the server's ink mode does;
     with "passage" set, the page's written text is the passage copied."""
-    import classify
     import computer_vision
     import ink_geometry
     import scoring
 
-    rows = ink_geometry.find_rows(arr)
-    classify.classify_lines(arr, rows)
-    hand = [r for r in rows if not r.get("printed_hint")]
+    text = None
     if meta.get("passage"):
-        text = meta.get("page_text", {}).get(page) or []
-        ink_geometry.expect_words(hand, "\n".join(text))
+        text = "\n".join(meta.get("page_text", {}).get(page) or [])
+    hand = _ink_hand(arr, ink_geometry.find_rows(arr), text)
     layout = computer_vision.vl_analyze(arr, hand, False)["layout"]
     analysis = scoring.build_analysis(arr, hand, layout).to_dict()
     results = {r["n"]: r for r in analysis["results"]}
@@ -150,13 +148,25 @@ def _score_ink(arr, page, meta):
     }
 
 
-def _score(arr, raw, reader, meta):
-    """One page through the pipeline after the reader, from its kept
-    output. Returns the result kept in expected.json."""
-    import computer_vision
+def _ink_hand(arr, rows, text):
+    """The handwriting rows of ink rows, as the server's _ink_lines gives
+    them: the printed check on each row, and each row's number of words
+    from the passage when text is given."""
+    import classify
+    import ink_geometry
+
+    classify.classify_lines(arr, rows)
+    hand = [r for r in rows if not r.get("printed_hint")]
+    if text is not None:
+        ink_geometry.expect_words(hand, text)
+    return hand
+
+
+def _reader_lines(arr, raw, reader, meta):
+    """(every line kept, handwriting lines) from the kept reader output,
+    as recognizer.extract_hand_lines gives them in the server."""
     import layout_filter
     import recognizer
-    import scoring
 
     recognizer.configure(
         ocr_langs=meta["settings"]["VAHINI_OCR_LANGS"].split(","),
@@ -175,13 +185,30 @@ def _score(arr, raw, reader, meta):
 
     try:
         lines = [dict(l) for l in reader["raw_lines"]]
-        _all, hand = recognizer.extract_hand_lines(
+        return recognizer.extract_hand_lines(
             arr, lines, raw_bytes=raw, read_region=read_region
         )
     finally:
         layout_filter.excluded_regions = real_regions
-    layout = computer_vision.vl_analyze(arr, hand, False)["layout"]
-    analysis = scoring.build_analysis(arr, hand, layout).to_dict()
+
+
+def _score(arr, raw, reader, meta):
+    """One page through the pipeline after the reader, from its kept
+    output. Returns the result kept in expected.json. A page the reader
+    read in pieces is measured from the ink rows, as the server does
+    (ink_geometry.fragment_rows, #277); the lines kept are still the
+    reader's."""
+    import computer_vision
+    import ink_geometry
+    import scoring
+
+    found, hand = _reader_lines(arr, raw, reader, meta)
+    measured = hand
+    if hand:
+        rows, _cover = ink_geometry.fragment_rows(arr, found)
+        measured = (_ink_hand(arr, rows, None) if rows else []) or hand
+    layout = computer_vision.vl_analyze(arr, measured, False)["layout"]
+    analysis = scoring.build_analysis(arr, measured, layout).to_dict()
     results = {r["n"]: r for r in analysis["results"]}
     return {
         "overall": analysis["overall"],
@@ -913,12 +940,64 @@ def cmd_factors(args):
     return 1 if problems or now != old else 0
 
 
+def cmd_fragments(args):
+    """Each page's reader boxes against its ink rows (ink_geometry.
+    reader_cover) beside the FRAGMENT_* thresholds: how far each page is
+    from being measured from the ink as read in pieces (#277). --page
+    limits it to the pages named; --none fails when any page is read in
+    pieces (a set that must stay on the reader's lines)."""
+    import ink_geometry as ig
+
+    folder, meta = _load_set(args.set)
+    _apply_settings(meta)
+    if _ink_mode(meta):
+        _report(f"{args.set}: measured from the ink, nothing read.")
+        return 0
+    out = [
+        f"## Read in pieces? {args.set}\n",
+        f"In pieces: {ig.FRAGMENT_MIN_ROWS} ink rows or more, and cover "
+        f"under {ig.FRAGMENT_COVER}, {ig.FRAGMENT_PIECES} boxes per row or "
+        f"more, or a short share of {ig.FRAGMENT_SHORT_SHARE} or more "
+        f"(a box under {ig.FRAGMENT_SHORT} of its row's ink).\n",
+        "| Page | Ink rows | Reader boxes | Cover | Boxes per row "
+        "| Short | In pieces |",
+        "|---|---|---|---|---|---|---|",
+    ]
+    in_pieces = []
+    for page in args.page or _pages(folder):
+        raw, arr = _image(folder, page, meta)
+        with open(
+            os.path.join(folder, "reader", page + ".json"), encoding="utf-8"
+        ) as f:
+            reader = json.load(f)
+        try:
+            found, hand = _reader_lines(arr, raw, reader, meta)
+        except MissingRead:
+            out.append(f"| {page} | reads a crop not kept | | | | | |")
+            continue
+        if not hand:
+            out.append(f"| {page} | no handwriting read | | | | | |")
+            continue
+        _rows, c = ig.fragment_rows(arr, found)
+        if c["fragments"]:
+            in_pieces.append(page)
+        out.append(
+            f"| {page} | {c['rows']} | {c['pieces']} | {c['cover']:.2f} "
+            f"| {c['per_row']:g} | {c['short']:.2f} "
+            f"| {'yes' if c['fragments'] else 'no'} |"
+        )
+    if args.none and in_pieces:
+        out.append(f"\n**Read in pieces: {', '.join(in_pieces)}.**")
+    _report("\n".join(out) + "\n")
+    return 1 if args.none and in_pieces else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n", maxsplit=1)[0]
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("check", "update", "capture", "live"):
+    for name in ("check", "update", "capture", "live", "fragments"):
         p = sub.add_parser(name)
         p.add_argument("--set", default="uji-clean")
         p.add_argument(
@@ -927,6 +1006,11 @@ def main(argv=None):
         )
         if name in ("capture", "live"):
             p.add_argument("--out", help="write the reading here")
+        if name == "fragments":
+            p.add_argument("--page", action="append", help="this page only")
+            p.add_argument(
+                "--none", action="store_true", help="fail on a page in pieces"
+            )
     p = sub.add_parser("langs")
     p.add_argument("--set", default="uji-clean")
     p.add_argument("--root", help="a folder of sets outside the repository")
@@ -952,6 +1036,7 @@ def main(argv=None):
         "langs": cmd_langs,
         "planted": cmd_planted,
         "factors": cmd_factors,
+        "fragments": cmd_fragments,
     }[args.cmd](args)
 
 

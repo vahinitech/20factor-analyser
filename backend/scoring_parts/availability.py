@@ -16,6 +16,10 @@ _UNMEASURED_REASONS = {
     "ocr": "Requires recognised text from the page.",
     "insufficient": "Needs at least three measurable word gaps.",
     "script": "Reads English letters; not measured on this script.",
+    # Joined cursive (#277): the reason code is the scoring_inputs
+    # method, letters_joined. Words for families wait for the owner's
+    # approval (docs/12-report-rules.md), so none are given yet.
+    "joined": None,
 }
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
@@ -35,21 +39,27 @@ _UNMEASURED_EVIDENCE = {
 }
 
 
-def page_supplies(lines, fx, zone_based):
-    """The needs this page supplied (factor_needs.page_supplies)."""
+def page_supplies(lines, fx, zone_based, style=None):
+    """The needs this page supplied (factor_needs.page_supplies). style:
+    the style check (style_analysis.analyze_style); a page it calls
+    cursive has its letters joined."""
     # Lines from computer_vision.fallback_line_regions() (no OCR engine
     # produced any line) carry empty text, a placeholder 0.0 confidence
     # and level rectangles. Factors that read those inputs would publish
     # 0.0 for letter formation and a perfect 10.0 for line angle that the
     # page never produced, so they are reported as not measured instead.
+    joined = bool(
+        style and style.get("available") and style["verdict"] == "cursive"
+    )
     return factor_needs.page_supplies(
-        lines, fx.get("latin_letters", 0), zone_based
+        lines, fx.get("latin_letters", 0), zone_based, joined
     )
 
 
 def missing_kind(n, fx, supplied):
     """Why factor n is not measured on this page ("imu", "ocr",
-    "insufficient" or "script"), or None when it is measured."""
+    "insufficient", "script" or "joined"), or None when it is
+    measured."""
     # The one check (factor_needs.py): which need, if any, this page
     # did not supply for this factor.
     lacking = factor_needs.missing_kind(n, supplied)
@@ -61,7 +71,7 @@ def missing_kind(n, fx, supplied):
 
 
 def unmeasured_evidence(kind):
-    return _UNMEASURED_EVIDENCE[kind]
+    return _UNMEASURED_EVIDENCE.get(kind) or ""
 
 
 def unmeasured_inputs(kind, fx):
@@ -75,6 +85,8 @@ def unmeasured_inputs(kind, fx):
             "method": "script_not_supported",
             "features": {"latin_letters": 0},
         }
+    if kind == "joined":
+        return {"method": "letters_joined", "features": {"style": "cursive"}}
     return {
         "method": "insufficient_data",
         "features": {"word_gap_count": fx.get("word_gap_count", 0)},

@@ -5,6 +5,7 @@ it caught at 0 on two UJI pages (computer_vision.line_starts)."""
 
 import importlib.util
 import os
+import subprocess
 import sys
 import unittest
 
@@ -108,6 +109,32 @@ class TestBenchmarkRules(unittest.TestCase):
             {"floor_sentences_found": 0, **meta}, bad, {"eye_agreement": 1.0}
         )
         self.assertTrue(any("by eye" in p for p in problems))
+
+
+class TestReadInPieces(unittest.TestCase):
+    def test_a_uji_page_stays_on_the_readers_lines(self):
+        # Its own process: the set's reader settings are read at import.
+        env = {**os.environ, "GITHUB_STEP_SUMMARY": ""}
+        out = subprocess.run(
+            [
+                sys.executable,
+                os.path.join(ROOT, "scripts", "benchmark.py"),
+                "fragments",
+                "--set",
+                "uji-clean",
+                "--page",
+                "UJI_W12",
+                "--none",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        row = [l for l in out.stdout.splitlines() if "| UJI_W12 |" in l]
+        self.assertEqual(len(row), 1, out.stdout)
+        self.assertTrue(row[0].endswith("| no |"), row[0])
 
 
 class TestLineStarts(unittest.TestCase):
