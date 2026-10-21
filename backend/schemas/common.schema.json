@@ -965,6 +965,11 @@
       "pattern": "^[0-9a-f]{64}$",
       "description": "sha256 of the rules the page was scored by: the language pack the scorer reads and the request's profile (backend/languages/profile.py). Without a profile it is the pack's own hash. Never the profile itself."
     },
+    "ageBand": {
+      "type": "string",
+      "pattern": "^([3-9]|1[0-8])-([3-9]|1[0-8])$",
+      "description": "The request's age_band as sent, when it sent one: two whole-year ages, such as 6-7. Not used by any score yet (#216); never a birth date, never stored."
+    },
     "recognitionMetadata": {
       "type": "object",
       "properties": {
