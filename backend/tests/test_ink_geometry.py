@@ -3,8 +3,10 @@
 """Lines, baselines, letter sizes and word gaps from the ink alone
 (ink_geometry.py), for handwriting the reader cannot read, on drawn
 pages shaped like Telugu: round letter bodies, some with a stroke
-written below the line as a separate mark (a vattu)."""
+written below the line as a separate mark (a vattu). And joined cursive
+read in pieces (#277), on drawn pages written one stroke a word."""
 
+import contextlib
 import importlib.util
 import os
 import sys
@@ -60,6 +62,60 @@ def draw_page(rows, tilt_last=0.0, wide_after=None):
 
 
 SENTENCE = [3, 4, 3, 2]
+LETTER_W = 28
+
+
+def draw_cursive(rows=4, words=4, letters=7):
+    """Joined cursive: each word one unbroken stroke, a garland of
+    letters, so the pen never lifts inside a word. Returns the page and
+    each row's word boxes."""
+    img = np.full((140 + 150 * rows, 1500, 3), 236, np.uint8)
+    boxes = []
+    for ri in range(rows):
+        base = 120 + ri * 150
+        x = 80
+        row = []
+        for _ in range(words):
+            width = letters * LETTER_W
+            xs = np.arange(x, x + width + 1)
+            phase = 2 * np.pi * (xs - x) / LETTER_W
+            ys = base - BODY / 2.0 * (1 + np.cos(phase))
+            pts = np.stack([xs, ys], axis=1).round().astype(np.int32)
+            stroke = pts.reshape(-1, 1, 2)
+            cv2.polylines(img, [stroke], False, (40, 30, 90), 3)
+            row.append([x, base - BODY - 2, width, BODY + 4])
+            x += width + 60
+        boxes.append(row)
+    return img, boxes
+
+
+def reader_line(box, text):
+    x, y, w, h = box
+    return {
+        "text": text,
+        "score": 0.6,
+        "box": [float(v) for v in box],
+        "poly": [[x, y], [x + w, y], [x + w, y + h], [x, y + h]],
+        "lang": "en",
+        "printed_hint": False,
+    }
+
+
+def pieces(boxes):
+    """The reader's lines on a joined page, as PP-OCRv5 reads it: the
+    first word of each row, the rest of the row unread."""
+    return [reader_line(row[0], "minimum") for row in boxes]
+
+
+def whole_lines(boxes):
+    """The same rows read whole, one box a row."""
+    out = []
+    for row in boxes:
+        x0, y0 = row[0][0], row[0][1]
+        x1 = row[-1][0] + row[-1][2]
+        box = [x0, y0, x1 - x0, row[0][3]]
+        out.append(reader_line(box, "minimum " * 4))
+    return out
 
 
 class TestInkGeometry(unittest.TestCase):
@@ -161,6 +217,61 @@ class TestInkScores(unittest.TestCase):
         self.assertGreater(scores[0] - scores[1], 1.0)
 
 
+class TestReadInPieces(unittest.TestCase):
+    """Joined cursive read in pieces is measured from the ink (#277)."""
+
+    def setUp(self):
+        if cv2 is None:
+            self.skipTest("OpenCV unavailable")
+        self.arr, self.boxes = draw_cursive()
+
+    def test_a_page_read_in_pieces_is_found(self):
+        rows, cover = ig.fragment_rows(self.arr, pieces(self.boxes))
+        self.assertEqual(len(rows), 4)
+        self.assertTrue(cover["fragments"])
+        self.assertLess(cover["cover"], ig.FRAGMENT_COVER)
+
+    def test_the_same_page_read_whole_stays_on_the_reader(self):
+        rows, cover = ig.fragment_rows(self.arr, whole_lines(self.boxes))
+        self.assertEqual(rows, [])
+        self.assertFalse(cover["fragments"])
+        self.assertGreater(cover["cover"], 0.95)
+        self.assertEqual(cover["per_row"], 1)
+        self.assertEqual(cover["short"], 0)
+
+    def test_many_pieces_on_a_row_or_short_pieces_count(self):
+        rows = [{"box": [0, 0, 1000, 50]}, {"box": [0, 100, 1000, 50]}]
+        words = [
+            reader_line([x, y, 240, 40], "a")
+            for y in (5, 105)
+            for x in (0, 250, 500, 750)
+        ]
+        cover = ig.reader_cover(rows, words)
+        self.assertEqual(cover["per_row"], 4)
+        self.assertEqual(cover["short"], 1.0)
+        self.assertTrue(ig.read_in_fragments(cover))
+        # One row is too little to tell.
+        self.assertFalse(ig.read_in_fragments({**cover, "rows": 1}))
+        # A box outside every row, or with no size, is left out.
+        stray = [reader_line([0, 400, 100, 20], "7"), {"box": [0, 0, 0, 0]}]
+        self.assertEqual(ig.reader_cover(rows, stray)["pieces"], 0)
+        self.assertEqual(ig.reader_cover([], words)["cover"], 0.0)
+
+    def test_letter_spacing_is_not_measured_from_the_ink(self):
+        rows, _cover = ig.fragment_rows(self.arr, pieces(self.boxes))
+        result = scoring.build_analysis(self.arr, rows, {})
+        f = {r.n: r for r in result.results}
+        self.assertTrue(f[9].unmeasured)
+        self.assertEqual(f[9].value, "Not measured")
+        for n in (5, 7, 10, 11, 12):
+            self.assertFalse(f[n].unmeasured, n)
+
+    def test_same_page_same_decision(self):
+        a = ig.fragment_rows(self.arr, pieces(self.boxes))
+        b = ig.fragment_rows(self.arr, pieces(self.boxes))
+        self.assertEqual(a, b)
+
+
 def _load_server(env):
     with mock.patch.dict(os.environ, env):
         spec = importlib.util.spec_from_file_location(
@@ -202,6 +313,65 @@ class TestInkMode(unittest.TestCase):
         self.assertFalse(mode("en"))
         self.assertFalse(mode("en,te"))
         self.assertFalse(mode(""))
+
+
+def _kept(_arr, _rows):
+    return None
+
+
+class TestServerReadInPieces(unittest.TestCase):
+    """Through the server's scan: a page read in pieces is measured from
+    the ink and says so (recognition.ink_reason); the text is still the
+    reader's. The same rows read whole stay on the reader's lines."""
+
+    @classmethod
+    def setUpClass(cls):
+        if cv2 is None:
+            raise unittest.SkipTest("OpenCV unavailable")
+        cls.server = _load_server({})
+        cls.arr, cls.boxes = draw_cursive()
+
+    def scan(self, lines):
+        server = self.server
+
+        def collect(_arr, _lang):
+            return [dict(l) for l in lines], "", "paddle", {}
+
+        def extract(_arr, raw_lines, **_kw):
+            return list(raw_lines), [dict(l) for l in raw_lines]
+
+        with contextlib.ExitStack() as stack:
+            stack.enter_context(
+                mock.patch.object(server.recognizer, "collect_lines", collect)
+            )
+            stack.enter_context(
+                mock.patch.object(
+                    server.recognizer, "extract_hand_lines", extract
+                )
+            )
+            # The printed check is not what is tested here.
+            stack.enter_context(
+                mock.patch.object(server.classify, "classify_lines", _kept)
+            )
+            scan = getattr(server, "_report_python_process")
+            return scan(self.arr, b"", "en", "")
+
+    def test_pieces_are_measured_from_the_ink(self):
+        out = self.scan(pieces(self.boxes))
+        self.assertTrue(out["ok"], out)
+        rec = out["analysis"]["recognition"]
+        self.assertTrue(rec["ink_rows"])
+        self.assertEqual(rec["ink_reason"], "read_in_fragments")
+        self.assertEqual(out["rec_texts"], ["minimum"] * 4)
+        f9 = [r for r in out["analysis"]["results"] if r["n"] == 9][0]
+        self.assertTrue(f9["unmeasured"])
+
+    def test_whole_lines_stay_on_the_reader(self):
+        out = self.scan(whole_lines(self.boxes))
+        self.assertTrue(out["ok"], out)
+        rec = out["analysis"]["recognition"]
+        self.assertFalse(rec["ink_rows"])
+        self.assertIsNone(rec["ink_reason"])
 
 
 if __name__ == "__main__":

@@ -24,6 +24,7 @@ VOCABULARY = (
     "confidence",  # the reader's confidence
     "classes",  # letters the language pack sorts into classes
     "zones",  # the pack's zone model fitted to the page
+    "apart",  # letters written apart: not joined cursive (#277)
 )
 
 # Each factor's alternatives: the factor is measured when any one of them
@@ -43,8 +44,9 @@ NEEDS = {
     # row when the passage says how many it holds (ink_geometry.py).
     8: (("words",), ("rows",)),
     # Letter gaps are measured inside the letters read; ink rows do not
-    # give them yet.
-    9: (("graphemes",),),
+    # give them yet. Joined cursive has no gaps between letters, only
+    # pen lifts, so it needs letters written apart (#277).
+    9: (("graphemes", "apart"),),
     10: ((),),
     11: (("rows",),),
     12: (("rows",),),
@@ -81,6 +83,7 @@ KIND = {
     "confidence": "ocr",
     "classes": "script",
     "zones": "script",
+    "apart": "joined",
 }
 
 
@@ -112,11 +115,13 @@ def _check():
 _check()
 
 
-def page_supplies(lines, latin_letters, zone_based):
+def page_supplies(lines, latin_letters, zone_based, joined=False):
     """The needs a photographed page supplied. Lines with "cv_fallback"
     were found without a reader: fallback boxes give nothing beyond line
     bands, and ink rows ("ink_row", ink_geometry.py) give rows with
-    baselines. A photo never gives pen data."""
+    baselines. A photo never gives pen data. joined: the style check
+    found the page written in joined cursive (style_analysis.py), so its
+    letters are not written apart."""
     read = not all(bool(ln.get("cv_fallback")) for ln in lines)
     ink_rows = bool(lines) and all(bool(ln.get("ink_row")) for ln in lines)
     got = set()
@@ -128,6 +133,8 @@ def page_supplies(lines, latin_letters, zone_based):
         got.add("classes")
     if zone_based:
         got.add("zones")
+    if not joined:
+        got.add("apart")
     return frozenset(got)
 
 

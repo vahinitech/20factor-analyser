@@ -27,7 +27,8 @@ trust. The geometry of the writing does not need the words read:
    are known, so Word Spacing is not measured without a passage.
 
 Everything is in processed-image pixels and deterministic. The server
-uses it for the languages named in VAHINI_INK_GEOMETRY_LANGS.
+uses it for the languages named in VAHINI_INK_GEOMETRY_LANGS, and for a
+page the reader read in pieces (fragment_rows, joined cursive, #277).
 """
 
 import math
@@ -50,6 +51,24 @@ MIN_WORD_SHARE = 0.1
 MAX_WORD_SHARE = 0.6
 MIN_WORDS_FOR_GAPS = 3
 LETTER_GROUP = 5
+
+# A page read in pieces (#277): the reader's boxes against the ink rows.
+# Joined cursive comes back as short pieces ("Thi", "cmen") with the rest
+# of each row unread, and every factor was measured on the pieces' boxes.
+# A page is read in pieces when it has FRAGMENT_MIN_ROWS ink rows or more
+# and any of:
+# - the reader's boxes span under FRAGMENT_COVER of the rows' ink width;
+# - the median row holds FRAGMENT_PIECES reader boxes or more;
+# - FRAGMENT_SHORT_SHARE of the boxes or more are short: under
+#   FRAGMENT_SHORT of their own row's ink width.
+# Set from every page of benchmarks/uji-clean (none of which may cross
+# them) and the neat penmanship pages of #276; `benchmark.py fragments`
+# prints each page's numbers against them.
+FRAGMENT_MIN_ROWS = 2
+FRAGMENT_COVER = 0.6
+FRAGMENT_PIECES = 3
+FRAGMENT_SHORT = 0.5
+FRAGMENT_SHORT_SHARE = 0.5
 
 
 def _ink(gray, line_h):
@@ -384,3 +403,87 @@ def page_features(arr, rows):
         "signed": signed,
         "gaps": gaps if all(known) else [],
     }
+
+
+def reader_cover(rows, lines):
+    """How the reader's lines sit on the page's ink rows (find_rows), as
+    {"rows", "pieces", "cover", "per_row", "short"}. Each reader box with
+    a size goes to the row whose middle is nearest its own, among the
+    rows its middle lies inside; a box outside every row is left out.
+
+    cover: the share of the rows' ink width the reader's boxes span.
+    per_row: the median number of boxes on a row (a row nothing was read
+    on counts 0). short: the share of the boxes under FRAGMENT_SHORT of
+    their row's ink width; a short last line is its row's whole ink, so
+    it is not short."""
+    spans = [[] for _ in rows]
+    middles = [r["box"][1] + r["box"][3] / 2.0 for r in rows]
+    for line in lines:
+        x, y, w, h = [float(v) for v in (line.get("box") or [0, 0, 0, 0])]
+        if w <= 0 or h <= 0:
+            continue
+        cy = y + h / 2.0
+        inside = [
+            i
+            for i, r in enumerate(rows)
+            if r["box"][1] <= cy <= r["box"][1] + r["box"][3]
+        ]
+        if not inside:
+            continue
+        i = min(inside, key=lambda j, cy=cy: (abs(middles[j] - cy), j))
+        x0, rw = rows[i]["box"][0], rows[i]["box"][2]
+        a, b = max(x, x0), min(x + w, x0 + rw)
+        if b > a:
+            spans[i].append((a, b))
+    total = covered = 0.0
+    short = 0
+    for row, row_spans in zip(rows, spans):
+        rw = float(row["box"][2])
+        total += rw
+        covered += _union(row_spans)
+        short += sum(1 for a, b in row_spans if b - a < FRAGMENT_SHORT * rw)
+    pieces = sum(len(s) for s in spans)
+    return {
+        "rows": len(rows),
+        "pieces": pieces,
+        "cover": covered / total if total > 0 else 0.0,
+        "per_row": float(np.median([len(s) for s in spans])) if rows else 0,
+        "short": short / pieces if pieces else 0.0,
+    }
+
+
+def _union(spans):
+    """The length covered by a list of (start, end) spans."""
+    out, end = 0.0, None
+    for a, b in sorted(spans):
+        if end is None or a > end:
+            out += b - a
+            end = b
+        elif b > end:
+            out += b - end
+            end = b
+    return out
+
+
+def read_in_fragments(cover):
+    """Whether reader_cover's numbers say the page was read in pieces
+    (the FRAGMENT_* constants)."""
+    if cover["rows"] < FRAGMENT_MIN_ROWS:
+        return False
+    return (
+        cover["cover"] < FRAGMENT_COVER
+        or cover["per_row"] >= FRAGMENT_PIECES
+        or cover["short"] >= FRAGMENT_SHORT_SHARE
+    )
+
+
+def fragment_rows(arr, lines):
+    """(rows, cover): the page's ink rows when the reader read it in
+    pieces, else an empty list; cover is reader_cover's numbers with
+    "fragments" set. lines: every line the reader kept, printed ones
+    too, so a printed title's row counts as read. The rows are
+    find_rows's, not yet put through the printed check."""
+    rows = find_rows(arr)
+    cover = reader_cover(rows, lines)
+    cover["fragments"] = read_in_fragments(cover)
+    return (rows if cover["fragments"] else []), cover

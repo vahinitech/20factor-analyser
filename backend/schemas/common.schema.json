@@ -1060,6 +1060,23 @@
           ]
         },
         "passage_match": {},
+        "ink_rows": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "ink_reason": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "language",
+            "read_in_fragments",
+            null
+          ]
+        },
         "note": {
           "type": "string"
         }

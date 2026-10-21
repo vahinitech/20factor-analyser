@@ -164,6 +164,11 @@ def common():
             "assistive_only": nullable("boolean"),
             "passage_aligned": nullable("boolean"),
             "passage_match": {},
+            "ink_rows": nullable("boolean"),
+            "ink_reason": {
+                "type": ["string", "null"],
+                "enum": ["language", "read_in_fragments", None],
+            },
             "note": {"type": "string"},
         },
     }
