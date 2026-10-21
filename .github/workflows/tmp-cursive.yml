@@ -1,5 +1,4 @@
-# Throwaway (#277): the neat penmanship pages of #276 through the joined
-# cursive change. Never merged.
+# Throwaway (#277): which test reaches two lines on main. Never merged.
 name: tmp cursive neat
 
 on:
@@ -7,73 +6,41 @@ on:
     branches: [claude/tmp-cursive-neat]
 
 jobs:
-  neat:
+  contexts:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    strategy:
+      matrix:
+        ref: [main, claude/cursive-from-ink-32bc17]
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
       - run: pip install -r backend/requirements-core.txt
-      - name: Which tests read in pieces
+      - name: Tests with per-test contexts
         run: |
-          python -m unittest discover -s backend/tests -t . > "$RUNNER_TEMP/ut.txt" 2>&1 || true
-          grep -E "FRAGDBG|File .*tests/test_" "$RUNNER_TEMP/ut.txt" | grep -v "test_ink_geometry.py" | head -200
-      - name: Black diff
-        run: black --diff --line-length 79 backend/*.py backend/tests/*.py || true
-      - name: Diagnostics
-        run: python scripts/tmp_diag.py neat-penmanship
-      - name: Each page against the thresholds
+          python -m coverage run --branch --context=x -m unittest discover -s backend/tests -t . > /dev/null 2>&1 || true
+          echo skip
+      - name: Contexts of the two lines
         run: |
-          python scripts/benchmark.py fragments --set uji-clean
-          python scripts/benchmark.py fragments --set neat-penmanship
-      - name: Neat pages before and after
-        run: |
-          cp benchmarks/neat-penmanship/expected.json "$RUNNER_TEMP/before.json"
-          python scripts/benchmark.py update --set neat-penmanship || true
-          cp benchmarks/neat-penmanship/expected.json "$RUNNER_TEMP/after.json"
-          python - "$RUNNER_TEMP/before.json" "$RUNNER_TEMP/after.json" <<'PY' | tee -a "$GITHUB_STEP_SUMMARY"
-          import json, sys
-          a = json.load(open(sys.argv[1]))["pages"]
-          b = json.load(open(sys.argv[2]))["pages"]
-          ns = sorted({int(n) for p in a.values() for n in p["scores"]})
-          print("\n## Neat pages, before -> after\n")
-          print("| Page | Overall | " + " | ".join(str(n) for n in ns) + " |")
-          print("|---" * (len(ns) + 2) + "|")
-          f = lambda v: "-" if v is None else f"{v:g}"
-          for page in sorted(a):
-              x, y = a[page], b[page]
-              cells = [f"{f(x['overall'])} -> {f(y['overall'])}"]
-              for n in ns:
-                  u, v = x["scores"].get(str(n)), y["scores"].get(str(n))
-                  cells.append(f(u) if u == v else f"{f(u)} -> {f(v)}")
-              print(f"| {page} | " + " | ".join(cells) + " |")
-          print("\n### Lines kept\n")
-          for page in sorted(a):
-              print(f"- {page}: {b[page]['lines']}")
+          python -m coverage run --branch -m unittest discover -s backend/tests -t . > /dev/null 2>&1 || true
+          cat > /tmp/rc <<'RC'
+          [run]
+          branch = True
+          source = backend
+          dynamic_context = test_function
+          RC
+          python -m coverage run --rcfile=/tmp/rc -m unittest discover -s backend/tests -t . > /dev/null 2>&1 || true
+          python -m coverage json --rcfile=/tmp/rc --show-contexts -o /tmp/c.json
+          python - <<'PY'
+          import json
+          d = json.load(open("/tmp/c.json"))["files"]
+          for f, lines in (("backend/tbar_analysis.py", ["136"]), ("backend/style_analysis.py", ["161", "171"])):
+              ctx = d.get(f, {}).get("contexts", {})
+              for ln in lines:
+                  print(f, ln, sorted(set(ctx.get(ln, [])))[:20])
           PY
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: neat-after
-          path: |
-            benchmarks/neat-penmanship/expected.json
-            benchmarks/neat-penmanship/reading.json
-      - name: UJI unchanged
-        run: python scripts/benchmark.py check --set uji-clean
-      - name: Cache the UJI letters for the planted pages
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/vahini/ujipenchars2.txt
-          key: uji-cc56f72f8477e763
-      - name: Planted mistakes, no rate worse
-        run: python scripts/benchmark.py planted
-      - name: Neat, UJI, clean and poor side by side
-        run: python scripts/score_ranges.py --json "$RUNNER_TEMP/score-ranges.json"
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: score-ranges
-          path: ${{ runner.temp }}/score-ranges.json
