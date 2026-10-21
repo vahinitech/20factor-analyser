@@ -171,14 +171,15 @@ def line_zone_bands(gray, box):
     asc_top, desc_bot = int(rows[0]), int(rows[-1])
     h_u = max(0, midline - asc_top)
     h_l = max(0, desc_bot - baseline)
-    own = _own_ink_reach(
-        ink, midline, baseline, _neighbour_bands(profile, midline, baseline)
-    )
+    limits = _neighbour_bands(profile, midline, baseline)
+    own = _own_ink_reach(ink, midline, baseline, limits)
+    every = (h_u, h_l)
     if own is not None:
         # The padded crop reaches into the lines above and below on
         # closely ruled paper; their descenders and ascenders read as
         # this line's reach (4.0x on tests' handwriting-sample.jpg).
         h_u, h_l = own
+        every = _own_ink_reach(ink, midline, baseline, limits, True)
 
     return {
         "h_m": int(h_m),
@@ -186,6 +187,11 @@ def line_zone_bands(gray, box):
         "h_l": int(h_l),
         "asc_reach": (h_u + h_m) / float(h_m),
         "desc_reach": (h_l + h_m) / float(h_m),
+        # With the tall letters that touch a neighbouring line too
+        # (clipped at its band), for comparing this line with the page's
+        # others (#194).
+        "asc_reach_all": (every[0] + h_m) / float(h_m),
+        "desc_reach_all": (every[1] + h_m) / float(h_m),
     }
 
 
@@ -211,7 +217,7 @@ def _neighbour_bands(profile, midline, baseline):
     return (max(above) if above else None, min(below) if below else None)
 
 
-def _typical_reach(reaches, h_m):
+def _typical_reach(reaches, h_m, joined_too=False):
     """The usual reach of one line's tall (or hanging) letters.
 
     reaches: (pixels, joined) per blob, joined when the blob runs into
@@ -223,15 +229,19 @@ def _typical_reach(reaches, h_m):
     only when the line has no other tall letter, clipped at the
     neighbour's band. With no tall blob at all the line has no reach to
     speak of, and its largest overshoot is kept (the single-zone
-    case)."""
+    case). With joined_too the joined blobs count like the others: the
+    line's reach for comparing it with the page's other lines, since
+    a line of ascenders written too long reaches the line above (#194)."""
     tall = [(r, joined) for r, joined in reaches if r >= REACH_MIN_FRAC * h_m]
-    free = [r for r, joined in tall if not joined]
+    free = [r for r, joined in tall if not joined or joined_too]
     if free or tall:
         return int(round(float(np.median(free or [r for r, _ in tall]))))
     return max([0] + [r for r, _ in reaches])
 
 
-def _own_ink_reach(ink, midline, baseline, limits=(None, None)):
+def _own_ink_reach(
+    ink, midline, baseline, limits=(None, None), joined_too=False
+):
     """Ascender and descender reach (pixels above the midline, below
     the baseline) of the ink blobs that belong to this line: those
     covering at least half of its x-height band. A neighbour's tail can
@@ -264,7 +274,10 @@ def _own_ink_reach(ink, midline, baseline, limits=(None, None)):
         downs.append((max(0, bottom - baseline), joined_down))
     if not ups:
         return None
-    return _typical_reach(ups, h_m), _typical_reach(downs, h_m)
+    return (
+        _typical_reach(ups, h_m, joined_too),
+        _typical_reach(downs, h_m, joined_too),
+    )
 
 
 def _median(vals):
@@ -311,6 +324,8 @@ def analyze_zones(gray, lines):
 
     asc = [z["asc_reach"] for z in per_line]
     desc = [z["desc_reach"] for z in per_line]
+    asc_all = [z["asc_reach_all"] for z in per_line]
+    desc_all = [z["desc_reach_all"] for z in per_line]
     out = {
         "available": True,
         "linesUsed": len(per_line),
@@ -320,8 +335,8 @@ def analyze_zones(gray, lines):
         "descReach": round(_median(desc), 2) if has_desc else None,
         "ascReachCv": round(_cv(asc), 3) if has_asc else None,
         "descReachCv": round(_cv(desc), 3) if has_desc else None,
-        "ascLineDev": round(_line_dev(asc), 3) if has_asc else None,
-        "descLineDev": round(_line_dev(desc), 3) if has_desc else None,
+        "ascLineDev": round(_line_dev(asc_all), 3) if has_asc else None,
+        "descLineDev": round(_line_dev(desc_all), 3) if has_desc else None,
     }
     # The coach's three mistakes, named.
     flags = []
