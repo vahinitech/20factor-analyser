@@ -211,6 +211,19 @@ def common():
                     "token": {
                         "type": "string",
                         "pattern": "^[A-Za-z0-9_-]{43}$",
+                        "description": (
+                            "Reads, renews and deletes. Stays in the "
+                            "family's browser."
+                        ),
+                    },
+                    "read_token": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9_-]{43}$",
+                        "description": (
+                            "Goes into the shared PDF. Opens the record "
+                            "only through POST /api/v2/compare with a Pro "
+                            "key; never reads alone, renews or deletes."
+                        ),
                     },
                     "expires": {
                         "type": "string",
@@ -1417,6 +1430,21 @@ def error():
                         },
                     },
                     {
+                        "type": "object",
+                        "description": (
+                            "404 from POST /api/v2/compare: the receipt "
+                            "for this side opens no record (unknown, "
+                            "expired, deleted or a wrong token)."
+                        ),
+                        "required": ["error_code", "error", "side"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"const": "no_such_report"},
+                            "error": {"type": "string", "minLength": 1},
+                            "side": {"enum": ["before", "after"]},
+                        },
+                    },
+                    {
                         "type": "array",
                         "minItems": 1,
                         "description": "FastAPI request validation errors.",
@@ -1439,12 +1467,14 @@ def error():
             }
         },
         title=(
-            "HTTP error body for /api/v2/* (401, 403, 404, 413, 422, 429, 503)"
+            "HTTP error body for /api/v2/* (400, 401, 403, 404, 413, 422, 429, 503)"
         ),
         description=(
             "FastAPI's HTTPException shape. 401 invalid or revoked "
-            "credential, 403 paid include= fields requested by Free, 404 "
-            "unknown catalogue version, 413 upload too large, 422 "
+            "credential, 403 paid include= fields requested by Free or a "
+            "comparison asked without Pro, 400 a comparison without exactly "
+            "two different receipts, 404 unknown catalogue version or "
+            "stored report, 413 upload too large, 422 "
             "unsupported include field or invalid form/query, 429 the free "
             "tier's daily checks for this connection are used (a Pro key "
             "is never limited; Retry-After gives the seconds to midnight, "
@@ -1733,6 +1763,76 @@ def stored():
     )
 
 
+def compare_request():
+    """POST /api/v2/compare body."""
+    receipt = closed(
+        {
+            "id": {"type": "string", "pattern": "^[0-9a-f]{32}$"},
+            "token": {"type": "string", "pattern": "^[A-Za-z0-9_-]{43}$"},
+        }
+    )
+    return closed(
+        {
+            "receipts": {
+                "type": "array",
+                "minItems": 2,
+                "maxItems": 2,
+                "items": receipt,
+                "description": (
+                    "The earlier check first. Either token of a receipt "
+                    "works: the full one from the browser, or the "
+                    "read-only one from a shared PDF."
+                ),
+            }
+        },
+        title="POST /api/v2/compare request body",
+        description=(
+            "Send with Authorization: Bearer <Pro key>. Anything but Pro "
+            "is refused with 403 before a record is opened."
+        ),
+    )
+
+
+def compare():
+    """POST /api/v2/compare response."""
+    stored_ref = {"$ref": "stored-report.schema.json"}
+    value = {"type": ["string", "integer", "null"]}
+    note = closed(
+        {
+            "code": {
+                "enum": [
+                    "dates_reversed",
+                    "same_day",
+                    "different_script",
+                    "different_length",
+                    "print_on_one_page",
+                ]
+            },
+            "before": value,
+            "after": value,
+        },
+        description=(
+            "dates_reversed and same_day carry the two days, "
+            "different_script the two scripts, different_length the two "
+            "word counts (more than 25% apart), print_on_one_page the two "
+            "page kinds."
+        ),
+    )
+    return closed(
+        {
+            "before": stored_ref,
+            "after": stored_ref,
+            "notes": {"type": "array", "maxItems": 5, "items": note},
+        },
+        title="POST /api/v2/compare response: two stored reports",
+        description=(
+            "The two stored records, in the order sent, and what makes "
+            "them hard to compare. Pro only; nothing new is stored "
+            "(backend/report_store.py comparison_notes)."
+        ),
+    )
+
+
 BUILDERS = {
     "common": common,
     "me": me,
@@ -1740,6 +1840,8 @@ BUILDERS = {
     "report-expanded": expanded,
     "report-compact": compact,
     "stored-report": stored,
+    "compare-request": compare_request,
+    "compare": compare,
     "catalog": catalog,
     "error": error,
     "health": health,

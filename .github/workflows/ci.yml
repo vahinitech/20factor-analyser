@@ -169,6 +169,8 @@ jobs:
         run: npm run test:practice
       - name: Print in Telugu and Share on WhatsApp
         run: npm run test:language
+      - name: The shared PDF carries the receipt and the page photo, still two pages
+        run: npm run test:share-embed
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.

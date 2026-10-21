@@ -101,7 +101,7 @@ keeps a small record of every successful compact report (owner decision,
 `VAHINI_REPORT_STORE_DIR` names a writable folder:
 
 ```
-<dir>/reports/<32 hex>.json    id, token_sha256, expires, report
+<dir>/reports/<32 hex>.json    id, token_sha256, read_token_sha256, expires, report
 ```
 
 `report` is built from an allowlist, never by deleting fields from the
@@ -118,13 +118,21 @@ the top of the page.
 
 | Call | What it does |
 | --- | --- |
-| `POST /api/v2/reports?format=compact` | The report, plus `receipt: {id, token, expires}` when a record was kept |
+| `POST /api/v2/reports?format=compact` | The report, plus `receipt: {id, token, read_token, expires}` when a record was kept |
 | `GET /api/v2/reports/{id}` with `X-Report-Token` | The record (`backend/schemas/stored-report.schema.json`), or 404 |
 | `DELETE /api/v2/reports/{id}` with `X-Report-Token` | Deletes it: 204, or 404 |
 | `POST /api/v2/reports/renew` `{"receipts": [...]}` | Moves each valid receipt's expiry to 12 months from today |
+| `POST /api/v2/compare` `{"receipts": [before, after]}` with a Pro `Authorization` | Both records and what makes them hard to compare (`backend/schemas/compare.schema.json`); 403 without Pro, before any record is opened |
 
 Unknown, expired and deleted records, and a wrong token, all answer 404.
-Only the token's SHA-256 is stored, so a copy of the folder cannot read a
+A receipt has two tokens. `token` reads, renews and deletes; it stays in the
+browser's saved checks. `read_token` goes into the shared PDF and works only
+in `POST /api/v2/compare`, with a Pro key: `GET`, `DELETE` and renew refuse
+it like a wrong token, so whoever the family sends a PDF to can neither
+read the record without Pro nor delete it. Comparing two checks is Pro
+(owner decision, 2026-10-16), and the server enforces it; the viewer's own
+key check is only for its message. The comparison stores nothing.
+Only each token's SHA-256 is stored, so a copy of the folder cannot read a
 record back, and nothing links a record to a person, a device or another
 record. The check page keeps each receipt with the browser's saved checks
 (`frontend/src/report/progress.js`); a new check renews the earlier

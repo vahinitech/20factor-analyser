@@ -18,8 +18,12 @@ fields from the response, and holds no personal data:
            the uploaded file's name, the passage typed in, the access
            key, the caller's address or browser, or the time of day
 
-A record is found only by its receipt: a random id and a random token
-that go back to the family's browser. Only the token's SHA-256 is
+A record is found only by its receipt: a random id and two random
+tokens that go back to the family's browser. The full token reads,
+renews and deletes, and stays in the browser's saved checks. The
+read-only token goes into the shared PDF, so whoever holds the PDF can
+compare it through POST /api/v2/compare with a Pro key, but cannot read
+it alone, keep it longer or delete it. Only each token's SHA-256 is
 stored, so a copy of the folder cannot read a report back, and nothing
 links a record to a person, a device or another record.
 
@@ -290,9 +294,11 @@ class ReportStore:
             self.sweep()
         ident = secrets.token_hex(16)
         token = secrets.token_urlsafe(32)
+        read_token = secrets.token_urlsafe(32)
         stored = {
             "id": ident,
             "token_sha256": _hash(token),
+            "read_token_sha256": _hash(read_token),
             "expires": self._expires(),
             "report": record_from(report, self.today()),
         }
@@ -302,11 +308,17 @@ class ReportStore:
         except (OSError, TypeError, ValueError) as exc:
             log.warning("report store: not kept: %s", exc)
             return None
-        return {"id": ident, "token": token, "expires": stored["expires"]}
+        return {
+            "id": ident,
+            "token": token,
+            "read_token": read_token,
+            "expires": stored["expires"],
+        }
 
-    def _load(self, ident, token):
+    def _load(self, ident, token, read_only=False):
         """The stored entry for a valid receipt, else None. A wrong
-        token and an unknown id look the same to the caller."""
+        token and an unknown id look the same to the caller. The
+        read-only token counts only when `read_only` is True."""
         if not (
             self.enabled
             and isinstance(ident, str)
@@ -320,16 +332,22 @@ class ReportStore:
                 stored = json.load(fh)
         except (OSError, ValueError):
             return None
-        if not hmac.compare_digest(
-            str(stored.get("token_sha256", "")), _hash(token)
-        ):
+        digest = _hash(token)
+        full = hmac.compare_digest(str(stored.get("token_sha256", "")), digest)
+        shared = hmac.compare_digest(
+            str(stored.get("read_token_sha256", "")), digest
+        )
+        if not (full or (read_only and shared)):
             return None
         if str(stored.get("expires", "")) < self.today().isoformat():
             return None
         return stored
 
-    def read(self, ident, token):
-        stored = self._load(ident, token)
+    def read(self, ident, token, read_only=False):
+        """The record for a receipt. The read-only token from a shared
+        PDF reads only where the caller passes read_only=True: the Pro
+        comparison."""
+        stored = self._load(ident, token, read_only)
         if stored is None:
             return None
         return {
@@ -394,6 +412,54 @@ class ReportStore:
                 except OSError:
                     pass
         return removed
+
+
+# Two pages compare badly when they are dated the wrong way round or on
+# the same day, are in different scripts, differ in length by more than a
+# quarter, or only one had printed text around the writing. Each note is
+# {code, before, after}; the viewer words it.
+NOTE_CODES = (
+    "dates_reversed",
+    "same_day",
+    "different_script",
+    "different_length",
+    "print_on_one_page",
+)
+LENGTH_RATIO = 0.75
+
+
+def comparison_notes(before, after):
+    """What makes two stored records hard to compare, as a list of
+    {code, before, after}. Plain facts; nothing is decided here."""
+    notes = []
+
+    def note(code, b, a):
+        notes.append({"code": code, "before": b, "after": a})
+
+    db, da = before.get("day"), after.get("day")
+    if isinstance(db, str) and isinstance(da, str) and db and da:
+        if db > da:
+            note("dates_reversed", db, da)
+        elif db == da:
+            note("same_day", db, da)
+    cb = before.get("comparability") or {}
+    ca = after.get("comparability") or {}
+    sb, sa = cb.get("script"), ca.get("script")
+    if sb and sa and sb != sa:
+        note("different_script", sb, sa)
+    wb, wa = cb.get("words"), ca.get("words")
+    if (
+        isinstance(wb, int)
+        and isinstance(wa, int)
+        and wb > 0
+        and wa > 0
+        and min(wb, wa) / max(wb, wa) < LENGTH_RATIO
+    ):
+        note("different_length", wb, wa)
+    pb, pa = cb.get("page"), ca.get("page")
+    if (pb == "handwriting_with_print") != (pa == "handwriting_with_print"):
+        note("print_on_one_page", pb, pa)
+    return notes
 
 
 def _dump(stored):
