@@ -17,8 +17,10 @@ on:
       - 'backend/baseline_track.py'
       - 'scripts/planted_pages.py'
       - 'scripts/factor_tests.py'
+      - 'scripts/variation_study.py'
       - 'scripts/benchmark.py'
       - 'benchmarks/factors/**'
+      - 'benchmarks/factors-ruled/**'
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
@@ -48,3 +50,9 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Every factor catches its planted mistake as often as before
         run: python scripts/benchmark.py factors
+      # Factor 6 on pages with a printed four-line ruling (#194): the
+      # planted long ascenders still caught, and the same passage twice
+      # by one writer within SAME_PASSAGE_LIMIT at the 90th percentile.
+      - name: Factor 6 on ruled pages, caught and steady
+        if: success() || failure()
+        run: python scripts/benchmark.py factors --ruled

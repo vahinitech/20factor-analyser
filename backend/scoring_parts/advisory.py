@@ -104,8 +104,13 @@ def factor_evidence(n, evidence, checks, zone_based):
             parts.append(f"ascenders reach {zones['ascReach']:.1f}x")
         if zones.get("descReach") is not None:
             parts.append(f"descenders reach {zones['descReach']:.1f}x")
+        source = (
+            "Measured against the printed guide lines"
+            if zones.get("ruled")
+            else "Measured zone bands"
+        )
         evidence = (
-            "Measured zone bands over "
+            f"{source} over "
             f"{zones['linesUsed']} lines: {', '.join(parts)} the "
             "x-height (the 1:2 rule targets 2.0x)."
         )
@@ -205,6 +210,11 @@ def zone_profile(zones, zone_based, scores):
     # special-case the schema on zone_based; upperLowerReach is kept in
     # both for backward compatibility with pre-measurement consumers.
     if zone_based:
+        how = (
+            "the printed guide lines"
+            if zones.get("ruled")
+            else "per-line ink projection profiles"
+        )
         return {
             "upperLowerReach": round(float(scores.get(6, 0.0)), 1),
             "ascenderReach": zones.get("ascReach"),
@@ -214,7 +224,7 @@ def zone_profile(zones, zone_based, scores):
             "flags": zones.get("flags", []),
             "middleStability": round(float(scores.get(5, 0.0)), 1),
             "method": (
-                "measured: per-line ink projection profiles -> zone "
+                f"measured: {how} -> zone "
                 f"bands over {zones['linesUsed']} lines (1:2 rule)"
             ),
         }

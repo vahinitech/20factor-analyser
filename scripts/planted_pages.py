@@ -158,9 +158,14 @@ def writer_scale(letters):
     return X / max(1e-6, float(np.median(heights)))
 
 
-def build_page(letters, rng, kind, style="photo", letters_out=None):
+def build_page(
+    letters, rng, kind, style="photo", letters_out=None, ruled=False
+):
     """Lines of words in one writer's letters, with one planted mistake.
-    Returns (image, lines, truth) where lines carry box, poly and text."""
+    Returns (image, lines, truth) where lines carry box, poly and text.
+    ruled: the page has a printed four-line ruling under each line
+    (ruling); it draws no random numbers, so the writing is the same
+    as on the unruled page."""
     scale = writer_scale(letters)
     sentences = list(SENTENCES)
     rng.shuffle(sentences)
@@ -326,10 +331,13 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
     far = np.concatenate(ink).max(0)
     width = max(PAGE_W, int(far[0]) + MARGIN)
     height = max(PAGE_H, int(far[1]) + MARGIN)
+    rules = (
+        ruling([l["baseline"] for l in lines], width) if ruled else None
+    )
     img = (
-        _photo(ink, width, height, rng)
+        _photo(ink, width, height, rng, rules)
         if style == "photo"
-        else _plain(ink, width, height, rng)
+        else _plain(ink, width, height, rng, rules)
     )
 
     hand_lines = []
@@ -409,9 +417,12 @@ def _shake(placed, amount, seed):
     return out
 
 
-def _plain(ink, width, height, rng):
+def _plain(ink, width, height, rng, rules=None):
     """An even 2-pixel pen on clean paper."""
     img = np.full((height, width, 3), 250, np.uint8)
+    if rules is not None:
+        r = _rule_mask(rules, width, height)[..., None]
+        img = (img * (1 - r) + np.array(RULE_RGB) * r).astype(np.uint8)
     for s in ink:
         pts = np.round(s).astype(np.int32).reshape(-1, 1, 2)
         cv2.polylines(img, [pts], False, (40, 40, 60), PEN, cv2.LINE_AA)
@@ -419,7 +430,7 @@ def _plain(ink, width, height, rng):
     return np.clip(img.astype(np.float64) + noise, 0, 255).astype(np.uint8)
 
 
-def _photo(ink, width, height, rng):
+def _photo(ink, width, height, rng, rules=None):
     """A phone photo of a pen page: the stroke thickens and thins as
     pressure changes, the ink is not one colour, the light falls off
     across the page, the paper has grain, and the picture is slightly
@@ -457,6 +468,9 @@ def _photo(ink, width, height, rng):
     paper = np.array([238, 234, 222]) * light[..., None]
     grain = cv2.GaussianBlur(rng.normal(0, 6, (height, width)), (0, 0), 1.2)
     paper = paper + grain[..., None]
+    if rules is not None:
+        r = _rule_mask(rules, width, height)[..., None]
+        paper = paper * (1 - r) + np.array(RULE_RGB) * r
     shade = 1.0 - 0.25 * cv2.GaussianBlur(
         rng.uniform(0, 1, (height, width)), (0, 0), 3
     )
@@ -732,3 +746,43 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+
+
+# A printed four-line ruling (#194), as on a handwriting worksheet or a
+# four-line notebook: the ascender line two small letters above the
+# baseline, a dashed midline one above it, the baseline, and the
+# descender line one below. Printed in a light blue-grey, under the ink.
+RULE_RGB = (120, 140, 175)
+RULE_ALPHA = 0.85
+RULE_DASH = (12, 6)  # dash and gap of the midline, pixels
+
+
+def ruling(baselines, width):
+    """The rules under lines written on these baselines: (y, x0, x1,
+    dashed) each, across the page less half a margin either side."""
+    x0, x1 = MARGIN // 2, width - MARGIN // 2
+    out = []
+    for b in baselines:
+        out += [
+            (b - 2 * X, x0, x1, False),
+            (b - X, x0, x1, True),
+            (b, x0, x1, False),
+            (b + X, x0, x1, False),
+        ]
+    return out
+
+
+def _rule_mask(rules, width, height):
+    """The rules as a 0 to 1 mask, two pixels thick."""
+    mask = np.zeros((height, width), np.float64)
+    dash, gap = RULE_DASH
+    cols = np.arange(width)
+    for y, x0, x1, dashed in rules:
+        row = int(round(y))
+        if not 0 <= row < height - 1:
+            continue
+        on = (cols >= x0) & (cols < x1)
+        if dashed:
+            on &= (cols - x0) % (dash + gap) < dash
+        mask[row : row + 2, on] = RULE_ALPHA
+    return mask

@@ -95,6 +95,19 @@ paper does not count as reach; reach =
 - Pages that can't support the measurement fall back to a tall-letter
   share proxy, and the report's `zoneProfile.method` field says which
   path produced the numbers, and why.
+- **On printed ruling** (a worksheet's guide lines, a four-line
+  notebook; #194) the bands come from the paper. A rule is a thin row
+  darker than the paper above and below it across most of the writing
+  (a dashed midline counts). Each line's small-letter band is the gap
+  between two rules that holds its small letters, with 1.5 times the
+  ink per row of the gaps either side; the ruling is taken out of the
+  ink, and the line's reach is the median over its letters that rise
+  more than half a band above it (and, for tails, below it), in ruled
+  x-heights. A line with no tall letter is left out of the ascender
+  side, and likewise for tails. The page uses the ruling when at least
+  half its lines, and two or more, are on it; otherwise, and on paper
+  with one dotted rule per line, it is measured from the ink as above.
+  `zoneProfile.method` says "the printed guide lines".
 
 ## Honesty rules — what a score does and doesn't claim
 
