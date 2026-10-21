@@ -892,6 +892,91 @@ def cmd_planted(args):
     return 1 if (problems or changed) else 0
 
 
+# On printed ruling (#194): the mistakes factor 6 is measured against,
+# and how far it may move between two pages of the same passage by one
+# writer: no further than benchmarks/factors-ruled/expected.json keeps,
+# or than #157's limit when nothing is kept. On 21 October 2026 the
+# UJI writers' ruled pages moved 1.31 at the 90th percentile, above that
+# limit (and 5.33 with the ink-only measurement on the same pages).
+RULED_KINDS = ("tall_ascenders",)
+SAME_PASSAGE_LIMIT = 1.0
+SAME_PASSAGE_PAIRS = 2
+
+
+def ruled_spread(uji):
+    """Factor 6's move between two pages of the same passage by one
+    writer, on ruled and on unruled paper: the median, 90th percentile
+    and largest over every UJI writer's pairs."""
+    spec = importlib.util.spec_from_file_location(
+        "variation_study", os.path.join(ROOT, "scripts", "variation_study.py")
+    )
+    vs = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(vs)
+    planted = vs._planted()  # pylint: disable=protected-access
+    writers = planted.parse(planted.fetch(uji))
+    writers = {
+        w: letters
+        for w, letters in writers.items()
+        if all(
+            ch in letters
+            for s in planted.SENTENCES[:4]
+            for ch in s.replace(" ", "")
+        )
+    }
+    out = {}
+    for paper, ruled in (("ruled", True), ("unruled", False)):
+        pairs = vs.synthetic_pairs(
+            writers, SAME_PASSAGE_PAIRS, planted, ruled=ruled
+        )
+        moves = sorted(
+            abs(a[6] - b[6])
+            for _w, a, b in pairs
+            if a.get(6) is not None and b.get(6) is not None
+        )
+        out[paper] = {
+            "pairs": len(moves),
+            "median": _quantile(moves, 0.5),
+            "p90": _quantile(moves, 0.9),
+            "max": round(moves[-1], 2) if moves else None,
+        }
+    return out
+
+
+def _quantile(xs, q):
+    """The q quantile of sorted xs, interpolated as numpy does, to two
+    places; None for none."""
+    if not xs:
+        return None
+    pos = (len(xs) - 1) * q
+    lo = int(pos)
+    hi = min(lo + 1, len(xs) - 1)
+    return round(xs[lo] + (xs[hi] - xs[lo]) * (pos - lo), 2)
+
+
+def _spread_report(spread, kept):
+    """The same-passage table; a problem when the ruled pages' 90th
+    percentile rose over the one kept (kept: the expected file's), or
+    is over SAME_PASSAGE_LIMIT when none is kept."""
+    _report(
+        "\n### Factor 6, the same passage twice by one writer\n\n"
+        "| Paper | Pairs | Median move | 90th percentile | Largest |\n"
+        "|---|---|---|---|---|\n"
+        + "\n".join(
+            f"| {paper} | {s['pairs']} | {s['median']} | {s['p90']} "
+            f"| {s['max']} |"
+            for paper, s in spread.items()
+        )
+    )
+    p90 = spread["ruled"]["p90"]
+    limit = ((kept or {}).get("ruled") or {}).get("p90", SAME_PASSAGE_LIMIT)
+    if p90 is not None and p90 > limit:
+        return [
+            f"ruled pages: factor 6 moves {p90} at the 90th percentile "
+            f"between pages of the same passage, over {limit}"
+        ]
+    return []
+
+
 def cmd_factors(args):
     """Every factor against a mistake planted for it (scripts/
     factor_tests.py): how often each catches its mistake may not fall
@@ -901,14 +986,17 @@ def cmd_factors(args):
     )
     ft = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(ft)
-    kinds = list(ft.TARGETS)
+    kinds = list(RULED_KINDS if args.ruled else ft.TARGETS)
     with contextlib.redirect_stderr(io.StringIO()):
-        rows = ft.run(args.uji, kinds, False)
+        rows = ft.run(args.uji, kinds, False, ruled=args.ruled)
     now = {
         kind: {n: t.get("caught") for n, t in v["targets"].items()}
         for kind, v in ft.summarise(rows).items()
     }
-    path = os.path.join(SETS[0], "factors", "expected.json")
+    name = "factors-ruled" if args.ruled else "factors"
+    path = os.path.join(SETS[0], name, "expected.json")
+    if args.ruled:
+        now["same_passage"] = ruled_spread(args.uji)
     if args.update:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         _dump(path, now)
@@ -917,6 +1005,8 @@ def cmd_factors(args):
         old = json.load(f)
     problems, lines = [], []
     for kind, targets in sorted(now.items()):
+        if kind == "same_passage":
+            continue
         for n, caught in sorted(targets.items()):
             was = old.get(kind, {}).get(n)
             lines.append(f"| {kind} | {n} | {was} | {caught} |")
@@ -929,6 +1019,10 @@ def cmd_factors(args):
         "| Mistake | Factor | Expected | Now |\n|---|---|---|---|\n"
         + "\n".join(lines)
     )
+    if args.ruled:
+        problems += _spread_report(
+            now["same_passage"], old.get("same_passage")
+        )
     for p in problems:
         _report(f"- {p}")
     if not problems and now != old:
@@ -969,6 +1063,12 @@ def main(argv=None):
             ),
         )
         p.add_argument("--update", action="store_true")
+        if name == "factors":
+            p.add_argument(
+                "--ruled",
+                action="store_true",
+                help="pages on printed ruling (factor 6, #194)",
+            )
     args = ap.parse_args(argv)
     if getattr(args, "root", None):
         SETS[0] = os.path.abspath(args.root)

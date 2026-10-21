@@ -83,7 +83,7 @@ def score_page(img, hand_lines, ocr):
     return out
 
 
-def run(uji, kinds, ocr, seed=0, only=None):
+def run(uji, kinds, ocr, seed=0, only=None, ruled=False):
     writers = pp.parse(pp.fetch(uji))
     rows = []
     for wi, writer in enumerate(sorted(writers)):
@@ -97,7 +97,9 @@ def run(uji, kinds, ocr, seed=0, only=None):
 
         def page(kind, letters=letters, wi=wi):
             rng = np.random.default_rng([seed, wi])
-            img, lines, _truth = pp.build_page(letters, rng, kind, "photo")
+            img, lines, _truth = pp.build_page(
+                letters, rng, kind, "photo", ruled=ruled
+            )
             return score_page(img, lines, ocr)
 
         clean = page("clean")

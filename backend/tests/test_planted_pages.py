@@ -82,3 +82,25 @@ class TestPlantedPages(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestRuledPages(unittest.TestCase):
+    """Pages on a printed four-line ruling (#194)."""
+
+    def test_the_ruling_changes_the_paper_not_the_writing(self):
+        plain = planted.build_page(LETTERS, np.random.default_rng(5), "clean")
+        ruled = planted.build_page(
+            LETTERS, np.random.default_rng(5), "clean", ruled=True
+        )
+        self.assertEqual(plain[1], ruled[1])
+        self.assertNotEqual(plain[0].tobytes(), ruled[0].tobytes())
+
+    def test_four_rules_under_each_line(self):
+        rules = planted.ruling([100.0, 180.0], 600)
+        self.assertEqual(len(rules), 8)
+        ys = [r[0] for r in rules[:4]]
+        self.assertEqual(ys, [100 - 2 * planted.X, 100 - planted.X, 100, 124])
+        self.assertTrue(rules[1][3])  # the midline is dashed
+        mask = planted._rule_mask(rules, 600, 300)
+        self.assertEqual(mask[100, 300], planted.RULE_ALPHA)
+        self.assertEqual(mask[100, 10], 0.0)
