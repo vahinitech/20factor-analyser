@@ -76,6 +76,9 @@ FRAGMENT_SHORT_SHARE = 0.5
 # heights of the row's middle (reader_rows): a word's loops reach about
 # half a line either side, and the next row is a line or more away.
 ROW_REACH = 0.6
+# Two reader lines are on one row when they overlap in height by this
+# share of the shorter one (reader_rows).
+ROW_OVERLAP = 0.45
 _NO_ROWS = {"rows": 0, "pieces": 0, "cover": 0.0, "per_row": 0, "short": 0.0}
 
 
@@ -439,9 +442,8 @@ def reader_rows(arr, lines):
     """The reader's lines as whole rows, widened to the ink on each row,
     and how much of each row the reader read: (rows, cover).
 
-    Lines whose middles lie within half a line of each other are one row
-    (a line height is the lines' median height). Each ink blob (_blobs)
-    joins the row whose middle is nearest its own, when it lies within
+    Lines overlapping in height are one row (_reader_groups). Each ink
+    blob (_blobs) joins the row whose middle is nearest its own, when it lies within
     ROW_REACH lines of it; ink far from every line (a row nothing was
     read on) is left out. A row is shaped like a reader line: the box
     and outline of its ink and its lines, its lines' text left to right
@@ -501,16 +503,23 @@ def reader_rows(arr, lines):
 
 
 def _reader_groups(read):
-    """(rows, line height): the reader's lines whose middles lie within
-    half a line of each other are one row, top to bottom; a line height
-    is the lines' median height."""
+    """(rows, line height): top to bottom, a reader's line joins the row
+    above when they overlap in height by ROW_OVERLAP of the shorter (a
+    capital's flourish read on its own sits half a line higher); a line
+    height is the lines' median height."""
     line_h = float(np.median([l["box"][3] for l in read]))
-    groups = []
+    groups, bands = [], []
     for line in sorted(read, key=_centre):
-        if groups and _centre(line) - _centre(groups[-1][0]) <= line_h / 2.0:
-            groups[-1].append(line)
-        else:
-            groups.append([line])
+        y0, h = line["box"][1], line["box"][3]
+        if bands:
+            top, bottom = bands[-1]
+            shared = min(bottom, y0 + h) - max(top, y0)
+            if shared >= ROW_OVERLAP * min(h, bottom - top):
+                groups[-1].append(line)
+                bands[-1] = (min(top, y0), max(bottom, y0 + h))
+                continue
+        groups.append([line])
+        bands.append((y0, y0 + h))
     return groups, line_h
 
 
