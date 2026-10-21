@@ -2,12 +2,11 @@
   Joined cursive came back as short pieces ("Thi", "cmen") with most of
   each row unread, and every factor was measured on the pieces' boxes:
   neat penmanship scored Margin Discipline 0 on five of eight pages. The
-  reader's boxes are now laid on the page's ink rows
-  (`ink_geometry.fragment_rows`); when they cover too little of the rows,
-  or come in many or short pieces, the rows, baselines, sizes and margins
-  are measured from the ink as the Telugu ink mode does, and the reader
-  only gives the text. Factors that need what was read are "Not
-  measured". The response says why in `recognition.ink_reason`
+  reader's lines are now grouped into rows and each row is widened to the
+  ink on it (`ink_geometry.fragment_rows`); when the reader's boxes cover
+  too little of the rows, or come in many or short pieces, the page is
+  measured on the whole rows, and the reader's own lines still give the
+  text. The response says so in `recognition.ink_reason`
   (`read_in_fragments`, or `language` for the Telugu ink mode).
 - Letter Spacing (9) is "Not measured" on a page the style check calls
   joined cursive: there are no gaps between its letters, only pen lifts.

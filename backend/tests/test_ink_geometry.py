@@ -69,7 +69,7 @@ def draw_cursive(rows=4, words=4, letters=7):
     """Joined cursive: each word one unbroken stroke, a garland of
     letters, so the pen never lifts inside a word. Returns the page and
     each row's word boxes."""
-    img = np.full((140 + 150 * rows, 1500, 3), 236, np.uint8)
+    img = np.full((140 + 150 * rows, 1200, 3), 236, np.uint8)
     boxes = []
     for ri in range(rows):
         base = 120 + ri * 150
