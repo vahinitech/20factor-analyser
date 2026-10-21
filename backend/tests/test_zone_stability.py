@@ -131,8 +131,8 @@ class OneLongLineTests(unittest.TestCase):
         longer = [1.5, 2.5, 1.6, 3.4]
         before = dict(_zones(uneven), ascReachCv=0.5)
         after = dict(_zones(longer), ascReachCv=0.6)
-        drop = zone_analysis.zone_score(before) - zone_analysis.zone_score(after)
-        self.assertGreater(drop, 0.1)
+        score = zone_analysis.zone_score
+        self.assertGreater(score(before) - score(after), 0.1)
 
     def test_the_penalty_has_a_ceiling(self):
         z = _zones([2.0, 2.0, 2.0, 2.0], dev=5.0)
