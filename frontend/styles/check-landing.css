@@ -16,7 +16,11 @@
 .check-sample .btn { display:flex; justify-content:center; margin-top:12px; text-decoration:none; }
 .check-path { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; border-block:1px solid var(--v-border); padding:20px 0; margin:0 0 32px; }
 .check-path a { color:var(--v-text-2); font-size:14px; text-decoration:none; display:flex; align-items:center; gap:12px; }
-.check-path span { font-size:12px; color:var(--v-accent-text); background:var(--v-accent-soft); padding:8px; border-radius:50%; }
+.check-path span { flex:0 0 32px; height:32px; display:grid; place-items:center; font-size:14px; font-weight:600; color:var(--v-accent-text); background:var(--v-accent-soft); border-radius:50%; }
+.check-path a { display:grid; grid-template-columns:32px 1fr; column-gap:12px; align-items:center; }
+.check-path span { grid-row:span 2; }
+.check-path b { color:var(--v-text); font-size:15px; font-weight:600; }
+.check-path small { color:var(--v-text-2); font-size:13px; grid-column:2; }
 #screen-upload .cl-upload { box-shadow:none; border:0; background:transparent; padding:0; scroll-margin-top:100px; }
 #screen-upload .intake-split { grid-template-columns:1.5fr 1fr; gap:24px; }
 #screen-upload .intake-cap { margin-bottom:18px; }
@@ -26,7 +30,11 @@
 #screen-upload .check-benefits { background:var(--v-accent-soft); padding:28px; border-radius:16px; }
 .benefit-list { display:grid; gap:0; padding:0; margin:12px 0; list-style:none; }
 .benefit-list li { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--v-border); }
-.benefit-list li > span { display:grid; place-items:center; flex:0 0 28px; height:28px; background:var(--v-surface); color:var(--v-accent-text); border-radius:50%; font-size:13px; font-weight:600; }
+.benefit-list li > span { display:grid; place-items:center; flex:0 0 36px; height:36px; background:var(--v-accent-soft); color:var(--v-accent-text); border-radius:50%; font-size:15px; font-weight:600; }
+.benefit-list li:nth-child(2) > span { background:var(--v-success-bg); color:var(--v-success); }
+.benefit-list li:nth-child(3) > span { background:var(--v-warning-bg); color:var(--v-warning); }
+.benefit-list li:nth-child(4) > span { background:var(--v-info-bg); color:var(--v-info); }
+.benefit-list li:nth-child(5) > span { background:var(--v-danger-bg); color:var(--v-danger); }
 .benefit-list h3 { font-size:16px; color:var(--v-text); margin:2px 0 5px; }
 .benefit-list p, .check-kind-note { font-size:14px; line-height:1.6; color:var(--v-text-2); margin:0; }
 .check-kind-note { border-top:1px solid var(--v-border); padding-top:18px; }
@@ -70,3 +78,9 @@
   .check-path { grid-template-columns:1fr; gap:12px; }
 }
 @media (prefers-reduced-motion:reduce) { #screen-upload.screen.on { animation:none; } }
+
+/* Under the run button: only while it waits for a photo. */
+.cl-upload .actions { flex-wrap:wrap; }
+.run-hint { display:none; flex-basis:100%; margin:8px 0 0; font-size:14px; color:var(--v-text-2); text-align:center; }
+#go-process:disabled + .run-hint { display:block; }
+.dz-sub { margin:4px 0 12px; font-size:14px; color:var(--v-text-2); }
