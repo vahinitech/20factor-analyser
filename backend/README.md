@@ -38,6 +38,7 @@ Docker: `docker compose up -d --build` from the repository root.
 - Engines, settings, hybrid mode and the layout filter: [docs/06](../docs/06-reading-engines.md#engine-settings-and-modes)
 - Settings, pointing a website at it, keeping models between deployments: [docs/14](../docs/14-build.md#running-the-service)
 - The API: [API-V2.md](API-V2.md); capacity: [docs/13](../docs/13-api-and-capacity.md)
+- Giving, renewing and taking back Pro (operators): [docs/17](../docs/17-access-and-trials.md) and `deployment/grant-pro.sh`
 - Benchmarks: [docs/18](../docs/18-benchmark.md)
 
 Reading is assistive: it labels what was written so the report can show

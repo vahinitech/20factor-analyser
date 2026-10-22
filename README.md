@@ -73,6 +73,9 @@ score table in either report.
 Start at [docs/00-start-here.md](docs/00-start-here.md): the documents are
 numbered in the order to read them.
 
+Operators giving, renewing or taking back Pro: [docs/17-access-and-trials.md](docs/17-access-and-trials.md)
+(`deployment/grant-pro.sh` does a grant in one command).
+
 ## See it before you scan
 
 No install needed to judge what the analyser delivers:
