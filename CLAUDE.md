@@ -137,6 +137,11 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **Pro access is granted on the server, never in code.** Operators follow
+  [docs/17-access-and-trials.md](docs/17-access-and-trials.md); `deployment/grant-pro.sh`
+  does a grant in one command and leaves the key in a private file. Every
+  key is random and only its hash is stored: never write a key into the
+  repository, a commit, a PR or a log, and never make one from a chosen word.
 - **CI runs a benchmark only when a change can move it.**
   `scripts/score_closure.py` follows the imports from the benchmark
   scripts (scores) and from the reader up to the scorer (reader), plus the
