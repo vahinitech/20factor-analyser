@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-50c9abfb693c12d0b809",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-4eff9e048107ba3df691",
   "creationInfo": {
-    "created": "2026-10-20T12:02:05Z",
+    "created": "2026-10-22T09:32:16Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
@@ -530,6 +530,17 @@
       "copyrightText": "NOASSERTION",
       "versionInfo": "4.0.6",
       "comment": "Declared in backend/requirements/core.txt: pylint==4.0.6. Resolved container versions require a build SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vulture",
+      "name": "vulture",
+      "downloadLocation": "https://pypi.org/project/vulture/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "versionInfo": "2.14",
+      "comment": "Declared in backend/requirements/core.txt: vulture==2.14. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Vendor-html2canvas",
@@ -3228,6 +3239,11 @@
     {
       "spdxElementId": "SPDXRef-Package-pylint",
       "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-vulture",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {

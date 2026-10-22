@@ -190,7 +190,6 @@ USE_TEXTLINE_ORIENTATION = SETTINGS.use_textline_orientation
 MAX_OCR_SIDE = SETTINGS.max_ocr_side
 OCR_VERSION = SETTINGS.ocr_version
 DET_MODEL_NAME = SETTINGS.det_model_name
-REC_MODEL_MAP_RAW = SETTINGS.rec_model_map_raw
 REC_MODEL_MAP = SETTINGS.rec_model_map
 TEXT_DET_LIMIT_SIDE_LEN = SETTINGS.text_det_limit_side_len
 TEXT_REC_SCORE_THRESH = SETTINGS.text_rec_score_thresh
@@ -307,7 +306,7 @@ ocr_backends.init_registry(
 print(f"[capacity] {scan_slots.PLAN}", flush=True)
 
 
-# _to_data_url/_crop_rgb/_build_region_previews/_full_page_preview/
+# _to_data_url/_crop_rgb/_build_region_previews/
 # _factor_region_map/_layout_features/_infer_doc_context/vl_analyze now
 # live in computer_vision.py. This module only needs vl_analyze.
 # The hardest letters on the hardest line are read again by the scan's

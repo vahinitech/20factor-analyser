@@ -259,6 +259,34 @@ change has to lower one (a file split in two, tests moved elsewhere),
 edit `coverage-baseline.json` by hand and say why in the PR, so the lower
 number is in the diff for review.
 
+### Unused code: what coverage cannot see
+
+Coverage says which lines the tests ran. It does not say whether anything
+in the product calls them, and the ratchet only fails when a number falls,
+so a file at 0% never fails it. `report-render.js` and `app.js` run only in
+browser tests, which c8 does not count, so they sit at 0%, and an unused
+role table, score ring, trajectory chart and nine other helpers stayed in
+`report-render.js` for months. pylint did not see them either: it checks
+unused imports and variables inside one file, not a function no other file
+calls.
+
+Two tests look for that directly, and run wherever the other tests run:
+
+- `backend/tests/test_unused_code.py` runs vulture over `backend/`,
+  `scripts/` and `frontend/build_bundle.py`, with the tests left out, at 60%
+  confidence. Route handlers and middleware are skipped, since FastAPI
+  calls them through `@app.*` and `@router.*`.
+- `tests/unused-code.test.mjs` lists every top-level function and constant
+  in `frontend/src/` and fails on one that nothing else under `frontend/`
+  names. The sources are joined into one script, so a per-file linter
+  would take every top-level name as a global someone might call.
+
+A test is not a use: a function only a test calls never runs for a
+visitor. When a name stays on purpose (a test helper, an attribute a
+library reads, a feature waiting for its report), it goes in the test's
+`KEEP` table with the reason. Both tests also fail on a `KEEP` entry that
+is used or gone, so the table cannot go stale.
+
 ## 7. Regression gate: is this commit slower or less accurate?
 
 Every commit should answer two questions before it merges: does a scan

@@ -292,24 +292,6 @@ def fallback_line_regions(arr: np.ndarray, max_lines: int = 40):
     return out
 
 
-def _full_page_preview(arr: np.ndarray):
-    h, w = arr.shape[:2]
-    target_w = 900
-    if w <= target_w:
-        small = arr
-    else:
-        scale = target_w / float(max(1, w))
-        nh = max(1, int(round(h * scale)))
-        nw = max(1, int(round(w * scale)))
-        if cv2 is not None:
-            small = cv2.resize(arr, (nw, nh), interpolation=cv2.INTER_AREA)
-        else:
-            small = np.array(
-                Image.fromarray(arr).resize((nw, nh), Image.Resampling.BICUBIC)
-            )
-    return _to_data_url(small, quality=78)
-
-
 def _accepted_lines(arr, regions, lines):
     """Handwriting lines with valid boxes clamped to the image, sorted top
     to bottom and numbered line_1, line_2, ... (the numbering evidence,
