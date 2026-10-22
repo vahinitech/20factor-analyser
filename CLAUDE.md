@@ -137,6 +137,20 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **CI runs a benchmark only when a change can move it.**
+  `scripts/score_closure.py` follows the imports from the benchmark
+  scripts (scores) and from the reader up to the scorer (reader), plus the
+  data each reads. A first `changes` job skips the replay, paired timing,
+  history, factor, calibration and live-reader jobs on a pull request that
+  touches neither list; pushes to main, the weekly runs and runs by hand
+  run them all. Before pushing, run
+  `python scripts/score_closure.py changed origin/main`. For scores, run
+  `python scripts/benchmark.py check`, `factors`, `factors --ruled` and
+  `planted`, and `python scripts/calibrate.py` when a scale moved. For
+  reader, the live reader needs the analyser image, so CI's run is the
+  check. A module loaded by name (importlib, a file path) is invisible to
+  the closure: add its entry or data to `GROUPS`, or `test_score_closure`
+  fails. Details: docs/18-benchmark.md, "When the benchmarks run".
 - **Run the whole test list ci.yml runs before calling a change ready.**
   A partial run missed the closed `/health` schema in `test_schemas`
   (#113). Browser tests need the Playwright image matching
@@ -147,12 +161,18 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 
 ```bash
 # backend
-python -m py_compile backend/*.py            # syntax gate
-black --check --line-length 79 backend/*.py backend/tests/*.py frontend/build_bundle.py
+python -m py_compile backend/*.py backend/*/*.py   # syntax gate
+black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/*/*.py
 # pylint --fail-under=9.0 <backend/*.py + frontend/build_bundle.py> -- see
 # ci.yml for the exact file list; not reproduced here since it's not one
 # glob (individual .py files, in the order ci.yml lists them)
-python -m pytest backend/tests/               # unit + integration
+python -m unittest discover -v -s backend/tests -t .   # unit + integration
+
+# benchmarks: which ones this change needs, then run those
+python scripts/score_closure.py changed origin/main
+python scripts/benchmark.py check             # scores: the real pages replayed
+python scripts/benchmark.py factors && python scripts/benchmark.py factors --ruled
+python scripts/benchmark.py planted
 
 # frontend bundle: build output, gitignored; build it to run the pages
 npm run build:bundle                          # python frontend/build_bundle.py
@@ -172,7 +192,7 @@ docker compose up -d --wait                   # full stack for live recognition 
 - Legacy evidence and score routes remain for compatibility. The hosted browser now uses `/api/v2/reports?format=compact&include=text` and a cached dictionary. Detailed crops are optional Pro evidence; test the changed route and its consumer, not an assumed legacy-only flow.
 - `pypdfium2` is used for PDF decode but reaches the image only
   transitively — keep it explicitly pinned in `backend/requirements/core.txt`.
-- OCR backends are tiered (`requirements-{core,paddle,trocr,surya}.txt`);
+- OCR backends are tiered (`requirements/{core,paddle,trocr,surya}.txt`);
   the default image = core + paddle. `VAHINI_OCR_BACKEND` selects at runtime.
 
 ## Consumers — breaking changes ripple
