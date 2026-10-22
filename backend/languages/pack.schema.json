@@ -1,19 +1,19 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/language-pack.schema.json",
   "title": "Language pack",
-  "description": "A pack file: facts under set, add and remove (docs/20-languages.md, section 4). $defs/resolved is the pack after inheritance.",
+  "description": "A pack file: facts under set, add and remove (docs/20-languages.md, section 4). definitions/resolved is the pack after inheritance.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "kind"],
   "properties": {
     "$comment": {"type": "string"},
-    "id": {"$ref": "#/$defs/id"},
+    "id": {"$ref": "#/definitions/id"},
     "kind": {"enum": ["script", "language", "locale"]},
-    "extends": {"$ref": "#/$defs/id"},
-    "set": {"$ref": "#/$defs/setFields"},
-    "add": {"$ref": "#/$defs/listFields"},
-    "remove": {"$ref": "#/$defs/listFields"}
+    "extends": {"$ref": "#/definitions/id"},
+    "set": {"$ref": "#/definitions/setFields"},
+    "add": {"$ref": "#/definitions/listFields"},
+    "remove": {"$ref": "#/definitions/listFields"}
   },
   "if": {"properties": {"kind": {"const": "script"}}},
   "then": {
@@ -26,7 +26,7 @@
     }
   },
   "else": {"required": ["extends"]},
-  "$defs": {
+  "definitions": {
     "id": {
       "type": "string",
       "pattern": "^([A-Z][a-z]{3}|[a-z]{2,3}|[a-z]{2,3}-[A-Z]{2})$"
@@ -34,12 +34,12 @@
     "path": {"type": "string", "pattern": "^[a-z_]+(\\.[a-z_]+)*$"},
     "setFields": {
       "type": "object",
-      "propertyNames": {"$ref": "#/$defs/path"}
+      "propertyNames": {"$ref": "#/definitions/path"}
     },
     "listFields": {
       "type": "object",
       "minProperties": 1,
-      "propertyNames": {"$ref": "#/$defs/path"},
+      "propertyNames": {"$ref": "#/definitions/path"},
       "additionalProperties": {
         "oneOf": [
           {"type": "string", "minLength": 1},
@@ -65,12 +65,12 @@
         "classes"
       ],
       "properties": {
-        "id": {"$ref": "#/$defs/id"},
+        "id": {"$ref": "#/definitions/id"},
         "kind": {"enum": ["script", "language", "locale"]},
         "chain": {
           "type": "array",
           "minItems": 1,
-          "items": {"$ref": "#/$defs/id"}
+          "items": {"$ref": "#/definitions/id"}
         },
         "script": {"type": "string", "pattern": "^[A-Z][a-z]{3}$"},
         "language": {"type": "string", "pattern": "^[a-z]{2,3}$"},
@@ -89,16 +89,16 @@
         "min_script_share": {"type": "number", "minimum": 0, "maximum": 1},
         "classes": {
           "type": "object",
-          "additionalProperties": {"$ref": "#/$defs/letters"}
+          "additionalProperties": {"$ref": "#/definitions/letters"}
         },
         "tbar_pairs": {
           "type": "object",
-          "additionalProperties": {"$ref": "#/$defs/words"}
+          "additionalProperties": {"$ref": "#/definitions/words"}
         },
         "letter_models": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/name"}
+          "items": {"$ref": "#/definitions/name"}
         },
         "variants": {
           "type": "object",
@@ -107,14 +107,14 @@
             "type": "array",
             "minItems": 1,
             "uniqueItems": true,
-            "items": {"$ref": "#/$defs/name"}
+            "items": {"$ref": "#/definitions/name"}
           }
         },
         "level": {"type": "integer", "minimum": 0, "maximum": 3},
         "benchmark": {"type": "string", "pattern": "^[a-z0-9-]+$"},
         "letters_per_word": {"type": "number", "exclusiveMinimum": 0},
-        "finishing": {"$ref": "#/$defs/letters"},
-        "form_words": {"$ref": "#/$defs/words"},
+        "finishing": {"$ref": "#/definitions/letters"},
+        "form_words": {"$ref": "#/definitions/words"},
         "reading": {
           "description": "Acceptance limits for reading a line (docs/20-languages.md, section 17.3). accept_confidence: a rung's reading is accepted when that rung's confidence reaches it and the letters are in the script (min_script_share). Unset, a reading is accepted at the top rung of the ladder only, so every line climbs the whole ladder. Set only from rank_stages.py's calibration on benchmark sets (section 19, gap 5).",
           "type": "object",

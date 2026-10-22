@@ -64,7 +64,7 @@
           "type": "string",
           "default": "",
           "maxLength": 16384,
-          "description": "Optional school, class and child profile as JSON text: $defs/layers of backend/languages/profile.schema.json, at most 16384 bytes in UTF-8. Sent with each request and never stored; the response carries only its hash as ruleset. A refused profile is HTTP 413 or 422 before the photo is read."
+          "description": "Optional school, class and child profile as JSON text: definitions/layers of backend/languages/profile.schema.json, at most 16384 bytes in UTF-8. Sent with each request and never stored; the response carries only its hash as ruleset. A refused profile is HTTP 413 or 422 before the photo is read."
         },
         "age_band": {
           "type": "string",

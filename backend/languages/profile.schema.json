@@ -1,16 +1,16 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/language-profile.schema.json",
   "title": "School, class or child profile",
-  "description": "Teaching choices layered on the language packs: packs, then school, then class, then child (docs/20-languages.md, section 18.1). Fixed fields and literal lists only: no code, no regular expressions. Every field says how it changes what came before, with set, add or remove. There is no field for health, diagnosis, ability or a child's name; a name may appear only as an exception word. $defs/layers is the request's profile field; $defs/resolved is the ruleset after every layer.",
-  "$ref": "#/$defs/profile",
-  "$defs": {
+  "description": "Teaching choices layered on the language packs: packs, then school, then class, then child (docs/20-languages.md, section 18.1). Fixed fields and literal lists only: no code, no regular expressions. Every field says how it changes what came before, with set, add or remove. There is no field for health, diagnosis, ability or a child's name; a name may appear only as an exception word. definitions/layers is the request's profile field; definitions/resolved is the ruleset after every layer.",
+  "$ref": "#/definitions/profile",
+  "definitions": {
     "profile": {
       "type": "object",
       "additionalProperties": false,
       "properties": {
         "profile": {
-          "$ref": "#/$defs/id"
+          "$ref": "#/definitions/id"
         },
         "version": {
           "type": "integer",
@@ -26,7 +26,7 @@
           ],
           "properties": {
             "set": {
-              "$ref": "#/$defs/id"
+              "$ref": "#/definitions/id"
             }
           }
         },
@@ -39,7 +39,7 @@
           ],
           "properties": {
             "set": {
-              "$ref": "#/$defs/rulingName"
+              "$ref": "#/definitions/rulingName"
             }
           }
         },
@@ -50,13 +50,13 @@
           "minProperties": 1,
           "properties": {
             "set": {
-              "$ref": "#/$defs/variantMap"
+              "$ref": "#/definitions/variantMap"
             },
             "add": {
-              "$ref": "#/$defs/variantChange"
+              "$ref": "#/definitions/variantChange"
             },
             "remove": {
-              "$ref": "#/$defs/variantChange"
+              "$ref": "#/definitions/variantChange"
             }
           }
         },
@@ -67,13 +67,13 @@
           "minProperties": 1,
           "properties": {
             "set": {
-              "$ref": "#/$defs/wordListMap"
+              "$ref": "#/definitions/wordListMap"
             },
             "add": {
-              "$ref": "#/$defs/wordListChange"
+              "$ref": "#/definitions/wordListChange"
             },
             "remove": {
-              "$ref": "#/$defs/wordListChange"
+              "$ref": "#/definitions/wordListChange"
             }
           }
         },
@@ -84,13 +84,13 @@
           "minProperties": 1,
           "properties": {
             "set": {
-              "$ref": "#/$defs/exceptionLists"
+              "$ref": "#/definitions/exceptionLists"
             },
             "add": {
-              "$ref": "#/$defs/exceptionChange"
+              "$ref": "#/definitions/exceptionChange"
             },
             "remove": {
-              "$ref": "#/$defs/exceptionChange"
+              "$ref": "#/definitions/exceptionChange"
             }
           }
         },
@@ -103,7 +103,7 @@
           ],
           "properties": {
             "set": {
-              "$ref": "#/$defs/checkMap"
+              "$ref": "#/definitions/checkMap"
             }
           }
         }
@@ -137,11 +137,11 @@
       "maxItems": 8,
       "uniqueItems": true,
       "items": {
-        "$ref": "#/$defs/id"
+        "$ref": "#/definitions/id"
       }
     },
     "someForms": {
-      "$ref": "#/$defs/forms",
+      "allOf": [{ "$ref": "#/definitions/forms" }],
       "minItems": 1
     },
     "words": {
@@ -149,11 +149,11 @@
       "maxItems": 200,
       "uniqueItems": true,
       "items": {
-        "$ref": "#/$defs/word"
+        "$ref": "#/definitions/word"
       }
     },
     "someWords": {
-      "$ref": "#/$defs/words",
+      "allOf": [{ "$ref": "#/definitions/words" }],
       "minItems": 1
     },
     "skipName": {
@@ -167,21 +167,21 @@
       "maxItems": 2,
       "uniqueItems": true,
       "items": {
-        "$ref": "#/$defs/skipName"
+        "$ref": "#/definitions/skipName"
       }
     },
     "someSkips": {
-      "$ref": "#/$defs/skips",
+      "allOf": [{ "$ref": "#/definitions/skips" }],
       "minItems": 1
     },
     "variantMap": {
       "type": "object",
       "maxProperties": 60,
       "propertyNames": {
-        "$ref": "#/$defs/letter"
+        "$ref": "#/definitions/letter"
       },
       "additionalProperties": {
-        "$ref": "#/$defs/forms"
+        "$ref": "#/definitions/forms"
       }
     },
     "variantChange": {
@@ -189,20 +189,20 @@
       "minProperties": 1,
       "maxProperties": 60,
       "propertyNames": {
-        "$ref": "#/$defs/letter"
+        "$ref": "#/definitions/letter"
       },
       "additionalProperties": {
-        "$ref": "#/$defs/someForms"
+        "$ref": "#/definitions/someForms"
       }
     },
     "wordListMap": {
       "type": "object",
       "maxProperties": 20,
       "propertyNames": {
-        "$ref": "#/$defs/id"
+        "$ref": "#/definitions/id"
       },
       "additionalProperties": {
-        "$ref": "#/$defs/words"
+        "$ref": "#/definitions/words"
       }
     },
     "wordListChange": {
@@ -210,10 +210,10 @@
       "minProperties": 1,
       "maxProperties": 20,
       "propertyNames": {
-        "$ref": "#/$defs/id"
+        "$ref": "#/definitions/id"
       },
       "additionalProperties": {
-        "$ref": "#/$defs/someWords"
+        "$ref": "#/definitions/someWords"
       }
     },
     "exceptionLists": {
@@ -222,10 +222,10 @@
       "minProperties": 1,
       "properties": {
         "words": {
-          "$ref": "#/$defs/words"
+          "$ref": "#/definitions/words"
         },
         "skip": {
-          "$ref": "#/$defs/skips"
+          "$ref": "#/definitions/skips"
         }
       }
     },
@@ -235,10 +235,10 @@
       "minProperties": 1,
       "properties": {
         "words": {
-          "$ref": "#/$defs/someWords"
+          "$ref": "#/definitions/someWords"
         },
         "skip": {
-          "$ref": "#/$defs/someSkips"
+          "$ref": "#/definitions/someSkips"
         }
       }
     },
@@ -275,13 +275,13 @@
       "minProperties": 1,
       "properties": {
         "school": {
-          "$ref": "#/$defs/profile"
+          "$ref": "#/definitions/profile"
         },
         "class": {
-          "$ref": "#/$defs/profile"
+          "$ref": "#/definitions/profile"
         },
         "child": {
-          "$ref": "#/$defs/profile",
+          "allOf": [{ "$ref": "#/definitions/profile" }],
           "propertyNames": {
             "enum": [
               "profile",
@@ -308,7 +308,7 @@
         "letter_model": {
           "anyOf": [
             {
-              "$ref": "#/$defs/id"
+              "$ref": "#/definitions/id"
             },
             {
               "type": "null"
@@ -318,7 +318,7 @@
         "ruling": {
           "anyOf": [
             {
-              "$ref": "#/$defs/rulingName"
+              "$ref": "#/definitions/rulingName"
             },
             {
               "type": "null"
@@ -326,10 +326,10 @@
           ]
         },
         "variants": {
-          "$ref": "#/$defs/variantMap"
+          "$ref": "#/definitions/variantMap"
         },
         "word_lists": {
-          "$ref": "#/$defs/wordListMap"
+          "$ref": "#/definitions/wordListMap"
         },
         "exceptions": {
           "type": "object",
@@ -340,10 +340,10 @@
           ],
           "properties": {
             "words": {
-              "$ref": "#/$defs/words"
+              "$ref": "#/definitions/words"
             },
             "skip": {
-              "$ref": "#/$defs/skips"
+              "$ref": "#/definitions/skips"
             }
           }
         },
