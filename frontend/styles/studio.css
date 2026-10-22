@@ -6,7 +6,7 @@
    Layers on top of report.css (same Ink & Paper tokens).
    ========================================================================= */
 
-body.studio{ background:#EEEEEE; }
+body.studio{ background:var(--v-bg, #E9E9EA); }
 
 /* ---- App frame / progress rail ---------------------------------------- */
 .studio-top{

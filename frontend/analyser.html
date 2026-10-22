@@ -377,8 +377,26 @@
         <li><span aria-hidden="true">Ab</span><div><h3>Readability</h3><p>How easy your writing is to read.</p></div></li>
       </ul>
       <figure class="check-sample">
-        <figcaption>Explore a sample page</figcaption>
-        <img src="assets/samples/handwriting-sample.jpg" alt="Vahini's handwritten practice page used in the sample report" width="640" height="400" loading="lazy">
+        <figcaption>What the check found on a sample page</figcaption>
+        <!-- Circles: the "look" places the analyser marked on the sample
+             (scripts/core/sample-report-data.js, factor_regions[n].places, in
+             the 960x1280 processed image). tests/sample-marks.test.mjs holds
+             them to that data. -->
+        <svg class="sample-marks" viewBox="130 740 700 340" role="img" aria-labelledby="sample-marks-title">
+          <title id="sample-marks-title">Lines 11 to 16 of Vahini's sample page, with the widest word gaps, the words of the most different height and the most tilted line circled</title>
+          <image href="assets/samples/handwriting-sample.jpg" x="0" y="0" width="960" height="1280"/>
+          <ellipse class="mark-spacing" data-factor="8" data-bbox="534,763,32,74" cx="550" cy="800" rx="24" ry="45"/>
+          <ellipse class="mark-spacing" data-factor="8" data-bbox="416,763,24,74" cx="428" cy="800" rx="20" ry="45"/>
+          <ellipse class="mark-size" data-factor="5" data-bbox="528,829,29,36" cx="542.5" cy="847" rx="22.5" ry="26"/>
+          <ellipse class="mark-size" data-factor="5" data-bbox="567,778,191,68" cx="662.5" cy="812" rx="103.5" ry="42"/>
+          <ellipse class="mark-size" data-factor="5" data-bbox="702,817,25,23" cx="714.5" cy="828.5" rx="20.5" ry="19.5"/>
+          <ellipse class="mark-line" data-factor="7" data-bbox="246,979,347,92" cx="419.5" cy="1025" rx="181.5" ry="54"/>
+        </svg>
+        <ul class="sample-key">
+          <li><i class="key-spacing" aria-hidden="true"></i>Word spacing: gaps much wider than the page's usual gap</li>
+          <li><i class="key-size" aria-hidden="true"></i>Letter size: words taller or shorter than the rest</li>
+          <li><i class="key-line" aria-hidden="true"></i>Writing on the line: the line that tilts most</li>
+        </ul>
         <a class="btn btn-ghost" href="sample-report.html?example=free">See a sample report</a>
       </figure>
       <p class="check-kind-note">Feedback describes the writing, never the writer.</p>
