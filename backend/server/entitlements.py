@@ -12,6 +12,27 @@ from pathlib import Path
 from fastapi import HTTPException
 
 FREE_FACTORS = (1, 5, 7, 8, 18)
+# A key shows where it works (owner, 2026-10-22): stage issues vh_test_
+# keys and production vh_ keys. VAHINI_ENVIRONMENT=stage marks the stage
+# analyser; unset or anything else is production. Production refuses a
+# vh_test_ key with its own message; stage still takes plain vh_ keys
+# issued before this, until they expire.
+LIVE_PREFIX = "vh_"
+TEST_PREFIX = "vh_test_"
+
+
+def on_stage(env=None):
+    """True on the stage analyser (VAHINI_ENVIRONMENT=stage)."""
+    value = (os.environ if env is None else env).get("VAHINI_ENVIRONMENT", "")
+    return value.strip().lower() == "stage"
+
+
+def new_secret():
+    """A new key: the environment's prefix and 32 random bytes."""
+    prefix = TEST_PREFIX if on_stage() else LIVE_PREFIX
+    return prefix + secrets.token_urlsafe(32)
+
+
 TIERS = ("free", "pro")
 STATUSES = ("active", "cancelled", "expired", "revoked")
 SCHEMA = """
@@ -69,7 +90,7 @@ def issue_key(path, customer_id):
 
     The audit row names the key id only, never the secret or its digest.
     """
-    token = "vh_" + secrets.token_urlsafe(32)
+    token = new_secret()
     key_id = "key_" + secrets.token_hex(12)
     now = int(time.time())
     with closing(connect(path)) as connection, connection:
@@ -132,7 +153,7 @@ def grant(path, expires_at):
         raise ValueError("Expiry must be in the future")
     customer_id = "cus_" + secrets.token_hex(12)
     key_id = "key_" + secrets.token_hex(12)
-    token = "vh_" + secrets.token_urlsafe(32)
+    token = new_secret()
     with closing(connect(path)) as connection, connection:
         connection.execute(
             "INSERT INTO customers(id, tier, status, expires_at, updated_at)"
@@ -349,6 +370,12 @@ def access_for(authorization=None):
         return result
     if not authorization.startswith("Bearer vh_") or len(authorization) > 200:
         raise HTTPException(401, "Invalid API credential")
+    if authorization[7:].startswith(TEST_PREFIX) and not on_stage():
+        raise HTTPException(
+            401,
+            "This is a stage test key (vh_test_); it works only on"
+            " stage.vahinitech.com",
+        )
     path = os.environ.get("VAHINI_ENTITLEMENTS_DB")
     if not path:
         raise HTTPException(503, "Subscription service is not configured")
