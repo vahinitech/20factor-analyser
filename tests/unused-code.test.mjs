@@ -31,7 +31,9 @@ const product = Object.fromEntries(walk('frontend').map(p => [p, fs.readFileSync
 const DECL = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(|^(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=/;
 
 const uses = name => {
-  const n = name.replace(/\$/g, '\\$');
+  // Escape every regex metacharacter, backslash included; an identifier
+  // only ever holds $, but the escape should not depend on that.
+  const n = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = new RegExp(`(?<![\\w$])${n}(?![\\w$])`, 'g');
   return Object.values(product).reduce((sum, text) => sum + (text.match(re) || []).length, 0);
 };
