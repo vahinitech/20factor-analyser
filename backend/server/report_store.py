@@ -45,7 +45,7 @@ import math
 import os
 import re
 import secrets
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 log = logging.getLogger("vahini.report_store")
 
@@ -434,14 +434,9 @@ class ReportStore:
 # Two pages compare badly when they are dated the wrong way round or on
 # the same day, are in different scripts, differ in length by more than a
 # quarter, or only one had printed text around the writing. Each note is
-# {code, before, after}; the viewer words it.
-NOTE_CODES = (
-    "dates_reversed",
-    "same_day",
-    "different_script",
-    "different_length",
-    "print_on_one_page",
-)
+# {code, before, after}; the viewer words it. The codes are
+# dates_reversed, same_day, different_script, different_length and
+# print_on_one_page.
 LENGTH_RATIO = 0.75
 
 
@@ -498,8 +493,3 @@ def _replace(path, data):
 
 
 STORE = ReportStore.from_env()
-
-
-def day_of(value):
-    """A YYYY-MM-DD string as a date (tests and tools)."""
-    return date.fromisoformat(value)

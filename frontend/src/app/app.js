@@ -113,7 +113,6 @@ function drawDetectionOverlay(img, pyReport, maxW){
 }
 
 const state = {
-  role:'individual',
   intake:{},
   imageEl:null,        // HTMLImageElement of the uploaded sample
   logoData:null,
@@ -139,9 +138,6 @@ function go(name){
   $$('.steps .sep').forEach((el,i)=>el.classList.toggle('done', i<idx));
   window.scrollTo(0,0);
 }
-
-/* ---------- role selection (personas removed: always the individual) ---------- */
-function selectRole(){ state.role = 'individual'; }
 
 /* ---------- intake (no personal details collected) ---------- */
 function collectIntake(){
