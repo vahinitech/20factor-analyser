@@ -21,24 +21,18 @@
 name: Benchmark (live reader)
 
 on:
+  # A coarse filter so a website-only change starts nothing; the changes
+  # job below decides from the reader's import closure
+  # (scripts/score_closure.py): live, langs and timing run only when the
+  # change can change what the reader reads.
   pull_request:
     paths:
-      - 'backend/reading/recognizer.py'
-      - 'backend/reading/escalation.py'
-      - 'backend/languages/ladders.json'
-      - 'backend/reading/ocr_backends.py'
-      - 'backend/reading/detector.py'
-      - 'backend/reading/line_recovery.py'
-      - 'backend/reading/layout_filter.py'
-      - 'backend/reading/classify.py'
-      - 'backend/config.py'
-      - 'backend/requirements.txt'
-      - 'backend/requirements/**'
-      - 'deployment/Dockerfile'
-      - 'scripts/benchmark.py'
-      - 'scripts/live_timing.py'
-      - '.github/workflows/benchmark-live.yml'
+      - 'backend/**'
+      - 'scripts/**'
       - 'benchmarks/**'
+      - 'deployment/**'
+      - '.github/actions/changes/**'
+      - '.github/workflows/benchmark-live.yml'
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
@@ -52,7 +46,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      reader: ${{ steps.closure.outputs.reader }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: closure
+        uses: ./.github/actions/changes
+
   live:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -86,6 +94,8 @@ jobs:
           retention-days: 14
 
   langs:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -117,6 +127,8 @@ jobs:
         run: cat "$RUNNER_TEMP/reading/langs.md" >> "$GITHUB_STEP_SUMMARY" || true
 
   timing:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
