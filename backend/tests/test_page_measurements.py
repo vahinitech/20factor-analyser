@@ -12,8 +12,8 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import computer_vision as vision  # noqa: E402
-import marked_places  # noqa: E402
+from vision import computer_vision as vision  # noqa: E402
+from vision import marked_places  # noqa: E402
 import scoring  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))

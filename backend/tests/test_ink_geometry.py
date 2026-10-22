@@ -18,7 +18,7 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
-import ink_geometry as ig  # noqa: E402
+from vision import ink_geometry as ig  # noqa: E402
 import scoring  # noqa: E402
 
 cv2 = ig.cv2
@@ -285,7 +285,7 @@ class TestReadInPieces(unittest.TestCase):
 def _load_server(env):
     with mock.patch.dict(os.environ, env):
         spec = importlib.util.spec_from_file_location(
-            "ink_server", os.path.join(SERVER_DIR, "ppocr-server.py")
+            "ink_server", os.path.join(SERVER_DIR, "server/app.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

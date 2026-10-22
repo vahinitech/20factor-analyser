@@ -103,7 +103,7 @@ def _image(folder, page, meta):
 
 
 def _image_file(path, meta):
-    import computer_vision
+    from vision import computer_vision
 
     with open(path, "rb") as f:
         raw = f.read()
@@ -127,9 +127,9 @@ def _ink_mode(meta):
 def _score_ink(arr, page, meta):
     """One page measured from the ink, as the server's ink mode does;
     with "passage" set, the page's written text is the passage copied."""
-    import classify
-    import computer_vision
-    import ink_geometry
+    from reading import classify
+    from vision import computer_vision
+    from vision import ink_geometry
     import scoring
 
     rows = ink_geometry.find_rows(arr)
@@ -154,8 +154,8 @@ def _score_ink(arr, page, meta):
 def _reader_lines(arr, raw, reader, meta):
     """(every line kept, handwriting lines) from the kept reader output,
     as recognizer.extract_hand_lines gives them in the server."""
-    import layout_filter
-    import recognizer
+    from reading import layout_filter
+    from reading import recognizer
 
     recognizer.configure(
         ocr_langs=meta["settings"]["VAHINI_OCR_LANGS"].split(","),
@@ -187,8 +187,8 @@ def _score(arr, raw, reader, meta):
     read in pieces is measured on whole rows of its ink, as the server
     does (ink_geometry.fragment_rows, #277); the lines kept are still
     the reader's."""
-    import computer_vision
-    import ink_geometry
+    from vision import computer_vision
+    from vision import ink_geometry
     import scoring
 
     found, hand = _reader_lines(arr, raw, reader, meta)
@@ -679,9 +679,9 @@ def cmd_update(args):
 
 def _server():
     """The analyser exactly as the server sets it up (settings, reader
-    registry), loaded from backend/ppocr-server.py."""
+    registry), loaded from backend/server/app.py."""
     spec = importlib.util.spec_from_file_location(
-        "benchmark_server", os.path.join(BACKEND, "ppocr-server.py")
+        "benchmark_server", os.path.join(BACKEND, "server/app.py")
     )
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)
@@ -697,8 +697,8 @@ def read_page(server, folder, page, meta):
 
 def read_image(server, raw, arr, lang, page):
     """read_page for a decoded photo and a request language."""
-    import layout_filter
-    import recognizer
+    from reading import layout_filter
+    from reading import recognizer
 
     raw_lines, err, _backend, _meta = recognizer.collect_lines(arr, lang)
     if err and not raw_lines:
@@ -1060,7 +1060,7 @@ def cmd_fragments(args):
     pieces (a set that must stay on the reader's lines)."""
     folder, meta = _load_set(args.set)
     _apply_settings(meta)
-    import ink_geometry as ig
+    from vision import ink_geometry as ig
 
     if _ink_mode(meta):
         _report(f"{args.set}: measured from the ink, nothing read.")

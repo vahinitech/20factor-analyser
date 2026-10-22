@@ -6,7 +6,7 @@ and a tiny pseudocode sketch. No prior CV knowledge assumed.
 
 > **Computer Vision (CV)** = software that "looks at" an image and extracts facts from it.
 > Vahini's CV is **deterministic**: fixed maths, no randomness: so the same photo always
-> produces the same measurements. Code: `backend/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
+> produces the same measurements. Code: `backend/vision/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
 
 ---
 
@@ -217,7 +217,7 @@ upper (l, h, t), middle (a, o, e), lower (g, y, p).
 **Why:** handwriting coaches teach letter size as one proportion: a 't' stands **two**
 x-heights tall, a 'g' hangs **two** x-heights deep (the 1:2 rule). The three classic
 mistakes are writing everything in one zone, over-reaching up, and over-reaching down.
-**How** (`backend/zone_analysis.py`, measured per line from ink):
+**How** (`backend/vision/zone_analysis.py`, measured per line from ink):
 
 ```
 binarise the line crop (iterative midpoint threshold)

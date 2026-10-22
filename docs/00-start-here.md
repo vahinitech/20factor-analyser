@@ -49,7 +49,7 @@ to the ones it builds on.
 
 - The API reference: [backend/API-V2.md](../backend/API-V2.md); its JSON
   Schemas: [backend/schemas/README.md](../backend/schemas/README.md).
-- Server set-up and engines: [backend/README.md](../backend/README.md).
+- Server set-up and what is where: [backend/README.md](../backend/README.md); engines and settings: [06](06-reading-engines.md#engine-settings-and-modes).
 - Practice framework details: [practice-framework/](practice-framework/).
 - Worked examples and the sample report generator: [examples/](examples/).
 - Superseded notes on earlier report layouts, and dated notes such as the

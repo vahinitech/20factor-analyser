@@ -17,9 +17,9 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import style_analysis  # noqa: E402
-from finishing_letters import analyze_finishing_letters  # noqa: E402
-from style_analysis import analyze_style  # noqa: E402
+from vision import style_analysis  # noqa: E402
+from vision.finishing_letters import analyze_finishing_letters  # noqa: E402
+from vision.style_analysis import analyze_style  # noqa: E402
 
 H_M = 16
 

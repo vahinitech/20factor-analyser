@@ -8,7 +8,7 @@
     "created": "2026-10-20T12:02:05Z",
     "creators": [
       "Organization: Vahini Technologies",
-      "Tool: backend/update_sbom.py"
+      "Tool: backend/tools/update_sbom.py"
     ],
     "licenseListVersion": "3.22"
   },
@@ -192,7 +192,7 @@
           "referenceLocator": "pkg:pypi/fastapi"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: fastapi>=0.110. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: fastapi>=0.110. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-HankenGrotesk",
@@ -231,7 +231,7 @@
           "referenceLocator": "pkg:pypi/httpx"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: httpx>=0.27. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: httpx>=0.27. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-LibheifJs",
@@ -270,7 +270,7 @@
           "referenceLocator": "pkg:pypi/numpy"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: numpy>=1.24. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: numpy>=1.24. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-OpenCV",
@@ -289,7 +289,7 @@
           "referenceLocator": "pkg:pypi/opencv-python-headless"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: opencv-python-headless>=4.9.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: opencv-python-headless>=4.9.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PaddleOCR",
@@ -308,7 +308,7 @@
           "referenceLocator": "pkg:pypi/paddleocr"
         }
       ],
-      "comment": "Declared in backend/requirements-paddle.txt: paddleocr>=3.0.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/paddle.txt: paddleocr>=3.0.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PaddlePaddle",
@@ -328,7 +328,7 @@
           "referenceLocator": "pkg:pypi/paddlepaddle@3.1.1"
         }
       ],
-      "comment": "Declared in backend/requirements-paddle.txt: paddlepaddle==3.1.1. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/paddle.txt: paddlepaddle==3.1.1. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PdfJs",
@@ -367,7 +367,7 @@
           "referenceLocator": "pkg:pypi/pillow"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: pillow==12.3.0. Resolved container versions require a build SBOM.",
+      "comment": "Declared in backend/requirements/core.txt: pillow==12.3.0. Resolved container versions require a build SBOM.",
       "versionInfo": "12.3.0"
     },
     {
@@ -388,7 +388,7 @@
           "referenceLocator": "pkg:pypi/pypdfium2"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: pypdfium2==5.13.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: pypdfium2==5.13.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PythonMultipart",
@@ -407,7 +407,7 @@
           "referenceLocator": "pkg:pypi/python-multipart"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: python-multipart>=0.0.9. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: python-multipart>=0.0.9. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-Spectral",
@@ -446,7 +446,7 @@
           "referenceLocator": "pkg:pypi/uvicorn"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: uvicorn>=0.29. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: uvicorn>=0.29. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-Vahini",
@@ -471,7 +471,7 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "versionInfo": "26.5.1",
-      "comment": "Declared in backend/requirements-core.txt: black==26.5.1. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: black==26.5.1. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-coverage",
@@ -482,7 +482,7 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "versionInfo": "7.16.2",
-      "comment": "Declared in backend/requirements-core.txt: coverage==7.16.2. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: coverage==7.16.2. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-goQR",
@@ -505,7 +505,7 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "Declared in backend/requirements-core.txt: jsonschema>=4.18. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: jsonschema>=4.18. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-nginx",
@@ -529,7 +529,7 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "versionInfo": "4.0.6",
-      "comment": "Declared in backend/requirements-core.txt: pylint==4.0.6. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: pylint==4.0.6. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Vendor-html2canvas",

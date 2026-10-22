@@ -14,7 +14,7 @@
    tests/report-strings.test.mjs lists what is missing.
 
    Exercises and tips are not here: they come from the practice catalogue
-   (backend/practice_catalog.py) with their own translations.
+   (backend/report/practice_catalog.py) with their own translations.
    ========================================================================= */
 (function (global) {
 'use strict';

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Each line up its ladder (backend/escalation.py, #219).
+"""Each line up its ladder (backend/reading/escalation.py, #219).
 
 The first version of the loop must read every page as the old refine
 step did: the same engines, the same guard, the same text. What is new is
@@ -29,9 +29,9 @@ SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 sys.path.insert(0, HERE)
 
-import computer_vision  # noqa: E402
-import escalation  # noqa: E402
-import recognizer  # noqa: E402
+from vision import computer_vision  # noqa: E402
+from reading import escalation  # noqa: E402
+from reading import recognizer  # noqa: E402
 from languages import ladders, stages  # noqa: E402
 from test_server_pipeline import _hand_strip, _load_server  # noqa: E402
 

@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""How well backend/ink_geometry.py measures pages the reader cannot read.
+"""How well backend/vision/ink_geometry.py measures pages the reader cannot read.
 
 Takes a folder of pages and its pages.json, as eval-tools/telugu_pages.py
 writes them: each page has a kind (clean, tilted_line, wide_gap), the
@@ -26,8 +26,12 @@ import numpy as np
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-import computer_vision  # noqa: E402  pylint: disable=wrong-import-position
-import ink_geometry  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    computer_vision,
+)  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    ink_geometry,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 ANGLE_LOOK_DEG = 2.0
 KNOWN_WORDS = False  # --known-words: the passage says how many words
@@ -166,7 +170,9 @@ def summarise(rows):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n", maxsplit=1)[0])
+    ap = argparse.ArgumentParser(
+        description=__doc__.split("\n", maxsplit=1)[0]
+    )
     ap.add_argument("folder")
     ap.add_argument("--json")
     ap.add_argument("--known-words", action="store_true")

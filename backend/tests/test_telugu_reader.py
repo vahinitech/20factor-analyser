@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-# The handwritten Telugu reader (backend/telugu_reader.py) and the guard
+# The handwritten Telugu reader (backend/reading/telugu_reader.py) and the guard
 # that keeps its training off production's memory (scripts/train_guard.py).
 # The runtime is checked with a small network of the same shape; where
 # torch is installed, the trainer's network and its export are checked to
@@ -19,7 +19,9 @@ ROOT = os.path.dirname(BACKEND)
 sys.path.insert(0, BACKEND)
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
-import telugu_reader as tr  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    telugu_reader as tr,
+)  # noqa: E402  pylint: disable=wrong-import-position
 import train_guard as guard  # noqa: E402  pylint: disable=wrong-import-position
 
 HAVE_TORCH = importlib.util.find_spec("torch") is not None

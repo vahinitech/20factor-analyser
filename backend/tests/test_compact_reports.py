@@ -7,8 +7,8 @@ import unittest
 from unittest.mock import patch, AsyncMock
 
 from backend.tests import test_report_access as base
-import compact_reports
-import computer_vision
+from report import compact_reports
+from vision import computer_vision
 import numpy as np
 
 sample = base.sample
@@ -84,7 +84,7 @@ class CompactHTTPTests(unittest.TestCase):
 
         spec = importlib.util.spec_from_file_location(
             "compact_test_server",
-            Path(__file__).resolve().parents[1] / "ppocr-server.py",
+            Path(__file__).resolve().parents[1] / "server/app.py",
         )
         server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(server)

@@ -4,7 +4,7 @@
 /* =========================================================================
    Vahini OCR / analysis server client.
    Recognition AND the 20-factor scoring run on the PP-OCRv5 server (see
-   ppocr-server.py: PaddleOCR v5, runs fully on your own machine), or any
+   server/app.py: PaddleOCR v5, runs fully on your own machine), or any
    endpoint set via window.VAHINI_OCR_ENDPOINT. The browser only sends the
    image and renders the returned analysis; there is no in-browser scorer.
    ========================================================================= */
@@ -14,7 +14,7 @@
 /* Candidate endpoints, tried in order:
    1. an explicit window.VAHINI_OCR_ENDPOINT
    2. same-origin /ocr
-   3. the local PP-OCRv5 helper server (ppocr-server.py) on this machine,
+   3. the local PP-OCRv5 helper server (server/app.py) on this machine,
       only when the page itself is local: on vahinitech.com it would send
       every visitor's browser to a port on their own computer. */
 const PAGE_IS_LOCAL = ['localhost', '127.0.0.1', '[::1]', '']
@@ -155,7 +155,7 @@ async function serverOCR(blob){
       if (out && out.error) lastServerError = out.error;
     }catch(e){ lastServerError = (e && e.message) ? e.message : 'request failed'; }
   }
-  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable: using on-device detector (run ppocr-server.py for PP-OCRv5 recognition)', lastServerError || '');
+  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable: using on-device detector (run server/app.py for PP-OCRv5 recognition)', lastServerError || '');
   return null;
 }
 
@@ -202,12 +202,12 @@ async function serverPythonReport(blob, expectedText){
         res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
       } finally { clearTimeout(t); }
       const raw = await res.text();
-      // 503 is the server's scan cap (backend/scan_slots.py): it is up but
+      // 503 is the server's scan cap (backend/server/scan_slots.py): it is up but
       // full; or, with detail.error_code "ocr_unavailable", it could not
       // read the page right now. Definitive answers, so do not try other
       // endpoints.
       // 429: the free tier's daily checks for this connection are used
-      // (backend/daily_limit.py), or nginx's per-minute burst limit. Both are
+      // (backend/server/daily_limit.py), or nginx's per-minute burst limit. Both are
       // definitive answers from a server that is up.
       if (res.status === 429){
         let detail = null;
@@ -247,7 +247,7 @@ async function serverPythonReport(blob, expectedText){
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
-      // The stored report's receipt (backend/report_store.py) goes to the
+      // The stored report's receipt (backend/server/report_store.py) goes to the
       // browser's saved checks; earlier receipts are renewed for 12 months.
       if (global.VahiniProgress){
         global.VahiniProgress.receiptFor(j && j.receipt);

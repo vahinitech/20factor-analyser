@@ -10,10 +10,10 @@ import re
 
 import numpy as np
 
-from baseline_track import track_rows
-import letter_geometry
-import computer_vision
-import ink_geometry
+from vision.baseline_track import track_rows
+from vision import letter_geometry
+from vision import computer_vision
+from vision import ink_geometry
 import languages
 from scoring_parts.page import (
     _detilted_left_x,

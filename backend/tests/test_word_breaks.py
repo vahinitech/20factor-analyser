@@ -12,7 +12,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import computer_vision  # noqa: E402
+from vision import computer_vision  # noqa: E402
 
 
 def letters(*xs, w=10):

@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
 """Training and test lines for the print-or-handwriting line reader
-(backend/print_hand.py), written as one .npz.
+(backend/reading/print_hand.py), written as one .npz.
 
 Handwriting: UJI Pen Characters v2 (Prat, Castro, Llorens, Marzal and
 Vilar, 2008, doi:10.24432/C5FG8S, CC BY 4.0). The 40 writers of its
@@ -46,7 +46,9 @@ sys.path.insert(0, os.path.join(ROOT, "scripts"))
 
 import cv2  # noqa: E402  pylint: disable=wrong-import-position
 import planted_pages  # noqa: E402  pylint: disable=wrong-import-position
-import print_hand  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    print_hand,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 FONTS_COMMIT = "66928797f271fed5ee428544e7229685e2d90127"
 FONTS_URL = "https://raw.githubusercontent.com/google/fonts/{}/{}"
@@ -412,9 +414,11 @@ def synth(kind_items, n, rng):
 def real_lines():
     """(input, label, page, text) for every labelled line the reader finds
     on the committed sample pages."""
-    import computer_vision  # pylint: disable=import-outside-toplevel
-    import detector  # pylint: disable=import-outside-toplevel
-    import recognizer  # pylint: disable=import-outside-toplevel
+    from vision import (
+        computer_vision,
+    )  # pylint: disable=import-outside-toplevel
+    from reading import detector  # pylint: disable=import-outside-toplevel
+    from reading import recognizer  # pylint: disable=import-outside-toplevel
 
     out = []
     for page, default in REAL_PAGES.items():

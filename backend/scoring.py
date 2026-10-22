@@ -17,8 +17,8 @@
 
 import numpy as np
 
-import perf
-from plain_groups import build_coach_view, build_plain_groups
+from server import perf
+from report.plain_groups import build_coach_view, build_plain_groups
 from scoring_parts import (
     advisory,
     availability,

@@ -145,7 +145,7 @@ Run the tests:
 
 ```bash
 # Python server tests (no heavy paddle/torch install needed)
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python -m unittest discover -v -s backend/tests -t .
 
 # Headless Chrome report checks

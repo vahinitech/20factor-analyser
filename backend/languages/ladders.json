@@ -1,7 +1,7 @@
 {
   "$comment": "Built by scripts/rank_stages.py from stages.json (docs/20-languages.md, section 17.2); do not edit by hand. Each ladder lists the stages that may read a handwriting line of one script, cheapest first: the Paddle stage that found the line, then the stages a line is sent up to. basis: reader (paddle mode, the reader alone), pinned (trocr mode, TrOCR re-reads every line), route (hybrid mode while a quality or cost is unmeasured: the refine route in stages.json), ranked (hybrid mode from measured facts). left_off says why a stage is not on a ladder; unmeasured names the stages that kept a ladder from being ranked.",
   "version": 1,
-  "stages_sha256": "ba3088582635fb741d72743acd3622a257b5b7fa5131f6b97e690c3a88de7740",
+  "stages_sha256": "4c36c4ef8365e9fe7c6f24ada0b74f4e3fe1fc375f27eb09ab791c0051581cfd",
   "device": "cpu",
   "modes": {
     "paddle": {

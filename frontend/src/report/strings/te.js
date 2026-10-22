@@ -6,7 +6,7 @@
 
    DRAFT WORDING, 2026-10-11: written for this change, not yet checked by a
    native speaker. A native speaker must read and correct every line here,
-   and the Telugu in backend/practice_catalog.py, before Telugu reaches
+   and the Telugu in backend/report/practice_catalog.py, before Telugu reaches
    production (CLAUDE.md: report text in other languages ships only after
    a native speaker's check).
 
@@ -15,7 +15,7 @@
    Rules for this table (docs/10-practice-framework.md, "Words for children"):
    simple words a parent with basic schooling reads easily; describe the
    writing, never the child; no judging words (the Telugu list is in
-   backend/practice_catalog.py AVOID_WORDS_TE, and the test scans for it);
+   backend/report/practice_catalog.py AVOID_WORDS_TE, and the test scans for it);
    skill names keep their English name in brackets on first use on each
    page (the renderer adds the brackets); Latin practice letters and words
    stay as they are, because the child practises English letters.

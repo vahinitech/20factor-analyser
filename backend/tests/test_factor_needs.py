@@ -18,8 +18,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
-import factor_needs  # noqa: E402
-import ink_geometry  # noqa: E402
+from scoring_parts import needs as factor_needs  # noqa: E402
+from vision import ink_geometry  # noqa: E402
 import scoring  # noqa: E402
 from scoring_parts import advisory  # noqa: E402
 from backend.tests.test_ink_geometry import SENTENCE, draw_page  # noqa: E402

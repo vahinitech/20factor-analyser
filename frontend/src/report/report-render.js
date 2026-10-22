@@ -353,7 +353,7 @@ function applyPenDynamics(analysis, imu){
 
 /* ---- practice (docs/10-practice-framework.md; owner approval 2026-10-11, #122)
    Exercises, tips and how many tries come from the practice catalogue
-   (backend/practice_catalog.py), never from this file: the catalogue served
+   (backend/report/practice_catalog.py), never from this file: the catalogue served
    with the report's dictionary version when there is one, otherwise the copy
    build_bundle.py packs into the bundle (window.VahiniPracticeCatalog).
    Which ones a report prints is chosen by VahiniPracticeSelect

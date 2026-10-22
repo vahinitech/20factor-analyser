@@ -391,7 +391,7 @@ It counts CPU time per page and per step: decoding the photo, finding the
 hand lines from the kept reading, the layout pass, scoring, and the rest.
 A step's time leaves out any other step it calls. Each page also runs
 inside `perf.scan()` (#229), so the summary has a second table of the
-stages `backend/perf.py` records (merge, printed check, recovery, join,
+stages `backend/server/perf.py` records (merge, printed check, recovery, join,
 features, scoring and the rest); each of those includes the stages
 inside it. The job fails when the
 pull request's median total is more than 10% above main's and the pull
@@ -424,7 +424,7 @@ The job summary has two tables:
   Each allocation is charged to the innermost line of our own code that
   led to it, so a numpy array shows up as the line that made it. This is
   Python's view of one replay, not the server's memory per scan; that is
-  `backend/load_test.py` on stage.
+  `backend/tools/load_test.py` on stage.
 
 Each row is compared with the last successful scheduled or manual run on
 `main` (its `profile.json` artifact). *Change* is the move in share of
@@ -540,3 +540,32 @@ measures from the ink:
 the page maker's folder (`--known-words` for the passage case), and the
 private sets `telugu-ink` and `telugu-ink-passage` keep every page's
 scores for `benchmark.py check --root`.
+
+## Engine speed (`backend/tools/benchmark_ocr.py`)
+
+Moved here from `backend/README.md`.
+
+Real, measured numbers only: this project's whole premise is auditable
+geometry over guesswork, so a made-up speed table would contradict that.
+Run it yourself and paste the output here (or open a PR):
+
+```bash
+pip install -r backend/requirements/core.txt   # + whichever engine tiers you want measured
+python backend/tools/benchmark_ocr.py
+```
+
+It runs the SAME production code path (`recognizer.collect_lines_paddle` /
+`recognizer.backend_recognize`) against the pages already committed under
+`tests/fixtures/samples/`, times every call, and prints a Markdown table:
+engine, sample, lines found, detection/recognition/total time, mean
+confidence. Engines you haven't installed are skipped with a note, not an
+error. See the script's own header comment for exactly what "detection"
+vs "recognition" means for a recogniser-only engine like TrOCR or Surya
+(PaddleOCR's API doesn't expose them as separately timeable steps, so one
+of the two is an estimate: clearly labelled as such in the output).
+
+`--samples <dir>` points it at a different folder of images, `--limit N`
+caps how many it runs, `--lang en|te|hi|...` picks the language.
+
+_No results are published here yet: be the first to run it on real
+hardware and send a PR with your table and CPU/GPU details._

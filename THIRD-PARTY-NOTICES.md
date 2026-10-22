@@ -109,7 +109,7 @@ The SPDX source inventory includes npm test tooling and transitive lockfile
 packages, plus declared core/default Python dependencies. Generate a separate
 inventory from the built container for resolved Python transitives, operating
 system packages and model weights. Refresh the source inventory with
-`python backend/update_sbom.py` after dependency changes.
+`python backend/tools/update_sbom.py` after dependency changes.
 
 
 ## Locally served report fonts
@@ -122,7 +122,7 @@ Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the S
 
 These files are vendored unchanged in `frontend/scripts/vendor/` (npm
 package, version, tarball URL and SHA-256 in `sources.json` there; the SBOM
-entries come from that file through `backend/update_sbom.py`).
+entries come from that file through `backend/tools/update_sbom.py`).
 
 **QR Code Generator for JavaScript** (`qrcode-generator` 2.0.4), Copyright (c) 2009 Kazuhiko Arase, MIT License: `qrcode.js`, which draws the QR code on report page 1. The licence notice is in the file's own header; the package ships no separate licence file. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
 

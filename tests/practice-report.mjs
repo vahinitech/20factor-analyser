@@ -351,7 +351,7 @@ try {
   });
   add(capped === 60, 'Saved checks are capped at 60', capped);
 
-  // ---- Receipts for stored reports (backend/report_store.py, 2026-10-16)
+  // ---- Receipts for stored reports (backend/server/report_store.py, 2026-10-16)
   const calls = [];
   await page.route('**/api/v2/reports/**', (route) => {
     const req = route.request();

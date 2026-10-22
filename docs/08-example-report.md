@@ -13,7 +13,7 @@ to the real engine, `build_analysis()` in `backend/scoring.py`. The raw
 response is committed next to this file. Reproduce it yourself:
 
 ```bash
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python docs/examples/generate_examples.py   # deterministic, fixed seed
 ```
 
@@ -101,7 +101,7 @@ model. That traceability is the point of deterministic scoring.
 
 ## Page 4 — Coach's corner
 
-The tip engine (`backend/coach_tips.py`) ranks its lesson library
+The tip engine (`backend/report/coach_tips.py`) ranks its lesson library
 against this page's measurements and keeps the top few, each with a
 `why` naming what earned it the slot. This page drew:
 

@@ -4,7 +4,7 @@
 
 Replays each page of a benchmark set through the server's own scan, the
 body of /report-python (_report_python_process), from the reader's kept
-output as scripts/benchmark.py does, with backend/perf.py recording.
+output as scripts/benchmark.py does, with backend/server/perf.py recording.
 Then it builds the Pro report (the practice stage) and checks the page
 against every budget in backend/perf/budgets.json:
 
@@ -48,7 +48,7 @@ CAP_FLOOR_MS = 100
 
 
 def _load_server():
-    path = os.path.join(benchmark.BACKEND, "ppocr-server.py")
+    path = os.path.join(benchmark.BACKEND, "server/app.py")
     spec = importlib.util.spec_from_file_location("ppocr_server_perf", path)
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

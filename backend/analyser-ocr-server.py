@@ -1,10 +1,10 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies
 # Combined analyser + OCR service:
-# - Reuses PP-OCRv5 endpoints from ppocr-server.py
+# - Reuses PP-OCRv5 endpoints from server/app.py
 # - Serves analyser static files under /analyser
 #
-# Filename is intentionally hyphenated (matches the sibling ppocr-server.py
+# Filename is intentionally hyphenated (matches the sibling server/app.py
 # and the JS-side kebab-case convention); it is loaded by file path via
 # importlib, never `import analyser_ocr_server`, so the hyphen is harmless.
 # Only the module-name check is silenced here; re-enabled right after.
@@ -18,11 +18,11 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-PP_OCR_SERVER_PATH = Path(__file__).resolve().parent / "ppocr-server.py"
+PP_OCR_SERVER_PATH = Path(__file__).resolve().parent / "server/app.py"
 
 spec = util.spec_from_file_location("ppocr_server", str(PP_OCR_SERVER_PATH))
 if spec is None or spec.loader is None:
-    raise RuntimeError("Failed to load ppocr-server.py")
+    raise RuntimeError("Failed to load server/app.py")
 module = util.module_from_spec(spec)
 spec.loader.exec_module(module)
 app = module.app

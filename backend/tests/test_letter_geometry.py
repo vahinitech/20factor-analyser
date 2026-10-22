@@ -13,7 +13,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import letter_geometry as lg  # noqa: E402
+from vision import letter_geometry as lg  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
 spec = importlib.util.spec_from_file_location(

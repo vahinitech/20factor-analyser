@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-only */
 // The saved checks in the browser (frontend/src/report/progress.js) and the
-// receipts of stored reports (backend/report_store.py): a check keeps only a
+// receipts of stored reports (backend/server/report_store.py): a check keeps only a
 // well-formed receipt, "forget" deletes the stored reports it names, a new
 // check renews the earlier ones, and a progress file is read field by field.
 import vm from 'node:vm';

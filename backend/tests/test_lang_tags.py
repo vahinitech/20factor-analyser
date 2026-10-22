@@ -21,10 +21,10 @@ SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
 # pylint: disable=wrong-import-position
-import cache  # noqa: E402
-import contract_schemas  # noqa: E402
-import lang_tags  # noqa: E402
-import recognizer  # noqa: E402
+from server import cache  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from languages import tags as lang_tags  # noqa: E402
+from reading import recognizer  # noqa: E402
 from languages import stages  # noqa: E402
 
 from backend.tests.test_server_pipeline import _hand_strip  # noqa: E402
@@ -173,7 +173,7 @@ class TestStageTable(unittest.TestCase):
 
 def _load_server():
     spec = importlib.util.spec_from_file_location(
-        "ppocr_server_lang_tags", os.path.join(SERVER_DIR, "ppocr-server.py")
+        "ppocr_server_lang_tags", os.path.join(SERVER_DIR, "server/app.py")
     )
     mod = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(mod)

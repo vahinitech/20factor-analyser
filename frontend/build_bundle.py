@@ -31,7 +31,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Order matters: app.js references globals defined by earlier modules.
-# Scoring + CV now run server-side (ppocr-server.py); the browser bundle is
+# Scoring + CV now run server-side (server/app.py); the browser bundle is
 # recognition-client + report rendering only.
 SOURCES = [
     "src/engine/compact-client.js",
@@ -71,15 +71,17 @@ ASSET_REF = re.compile(
 
 def practice_source():
     """The practice catalogue for reports made without a server catalogue
-    (the sample report). One source: backend/practice_catalog.py, which
+    (the sample report). One source: backend/report/practice_catalog.py, which
     validates itself on import and uses only the standard library."""
-    path = os.path.join(HERE, os.pardir, "backend", "practice_catalog.py")
+    path = os.path.join(
+        HERE, os.pardir, "backend", "report", "practice_catalog.py"
+    )
     spec = importlib.util.spec_from_file_location("practice_catalog", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     data = json.dumps(module.browser_catalog(), ensure_ascii=False)
     return (
-        "/* Generated from backend/practice_catalog.py by build_bundle.py */"
+        "/* Generated from backend/report/practice_catalog.py by build_bundle.py */"
         f"\nwindow.VahiniPracticeCatalog = {data};\n"
     )
 

@@ -13,7 +13,7 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from plain_groups import (  # noqa: E402
+from report.plain_groups import (  # noqa: E402
     COACH_EXTRA_ASPECTS,
     PLAIN_GROUPS,
     build_coach_view,

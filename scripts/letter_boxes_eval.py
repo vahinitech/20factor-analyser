@@ -6,7 +6,7 @@ Builds the planted pages of scripts/planted_pages.py (20 UJI test
 writers, photo style), records where every letter really is, runs the
 real reader to find and keep the handwritten lines, then reads each line
 again with word boxes on and places every character on the page with
-backend/letter_boxes.py. A placed letter "lands" when its centre falls
+backend/vision/letter_boxes.py. A placed letter "lands" when its centre falls
 inside a real letter's box on the same line; each real letter can be
 claimed once, by the nearest placed letter.
 
@@ -50,8 +50,12 @@ sys.path.insert(0, os.path.join(HERE, "..", "backend"))
 
 import cv2  # noqa: E402  pylint: disable=wrong-import-position
 import planted_pages  # noqa: E402  pylint: disable=wrong-import-position
-import letter_boxes  # noqa: E402  pylint: disable=wrong-import-position
-import letter_geometry  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    letter_boxes,
+)  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    letter_geometry,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 CUTOFFS = (1.3, 1.4, 1.5, 1.6)
 SURE = 0.9
@@ -126,7 +130,7 @@ def _one_per_line(hand_lines):
     when the two readings differ by a letter (detector.merge_lines only
     drops exact repeats). Place letters once per line: the
     higher-scoring reading of any two whose boxes mostly overlap."""
-    import detector  # pylint: disable=import-outside-toplevel
+    from reading import detector  # pylint: disable=import-outside-toplevel
 
     kept = []
     for line in sorted(

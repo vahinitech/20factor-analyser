@@ -40,7 +40,7 @@ benchmark sets, the confidence calibration and sure-and-wrong counts
 #219; until they land, every such figure in stages.json is
 ``unmeasured`` and this script says so in the ladders.
 
-Standard library plus jsonschema (backend/requirements-core.txt).
+Standard library plus jsonschema (backend/requirements/core.txt).
 """
 
 import argparse

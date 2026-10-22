@@ -18,7 +18,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import classify  # noqa: E402
+from reading import classify  # noqa: E402
 
 TOP = "my best day"
 CRISP = "Name of the school"

@@ -79,7 +79,7 @@ README without change, it says nothing; delete it.
 - Separate OCR confidence from recognition accuracy. Accuracy needs a labeled evaluation set; a model confidence percentage is not that result.
 - Report tests with their scope: request count, endpoint, cache state, hardware where known, and whether OCR was real or stubbed. Concurrent request handling does not establish production model throughput.
 - Describe dependencies as declared, locked or installed. A version range is not an installed version. State what a source SBOM omits, including container libraries and model weights.
-- When a dependency or CDN asset changes, update its lockfile or pinned URL and the source inventory with `python backend/update_sbom.py`. Verify with `--check`.
+- When a dependency or CDN asset changes, update its lockfile or pinned URL and the source inventory with `python backend/tools/update_sbom.py`. Verify with `--check`.
 
 ## Review procedure
 

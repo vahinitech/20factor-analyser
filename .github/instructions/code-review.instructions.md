@@ -50,13 +50,13 @@ Use [report contract guidance](../../docs/12-report-rules.md) and [API specifica
 ## Performance Red Flags
 
 - Heavy work (OCR inference, image decode/crop) must run via
-  `run_in_threadpool` off the event loop in `ppocr-server.py` — flag any
+  `run_in_threadpool` off the event loop in `server/app.py` — flag any
   new endpoint that does blocking work directly in an `async def` handler.
 - Crop/preview generation (`computer_vision.py`): check new code doesn't
   duplicate the shared `geometry.py` clamp-box logic — `classify.py`,
   `ocr_backends.py`, and `zone_analysis.py` already import `clamp_box`
   from it specifically to avoid drift; a fourth reimplementation
-  (including inside `ppocr-server.py`, which doesn't use it today) is
+  (including inside `server/app.py`, which doesn't use it today) is
   the drift this rule exists to prevent.
 - `npm run build:bundle` must be re-run whenever `frontend/src/` changes —
   CI checks the bundle is in sync; a PR with source changes but no bundle

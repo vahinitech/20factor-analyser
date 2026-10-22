@@ -22,7 +22,9 @@ from PIL import (  # noqa: E402  pylint: disable=wrong-import-position
     Image,
     UnidentifiedImageError,
 )
-import computer_vision as cv  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    computer_vision as cv,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 # White-box: the endpoint test swaps the server's daily limit off.
 # pylint: disable=protected-access
@@ -80,7 +82,7 @@ class ImageFormatTests(unittest.TestCase):
 
     def test_the_endpoint_answers_422(self):
         spec = importlib.util.spec_from_file_location(
-            "ppocr_server_formats", os.path.join(SERVER_DIR, "ppocr-server.py")
+            "ppocr_server_formats", os.path.join(SERVER_DIR, "server/app.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -115,7 +117,7 @@ class HardeningTests(unittest.TestCase):
 
     def test_pillow_is_pinned_exactly(self):
         with open(
-            os.path.join(SERVER_DIR, "requirements-core.txt"), encoding="utf-8"
+            os.path.join(SERVER_DIR, "requirements/core.txt"), encoding="utf-8"
         ) as f:
             reqs = f.read()
         self.assertRegex(reqs, r"(?m)^pillow==\d+\.\d+\.\d+$")

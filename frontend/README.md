@@ -139,7 +139,7 @@ speaker has checked it.
 `scripts/vendor/` holds unchanged copies of qrcode-generator (the QR code
 on page 1, loaded with the page), jsPDF and html2canvas (the shared PDF,
 loaded on demand), with their licences and `sources.json` (package,
-version, npm tarball, SHA-256). `backend/update_sbom.py` writes their SBOM
+version, npm tarball, SHA-256). `backend/tools/update_sbom.py` writes their SBOM
 entries from that file and fails if a file no longer matches its hash.
 Their URLs carry `?v=` stamps from `build_bundle.py --stamp` like the other
 assets.

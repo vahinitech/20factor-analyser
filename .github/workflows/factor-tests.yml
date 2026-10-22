@@ -10,11 +10,11 @@ on:
     paths:
       - 'backend/scoring.py'
       - 'backend/scoring_parts/**'
-      - 'backend/letter_geometry.py'
-      - 'backend/computer_vision.py'
-      - 'backend/zone_analysis.py'
-      - 'backend/marked_places.py'
-      - 'backend/baseline_track.py'
+      - 'backend/vision/letter_geometry.py'
+      - 'backend/vision/computer_vision.py'
+      - 'backend/vision/zone_analysis.py'
+      - 'backend/vision/marked_places.py'
+      - 'backend/vision/baseline_track.py'
       - 'scripts/planted_pages.py'
       - 'scripts/factor_tests.py'
       - 'scripts/calibrate.py'
@@ -45,7 +45,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r backend/requirements-core.txt
+      - run: pip install -r backend/requirements/core.txt
       - name: Cache the UJI letters
         uses: actions/cache@v4
         with:
@@ -74,7 +74,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r backend/requirements-core.txt
+      - run: pip install -r backend/requirements/core.txt
       - name: Cache the UJI letters
         uses: actions/cache@v4
         with:

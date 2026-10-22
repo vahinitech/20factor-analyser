@@ -7,7 +7,7 @@ definitions from `_FACTOR_META` / `_FACTOR_EXTRAS` and `build_analysis()`,
 all in `backend/scoring.py`; the formulas from `_score_factor_map()`,
 which runs one file per section in `backend/scoring_parts/`
 (`structure.py`, `spatial.py`, `dynamics.py`, `style.py`); and the zone
-rule from `backend/zone_analysis.py`.
+rule from `backend/vision/zone_analysis.py`.
 If this page and the code ever disagree, the code wins; please file an
 issue.
 

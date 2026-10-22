@@ -12,7 +12,7 @@ const banned = new RegExp('\\b(' + AVOID.join('|') + ')(s|ed|ing|ly|ness|er|est)
 // 2026-10-11): the report encourages practice and points to a teacher or an
 // occupational therapist when writing stays hard.
 const claims = /\b(cur(e|es|ed|ing)|overcom\w*|disorder\w*|diagnos\w*)\b/i;
-const python = fs.readFileSync('backend/practice_catalog.py', 'utf8');
+const python = fs.readFileSync('backend/report/practice_catalog.py', 'utf8');
 for (const word of ['cure', 'overcome', 'disorder', 'diagnos']) assert.ok(python.includes(`"${word}"`), `practice_catalog.CLAIM_WORDS lists ${word}`);
 for (const word of AVOID) assert.ok(python.includes(`"${word}"`), `practice_catalog.AVOID_WORDS lists ${word}`);
 const strings = source => {

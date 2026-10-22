@@ -164,7 +164,7 @@ make a child stop practising, so:
 - Never "weak", "poor", "bad", "wrong", "problem", "inadequate", "fail" or
   "lowest", in English or in a translation.
   For Telugu the list to avoid is `AVOID_WORDS_TE` in
-  `backend/practice_catalog.py` (tappu, porapatu, balaheena, and so on);
+  `backend/report/practice_catalog.py` (tappu, porapatu, balaheena, and so on);
   the tests scan the catalogue and the report's string tables for both.
 - One action per sentence, words a nine-year-old knows.
 - End on encouragement, and name any gain since the last check.

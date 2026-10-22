@@ -76,7 +76,7 @@ for (const id of ['spelling.deferred', 'spelling.notext', 'spelling.found', 'spe
 }
 
 // Words for children, both languages; no em dash anywhere.
-const python = fs.readFileSync('backend/practice_catalog.py', 'utf8');
+const python = fs.readFileSync('backend/report/practice_catalog.py', 'utf8');
 const AVOID = ['weak', 'poor', 'bad', 'wrong', 'problem', 'inadequate', 'fail', 'lowest', 'mistake'];
 const banned = new RegExp('\\b(' + AVOID.join('|') + ')(s|ed|ing|ly|ness|er|est)?\\b', 'i');
 const teBlock = python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/);

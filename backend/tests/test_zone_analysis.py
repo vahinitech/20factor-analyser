@@ -16,7 +16,7 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from zone_analysis import (  # noqa: E402
+from vision.zone_analysis import (  # noqa: E402
     ZONE_TARGET_REACH,
     analyze_zones,
     line_zone_bands,

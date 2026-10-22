@@ -2,7 +2,7 @@
 // (c) 2026 Vahini Technologies.
 // An upload sends no reference passage unless the writer picks one. The
 // server rewrites every read line that is close enough to the passage into
-// the passage itself (backend/recognizer.py align_to_expected), so a default
+// the passage itself (backend/reading/recognizer.py align_to_expected), so a default
 // passage would quietly replace a child's own words with the pangram.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';

@@ -23,14 +23,14 @@ from fastapi import UploadFile
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import comparison_data  # noqa: E402
-import compact_reports  # noqa: E402
-import contract_schemas  # noqa: E402
-import entitlements  # noqa: E402
-import factor_needs  # noqa: E402
+from report import comparison_data  # noqa: E402
+from report import compact_reports  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from server import entitlements  # noqa: E402
+from scoring_parts import needs as factor_needs  # noqa: E402
 import scoring  # noqa: E402
 from languages import profile, registry  # noqa: E402
-from report_contract import public_report  # noqa: E402
+from report.report_contract import public_report  # noqa: E402
 from backend.tests.test_comparison_data import (  # noqa: E402
     FREE,
     read_payload,
@@ -392,7 +392,7 @@ class EmptiedClasses(unittest.TestCase):
 
 
 def load_server():
-    path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+    path = Path(__file__).resolve().parents[1] / "server/app.py"
     spec = importlib.util.spec_from_file_location("profile_test_server", path)
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)

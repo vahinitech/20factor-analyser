@@ -19,7 +19,7 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from baseline_track import (  # noqa: E402
+from vision.baseline_track import (  # noqa: E402
     MIN_POINTS,
     _collapse_duplicate_x,
     track_row_baseline,

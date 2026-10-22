@@ -8,7 +8,7 @@
    saved. The panel is screen-only and never printed; the printed report
    keeps comparing with the previous check.
    Each check also keeps its receipt for the server's stored report
-   (backend/report_store.py, owner decision 2026-10-16): a random id and
+   (backend/server/report_store.py, owner decision 2026-10-16): a random id and
    token, nothing else. The only network calls here use receipts: a new
    check renews the earlier ones for another 12 months, and "forget"
    deletes their stored reports. The name stays on this device.

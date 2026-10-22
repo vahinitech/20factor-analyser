@@ -18,13 +18,13 @@ import numpy as np
 from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import compact_reports
-import comparison_data
-import contract_schemas
-import entitlements
-import computer_vision as vision
+from report import compact_reports
+from report import comparison_data
+from report import contract_schemas
+from server import entitlements
+from vision import computer_vision as vision
 import scoring
-from report_contract import public_report
+from report.report_contract import public_report
 
 ROOT = Path(__file__).resolve().parents[2]
 EXAMPLES = ROOT / "docs" / "examples"
