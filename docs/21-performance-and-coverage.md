@@ -348,6 +348,11 @@ total work count. Numbers only.
   the last ten lines. It fails when accuracy falls: the error rate more
   than 0.2 points up (the reading gate's tolerance), fewer written lines
   scored, the eye agreement more than 0.05 down, or any catch rate lower.
+  A catch rate a pull request lowers on purpose is named in
+  `benchmarks/factors/accepted.json` with the rate, the pull request and
+  the reason, by hand and in that pull request: a fall no lower than
+  that rate is reported, not failed. Once ten main runs carry the new
+  rate the entry has no effect and can go.
   CPU, memory or work more than 15% above the median is flagged in the
   summary and as a warning, not failed: the lines come from different
   runners, whose speed differs by tens of percent, and gate 2 already
