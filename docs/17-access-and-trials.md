@@ -27,7 +27,12 @@ this page, a chat or a competitor's site; ask the owner.
 - When the expiry passes, the same key falls back to Free on the next
   request. Nobody has to run anything. `/api/v2/me` then reports
   `tier: free`, `plan_tier: pro`, `subscription_status: expired`.
-- A key is `vh_` followed by 43 random characters. The secret is shown once,
+- A production key is `vh_` followed by 43 random characters; a stage key
+  is `vh_test_` followed by 43 (owner, 2026-10-22), so a key shows where it
+  works. The stage analyser has `VAHINI_ENVIRONMENT=stage`; production does
+  not set it. Production refuses a `vh_test_` key with HTTP 401 and "This is
+  a stage test key", and stage still takes the plain `vh_` keys it issued
+  before the change, until they expire. The secret is shown once,
   written to a new file with mode 0600, and only its SHA-256 digest enters
   the ledger. A lost key cannot be recovered from the ledger, only replaced.
 - A revoked key is refused (HTTP 401) on its next lookup, including a scan
