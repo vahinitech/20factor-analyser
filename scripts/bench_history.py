@@ -28,11 +28,12 @@ lower catch rate. A catch rate a pull request lowers on purpose is
 named, with the pull request and the reason, in
 benchmarks/factors/accepted.json: a fall no lower than the rate given
 there is reported, not failed, until main's own lines carry it. Time,
-memory and work up by more than CREEP are flagged in the summary and as a warning, not failed: the lines come from
-different runners, whose speeds differ by tens of percent, and the
-paired timing gate (#251) already compares each pull request with main
-on one runner. Both commands write the trend of every number over the
-last TREND lines to the job summary.
+memory and work up by more than CREEP are flagged in the summary and as
+a warning, not failed: the lines come from different runners, whose
+speeds differ by tens of percent, and the paired timing gate (#251)
+already compares each pull request with main on one runner. Both
+commands write the trend of every number over the last TREND lines to
+the job summary.
 
 Lines are kept on the `bench-history` branch as history/<set>.jsonl,
 numbers only. Standard library only, apart from what the replay imports.
