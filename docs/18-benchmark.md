@@ -42,6 +42,7 @@ benchmarks/
     reader/*.json   the reader's output per page
     expected.json   every page's result
     reading.json    how well the reader read each page (character error rate)
+  sample-page/      the analyser's own sample photo, same files (below)
   planted/
     expected.json   how often planted mistakes are marked (scripts/planted_pages.py)
 ```
@@ -483,6 +484,28 @@ allows them in a public repository, and a `source.md` saying where they
 came from. Capture the reader output with `capture --set <name>` in the
 analyser image, then `update --set <name>`, and add the set to the
 `check` step in `ci.yml`.
+
+## The sample page
+
+`benchmarks/sample-page` is the photo behind `sample-report.html`
+(`tests/fixtures/handwriting-sample.jpg`): a ruled notebook page
+photographed at an angle, its lower lines sloping by three to six
+degrees. On 22 October 2026 the stage analyser scored it Size
+Consistency 0.0 and Baseline Alignment 3.2: each sloping line's box
+took in the rows above and below it, and the short line "with care."
+was dropped as a second reading of the sloping line under it. The
+letter measurements now take a line's ink from its band
+(`geometry.line_band`, the reader's outline where it is shaped like a
+line) and leave out ink that is plainly another line's
+(`letter_geometry._elsewhere`).
+
+It is not in CI's `check` loop: its Letter Spacing is a measured 0
+(its letter gaps are one to four pixels on a 960 px photo, and its
+letter lists and digit strings read as words written apart), which the
+limits fail until that scale is set (#197). `backend/tests/test_sample_page.py`
+replays it in every CI run instead and fails when the line is lost,
+when the size spread or the share of words off the line rises, or when
+any factor the free report shows falls below 4.
 
 ## A set kept outside the repository
 

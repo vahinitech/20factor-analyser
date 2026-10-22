@@ -38,7 +38,7 @@ except ImportError:  # pragma: no cover - cv2 ships in core
     cv2 = None
 
 import languages
-from vision.geometry import clamp_box
+from vision.geometry import clamp_box, line_band
 from vision.zone_analysis import binarise, dense_band
 
 # Letters that stay within the small-letter band (the language pack).
@@ -184,10 +184,38 @@ def _column_xheight(mask, mx0, y0, slope, icpt, line_xh):
     return xh if xh >= MIN_XHEIGHT_PX else None
 
 
-def _line_ink(gray, line):
+# Ink belongs to another line when it lies in that line's band and its
+# distance to that band's middle is under NEARER times its distance to
+# its own line's. A word sunk below its line (a planted mistake) can lie
+# nearly as close to the line below and stays; the rows above and below
+# a sloping line on the sample page lie at under a fifth of the distance.
+NEARER = 0.5
+
+
+def _elsewhere(line, others, x, y):
+    """Whether ink at (x, y) is another line's (NEARER;
+    geometry.line_band)."""
+    top, bottom = line_band(line, x)
+    own = abs(y - (top + bottom) / 2.0)
+    for other in others:
+        top, bottom = line_band(other, x)
+        if top <= y <= bottom and abs(y - (top + bottom) / 2.0) < NEARER * own:
+            return True
+    return False
+
+
+def _line_ink(gray, line, others=()):
     """The line's ink: (x0, y0, mask, blobs) for the padded line box, with
     only the blobs whose middle lies inside the line's own box, or None.
-    gray: full-page uint8 grayscale."""
+    gray: full-page uint8 grayscale.
+
+    others: the page's other lines; a blob that is plainly another
+    line's ink (_elsewhere) is left out. The box of a line sloping by a
+    few degrees takes in the rows above and below it: on the analyser's
+    sample page those rows' letters were measured as words three small
+    letters tall and words off the line, and Size Consistency scored 0.
+    A blob in no other line's band, such as a long tail below the last
+    line, stays with the box it is in."""
     x, y, w, h = [int(round(float(v))) for v in (line.get("box") or [])[:4]]
     if w < 6 or h < 12:
         return None
@@ -206,6 +234,8 @@ def _line_ink(gray, line):
         cx, cy, cw, ch, area = (int(v) for v in stats[i])
         middle = y0 + cy + ch / 2.0
         if area < min_area or not y <= middle <= y + h:
+            continue
+        if _elsewhere(line, others, x0 + cx + cw / 2.0, middle):
             continue
         comps.append((x0 + cx, y0 + cy, cw, ch))
         keep.append(i)
@@ -279,12 +309,13 @@ def _bowls(mask, xh):
     return n
 
 
-def measure_line(gray, line):  # pylint: disable=too-many-locals
+def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
     """Word and letter geometry for one line, or None when the line is too
-    small or has no usable ink. gray: full-page uint8 grayscale."""
+    small or has no usable ink. gray: full-page uint8 grayscale; others:
+    the page's other lines, whose ink is left out (_line_ink)."""
     if cv2 is None:
         return None
-    ink = _line_ink(gray, line)
+    ink = _line_ink(gray, line, others)
     if ink is None:
         return None
     x0, y0, mask, comps = ink
@@ -526,7 +557,9 @@ def measure_page(arr, lines):
     if cv2 is None:
         return [None] * len(lines)
     gray = cv2.cvtColor(arr, cv2.COLOR_RGB2GRAY)
-    return [measure_line(gray, l) for l in lines]
+    return [
+        measure_line(gray, l, [o for o in lines if o is not l]) for l in lines
+    ]
 
 
 # Marks. A small letter this far from the line's x-height, a word whose
