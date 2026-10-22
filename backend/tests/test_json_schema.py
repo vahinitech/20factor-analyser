@@ -4,12 +4,16 @@
 schema file declares draft-07 and is a valid draft-07 schema, the module
 refuses any other draft, and no other code builds its own validator."""
 
+import contextlib
+import io
 import json
 import os
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
@@ -132,6 +136,35 @@ class OneValidator(unittest.TestCase):
         )
         self.assertIsNone(json_schema.first_error(checker, 3))
         self.assertIsNotNone(json_schema.first_error(checker, "3"))
+
+
+class ContractCommandLine(unittest.TestCase):
+    """python backend/report/contract_schemas.py <schema> <file|->"""
+
+    def run_main(self, argv, stdin=""):
+        out = io.StringIO()
+        with mock.patch("sys.stdin", io.StringIO(stdin)):
+            with contextlib.redirect_stdout(out):
+                code = contract_schemas.main(argv)
+        return code, out.getvalue()
+
+    def test_a_valid_message_from_a_file(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = os.path.join(folder, "error.json")
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump({"detail": "Not found"}, f)
+            code, out = self.run_main(["x", "error", path])
+        self.assertEqual((code, out.strip().splitlines()[-1]), (0, "valid"))
+
+    def test_problems_from_stdin(self):
+        code, out = self.run_main(["x", "error", "-"], stdin="{}")
+        self.assertEqual(code, 1)
+        self.assertIn("problem(s)", out)
+
+    def test_wrong_arguments_print_the_usage(self):
+        code, out = self.run_main(["x"])
+        self.assertEqual(code, 2)
+        self.assertIn("contract_schemas.py", out)
 
 
 if __name__ == "__main__":
