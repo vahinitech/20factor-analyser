@@ -35,8 +35,12 @@ import re
 import sys
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-from jsonschema.exceptions import best_match
+# Run as a script (python backend/languages/registry.py): backend/ goes on
+# the path so the shared schema module imports.
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+# pylint: disable-next=wrong-import-position
+from report import json_schema  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 SCHEMA_PATH = ROOT / "pack.schema.json"
@@ -60,17 +64,15 @@ class PackError(ValueError):
 
 
 def _validator(definition):
-    """The schema for a pack file (None) or for one of its $defs."""
+    """The validator for a pack file (None) or for one of its
+    definitions."""
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = json.load(f)
-    if definition:
-        defs = schema["$defs"]
-        schema = dict(defs[definition], **{"$defs": defs})
-    return Draft202012Validator(schema)
+    return json_schema.validator(schema, definition or None)
 
 
 def _check(definition, data, what):
-    error = best_match(_validator(definition).iter_errors(data))
+    error = json_schema.first_error(_validator(definition), data)
     if error is not None:
         where = "/".join(str(p) for p in error.path) or "(top)"
         raise PackError(f"{what}: {where}: {error.message}")

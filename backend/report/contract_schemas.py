@@ -17,9 +17,7 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
-from jsonschema import Draft7Validator
-from referencing import Registry, Resource
-from referencing.jsonschema import DRAFT7
+from report import json_schema
 
 SCHEMA_DIR = Path(__file__).resolve().parents[1] / "schemas"
 NAMES = (
@@ -51,19 +49,9 @@ def load(name):
 @lru_cache(maxsize=None)
 def validator(name):
     """Build a draft-07 validator whose $ref links resolve offline."""
-    resources = []
-    for other in NAMES:
-        schema = load(other)
-        resources.append(
-            (
-                schema["$id"],
-                Resource.from_contents(schema, default_specification=DRAFT7),
-            )
-        )
-    schema = load(name)
-    Draft7Validator.check_schema(schema)
-    registry = Registry().with_resources(resources)
-    return Draft7Validator(schema, registry=registry)
+    return json_schema.validator(
+        load(name), schemas=[load(other) for other in NAMES]
+    )
 
 
 def errors(name, instance):

@@ -25,7 +25,7 @@ Docker: `docker compose up -d --build` from the repository root.
 | `reading/` | From photo to text: detection, the readers, printed or handwritten |
 | `vision/` | Measurements from the ink: lines, letters, zones, slant, spacing |
 | `languages/` | Language packs, recognition stages and ladders |
-| `report/` | The report, practice and coaching, and the JSON Schema generator |
+| `report/` | The report, practice and coaching; the JSON Schema generator and the one validator (draft-07) |
 | `schemas/`, `catalogs/` | API contracts and versioned report dictionaries (both generated) |
 | `models/`, `perf/` | Small trained models; per-page cost budgets |
 | `requirements.txt`, `requirements/` | The default install; one file per engine tier |

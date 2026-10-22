@@ -225,7 +225,7 @@ class TestTable(unittest.TestCase):
             schema = json.load(f)
         ocr_backends.init_registry()
         self.assertEqual(
-            set(schema["$defs"]["engine"]["enum"]),
+            set(schema["definitions"]["engine"]["enum"]),
             set(ocr_backends._REGISTRY),
         )
 

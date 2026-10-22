@@ -25,8 +25,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-from jsonschema.exceptions import best_match
+from report import json_schema
 
 from languages import stages
 
@@ -45,7 +44,7 @@ class LaddersError(ValueError):
 def _validate(data, what):
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = json.load(f)
-    error = best_match(Draft202012Validator(schema).iter_errors(data))
+    error = json_schema.first_error(json_schema.validator(schema), data)
     if error is not None:
         where = "/".join(str(p) for p in error.path) or "(top)"
         raise LaddersError(f"{what}: {where}: {error.message}")

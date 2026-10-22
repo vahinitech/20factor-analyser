@@ -45,8 +45,7 @@ import json
 import re
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-from jsonschema.exceptions import best_match
+from report import json_schema
 
 from .registry import language
 
@@ -118,9 +117,7 @@ def _schema():
 
 
 def _validator(definition):
-    schema = _schema()
-    defs = schema["$defs"]
-    return Draft202012Validator(dict(defs[definition], **{"$defs": defs}))
+    return json_schema.validator(_schema(), definition)
 
 
 _VALIDATORS = {}
@@ -129,7 +126,7 @@ _VALIDATORS = {}
 def _check(definition, data, where):
     if definition not in _VALIDATORS:
         _VALIDATORS[definition] = _validator(definition)
-    error = best_match(_VALIDATORS[definition].iter_errors(data))
+    error = json_schema.first_error(_VALIDATORS[definition], data)
     if error is None:
         return
     path = ".".join([where] + [str(p) for p in error.absolute_path])
@@ -345,7 +342,7 @@ class Ruleset:
 
 
 def resolve(layers=None, pack=None):
-    """The ruleset for these layers ($defs/layers of profile.schema.json,
+    """The ruleset for these layers (definitions/layers of profile.schema.json,
     or None) on the pack the scorer reads (the English pack by default).
     Refused with ProfileError."""
     pack = pack or language()

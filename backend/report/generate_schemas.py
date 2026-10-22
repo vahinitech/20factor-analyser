@@ -23,11 +23,11 @@ from server.entitlements import FREE_FACTORS, STATUSES, TIERS
 from languages.profile import CODES as PROFILE_CODES
 from languages.profile import MAX_BYTES as PROFILE_BYTES
 from report.practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
+from report.json_schema import DRAFT
 from report.report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 
 OUT = Path(__file__).resolve().parents[1] / "schemas"
 BASE = "https://vahinitech.com/schemas/analyser/v2/"
-DRAFT = "http://json-schema.org/draft-07/schema#"
 COMMON = "common.schema.json#/definitions/"
 ACCESS = "access-customer.schema.json#/definitions/"
 IDS = list(FACTOR_IDS)
@@ -1689,7 +1689,7 @@ def request():
                         "maxLength": PROFILE_BYTES,
                         "description": (
                             "Optional school, class and child profile as "
-                            "JSON text: $defs/layers of "
+                            "JSON text: definitions/layers of "
                             "backend/languages/profile.schema.json, at "
                             f"most {PROFILE_BYTES} bytes in UTF-8. Sent "
                             "with each request and never stored; the "
