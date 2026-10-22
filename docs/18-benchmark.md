@@ -121,7 +121,7 @@ the PR shows what the new reader did to every page.
 container, writing straight into `reader/`. The kept output was captured
 on the stage server's image on 19 October 2026.
 
-The same run reads every page, and the sample photo
+A second job, alongside it, reads every page, and the sample photo
 (`tests/fixtures/handwriting-sample.jpg`), twice more: with `lang=auto`,
 as the website sends, and with `lang=en` (`benchmark.py langs`). Both
 must give the same number of lines and every score within the same 0.3
@@ -135,7 +135,12 @@ variants are read and the merged lines have other boxes.
 
 ### Speed and memory of the live reader
 
-The same workflow times the reader (#252, `scripts/live_timing.py`). On
+A third job, alongside the other two, times the reader (#252,
+`scripts/live_timing.py`). The three jobs run side by side, each building
+the image from the shared cache, so the run takes as long as the timing
+job (about 13 minutes) instead of all three in a row (about 21). The
+timing stays one job, its sides one after the other on one runner, so
+the runner's speed cancels out of the comparison. On
 a pull request it builds main's analyser image next to the pull
 request's and runs each as a container held to the production limit
 (`--memory 2500m --memory-swap 2500m`). Each container reads and scores
