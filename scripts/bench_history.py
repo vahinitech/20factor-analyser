@@ -24,12 +24,16 @@ catch rate from benchmarks/factors/expected.json and, when given
 `check` fails when accuracy falls against the median of the last RECENT
 main lines: the error rate up by more than CER_RISE points, fewer
 written lines scored, the eye agreement down by more than EYE_DROP, or a
-lower catch rate. Time, memory and work up by more than CREEP are
-flagged in the summary and as a warning, not failed: the lines come from
-different runners, whose speeds differ by tens of percent, and the
-paired timing gate (#251) already compares each pull request with main
-on one runner. Both commands write the trend of every number over the
-last TREND lines to the job summary.
+lower catch rate. A catch rate a pull request lowers on purpose is
+named, with the pull request and the reason, in
+benchmarks/factors/accepted.json: a fall no lower than the rate given
+there is reported, not failed, until main's own lines carry it. Time,
+memory and work up by more than CREEP are flagged in the summary and as
+a warning, not failed: the lines come from different runners, whose
+speeds differ by tens of percent, and the paired timing gate (#251)
+already compares each pull request with main on one runner. Both
+commands write the trend of every number over the last TREND lines to
+the job summary.
 
 Lines are kept on the `bench-history` branch as history/<set>.jsonl,
 numbers only. Standard library only, apart from what the replay imports.
@@ -137,6 +141,16 @@ def catch_rates(path=None):
     return dict(sorted(rates.items()))
 
 
+def accepted_falls(path=None):
+    """Catch rates lowered on purpose, as "mistake/factor": {"rate", "pr",
+    "why"}: the lowest rate each may fall to (benchmarks/factors/
+    accepted.json, edited by hand in the pull request that lowers it)."""
+    path = path or os.path.join(ROOT, "benchmarks", "factors", "accepted.json")
+    if not os.path.exists(path):
+        return {}
+    return _load(path)
+
+
 def work_total(name, work):
     path = os.path.join(work, name, "work.json") if work else ""
     if not path or not os.path.exists(path):
@@ -196,8 +210,9 @@ def _median(past, key):
     return statistics.median(values) if values else None
 
 
-def compare(now, past):
-    """(failures, flags) of a line against the median of past lines."""
+def compare(now, past, accepted=None):
+    """(failures, flags) of a line against the median of past lines;
+    accepted: accepted_falls()."""
     fails, flags = [], []
     past = past[-RECENT:]
     if not past:
@@ -221,11 +236,17 @@ def compare(now, past):
         fails.append(f"agreement with the eye fell to {new} from {old}")
     for key, rate in (now.get("catch") or {}).items():
         values = [p["catch"][key] for p in past if key in p.get("catch", {})]
-        if values and rate < statistics.median(values):
-            fails.append(
-                f"{key} caught on {rate} of writers, median "
-                f"{statistics.median(values)}"
-            )
+        if not values or rate >= statistics.median(values):
+            continue
+        text = (
+            f"{key} caught on {rate} of writers, median "
+            f"{statistics.median(values)}"
+        )
+        ok = (accepted or {}).get(key)
+        if ok and rate >= ok["rate"]:
+            flags.append(f"{text}: accepted in #{ok['pr']}, {ok['why']}")
+        else:
+            fails.append(text)
     return fails, flags
 
 
@@ -297,7 +318,7 @@ def main(argv=None):
         _report(f"## History of main, `{line['set']}`\n")
         _report(trend(past, line))
         return 0
-    fails, flags = compare(line, past)
+    fails, flags = compare(line, past, accepted_falls())
     _report(f"## Against the last {RECENT} main runs, `{line['set']}`\n")
     _report(trend(past, line))
     for text in fails:

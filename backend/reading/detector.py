@@ -23,6 +23,8 @@ try:
 except Exception:
     cv2 = None
 
+from vision.geometry import line_band
+
 
 def variants(arr: np.ndarray, max_variants: int, adv_preproc: bool):
     """Yield preprocessing variants LAZILY, base first.
@@ -327,6 +329,21 @@ def _side_overlap(a, b):
     return over_x > ROW_SIDE_OVERLAP * min(aw, bw)
 
 
+def _same_band(a, b):
+    """Whether two lines sharing columns cover the same band there: at the
+    middle of their shared columns, their bands (geometry.line_band)
+    overlap by ROW_OVERLAP of the thinner. A second reading of a line does;
+    a short line above or below a sloping one does not, though the sloping
+    line's box takes it in."""
+    ax, _ay, aw, _ah = [float(v) for v in a["box"][:4]]
+    bx, _by, bw, _bh = [float(v) for v in b["box"][:4]]
+    x = (max(ax, bx) + min(ax + aw, bx + bw)) / 2.0
+    a0, a1 = line_band(a, x)
+    b0, b1 = line_band(b, x)
+    thin = min(a1 - a0, b1 - b0)
+    return thin > 0 and min(a1, b1) - max(a0, b0) >= ROW_OVERLAP * thin
+
+
 def outline(points):
     """Four corners, top-left, top-right, bottom-right, bottom-left, of
     the smallest rotated rectangle around the points (the shape the
@@ -443,12 +460,17 @@ def _join_pass(lines):
             off = _fits_row(piece, _nearest(piece, row[1]))
             if off is None:
                 continue
-            if any(_side_overlap(piece, m) for m in row[1]):
+            over = [m for m in row[1] if _side_overlap(piece, m)]
+            if over:
                 # Over ink the row already holds: a second reading of it
                 # (another image variant, or line_recovery.py), not a
                 # piece of the line. Pieces come widest first, so the
-                # fuller reading stays.
-                reread = True
+                # fuller reading stays. Only where their bands agree: the
+                # box of a sloping line overlaps the short line above it
+                # by more than half, and "with care." on the sample page
+                # was dropped as a second reading of the line below.
+                if any(_same_band(piece, m) for m in over):
+                    reread = True
                 continue
             if best_row is None or off < best_off:
                 best_off, best_row = off, row

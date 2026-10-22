@@ -1,0 +1,48 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "handwriting-sample": {
+   "lines": [
+    "ANY-ONE CAW CHAUDE HAND WTL",
+    "1/1/1/11",
+    "The Quiclc brown tox sumfs-oves-",
+    "hue 1a3ydog",
+    "Dibe hos a big blve bag and a funall",
+    "ved box bey Ploy with ball, a btand a",
+    "t0y svery da-",
+    "Dodo and Pikcu write lettey lile bdfam",
+    "nuv in a live. Thy try to led Each",
+    "wod clear, weat and well slaced:.",
+    "A+ 5PM, bab0 C0u1+ 1234567890",
+    "stouly he alle writh 11, 2y and 33",
+    "wik cave:",
+    "can ! wrik berter He osls",
+    "4e! parctic daily, cnike slody and",
+    "Stay on the live."
+   ],
+   "overall": 59,
+   "repeats": 0,
+   "scores": {
+    "1": 7.5,
+    "10": 4.8,
+    "11": 3.1,
+    "12": 8.4,
+    "17": 6.4,
+    "18": 5.9,
+    "19": 8.0,
+    "2": 9.1,
+    "20": 4.9,
+    "3": 9.3,
+    "4": 5.9,
+    "5": 5.1,
+    "6": 5.7,
+    "7": 5.5,
+    "8": 4.8,
+    "9": 0.0
+   },
+   "sentences_found": 15,
+   "unmatched": 1
+  }
+ },
+ "set": "sample-page"
+}

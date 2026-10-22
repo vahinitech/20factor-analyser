@@ -70,6 +70,26 @@ class TestCompare(unittest.TestCase):
         self.assertIn("reading error rose", fails[0])
         self.assertIn("indented_line/10", fails[3])
 
+    def test_a_fall_accepted_in_its_pull_request_is_flagged(self):
+        now = line(catch={"indented_line/10": 0.9, "tall_ascenders/6": 0.7})
+        ok = {"indented_line/10": {"rate": 0.9, "pr": 1, "why": "meant"}}
+        fails, flags = hist.compare(now, [line()] * 10, ok)
+        self.assertEqual(len(fails), 1)
+        self.assertIn("tall_ascenders/6", fails[0])
+        self.assertIn("accepted in #1, meant", flags[0])
+
+    def test_a_fall_below_the_accepted_rate_still_fails(self):
+        now = line(catch={"indented_line/10": 0.8, "tall_ascenders/6": 0.75})
+        ok = {"indented_line/10": {"rate": 0.9, "pr": 1, "why": "meant"}}
+        fails, _flags = hist.compare(now, [line()] * 10, ok)
+        self.assertEqual(len(fails), 1)
+
+    def test_accepted_falls_name_a_rate_a_pull_request_and_why(self):
+        for key, ok in hist.accepted_falls().items():
+            self.assertEqual(set(ok), {"rate", "pr", "why"}, key)
+            self.assertIn(key, hist.catch_rates())
+        self.assertEqual(hist.accepted_falls(os.path.join(HERE, "none")), {})
+
     def test_small_reading_moves_inside_the_gate_pass(self):
         fails, _flags = hist.compare(line(cer=9.7), [line()] * 10)
         self.assertEqual(fails, [])

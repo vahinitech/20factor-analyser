@@ -110,6 +110,7 @@ jobs:
             scripts/train_guard.py \
             backend/tests/test_layout_filter.py \
             backend/tests/test_line_pieces.py \
+            backend/tests/test_sample_page.py \
             backend/tests/test_word_spacing.py \
             backend/tests/test_benchmark.py scripts/benchmark.py \
             backend/tests/test_reading_accuracy.py \

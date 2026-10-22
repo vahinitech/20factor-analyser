@@ -1,0 +1,19 @@
+{
+ "cer": 22.27,
+ "edits": 96,
+ "graphemes": 431,
+ "pages": {
+  "handwriting-sample": {
+   "cer": 22.27,
+   "edits": 96,
+   "graphemes": 431
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 22.27,
+   "edits": 96,
+   "graphemes": 431
+  }
+ }
+}

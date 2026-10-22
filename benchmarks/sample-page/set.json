@@ -1,0 +1,40 @@
+{
+ "description": "The analyser's own sample page (tests/fixtures/handwriting-sample.jpg): an adult's notebook page of practice sentences on dashed ruling, photographed at an angle, so its lower lines slope by three to six degrees. Checked by backend/tests/test_sample_page.py, not by CI's benchmark loop.",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "handwriting-sample": [
+   "any one can change hand writing",
+   "any one can change hand writing",
+   "the quick brown fox jumps over",
+   "the lazy dog",
+   "babu has a big blue bag and a small",
+   "red box they play with ball, a bat and a",
+   "toy every day!",
+   "dodo and piku write letters like b d p q m",
+   "n u v in a line. they try to keep each",
+   "word clear, neat and well spaced.",
+   "at 5pm, babu counts 1234567890",
+   "slowly he also writes 11, 22 and 33",
+   "with care.",
+   "can i write better? he asks",
+   "yes! practice daily, write slowly and",
+   "stay on the line."
+  ]
+ },
+ "lines_per_page": 16,
+ "floor_sentences_found": 14,
+ "eye_ranking": []
+}
