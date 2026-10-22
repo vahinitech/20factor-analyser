@@ -336,7 +336,7 @@ async function loadBundledSample(){
       window.VAHINI_SAMPLE_RUN = true;
       keepForSample(true);
       showSample(img, url);
-      setDzStatus('Sample page loaded. Press Run analysis to see its report.');
+      setDzStatus('Sample page loaded. Press Analyse my handwriting to see its report.');
     });
   }catch(_e){ setDzStatus('The sample page could not be loaded. Try your own photo.'); }
 }
@@ -425,7 +425,7 @@ function handleSample(file){
     setDzStatus('Converting your iPhone photo (HEIC) to JPEG…');
     heicToJpeg(file).then(jpeg=>readImageFile(jpeg, (img, url)=>{
       showSample(img, url);
-      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Run analysis.');
+      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Analyse my handwriting.');
     }, unreadable)).catch(unreadable);
   });
 }

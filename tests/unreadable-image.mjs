@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
    (c) 2026 Vahini Technologies. */
 // A photo the browser cannot open must say so, and no photo ever leaves for
-// the upload store: photos are never stored. On 2026-10-06 a visitor on
+// the upload-event store. Saving pages uses a separate opt-in flow. On 2026-10-06 a visitor on
 // Chrome for Mac tried one iPhone HEIC photo five times: the page showed
 // nothing, and the store logged five rejected uploads. Chromium, like Chrome, cannot decode HEIC, so
 // the page converts it with libheif; when that fails, it says what to do.
@@ -21,7 +21,10 @@ const page = await readFile('frontend/analyser.html', 'utf8');
 const store = page.slice(page.indexOf('  var CONSENT_VERSION'), page.indexOf('  // A printed report is stored'));
 assert.ok(store.includes('function photoRecord('), 'photoRecord not found in analyser.html');
 // The upload screen says what happens to the photo, where it is chosen.
-assert.match(page, /<p id="photo-note-lead"><b>Your photo:<\/b> we check it and do not keep it\./, 'the upload screen says the photo is not kept');
+const photoNote = page.match(/<p id="photo-note-lead">([\s\S]*?)<\/p>/)?.[1];
+assert.ok(photoNote, 'the upload screen explains what happens to the photo');
+assert.match(photoNote, /we check it without saving it/, 'photos are not saved by default');
+assert.match(photoNote, /unless you choose “Keep my pages” below/, 'saving requires the separate explicit choice');
 assert.match(page, /<input type="checkbox" id="keep-pages">/, '"Keep my pages" is offered, unticked');
 // What a printed report is stored as: checkFacts and the photo-quality
 // measure it uses, run on the sample report's real analysis.
@@ -125,7 +128,7 @@ try {
   assert.equal(r.maxPick, 10 * 1024 * 1024, 'a picked file is limited to 10 MB');
   assert.match(r.bigMsg, /12\.0 MB, over the 10 MB limit/); assert.match(r.bigMsg, /1 to 5 MB/);
   assert.match(tampered, /integrity/, 'a wasm file that fails its hash is refused');
-  // Photos are never stored: the store gets a record, never the photo or its name.
+  // Upload events carry a record, never the photo or its name.
   const recHeic = JSON.parse(r.recHeic);
   assert.deepEqual([recHeic.fileName, recHeic.mimeType, recHeic.source, recHeic.meta.size], ['photo.heic', 'image/heic', 'file-input', REAL_HEIC.length], 'a HEIC photo is described, not sent');
   for (const rec of [r.recHeic, r.recNamed, r.recNoType]) {
