@@ -58,9 +58,15 @@ Use [report contract guidance](../../docs/12-report-rules.md) and [API specifica
   from it specifically to avoid drift; a fourth reimplementation
   (including inside `server/app.py`, which doesn't use it today) is
   the drift this rule exists to prevent.
-- `npm run build:bundle` must be re-run whenever `frontend/src/` changes —
-  CI checks the bundle is in sync; a PR with source changes but no bundle
-  diff is a red flag.
+- The bundle (`frontend/scripts/core/engine.bundle.js`) is build output
+  and gitignored: a PR that commits it, or a `?v=` stamp, is a red flag
+  (CI fails on both).
+- Benchmarks run only when the `changes` job says the change can move
+  them (`scripts/score_closure.py`). When it skipped them, check the PR
+  adds no module loaded by name (importlib, a file path) and no new
+  benchmark script; either needs an entry in `GROUPS` there, or a skipped
+  benchmark could hide a moved score. A PR that moves a score must commit
+  the updated `expected.json`.
 
 ## Code Quality Essentials
 

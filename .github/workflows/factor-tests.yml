@@ -6,24 +6,15 @@
 name: Factor tests
 
 on:
+  # A coarse filter so a website-only change starts nothing; the changes
+  # job below decides from the import closure (scripts/score_closure.py).
   pull_request:
     paths:
-      - 'backend/scoring.py'
-      - 'backend/scoring_parts/**'
-      - 'backend/vision/letter_geometry.py'
-      - 'backend/vision/computer_vision.py'
-      - 'backend/vision/zone_analysis.py'
-      - 'backend/vision/marked_places.py'
-      - 'backend/vision/baseline_track.py'
-      - 'scripts/planted_pages.py'
-      - 'scripts/factor_tests.py'
-      - 'scripts/calibrate.py'
-      - 'scripts/score_ranges.py'
-      - 'scripts/variation_study.py'
-      - 'scripts/benchmark.py'
-      - 'benchmarks/factors/**'
-      - 'benchmarks/neat-penmanship/**'
-      - 'benchmarks/factors-ruled/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - 'benchmarks/**'
+      - '.github/actions/changes/**'
+      - '.github/workflows/factor-tests.yml'
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
@@ -36,7 +27,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Which benchmarks this change can move (scripts/score_closure.py,
+  # docs/18-benchmark.md "When the benchmarks run"). On a pull request
+  # that touches nothing the replay imports or reads, the factor and
+  # calibration jobs are skipped; the weekly run and runs by hand run them.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      scores: ${{ steps.closure.outputs.scores }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: closure
+        uses: ./.github/actions/changes
+
   factors:
+    needs: changes
+    if: needs.changes.outputs.scores == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -66,6 +75,8 @@ jobs:
   # the engraved model pages, and every factor on neat, UJI, clean and
   # poor pages side by side. Nothing here is applied to a scale.
   calibration:
+    needs: changes
+    if: needs.changes.outputs.scores == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

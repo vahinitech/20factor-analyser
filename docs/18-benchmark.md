@@ -105,6 +105,38 @@ reports how well the overall scores follow it (Spearman's rank agreement,
 -1 to 1) and fails when a change makes it fall by more than 0.05. It is
 empty until the owner ranks the 20 pages.
 
+## When the benchmarks run
+
+A pull request runs a benchmark only when it can move it.
+`scripts/score_closure.py` reads the imports, without running anything,
+from the benchmark scripts through `backend/` and `scripts/`, and keeps
+two lists of files:
+
+- **scores**: what the replay, the factor and calibration tests, the
+  paired timing and the history import, plus the data they read
+  (`benchmarks/`, the language packs, the models, the budgets and the
+  requirements). A change here runs those jobs.
+- **reader**: what the reader imports, stopping at the scorer, plus the
+  image, the models and the requirements. A change here runs the live
+  reader. The reading never comes from the scorer
+  (`vision/computer_vision.py` imports it inside one function, for the
+  evidence boxes), and a scoring change is caught by the replay of the
+  kept reading.
+
+A first job in each workflow (`.github/actions/changes`) compares the
+pull request with its base and says run or skip. A change to the server,
+the report text, the practice catalogue, the website or a test skips the
+benchmarks; the unit tests, e2e and CodeQL always run. A push to main,
+the weekly runs and runs by hand run every benchmark. Run
+`python scripts/score_closure.py groups` to see both lists, and
+`python scripts/score_closure.py changed origin/main` for a branch.
+
+`test_score_closure.py` replays one page of every set and fails if the
+replay loads a file the scores list does not hold, so a module loaded by
+name cannot let a pull request skip a benchmark it moves. It also fails if
+a reader module imports the scorer at load time, which would end the
+reason for the stop.
+
 ## The live reader (Layer B)
 
 `benchmark-live.yml` builds the analyser image (the PaddleOCR layer is
