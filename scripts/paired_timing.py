@@ -65,6 +65,15 @@ STEPS = (
     ("scoring", "scoring", "build_analysis"),
 )
 OTHER = "other"
+# Where each timed module lives: its folder since the backend was sorted
+# into folders (#282), the top of backend/ before. Main and the pull
+# request can be on either side of that change.
+PACKAGES = {
+    "computer_vision": "vision",
+    "ink_geometry": "vision",
+    "recognizer": "reading",
+    "perf": "server",
+}
 # One thread for the maths libraries on both sides: idle threads spinning
 # while they wait add CPU time that says nothing about the code.
 THREADS = ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS")
@@ -109,10 +118,22 @@ def _bench(checkout):
     return module
 
 
+def _import(name):
+    """The checkout's module `name`, from its folder or, in a checkout
+    from before the folders, from the top of backend/."""
+    package = PACKAGES.get(name)
+    if package:
+        try:
+            return importlib.import_module(f"{package}.{name}")
+        except ImportError:
+            pass
+    return importlib.import_module(name)
+
+
 def _wrap_steps(clock):
     for name, module_name, func in STEPS:
         try:
-            module = importlib.import_module(module_name)
+            module = _import(module_name)
         except ImportError:
             continue
         if hasattr(module, func):
@@ -151,11 +172,11 @@ def worker(checkout, sets):
     # Import the analyser before the clock starts, as the server has it
     # loaded before any scan.
     for module in ("computer_vision", "recognizer", "scoring"):
-        importlib.import_module(module)
+        _import(module)
     clock = Clock()
     _wrap_steps(clock)
     try:
-        perf = importlib.import_module("server.perf")
+        perf = _import("perf")
     except ImportError:
         perf = None
     pages, skipped, stages = {}, [], {}

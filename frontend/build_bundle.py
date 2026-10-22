@@ -73,7 +73,9 @@ def practice_source():
     """The practice catalogue for reports made without a server catalogue
     (the sample report). One source: backend/report/practice_catalog.py, which
     validates itself on import and uses only the standard library."""
-    path = os.path.join(HERE, os.pardir, "backend", "report", "practice_catalog.py")
+    path = os.path.join(
+        HERE, os.pardir, "backend", "report", "practice_catalog.py"
+    )
     spec = importlib.util.spec_from_file_location("practice_catalog", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
