@@ -9,6 +9,33 @@ and [`backend/API-V2.md`](../backend/API-V2.md). Read
 [13 API and capacity](13-api-and-capacity.md) and
 [15 Persistence](15-persistence.md) first if the stack is new to you.
 
+## Quick start
+
+On the deploy server, as the deploying user, from a checkout of this
+repository:
+
+```bash
+deployment/grant-pro.sh stage "test, Seetha" 2026-11-21
+deployment/grant-pro.sh prod "who it is for" 2026-11-21
+```
+
+It runs "Give a family or teacher a Pro trial" below as one command: it
+backs up the ledger, creates the customer, issues a random key, grants Pro
+until the end of that day in India time, checks the key and asks the site
+what the key gets. The key is never printed; it lands in a 0600 file under
+`~/secrets/pro-keys/`, and one line (date, customer id, label, end date,
+never the key) goes to `~/secrets/pro-register.txt`, or to the file
+`VAHINI_PRO_REGISTER` names. Hand the key over as "How the key reaches the
+person" says. Try a new kind of grant on stage first. To look up, renew,
+move back to Free or revoke, use the commands in "Running the command" and
+the procedures below.
+
+Production runs the image of its last release. Until that release includes
+the backend folder sort (#282), the tool there is
+`/app/backend/subscription_admin.py`, not
+`/app/backend/server/subscription_admin.py`. The script finds either; in
+the commands below, use the path the container has.
+
 Items marked **OWNER DECISION** have no value yet. Do not fill them in from
 this page, a chat or a competitor's site; ask the owner.
 
@@ -27,7 +54,12 @@ this page, a chat or a competitor's site; ask the owner.
 - When the expiry passes, the same key falls back to Free on the next
   request. Nobody has to run anything. `/api/v2/me` then reports
   `tier: free`, `plan_tier: pro`, `subscription_status: expired`.
-- A key is `vh_` followed by 43 random characters. The secret is shown once,
+- A production key is `vh_` followed by 43 random characters; a stage key
+  is `vh_test_` followed by 43 (owner, 2026-10-22), so a key shows where it
+  works. The stage analyser has `VAHINI_ENVIRONMENT=stage`; production does
+  not set it. Production refuses a `vh_test_` key with HTTP 401 and "This is
+  a stage test key", and stage still takes the plain `vh_` keys it issued
+  before the change, until they expire. The secret is shown once,
   written to a new file with mode 0600, and only its SHA-256 digest enters
   the ledger. A lost key cannot be recovered from the ledger, only replaced.
 - A revoked key is refused (HTTP 401) on its next lookup, including a scan
@@ -68,6 +100,8 @@ ledger and outside every repository: the customer id, the adult's contact,
 whether it is a trial, and the dates. Never a child's name.
 
 **OWNER DECISION:** where that private register lives and who can read it.
+Until decided, `deployment/grant-pro.sh` appends to
+`~/secrets/pro-register.txt` (mode 0600) on the deploy server.
 
 ## Stage and production have separate ledgers
 
@@ -137,8 +171,10 @@ TZ=Asia/Kolkata date -d '2026-11-15 23:59:59' +%s
 ```
 
 The `docker exec` route above follows the hardened compose settings and the
-code; it has not yet been run end to end on the server. Run it once on stage
-and correct this page if a step differs.
+code, and `deployment/grant-pro.sh` runs the same steps. The script ran end
+to end on stage on 22 October 2026: backup, customer, key, Pro until the
+chosen day, the key check and `/api/v2/me` answering `tier: pro`, every step
+as written here. Correct this page if a later run differs.
 
 The commands keep working. A service on the private network can make the
 same changes through the analyser's internal access API instead of the
@@ -200,6 +236,29 @@ exists, every request that carries a key gets HTTP 503.
 8. Check: ask the person to connect the key on the analyser page and confirm
    the full 20-factor report, or call `/api/v2/me` yourself with the key in
    an `Authorization: Bearer` header before handing it over.
+
+### A key for a group
+
+A school visit, a workshop or a pilot class can share one key. Grant it the
+same way, with the group as the label and a short end date:
+
+```bash
+deployment/grant-pro.sh prod "pilot class, shared" 2026-11-21
+```
+
+- The key is random, like every key. The admin tool cannot make a key from
+  a chosen word on purpose: a memorable key (`vh_` and a city or a number)
+  can be guessed, and a Pro key is never held to the free daily limit, so
+  whoever guesses it gets unlimited checks on a server that runs one scan
+  at a time.
+- Everyone the key reaches has Pro until it ends. Choose the end date to
+  match the visit or the pilot, and end it early with `admin revoke-key`
+  when the group is done.
+- If the key turns up somewhere it should not (a group chat, a photo of a
+  whiteboard, a public page), revoke it and issue a new one, as "A lost or
+  leaked key" says. Only the customer's key changes.
+- Write in the private register that the key is shared, with whom, and by
+  which channel it went out.
 
 ### How the key reaches the person
 

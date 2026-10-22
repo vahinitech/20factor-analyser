@@ -26,6 +26,8 @@ Repository landscape: this is `20factor-analyser` (the open (AGPL-3.0) handwriti
 
 **Benchmarks run when a change can move them.** CI's first `changes` job (`scripts/score_closure.py`) skips the replay, timing, history, factor, calibration and live-reader jobs when a pull request touches nothing the benchmarks import or read; main, the weekly runs and runs by hand run them all. Before pushing, run `python scripts/score_closure.py changed origin/main` and run the benchmarks it says (`benchmark.py check`, `factors`, `factors --ruled`, `planted`). A module loaded by name must be added to `GROUPS` there, or `backend/tests/test_score_closure.py` fails. docs/18-benchmark.md, "When the benchmarks run".
 
+**Pro access is granted on the server, never in code.** Giving, renewing and revoking Pro follow [docs/17-access-and-trials.md](docs/17-access-and-trials.md) and `deployment/grant-pro.sh`; every key is random and only its hash is stored. Never write a key into a file in the repository, a commit, a PR, an issue or a log, and never make a key from a chosen word.
+
 **Run the whole CI test list locally**, as `.github/workflows/ci.yml` lists it, before calling a change ready: a partial run missed the closed `/health` contract in `test_schemas` (#113). Base every branch on `main`; never stack.
 
 **Generated files are not committed.** `engine.bundle.js` and the `?v=` asset stamps are produced by `python frontend/build_bundle.py --stamp` in the image build and by CI; never commit them (they made every pair of frontend PRs conflict). `sample-report-data.js` is committed but regenerated with `docs/examples/generate_photo_sample.py`, never edited by hand.

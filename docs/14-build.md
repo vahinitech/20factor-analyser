@@ -92,6 +92,7 @@ Moved here from `backend/README.md` when the backend was sorted into folders.
 | `VAHINI_PRINTED_THRESHOLD` | `0.58` | printed vs handwriting split; higher keeps more as handwriting |
 | `VAHINI_OCR_ENGINE_RETRY_SEC` | `300` | how long a failed engine build is remembered before retrying |
 | `VAHINI_OCR_ORIGINS` | `*` | CORS allowlist for cross-origin deployments |
+| `VAHINI_ENVIRONMENT` | unset (production) | `stage` on the stage analyser: new Pro keys start `vh_test_`, and production refuses those keys |
 | `VAHINI_REFINE_MIN_SIM` | `0.70` | in `trocr`/`hybrid` mode, accept a re-read line if it's at least this similar to paddle's reading |
 | `VAHINI_REFINE_MIN_CONF` | `0.75` | in `trocr`/`hybrid` mode, accept a re-read line if the specialist's own confidence is at least this high, even if it disagrees with paddle |
 | `VAHINI_HYBRID_MAX_MS_PER_LINE` | `2500` | `/health` marks an engine slower than this per line as not `fast_enough`; information only, it never skips the engine |

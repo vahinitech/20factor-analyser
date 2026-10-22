@@ -5,9 +5,12 @@
 // XMP metadata and the page photo, at most 1600 px, as an embedded file.
 // The printed PDF stays exactly two A4 pages, nothing names the child, the
 // photo carries no camera data, a sample run embeds nothing, and making the
-// file still sends nothing to a server. The page photo here is drawn on a
-// canvas with the cast's names, never real handwriting. Runs the packed
-// bundle (python frontend/build_bundle.py) in Chromium on a free port.
+// file still sends nothing to a server. Its document properties (title,
+// author, creator, subject) are Vahini's in every print language, the
+// subject says Free or Pro, and none carries the typed name. The page
+// photo here is drawn on a canvas with the cast's names, never real
+// handwriting. Runs the packed bundle (python frontend/build_bundle.py) in
+// Chromium on a free port.
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -55,6 +58,34 @@ function embedded(buf) {
   }
   return { xmp, files, text: s };
 }
+/* The PDF's Info dictionary as {key: text}, found through the trailer's
+   /Info reference. Literal and hex strings are both read; a string that
+   starts with the FE FF mark is UTF-16BE, any other PDFDocEncoding,
+   which agrees with Latin-1 for every character jsPDF writes here. */
+function pdfInfo(buf) {
+  const s = buf.toString('latin1');
+  const ref = [...s.matchAll(/\/Info (\d+) 0 R/g)].at(-1)?.[1];
+  if (!ref) return null;
+  const at = s.search(new RegExp(`(^|\\n)${ref} 0 obj`));
+  const body = s.slice(at, s.indexOf('endobj', at));
+  const ESC = { n: '\n', r: '\r', t: '\t', b: '\b', f: '\f' };
+  const bytes = raw => raw[0] === '<'
+    ? Buffer.from(raw.slice(1, -1).replace(/\s/g, ''), 'hex')
+    : Buffer.from(raw.slice(1, -1).replace(/\\(\r\n|\n|[0-7]{1,3}|[\s\S])/g, (_, c) =>
+      /^\r?\n$/.test(c) ? '' : /^[0-7]/.test(c) ? String.fromCharCode(parseInt(c, 8)) : ESC[c] ?? c), 'latin1');
+  const out = {};
+  for (const [, key, raw] of body.matchAll(/\/(\w+)\s*(\((?:\\[\s\S]|[^\\)])*\)|<[0-9A-Fa-f\s]*>)/g)) {
+    const b = bytes(raw);
+    out[key] = b[0] === 0xfe && b[1] === 0xff ? Buffer.from(b.subarray(2)).swap16().toString('utf16le') : b.toString('latin1');
+  }
+  return out;
+}
+/* What may be there: the four properties report-share.js sets (title,
+   author, creator, subject) and the three jsPDF adds (producer and the
+   dates). Any other key is a new place a name could go. */
+const INFO_KEYS = ['Title', 'Author', 'Creator', 'Subject', 'Producer', 'CreationDate', 'ModDate'];
+const META = { Title: 'Vahini handwriting snapshot', Author: 'Vahini Technologies · vahinitech.com', Creator: 'Vahini Technologies · vahinitech.com' };
+const SUBJECTS = { free: 'Free handwriting review', pro: 'Handwriting review' };
 
 async function share(page) {
   const [download] = await Promise.all([page.waitForEvent('download', { timeout: 60000 }), page.click('#share-pdf')]);
@@ -144,6 +175,35 @@ try {
   const fullFile = await share(page);
   add(!/receipt/.test(embedded(fullFile).xmp) && !fullFile.includes(Buffer.from(RECEIPT.token)),
     'Without a read-only token no receipt is embedded', embedded(fullFile).xmp);
+
+  // The document properties are the brand's, the same in every print
+  // language, with the subject telling a Free review from a Pro one, and
+  // none of them carries the name the family typed (owner, 2026-10-11).
+  // Each PDF here carries the receipt and photo, as a family's share does.
+  for (const tier of ['free', 'pro']) for (const lang of ['en', 'te']) {
+    const shown = await page.evaluate(({ tier, lang, receipt, name }) => {
+      const d = window.VAHINI_SAMPLE_REPORT;
+      const results = tier === 'free' ? d.analysis.results.filter(f => [1, 5, 7, 8, 18].includes(f.n)) : d.analysis.results;
+      VahiniReport.render(document.getElementById('report-host'), { analysis: { ...d.analysis, access: { tier }, results },
+        intake: { writerName: name }, crops: d.factor_regions || {}, detURL: d.photo, history: null });
+      VahiniReportShare.applyLanguage(lang);
+      const c = document.createElement('canvas'); c.width = 800; c.height = 600;
+      c.getContext('2d').fillRect(0, 0, 10, 10);
+      VahiniReportShare.setCheck({ receipt, image: c });
+      const host = document.getElementById('report-host');
+      return { lang: host.getAttribute('lang'), pro: !!host.querySelector('.practice-pro'), named: host.textContent.includes(name.split(' ')[0]) };
+    }, { tier, lang, receipt: RECEIPT, name: NAME });
+    const info = pdfInfo(await share(page)) || {};
+    const label = `${tier === 'pro' ? 'Pro' : 'Free'} report printed in ${lang}`;
+    add(shown.lang === lang && shown.pro === (tier === 'pro') && shown.named,
+      `${label}: the report on screen is ${tier}, in ${lang}, and shows the typed name`, shown);
+    add(info.Title === META.Title && info.Author === META.Author && info.Creator === META.Creator,
+      `${label}: the PDF's title, author and creator are exactly Vahini's`, info);
+    add(info.Subject === SUBJECTS[tier], `${label}: the subject is "${SUBJECTS[tier]}"`, info);
+    add(Object.keys(info).every(k => INFO_KEYS.includes(k)) && !Object.values(info).some(v => /Bheema|Kosuri/.test(v)),
+      `${label}: no document property names the child`, info);
+  }
+  await page.evaluate(() => VahiniReportShare.applyLanguage('en'));
   add(!errors.length, 'No page errors', errors);
 
   // The receipt survives expanding the compact report, so app.js can hand
