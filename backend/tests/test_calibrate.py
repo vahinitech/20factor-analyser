@@ -33,7 +33,9 @@ def linear(spreads):
 
 
 def page(name, x):
-    return {"page": name, "scores": {"9": 5.0}, "fx": {"letter_gap_cv": x}}
+    # The feature factor 9's scale divides, so the fixture follows SCALES.
+    feature = cal.SCALES[9]["feature"]
+    return {"page": name, "scores": {"9": 5.0}, "fx": {feature: x}}
 
 
 def step_score(planted_when_loose):
