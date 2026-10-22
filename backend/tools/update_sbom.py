@@ -261,7 +261,8 @@ def synchronize(document):
     document["comment"] = (
         "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, "
         "and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. "
-        "This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. "
+        "Datasets used for training, tests and evaluation are SPDXRef-Data-* packages (purpose OTHER), described in docs/22-datasets.md; print_hand.json is the one first-party weights file. "
+        "This is not a complete container SBOM: Python transitive packages, OS libraries, third-party model weights and optional OCR tiers require an inventory from the built image. "
         "Rolling font and hosted-service entries describe runtime integrations."
     )
     document["packages"].sort(key=lambda p: p["SPDXID"])

@@ -64,6 +64,34 @@ weights were learned from:
 
 ---
 
+## Data used for tests and evaluation
+
+Each dataset, with its licence, use and what is committed, is described in
+[docs/22-datasets.md](docs/22-datasets.md) and listed in `sbom.spdx.json` as an
+`SPDXRef-Data-*` package. No raw dataset is redistributed in this repository or the
+image.
+
+- **UJI Pen Characters (Version 2)** (credited above): its 20 test writers
+  make the synthetic test pages and the 20 rendered pages committed in
+  `benchmarks/uji-clean/pages/`. Changes: letters arranged into lines and
+  drawn as a photo of paper would look; the letters are unchanged.
+- **GNHK**: A. W. C. Lee, J. Chung and M. Lee, "GNHK: A Dataset for English
+  Handwriting in the Wild", ICDAR 2021, GoodNotes,
+  <https://github.com/GoodNotes/GNHK-dataset>. **CC BY 4.0**. 200 photos
+  scored for an evaluation on 19 October 2026, resized and otherwise
+  unchanged; none are in this repository.
+- **IIIT-INDIC-HW-WORDS-Telugu**: S. Gongidi and C. V. Jawahar, ICDAR 2021,
+  CVIT, IIIT Hyderabad, <https://ilocr.iiit.ac.in/dataset/23>. Listed there
+  as **CC BY 4.0**; the terms for the copy we hold are not yet confirmed
+  (see docs/22-datasets.md). Trains the Telugu reader and builds Telugu
+  evaluation pages; neither the words, the pages nor the weights are in this
+  repository or the image.
+- **Palmer Method of Business Writing** (A. N. Palmer, 1915) and
+  **Zaner-Bloser Manual 144**, from archive.org: **public domain**. Eight
+  crops in `benchmarks/neat-penmanship/pages/`.
+
+---
+
 ## Hosted runtime services (no code redistributed)
 
 | Service | Provider | Terms |

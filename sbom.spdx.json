@@ -3,17 +3,121 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-4eff9e048107ba3df691",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-9374f856aceaf60d8f84",
   "creationInfo": {
-    "created": "2026-10-22T09:32:16Z",
+    "created": "2026-10-22T12:04:40Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
     ],
     "licenseListVersion": "3.22"
   },
-  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
+  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. Datasets used for training, tests and evaluation are SPDXRef-Data-* packages (purpose OTHER), described in docs/22-datasets.md; print_hand.json is the one first-party weights file. This is not a complete container SBOM: Python transitive packages, OS libraries, third-party model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
   "packages": [
+    {
+      "SPDXID": "SPDXRef-Data-FixtureSamples",
+      "name": "tests/fixtures/samples",
+      "versionInfo": "8 images",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Old letters (1722, 1889), a 1929 receipt, font specimens and printed forms used by the handwriting-only tests and as real test lines for print_hand.json. Source and licence not recorded. Not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-GNHK",
+      "name": "GNHK: GoodNotes Handwriting Kollection",
+      "versionInfo": "Hugging Face mirror aryaman27/goodnotes-handwritten-dataset at 904297760a9fec813fdc1ecb5f8055cb1ca03550, fetched 2026-10-19",
+      "supplier": "Organization: GoodNotes",
+      "downloadLocation": "https://github.com/GoodNotes/GNHK-dataset",
+      "filesAnalyzed": false,
+      "licenseConcluded": "CC-BY-4.0",
+      "licenseDeclared": "CC-BY-4.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Lee, Chung and Lee, ICDAR 2021. Licence stated in the official repository; the mirror the files came from declares none and was not compared with the official release. Evaluation only: 200 photos scored on 2026-10-19 (docs/history/real-photos-gnhk-2026-10-19.md). Holds personal data; not in this repository or the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-HandwritingSample",
+      "name": "handwriting-sample.jpg",
+      "versionInfo": "first public release",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). One adult's notebook page. Author, source and terms not recorded. Ships in the image as frontend/assets/samples/handwriting-sample.jpg and as crops in frontend/scripts/core/sample-report-data.js; also tests/fixtures/ and benchmarks/sample-page/."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-IIIT-Telugu",
+      "name": "IIIT-INDIC-HW-WORDS-Telugu",
+      "versionInfo": "80,637 training words; source page not recorded",
+      "supplier": "Organization: CVIT, IIIT Hyderabad",
+      "downloadLocation": "https://ilocr.iiit.ac.in/dataset/23",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Gongidi and Jawahar, ICDAR 2021. ILOCR and the AIKOSH portal state CC BY 4.0; the ICFHR 2022 IHTR split (80,637 Telugu training words, the same count as our copy) is for that competition only; terms for our copy unverified. Trains the Telugu reader (weights not committed, not used by a scan) and builds Telugu evaluation pages kept outside the repository. Not in this repository or the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-PenmanshipManuals",
+      "name": "Palmer Method (1915) and Zaner-Bloser Manual 144",
+      "versionInfo": "archive.org scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/palmermethodofbu00palmrich",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Also https://archive.org/details/zaner-method-writing-manual-144. Public domain as recorded in benchmarks/neat-penmanship/source.md. Eight crops committed in benchmarks/neat-penmanship/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-PrintLineFonts",
+      "name": "google/fonts (24 families for printed training lines)",
+      "versionInfo": "66928797f271fed5ee428544e7229685e2d90127",
+      "supplier": "Organization: Google Fonts contributors",
+      "downloadLocation": "https://github.com/google/fonts/tree/66928797f271fed5ee428544e7229685e2d90127",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1 AND Apache-2.0",
+      "licenseDeclared": "OFL-1.1 AND Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Font files listed with their SHA-256 in scripts/print_hand_data.py, used to render the printed lines that train and test print_hand.json. Special Elite is Apache-2.0, the rest OFL-1.1. No font file is included."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-UJIPenChars2",
+      "name": "UJI Pen Characters (Version 2)",
+      "versionInfo": "ujipenchars2.txt",
+      "supplier": "Organization: Universitat Jaume I and Universitat Politecnica de Valencia (UCI Machine Learning Repository)",
+      "downloadLocation": "https://archive.ics.uci.edu/ml/machine-learning-databases/uji-penchars/version2/ujipenchars2.txt",
+      "filesAnalyzed": false,
+      "licenseConcluded": "CC-BY-4.0",
+      "licenseDeclared": "CC-BY-4.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Prat, Castro, Llorens, Marzal and Vilar, 2008, doi:10.24432/C5FG8S; licence stated on https://archive.ics.uci.edu/dataset/177/uji+pen+characters+version+2. 40 training writers train print_hand.json; the 20 test writers make the synthetic test pages and the 20 rendered pages in benchmarks/uji-clean/pages (committed, not in the image). The raw file is not redistributed. See docs/22-datasets.md.",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cc56f72f8477e763dd06a44746ba05a679e9232468aac93b3a7aad46a0300d61"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "doi",
+          "referenceLocator": "10.24432/C5FG8S"
+        }
+      ]
+    },
     {
       "SPDXID": "SPDXRef-LocalFont-Caveat",
       "name": "Caveat.ttf",
@@ -134,6 +238,19 @@
         }
       ],
       "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-Model-PrintHand",
+      "name": "print_hand.json",
+      "versionInfo": "trained at d842980",
+      "supplier": "Organization: Vahini Technologies",
+      "downloadLocation": "https://github.com/vahinitech/20factor-analyser/blob/main/backend/models/print_hand.json",
+      "filesAnalyzed": false,
+      "licenseConcluded": "AGPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "First-party weights of the print-or-handwriting line reader (backend/reading/print_hand.py), trained by scripts/train_print_hand.py. Ships in the image. Trained on UJI Pen Characters v2 and fonts from google/fonts; no training data is included."
     },
     {
       "SPDXID": "SPDXRef-Package-Caveat",
@@ -3097,6 +3214,41 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-Data-FixtureSamples",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-GNHK",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-IIIT-Telugu",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-PenmanshipManuals",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-UJIPenChars2",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Model-PrintHand",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-Data-PrintLineFonts"
+    },
+    {
+      "spdxElementId": "SPDXRef-Model-PrintHand",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-Data-UJIPenChars2"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-FastAPI",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -3155,6 +3307,16 @@
       "spdxElementId": "SPDXRef-Package-Uvicorn",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Data-HandwritingSample"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Model-PrintHand"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",
@@ -3775,6 +3937,16 @@
       "spdxElementId": "SPDXRef-npm-node-modules-yocto-queue",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    }
+  ],
+  "hasExtractedLicensingInfos": [
+    {
+      "licenseId": "LicenseRef-Public-Domain",
+      "name": "Public domain",
+      "extractedText": "Works out of copyright: archive.org marks these scans NOT_IN_COPYRIGHT and Public Domain Mark 1.0.",
+      "seeAlsos": [
+        "https://creativecommons.org/publicdomain/mark/1.0/"
+      ]
     }
   ]
 }
