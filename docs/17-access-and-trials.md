@@ -166,9 +166,10 @@ TZ=Asia/Kolkata date -d '2026-11-15 23:59:59' +%s
 ```
 
 The `docker exec` route above follows the hardened compose settings and the
-code, and `deployment/grant-pro.sh` runs the same steps. It has not yet been
-run end to end on the server. Run the script once on stage and correct this
-page if a step differs.
+code, and `deployment/grant-pro.sh` runs the same steps. The script ran end
+to end on stage on 22 October 2026: backup, customer, key, Pro until the
+chosen day, the key check and `/api/v2/me` answering `tier: pro`, every step
+as written here. Correct this page if a later run differs.
 
 The commands keep working. A service on the private network can make the
 same changes through the analyser's internal access API instead of the
