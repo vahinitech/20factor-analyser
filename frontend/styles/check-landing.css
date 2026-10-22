@@ -1,33 +1,31 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
    Copyright (c) 2026 Vahini Technologies. */
-#screen-upload .check-hero { display:grid; grid-template-columns:1.2fr 1fr; gap:52px; align-items:center; padding:24px 0 38px; }
-.check-hero h1 { font:600 clamp(34px,4vw,52px)/1.12 var(--v-font-serif); letter-spacing:-.035em; color:var(--v-text); margin:18px 0; }
-.check-hero h1 em { font-style:normal; color:var(--v-accent-text); }
-.check-hero-copy > p { max-width:520px; font-size:17px; line-height:1.65; color:var(--v-text-2); }
-.hero-actions { display:flex; flex-wrap:wrap; align-items:center; gap:18px; margin:26px 0 18px; }
-.hero-actions .btn { text-decoration:none; min-height:48px; }
-.hero-example { color:var(--v-accent-text); font-size:14px; font-weight:600; text-underline-offset:4px; }
-#screen-upload .trust-ticks { justify-content:flex-start; gap:8px 16px; font-size:13px; }
-.check-hero-copy .hero-audience { font-size:13px; line-height:1.5; margin-top:18px; }
-.hero-page { margin:0; background:var(--v-surface); padding:20px; border:1px solid var(--v-border); border-radius:22px; box-shadow:12px 16px 0 var(--v-accent-soft); transform:rotate(1deg); }
-.hero-page-label { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:12px; font-weight:600; color:var(--v-text-2); margin-bottom:14px; }
-.hero-sample-tag { background:var(--v-accent-soft); color:var(--v-accent-text); padding:5px 10px; border-radius:20px; }
-.hero-page img { display:block; width:100%; height:210px; object-fit:cover; object-position:center; border:1px solid var(--v-border); border-radius:8px; }
-.hero-page figcaption { display:grid; gap:8px; padding:18px 4px 4px; color:var(--v-text-2); font-size:14px; line-height:1.5; }
-.hero-page figcaption strong { color:var(--v-text); font-size:18px; }
-.hero-page a { color:var(--v-accent-text); font-weight:600; text-underline-offset:3px; }
+#screen-upload { padding-top:24px; }
+.check-heading { margin-bottom:22px; }
+.check-heading h1 { font:600 clamp(30px,3.5vw,44px)/1.15 var(--v-font-serif); color:var(--v-text); margin:10px 0; letter-spacing:-.025em; }
+.check-heading p { font-size:18px; line-height:1.5; color:var(--v-text-2); margin:0; }
+.check-heading .check-breadcrumb { font-size:12px; }
+.check-breadcrumb a { color:var(--v-accent-text); }
+#screen-upload .intake-col { background:var(--v-accent-soft); border-radius:16px; padding:28px; }
+#screen-upload .trust-ticks { justify-content:flex-start; gap:8px 16px; font-size:13px; margin:16px 0 4px; }
+#screen-upload .write-lang small { font-size:11px; color:var(--v-text-2); background:var(--v-bg-alt); padding:3px 6px; border-radius:12px; }
+#screen-upload .benefit-intro { font-size:14px; color:var(--v-text-2); margin:0; }
+.check-sample { margin:18px 0; padding:12px; border-radius:12px; background:var(--v-surface); }
+.check-sample figcaption { font-size:12px; color:var(--v-text-2); margin-bottom:8px; }
+.check-sample img { display:block; width:100%; height:100px; object-fit:cover; border-radius:8px; }
+.check-sample .btn { display:flex; justify-content:center; margin-top:12px; text-decoration:none; }
 .check-path { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; border-block:1px solid var(--v-border); padding:20px 0; margin:0 0 32px; }
 .check-path a { color:var(--v-text-2); font-size:14px; text-decoration:none; display:flex; align-items:center; gap:12px; }
 .check-path span { font-size:12px; color:var(--v-accent-text); background:var(--v-accent-soft); padding:8px; border-radius:50%; }
-#screen-upload .cl-upload { box-shadow:none; border:1px solid var(--v-border); padding:32px; scroll-margin-top:100px; }
-#screen-upload .intake-split { grid-template-columns:1.15fr 1fr; gap:40px; }
+#screen-upload .cl-upload { box-shadow:none; border:0; background:transparent; padding:0; scroll-margin-top:100px; }
+#screen-upload .intake-split { grid-template-columns:1.5fr 1fr; gap:24px; }
 #screen-upload .intake-cap { margin-bottom:18px; }
 #screen-upload .intake-cap h2, .check-benefits h2, .check-about h2 { font:600 28px/1.2 var(--v-font-serif); color:var(--v-text); margin:8px 0 10px; }
 #screen-upload .intake-cap p { font-size:14px; line-height:1.5; color:var(--v-text-2); margin:0; }
-#screen-upload .dropzone--solo { min-height:260px; aspect-ratio:auto; background:var(--v-bg-alt); border-color:var(--v-accent-light); }
+#screen-upload .dropzone--solo { min-height:220px; aspect-ratio:auto; background:var(--v-bg-alt); border-color:var(--v-accent-light); }
 #screen-upload .check-benefits { background:var(--v-accent-soft); padding:28px; border-radius:16px; }
-.benefit-list { display:grid; gap:20px; padding:0; margin:18px 0; list-style:none; }
-.benefit-list li { display:flex; gap:12px; }
+.benefit-list { display:grid; gap:0; padding:0; margin:12px 0; list-style:none; }
+.benefit-list li { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--v-border); }
 .benefit-list li > span { display:grid; place-items:center; flex:0 0 28px; height:28px; background:var(--v-surface); color:var(--v-accent-text); border-radius:50%; font-size:13px; font-weight:600; }
 .benefit-list h3 { font-size:16px; color:var(--v-text); margin:2px 0 5px; }
 .benefit-list p, .check-kind-note { font-size:14px; line-height:1.6; color:var(--v-text-2); margin:0; }
@@ -43,23 +41,32 @@
 .check-about p { font-size:15px; line-height:1.6; color:var(--v-text-2); margin:0 0 16px; }
 .check-about a { display:block; margin-top:10px; color:var(--v-accent-text); font-size:14px; font-weight:600; }
 #screen-upload a:focus-visible, #screen-upload button:focus-visible, #screen-upload summary:focus-visible { outline:3px solid var(--v-accent); outline-offset:4px; }
+
+#screen-upload .check-proof { display:block; padding:24px; background:var(--v-accent-soft); }
+#screen-upload .cp-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+#screen-upload .cp-stats li { display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:16px 12px; background:var(--v-surface); }
+#screen-upload .cp-stats b { font-size:38px; color:var(--v-accent); }
+#screen-upload .cp-stats span { color:var(--v-text); font-weight:600; font-size:14px; line-height:1.35; }
+.proof-foot { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px 24px; padding-top:16px; }
+.proof-foot p, .proof-foot a { font-size:12px; }
+#screen-upload .proof-limit { margin-top:8px; text-align:center; font-size:12px; }
+.check-path { margin:0; padding:12px 0; border:0; }
 @media (max-width:900px) {
-  #screen-upload .check-hero { grid-template-columns:1fr; gap:28px; padding-top:4px; }
-  .hero-page { transform:none; max-width:560px; width:100%; box-sizing:border-box; }
-  #screen-upload .intake-split { grid-template-columns:1fr; gap:28px; }
+  #screen-upload .intake-split { grid-template-columns:1fr; gap:20px; }
   .check-about { grid-template-columns:1fr; gap:12px; }
+  #screen-upload .cp-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
 @media (max-width:560px) {
-  #screen-upload { padding-inline:18px; }
-  .check-hero h1 { font-size:36px; }
-  .check-hero-copy > p { font-size:16px; }
-  .hero-actions { align-items:stretch; flex-direction:column; gap:16px; }
-  .hero-actions .btn { justify-content:center; }
-  .hero-page { box-shadow:5px 6px 0 var(--v-accent-soft); padding:14px; }
-  .hero-page img { height:160px; }
+  #screen-upload { padding:18px 14px 40px; }
+  .check-heading { margin-bottom:16px; }
+  .check-heading h1 { font-size:30px; }
+  .check-heading p { font-size:15px; }
+  #screen-upload .intake-col, #screen-upload .check-benefits { padding:18px; }
+  #screen-upload .cl-upload { padding:0; }
+  #screen-upload .check-proof { padding:18px; }
+  #screen-upload .dropzone--solo { min-height:200px; }
+  #screen-upload .intake-cap h2, .check-benefits h2 { font-size:25px; }
+  #screen-upload .cp-stats b { font-size:30px; }
   .check-path { grid-template-columns:1fr; gap:12px; }
-  #screen-upload .cl-upload, #screen-upload .check-proof { padding:20px; }
-  #screen-upload .check-benefits { padding:20px; }
-  #screen-upload .intake-cap h2, .check-benefits h2 { font-size:26px; }
 }
 @media (prefers-reduced-motion:reduce) { #screen-upload.screen.on { animation:none; } }

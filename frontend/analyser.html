@@ -227,42 +227,23 @@
 <!-- ============ SCREEN 1, INTAKE ============ -->
 <!-- ============ STEP 1, UPLOAD ============ -->
 <section class="screen on" id="screen-upload">
-  <header class="check-hero">
-    <div class="check-hero-copy">
-      <div class="eyebrow">Vahini · Free handwriting check</div>
-      <h1>Your handwriting has a story.<br><em>See your next step.</em></h1>
-      <p>Discover what your writing does well and where a little practice can help. Start with a photo. See the evidence on your own page.</p>
-      <div class="hero-actions">
-        <a class="btn btn-primary" href="#start-check">Check my handwriting <span aria-hidden="true">→</span></a>
-        <a class="hero-example" href="sample-report.html?example=free">See a free sample report <span aria-hidden="true">↗</span></a>
-      </div>
-      <ul class="trust-ticks"><li>Five skills checked free</li><li>No account needed</li><li>You choose whether to save</li></ul>
-      <p class="hero-audience">For students and adults. For children, explore the page together with a parent or teacher.</p>
-    </div>
-    <figure class="hero-page">
-      <div class="hero-page-label"><span>Inside a Vahini check</span><span class="hero-sample-tag">Sample page</span></div>
-      <img src="assets/samples/handwriting-sample.jpg" alt="Vahini's handwritten practice page, used in the sample report" width="640" height="400">
-      <figcaption><strong>Your page. Visible measurements.</strong><span>Explore letter size, word gaps and how the writing sits on the line.</span><a href="sample-report.html?example=free">Open the actual sample report →</a></figcaption>
-    </figure>
+  <header class="check-heading">
+    <p class="check-breadcrumb"><a href="/">Home</a> / Handwriting check</p>
+    <h1>Check your handwriting</h1>
+    <p>One page. Five writing skills. A clear next step.</p>
   </header>
-  <nav class="check-path" aria-label="Your handwriting check">
-    <a href="#start-check"><span>01</span> Add your page</a>
-    <a href="sample-report.html?example=free"><span>02</span> Understand your writing</a>
-    <a href="/practice.html"><span>03</span> Build a practice habit</a>
-  </nav>
 
   <div class="service-banner" id="service-banner" style="display:none;">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
     <div><b>Recognition server unavailable</b><p id="service-banner-detail">Checking connection…</p></div>
     <button class="btn btn-ghost" id="service-retry" type="button">Retry now</button>
   </div>
-  <!-- Upload beside the video, then what you get | steps | questions in three columns.
-       Phones stack them in that order. All static HTML, so crawlers and no-JS readers get it. -->
+  <!-- Scan first on every screen size; research and guidance follow the tool. -->
   <div class="check-layout">
   <div class="panel cl-upload" id="start-check" tabindex="-1">
     <div class="intake-split">
      <div class="intake-col">
-      <div class="intake-cap"><div class="eyebrow">Start with the page you have</div><h2>Add your handwriting</h2><p>Four to six lines in English, on ordinary paper. A clear photo helps us measure it.</p></div>
+      <div class="intake-cap"><h2>Add your handwriting</h2><p>Four to six lines in English, on ordinary paper. A clear photo helps us measure it.</p></div>
       <div class="dropzone dropzone--solo" id="dropzone">
       <button class="dz-clear" id="dz-clear" style="display:none;" aria-label="Remove this photo">✕</button>
       <img class="preview" id="dz-preview" style="display:none;" alt="Your handwriting photo">
@@ -282,6 +263,8 @@
     <!-- Outside the dropzone so its click does not bubble into the dropzone's own file picker. -->
     <input id="camera-input" type="file" accept="image/*" capture="environment" style="display:none;">
 
+    <ul class="trust-ticks"><li>Free check</li><li>No account needed</li><li>You choose what to save</li></ul>
+
     <!-- reference passage: hidden, so no passage is sent. The written text
          is read as it is; a passage is sent only when one is picked. -->
     <div class="passage-list" id="passage-list" style="display:none;"></div>
@@ -293,7 +276,7 @@
     <fieldset class="write-lang" id="write-lang">
       <legend>The page is written in</legend>
       <label><input type="radio" name="write-lang" value="en" checked> English</label>
-      <label><input type="radio" name="write-lang" value="te"> <span lang="te">తెలుగు</span> Telugu</label>
+      <label><input type="radio" name="write-lang" value="te"> <span lang="te">తెలుగు</span> Telugu <small>Not yet scored</small></label>
       <p class="write-lang-note" id="write-lang-note" role="status" hidden>Telugu handwriting is not scored yet. The check will tell you, and it will not use a free check. For a score today, write four lines in English.</p>
     </fieldset>
 
@@ -382,21 +365,44 @@
      </div>
 
      <aside class="intake-aside check-benefits" aria-labelledby="benefit-title">
-      <div class="eyebrow">A useful first step</div>
-      <h2 id="benefit-title">Understand the page.<br>Know what to practise.</h2>
-      <ol class="benefit-list">
-        <li><span aria-hidden="true">1</span><div><h3>See five writing skills</h3><p>Letter shapes, letter size, writing on the line, word spacing and readability.</p></div></li>
-        <li><span aria-hidden="true">2</span><div><h3>Look at the evidence</h3><p>See measurements and examples from your page alongside the feedback.</p></div></li>
-        <li><span aria-hidden="true">3</span><div><h3>Choose your next step</h3><p>Start with the suggested priorities and follow the practice guidance.</p></div></li>
-      </ol>
-      <p class="check-kind-note">Every writer starts somewhere. The feedback describes the writing on this page, not the person who wrote it.</p>
+      <h2 id="benefit-title">What you will learn</h2>
+      <p class="benefit-intro">Your handwriting is checked across five skills.</p>
+      <ul class="benefit-list">
+        <li><span aria-hidden="true">Aa</span><div><h3>Letter shapes</h3><p>Explore how your letters are formed.</p></div></li>
+        <li><span aria-hidden="true">aA</span><div><h3>Letter size</h3><p>See how even your small-letter heights are.</p></div></li>
+        <li><span aria-hidden="true">≡</span><div><h3>Writing on the line</h3><p>See how the writing sits on the line.</p></div></li>
+        <li><span aria-hidden="true">↔</span><div><h3>Word spacing</h3><p>Explore the gaps between your words.</p></div></li>
+        <li><span aria-hidden="true">Ab</span><div><h3>Readability</h3><p>See the page's readability feedback.</p></div></li>
+      </ul>
+      <figure class="check-sample">
+        <figcaption>Explore a sample page</figcaption>
+        <img src="assets/samples/handwriting-sample.jpg" alt="Vahini's handwritten practice page used in the sample report" width="640" height="400" loading="lazy">
+        <a class="btn btn-ghost" href="sample-report.html?example=free">See a sample report</a>
+      </figure>
+      <p class="check-kind-note">Feedback describes the writing, never the writer.</p>
       <details class="check-video"><summary>Watch how the 20-factor engine works</summary>
         <div class="video-frame"><iframe src="20-factors-explained.html" title="How the 20 factors work" loading="lazy"></iframe></div>
       </details>
-      <a class="hero-example" href="sample-report.html?example=free">Explore the free report first →</a>
      </aside>
     </div>
   </div>
+
+  <section class="v-card check-guide check-proof" aria-labelledby="cg-proof">
+    <h2 id="cg-proof">The research behind your check</h2>
+    <ul class="cp-stats">
+      <li><b>200</b><span>Real handwriting photos evaluated</span><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/history/real-photos-gnhk-2026-10-19.md">GNHK study · 19 Oct 2026</a></li>
+      <li><b>20</b><span>Writer pages in regression checks</span><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/18-benchmark.md">UJI benchmark</a></li>
+      <li><b>120</b><span>Constructed test pages</span><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/02-how-a-scan-works.md">Controlled writing changes</a></li>
+      <li><b>15,968</b><span>Letters in those test pages</span><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/02-how-a-scan-works.md">Part of the 120-page test</a></li>
+    </ul>
+    <div class="proof-foot"><p>Research test counts, not customer scans or training totals.</p><a href="/how-handwriting-analysis-works.html">Explore our tests and findings →</a></div>
+    <p class="proof-limit">The check supports practice. These development tests do not establish equivalence to human teacher evaluation.</p>
+  </section>
+  <nav class="check-path" aria-label="Your handwriting check">
+    <a href="#start-check"><span>01</span> Add your page</a>
+    <a href="sample-report.html?example=free"><span>02</span> See your feedback</a>
+    <a href="/practice.html"><span>03</span> Start practising</a>
+  </nav>
 
   <div class="cl-info">
     <section class="v-card check-guide" aria-labelledby="cg-get">
@@ -438,20 +444,6 @@
       </div>
     </section>
   </div>
-  <section class="v-card check-guide check-proof" aria-labelledby="cg-proof">
-    <div>
-      <div class="v-eyebrow">The work behind your check</div>
-      <h2 id="cg-proof">Research you can look into.</h2>
-      <p>Vahini measures the geometry of handwriting: the heights, gaps and slopes on a page. Our published development notes show what we test, what changed and what still needs work.</p>
-      <a class="cp-link" href="/how-handwriting-analysis-works.html">See how a real page is measured →</a>
-      <p class="proof-limit">These are development tests, not proof of agreement with human teachers. The check supports practice; it does not replace a teacher's judgement.</p>
-    </div>
-    <ul class="cp-stats">
-      <li><b>200</b><span>real phone photos evaluated in our 19 October GNHK study<br><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/history/real-photos-gnhk-2026-10-19.md">Read the study and its limits</a></span></li>
-      <li><b>20</b><span>UJI writer pages replayed to check scoring changes<br><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/18-benchmark.md">How regression checks work</a></span></li>
-      <li><b>120</b><span>constructed pages with deliberately changed writing features<br><a href="https://github.com/vahinitech/20factor-analyser/blob/main/docs/02-how-a-scan-works.md">Explore the controlled tests</a></span></li>
-    </ul>
-  </section>
   <section class="check-about" aria-labelledby="about-vahini-check">
     <div><div class="eyebrow">Meet Vahini Technologies</div><h2 id="about-vahini-check">Helping people write on ordinary paper.</h2></div>
     <div><p>This photo check is part of our work on handwriting. We are also developing a sensor pen to understand how writing happens, including movement and pressure.</p><a href="/product.html?from=free-check">Discover the Vahini pen →</a><a href="https://github.com/vahinitech/20factor-analyser/tree/main/changelog.d">Follow the research updates ↗</a></div>
