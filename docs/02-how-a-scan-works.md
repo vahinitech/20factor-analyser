@@ -353,8 +353,10 @@ skill covers it (at least half of the planted box inside the mark).
 
 - **Letters:** UJI Pen Characters, version 2 (Prat, Castro, Llorens, Marzal
   and Vilar, 2008, doi:10.24432/C5FG8S, CC BY 4.0), only the 20 writers of
-  its published test split. Downloaded and checked by SHA-256; neither the
-  data nor the pages are committed. The same data trained imu2text's
+  its published test split. Downloaded and checked by SHA-256. The data is
+  not committed, and neither are these pages; the 20 rendered pages of the
+  `uji-clean` benchmark set are, with the credit in its `source.md`
+  ([22](22-datasets.md)). The same data trained imu2text's
   drawing reader, so the evaluation and any later letter reader share one
   licence-clean source.
 - **Pages:** one writer per page, four lines in our cast's words, small

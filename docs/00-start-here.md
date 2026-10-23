@@ -44,6 +44,7 @@ to the ones it builds on.
 | 19 | [Comparison data](19-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
 | 20 | [Languages](20-languages.md) | The design for more scripts and languages: language packs, the per-line script decision, what each factor needs, maturity levels, and the build order |
 | 21 | [Performance, complexity and coverage](21-performance-and-coverage.md) | The design for timing every scan step, budgets on large calls, recording each function's growth (big O) in CI, a profiling job, and coverage with a ratchet |
+| 22 | [Datasets](22-datasets.md) | Every dataset used for training, tests and evaluation: publisher, licence, use, what is committed and what ships |
 
 ## Elsewhere
 
