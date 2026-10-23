@@ -80,6 +80,9 @@ from report import practice_catalog
 from server import (
     scan_slots,
 )  # caps simultaneous scans so memory cannot run out
+from server import (
+    scan_worker,
+)  # scans in a child process the server outlives (#299)
 from server import perf  # stage timings and call budgets, numbers only (#229)
 from server import (
     debug_store,
@@ -215,30 +218,35 @@ _cache_set = cache.cache_set
 _with_meta = cache.with_meta
 
 
-@app.on_event("startup")
-def _warm_startup_engines():
-    # Warm EVERY configured language's normal engine at startup so the
-    # FIRST real request isn't slowed by model download/init —
-    # which previously pushed the first /report-python past the reverse-proxy
-    # read timeout. Only paddle is warmed here; other backends warm on demand.
-    # Runs in a background thread: on an offline/blocked network the model
-    # download can take minutes to fail, and the server must still answer
-    # /health and scans (via the CV fallback) while it warms.
-    # The safe engine is not warmed: it is a second copy of the same
-    # models, built only when the normal engine cannot read (#173).
+def _warm_models():
+    """Build every configured language's normal engine and the layout
+    model, so the first real request is not slowed by model download and
+    load, which once pushed the first /report-python past the reverse
+    proxy's read timeout. Only paddle is warmed; other backends warm on
+    demand. The safe engine is not warmed: it is a second copy of the same
+    models, built only when the normal engine cannot read (#173). Runs on
+    a background thread in whichever process holds the models: on a
+    blocked network a download can take minutes to fail, and /health must
+    answer meanwhile."""
     if os.environ.get("VAHINI_OCR_PRELOAD_ON_START", "1") != "1":
         return
+    for lg in OCR_LANGS or ["en"]:
+        try:
+            ocr_backends.get_engine(lg)
+        except Exception:
+            pass
+    layout_filter.warm()
 
-    def _warm():
-        for lg in OCR_LANGS or ["en"]:
-            try:
-                ocr_backends.get_engine(lg)
-            except Exception:
-                pass
-        layout_filter.warm()
 
+@app.on_event("startup")
+def _warm_startup_engines():
+    # With the scan worker on, the models live in its process, which warms
+    # them itself (scan_worker.child_main); this process loads none.
+    if scan_worker.enabled():
+        scan_worker.SUPERVISOR.start()
+        return
     threading.Thread(
-        target=_warm, name="vahini-engine-warmup", daemon=True
+        target=_warm_models, name="vahini-engine-warmup", daemon=True
     ).start()
 
 
@@ -304,6 +312,10 @@ ocr_backends.init_registry(
     },
 )
 print(f"[capacity] {scan_slots.PLAN}", flush=True)
+# The child process loads this file under the same module name, so the
+# scan functions sent to it by reference resolve there. One scan thread
+# per slot, as scan_slots.EXECUTOR has here.
+scan_worker.configure(__name__, __file__, scan_slots.SLOTS.max_active)
 
 
 # _to_data_url/_crop_rgb/_build_region_previews/
@@ -346,23 +358,63 @@ def _vl_analyze(arr, lines, include_evidence=True):
 
 # /ocr/health is the same probe under the /ocr prefix a proxy routes to
 # this server; the browser asks for it (#34).
-@app.get("/health")
-@app.get("/ocr/health", include_in_schema=False)
-def health():
+def _model_health():
+    """The parts of /health only the process holding the models knows. With
+    the scan worker on, that process is the worker, which answers this."""
     # Probe every registered engine without crashing if its deps are missing.
     backends = {}
     for name, (ok, reason) in ocr_backends.available_backends().items():
         backends[name] = {"ready": bool(ok), "reason": reason}
+    return {
+        "backends": backends,
+        # Real, measured per-engine speed on THIS machine, not a synthetic
+        # benchmark: hybrid mode's trocr/surya refine calls (see
+        # recognizer.refine_handwriting_text) record here. Empty until the
+        # first relevant call has actually run. The layout filter's model is
+        # fixed by configuration, so it records nothing here (#112).
+        "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
+        # The device each engine resolved to (None until it is built).
+        # Recorded so the ladders, where the device is part of the stage
+        # (#219), have data.
+        "devices": ocr_backends.engine_devices(),
+        # Which layout model is loaded (see layout_filter.py). A scan waits
+        # for the load, never skips it, so this is the model every scan uses.
+        "built_tiers": layout_filter.built_tiers(),
+    }
+
+
+def _models_starting():
+    """What /health says of the models while the scan worker starts or
+    does not answer: nothing loaded, which is true of this process. Its
+    probes are not run here, because one imports paddle."""
+    return {
+        "backends": {},
+        "adaptive_engine_speed": {},
+        "devices": {},
+        "built_tiers": [],
+    }
+
+
+@app.get("/health")
+@app.get("/ocr/health", include_in_schema=False)
+def health():
+    if scan_worker.enabled():
+        models = scan_worker.SUPERVISOR.health() or _models_starting()
+    else:
+        models = _model_health()
     gpu_present = nvidia_gpu_present()
     return {
         "ok": True,
         "engine": "pp-ocrv5",
         "ocr_backend": OCR_BACKEND,
         "active_backend": OCR_BACKEND,
-        "backends": backends,
+        "backends": models["backends"],
         "gpu": USE_GPU,
         "gpu_detected": gpu_present,
         "scan_capacity": {**scan_slots.PLAN, **scan_slots.SLOTS.stats()},
+        # The process that runs the scans: off, or its state, restarts
+        # since the server started and how the last one ended (#299).
+        "scan_worker": scan_worker.stats(),
         # Each stage's p50 and p95 over the last scans, and how often a
         # page broke a budget (perf.py). Numbers only; reset on restart.
         "stage_timings": perf.ROLLING.snapshot(),
@@ -378,24 +430,15 @@ def health():
         "rec_model_map": REC_MODEL_MAP,
         "det_limit_side_len": TEXT_DET_LIMIT_SIDE_LEN,
         "printed_threshold": classify.PRINTED_THRESHOLD,
-        # Real, measured per-engine speed on THIS machine, not a synthetic
-        # benchmark: hybrid mode's trocr/surya refine calls (see
-        # recognizer.refine_handwriting_text) record here. Empty until the
-        # first relevant call has actually run. The layout filter's model is
-        # fixed by configuration, so it records nothing here (#112).
-        "adaptive_engine_speed": ocr_backends.engine_speed_snapshot(),
-        # The committed stage table every route comes from, and the device
-        # each engine resolved to (None until it is built). Recorded so the
-        # ladders, where the device is part of the stage (#219), have data.
+        "adaptive_engine_speed": models["adaptive_engine_speed"],
+        # The committed stage table every route comes from.
         "recognition": {
             "stages_sha256": stages.table().hash,
-            "devices": ocr_backends.engine_devices(),
+            "devices": models["devices"],
         },
-        # Which layout model is loaded (see layout_filter.py). A scan waits
-        # for the load, never skips it, so this is the model every scan uses.
         "layout_filter": {
             "enabled": layout_filter.is_enabled(),
-            "built_tiers": layout_filter.built_tiers(),
+            "built_tiers": models["built_tiers"],
         },
     }
 
@@ -420,6 +463,23 @@ def _ocr_unavailable_payload(engine):
         "error_code": "ocr_unavailable",
         "error": OCR_UNAVAILABLE_DETAIL,
     }
+
+
+@app.exception_handler(scan_worker.ScanLost)
+async def _scan_lost(_request, _exc):
+    """The scan worker died running this scan, and again running it once
+    more (scan_worker.py): the same answer as an engine that cannot read,
+    never a 502 and never cached."""
+    return JSONResponse(
+        status_code=503,
+        content={
+            "detail": {
+                "error_code": "ocr_unavailable",
+                "error": OCR_UNAVAILABLE_DETAIL,
+            }
+        },
+        headers={"Retry-After": str(OCR_UNAVAILABLE_RETRY_SEC)},
+    )
 
 
 def _raise_if_ocr_unavailable(payload):

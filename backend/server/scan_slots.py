@@ -32,6 +32,7 @@ from contextlib import asynccontextmanager
 from fastapi import HTTPException
 
 from server import capacity
+from server import scan_worker
 
 RETRY_AFTER_SEC = 20
 BUSY_DETAIL = "The analyser is busy. Please try again in a moment."
@@ -124,9 +125,13 @@ EXECUTOR = ThreadPoolExecutor(
 async def run(fn, *args):
     """Run blocking scan work on the scan pool (use inside slot()). The
     request's context goes with it, so the stages it runs are timed for
-    this request (perf.py)."""
+    this request (perf.py). With the scan worker on (scan_worker.py) the
+    pool's thread hands the work to the worker process and waits; fn must
+    then be a module-level function and its arguments must pickle."""
     loop = asyncio.get_running_loop()
     context = contextvars.copy_context()
-    return await loop.run_in_executor(
-        EXECUTOR, context.run, functools.partial(fn, *args)
-    )
+    if scan_worker.enabled():
+        call = functools.partial(scan_worker.SUPERVISOR.call, fn, *args)
+    else:
+        call = functools.partial(fn, *args)
+    return await loop.run_in_executor(EXECUTOR, context.run, call)

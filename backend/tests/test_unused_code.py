@@ -27,6 +27,10 @@ MIN_CONFIDENCE = 60
 
 # name -> why it stays although nothing in the product uses it.
 KEEP = {
+    "child_entry": (
+        "server/scan_worker.py: the scan worker's command line calls it "
+        "by name, in a string vulture cannot read"
+    ),
     "clear_cache": (
         "languages/registry.py: tests reset the language-pack cache "
         "between cases"

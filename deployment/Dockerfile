@@ -96,6 +96,10 @@ ENV HOME=/tmp \
 USER 10001:10001
 
 ENV PORT=8080
+# Scans run in a child process that the server outlives: when the kernel
+# kills a scan for memory, the API keeps answering and the scan runs once
+# more on a new child (backend/server/scan_worker.py, #299).
+ENV VAHINI_SCAN_WORKER=1
 EXPOSE 8080
 
 CMD ["python", "/app/backend/analyser-ocr-server.py"]
