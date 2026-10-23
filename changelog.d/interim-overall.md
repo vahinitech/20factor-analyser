@@ -4,7 +4,8 @@
   fifteen are still scored and shown as practice findings but no longer
   move it: on neat photos of real pages they misread good writing (Margin 0
   on 145 of 184 photos, Line Quality measuring line lengths, letter
-  frequency standing in for loops and tall letters). A Free report's
-  overall now comes from factors it shows. Section weights in reports are
+  frequency standing in for loops and tall letters). Of a Free report's
+  overall, 80 points now come from factors it shows (1, 5, 7); 11 and 17
+  are Pro factors. Section weights in reports are
   each section's share of the overall; the pen path no longer recomputes
   the overall in the browser.
