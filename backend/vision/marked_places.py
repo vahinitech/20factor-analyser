@@ -87,27 +87,22 @@ def _order(entries):
     return sorted(entries, key=lambda e: (-e[0], e[2][1], e[2][0]))
 
 
-def _word_size_places(lines, geo):
-    """Words whose small-letter height is far from the page's usual one
-    (letter_geometry.py), the measurement Letter size is scored from."""
-    words = [
-        (item, wd)
-        for item, g in zip(lines, geo)
-        if g
-        for wd in g["words"]
-        if wd["xheight"]
-    ]
+def _word_size_places(lines, geo, page_h):
+    """Words whose small-letter height is far from the size expected
+    where they sit (letter_geometry.size_words), the measurement Letter
+    size is scored from."""
+    words = letter_geometry.size_words(lines, geo, page_h)
     if len(words) < MIN_LINES:
-        return None
-    median = float(np.median([wd["xheight"] for _, wd in words]))
-    if median <= 0:
         return None
     rows = _order(
         [
-            (abs(wd["xheight"] - median) / median, item, wd["bbox"], wd)
-            for item, wd in words
+            (abs(wd["xheight"] - want) / want, item, wd["bbox"], wd, want)
+            for item, wd, want in words
+            if want > 0
         ]
     )
+    if not rows:
+        return None
     out = [
         _place(
             item,
@@ -116,14 +111,14 @@ def _word_size_places(lines, geo):
             "look",
             "word_xheight",
             wd["xheight"],
-            median,
+            want,
             dev,
-            "taller" if wd["xheight"] > median else "shorter",
+            "taller" if wd["xheight"] > want else "shorter",
         )
-        for dev, item, box, wd in rows
+        for dev, item, box, wd, want in rows
         if dev >= WORD_SIZE_LOOK_SHARE
     ][:MAX_LOOK]
-    dev, item, box, wd = rows[-1]
+    dev, item, box, wd, want = rows[-1]
     if dev <= KEEP_SHARE:
         out.append(
             _place(
@@ -133,7 +128,7 @@ def _word_size_places(lines, geo):
                 "keep",
                 "word_xheight",
                 wd["xheight"],
-                median,
+                want,
                 dev,
                 "even",
             )
@@ -335,7 +330,7 @@ def free_skill_places(arr, accepted, rows):
     nothing was read (the cv-fallback path)."""
     read = any(str(l.get("text") or "").strip() for l in accepted)
     geo = letter_geometry.measure_page(arr, accepted)
-    by_word = _word_size_places(accepted, geo)
+    by_word = _word_size_places(accepted, geo, arr.shape[0])
     places = {"5": by_word if by_word is not None else _size_places(accepted)}
     if read:
         places["1"] = _reading_places(accepted)

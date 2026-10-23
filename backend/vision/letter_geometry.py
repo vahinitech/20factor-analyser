@@ -421,6 +421,11 @@ def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
         )
         wd["off"] = wd["drop"] / line_xh
         del wd["spans"]
+    # Every character of a number is full height, so a word with a digit
+    # is not a small-letter size (size_words).
+    aligned = len(text_words) == len(words)
+    for i, wd in enumerate(words):
+        wd["digits"] = aligned and any(ch.isdigit() for ch in text_words[i])
     gaps_out = []
     if counted:
         for left, right in zip(words, words[1:]):
@@ -560,6 +565,58 @@ def measure_page(arr, lines):
     return [
         measure_line(gray, l, [o for o in lines if o is not l]) for l in lines
     ]
+
+
+# Size Consistency (factor 5) and its marks compare each word's small
+# letters with the size expected where the word sits (#304), from the
+# words of lines that measured sensibly:
+# - a line under SIZE_LINE_MIN of the page's usual line height is a
+#   scrap the reader found (a mark, a stray letter), not a line;
+# - a line whose small-letter band is outside SIZE_BAND as a share of its
+#   own box measured something else: real writing gave 0.19 to 0.63 on
+#   the benchmark pages, and a band taller than its box was the ink of
+#   the lines around it;
+# - a word with a digit is left out, as every character of a number is
+#   full height;
+# - the expected size follows the page from top to bottom (Theil-Sen of
+#   the words' heights against where they sit): a phone held at an angle
+#   to the page makes far lines smaller in pixels than near ones. One
+#   word, or one line, written larger still stands out from it.
+SIZE_LINE_MIN = 0.5
+SIZE_BAND = (0.15, 0.8)
+SIZE_MIN_WORDS = 3
+
+
+def size_words(lines, geo, page_h):
+    """(line, word, expected small-letter height) for every word Size
+    measures, in line order; [] when fewer than SIZE_MIN_WORDS."""
+    heights = [float((l.get("box") or [0, 0, 0, 0])[3]) for l in lines]
+    usual = float(np.median(heights)) if heights else 0.0
+    words = []
+    for line, g, box_h in zip(lines, geo, heights):
+        if not g or box_h < SIZE_LINE_MIN * usual or box_h <= 0:
+            continue
+        if not SIZE_BAND[0] <= g["xheight"] / box_h <= SIZE_BAND[1]:
+            continue
+        for wd in g["words"]:
+            if wd["xheight"] and not wd.get("digits"):
+                words.append((line, wd))
+    if len(words) < SIZE_MIN_WORDS:
+        return []
+    ys = [
+        (wd["bbox"][1] + wd["bbox"][3] / 2.0) / max(1.0, float(page_h))
+        for _, wd in words
+    ]
+    slope, icpt = _theil_sen(ys, [wd["xheight"] for _, wd in words])
+    median = float(np.median([wd["xheight"] for _, wd in words]))
+    out = []
+    for (line, wd), y in zip(words, ys):
+        expected = slope * y + icpt
+        # A fit pulled below a sensible size by a few words is not used.
+        if expected < 0.5 * median:
+            expected = median
+        out.append((line, wd, expected))
+    return out
 
 
 # Marks. A small letter this far from the line's x-height, a word whose

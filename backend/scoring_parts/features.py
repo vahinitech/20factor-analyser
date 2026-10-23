@@ -262,16 +262,16 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # its line's own baseline (letter_geometry.py). Line box heights grow
     # with a line's slope, so they counted tilt as size (#135); they remain
     # the fallback when fewer than three words can be measured.
+    # Each word is compared with the size expected where it sits
+    # (letter_geometry.size_words): scraps, impossible readings and
+    # numbers left out, the page's top-to-bottom trend taken out.
     geo = letter_geometry.measure_page(arr, lines)
-    word_xh = [
-        wd["xheight"] for g in geo if g for wd in g["words"] if wd["xheight"]
-    ]
+    sized = letter_geometry.size_words(lines, geo, h)
+    word_xh = [wd["xheight"] / expected for _, wd, expected in sized]
     size_by_words = len(word_xh) >= 3
-    xh_med = float(np.median(word_xh)) if word_xh else 0.0
     words_off_size = (
-        sum(1 for v in word_xh if abs(v / xh_med - 1.0) >= SIZE_OFF)
-        / len(word_xh)
-        if size_by_words and xh_med > 0
+        sum(1 for v in word_xh if abs(v - 1.0) >= SIZE_OFF) / len(word_xh)
+        if size_by_words
         else None
     )
 
