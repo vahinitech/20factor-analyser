@@ -84,15 +84,17 @@ test for the new boundary, and the owner's agreement. Owner decisions of
   route and searches every byte written.
 - One exception, for stage only: debug storage (`backend/server/debug_store.py`,
   owner decision 2026-10-15). With `VAHINI_DEBUG_STORE=1` and
-  `VAHINI_DEBUG_STORE_DIR` both set, each answered upload keeps its photo
-  and the answer sent back, under `<dir>/analyser/<date>/`, until someone
+  `VAHINI_DEBUG_STORE_DIR` both set, each upload keeps its photo as soon as
+  it is read, and a record of how it ended (the answer sent back, or the
+  refusal or error), under `<dir>/analyser/<date>/`, until someone
   deletes them by hand. It exists so the team can replay a page that scored
   oddly on stage.vahinitech.com. Production never sets either variable;
   vahini-web's `deploy/stage-debug.sh` sets them for the stage analyser
   alone, and every stage page then says that pages are being kept. The
   files are named by a random id, never the visitor's file name, and hold
-  nothing about the caller (address, browser, access key). Refused uploads
-  are not kept, and a failed write never fails the scan. `/health` (and
+  nothing about the caller (address, browser, access key). Refused and failed
+  checks are kept with their error, so a crash can be replayed; a photo too
+  large to read is not. A failed write never fails the scan. `/health` (and
   `/ocr/health`) reports `debug_store: true` while it is on, so a
   production probe can check it is `false`. Any other value, or one
   variable without the other, is off, and off is the code path as it was

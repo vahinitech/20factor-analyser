@@ -69,15 +69,26 @@ success; everything else is optional.
 ## Stage debug storage (the analyser's one write)
 
 The analyser itself never keeps a photo, with one switch for stage only.
-`backend/server/debug_store.py` keeps each answered upload's photo and response
-when both `VAHINI_DEBUG_STORE=1` and `VAHINI_DEBUG_STORE_DIR` are set:
+`backend/server/debug_store.py` keeps each upload's photo as soon as it is
+read, and a record of how the request ended, when both `VAHINI_DEBUG_STORE=1`
+and `VAHINI_DEBUG_STORE_DIR` are set:
 
 ```
 <dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.jpg    the photo, as sent
 <dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.json   route, lang, saved_at,
                                                           photo, photo_bytes,
-                                                          response
+                                                          outcome, finished_at
+                                                          and status + response
+                                                          or error
 ```
+
+`outcome` is `answered` (with the HTTP status and the whole response),
+`refused` (an HTTP error: its status and message) or `failed` (an error the
+server did not expect: its type and message, cut to 500 characters). A record
+still `started` is a scan the analyser never finished: it died mid-scan. On
+2026-10-23 the stage analyser crashed during a check and nothing was left to
+replay, because only answered checks were kept; since then the photo is
+written first. A photo too large to read (413) has nothing to keep.
 
 Dates and times are UTC. The routes are `/ocr`, `/analyze-vl`,
 `/report-python` and `/api/v2/reports`; a cache hit is kept too, since the
