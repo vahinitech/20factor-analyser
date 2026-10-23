@@ -1077,6 +1077,8 @@
       var img = new Image();
       img.alt = "";
       img.onload = function(){ frame.hidden = false; cropToFigure(img, frame); };
+      // A picture that does not load leaves the card without one, never a broken image.
+      img.onerror = function(){ img.remove(); frame.hidden = true; };
       img.src = art.tip;
       frame.appendChild(img);
     });

@@ -10,7 +10,8 @@
 //   or a share; it waits while the print popup or the feedback form is open;
 // - without the site script an answer does nothing and breaks nothing;
 // - never printed; Pihu comes only from the host and is cut to the drawing.
-// SHOT=<dir> also writes desktop and phone screenshots.
+// SHOT=<dir> also writes desktop and phone screenshots of the card without
+// a picture (docs/report-feedback/).
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { spawn } from 'node:child_process';
@@ -36,7 +37,7 @@ const server = spawn('./node_modules/.bin/http-server', ['.', '-p', String(PORT)
 const ART = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360"><rect x="100" y="200" width="120" height="60" fill="teal"/></svg>');
 
 let browser;
-async function openPage({ insights = true, viewport = { width: 1280, height: 900 } } = {}) {
+async function openPage({ insights = true, art = ART, viewport = { width: 1280, height: 900 } } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const errors = [];
@@ -47,14 +48,15 @@ async function openPage({ insights = true, viewport = { width: 1280, height: 900
   await page.route('**/api/v2/catalog/**', (r) => r.fulfill({ contentType: 'application/json', body: catalog }));
   await page.route('**/api/v2/reports?**', (r) => r.fulfill({ json: REPORT }));
   await page.route('**/persist/**', (r) => r.fulfill({ json: { ok: true } }));
-  await page.addInitScript(({ insights, ART }) => {
+  await page.route('**/missing-art/**', (r) => r.fulfill({ status: 404, body: '' }));
+  await page.addInitScript(({ insights, art }) => {
     window.answers = [];
-    window.VAHINI_REPORT_ART = { tip: ART };
+    if (art) window.VAHINI_REPORT_ART = { tip: art };
     if (insights) window.VahiniInsights = { check: () => {}, reportFeedback: (...args) => window.answers.push(args) };
     window.print = () => {};
     window.__vis = 'visible';
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => window.__vis });
-  }, { insights, ART });
+  }, { insights, art });
   await page.clock.install();
   await page.goto(BASE + '/frontend/analyser.html', { waitUntil: 'load' });
   return { context, page, errors };
@@ -93,7 +95,6 @@ try {
   await page.emulateMedia({ media: 'print' });
   assert.equal(await page.evaluate(() => getComputedStyle(document.getElementById('report-feedback')).display), 'none', 'never printed');
   await page.emulateMedia({ media: 'screen' });
-  if (process.env.SHOT) await page.screenshot({ path: `${process.env.SHOT}/report-feedback-desktop.png`, animations: 'disabled' });
   await page.click('button[data-answer="no_printout"]');
   assert.deepEqual(await page.evaluate(() => window.answers), [['no_printout']], 'one call, the fixed code only');
   assert.deepEqual([await page.locator('#rfb-ask').isVisible(), await page.locator('#rfb-done').isVisible()], [false, true], 'says thank you in place of the question');
@@ -122,7 +123,6 @@ try {
   await page.evaluate(() => document.getElementById('screen-report').classList.add('on'));
   await page.clock.runFor(10500);
   assert.equal(await shown(page), true, 'ten seconds on the visible report');
-  if (process.env.SHOT) await page.screenshot({ path: `${process.env.SHOT}/report-feedback-phone.png`, animations: 'disabled' });
   await page.click('#rfb-close');
   assert.equal(await shown(page), false, 'closed with one tap');
   assert.deepEqual(await page.evaluate(() => window.answers), [], 'closing sends nothing');
@@ -158,6 +158,27 @@ try {
   await page.clock.runFor(20000);
   assert.equal(await shown(page), false, 'never for the sample');
   await context.close();
+
+  // The host's picture does not load, or there is none: the card shows no
+  // picture, never a broken image.
+  for (const art of ['/missing-art/pihu.webp', null]) {
+    ({ context, page, errors } = await openPage({ art }));
+    await check(page);
+    await page.clock.runFor(10500);
+    // The 404 arrives over the network, not on the page clock.
+    for (let i = 0; i < 40 && await page.evaluate(() => document.querySelectorAll('.rfb__pihu img').length); i++) await new Promise((r) => setTimeout(r, 50));
+    assert.equal(await shown(page), true, `shown with art ${art}`);
+    assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('.rfb__pihu')].map((f) => [f.hidden, f.querySelectorAll('img').length])),
+      [[true, 0], [true, 0]], `no picture and no broken image (art ${art})`);
+    assert.equal(await page.locator('#rfb-title').isVisible(), true, 'the question still shows');
+    // The screenshots show this card: the drawings stay out of this repository.
+    if (process.env.SHOT && !art) {
+      await page.screenshot({ path: `${process.env.SHOT}/popup-desktop.png`, animations: 'disabled' });
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.screenshot({ path: `${process.env.SHOT}/popup-phone.png`, animations: 'disabled' });
+    }
+    await context.close();
+  }
 
   // Self-hosted, no site script: an answer breaks nothing.
   ({ context, page, errors } = await openPage({ insights: false }));
