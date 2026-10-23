@@ -120,6 +120,11 @@ _SECTIONS = [
 # neat-page test in docs/history/neat-pages-score-2026-10-23.md. A factor
 # not measured on a page is left out and the rest are scaled to 100.
 _OVERALL_POINTS = {1: 40, 7: 20, 5: 20, 11: 10, 17: 10}
+# Size Consistency counts in the overall only when measured on at least
+# this many words (or letter groups): from 3 words its score was 2 or
+# more points off the page's own in 20% of draws, from 10 in 8% (owner,
+# 23 October 2026, #305). It is still scored and shown below that.
+_OVERALL_MIN_SIZE_WORDS = 10
 
 _FACTOR_META = {
     1: ("structure", "Letter Formation Accuracy", "shape regularity proxy"),
@@ -331,7 +336,7 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
         _factor_result(n, fx, scores, supplied, basis, checks, zone_based)
         for n in range(1, 21)
     ]
-    sections, overall = _section_scores(results)
+    sections, overall = _section_scores(results, _left_out(fx))
     measured_results = [r for r in results if not r.unmeasured]
     ranked = sorted(measured_results, key=lambda r: float(r.score))
     top_weak = ranked[:3]
@@ -460,10 +465,20 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
     )
 
 
-def _section_scores(results):
+def _left_out(fx):
+    """Measured factors the overall leaves out on this page: Size when
+    it rests on too few words (_OVERALL_MIN_SIZE_WORDS)."""
+    few = (
+        fx.get("size_basis") not in ("words", "letter groups")
+        or int(fx.get("size_count") or 0) < _OVERALL_MIN_SIZE_WORDS
+    )
+    return (5,) if few else ()
+
+
+def _section_scores(results, left_out=()):
     """The four sections and the overall score. A section's score is the
     mean of its measured factors; the overall is the points-weighted mean
-    of the measured factors in _OVERALL_POINTS."""
+    of the measured factors in _OVERALL_POINTS, less those in left_out."""
     sections = []
     for sec_meta in _SECTIONS:
         fs = [r for r in results if r.sec == sec_meta["id"]]
@@ -482,7 +497,9 @@ def _section_scores(results):
         )
 
     counted = [
-        r for r in results if r.n in _OVERALL_POINTS and not r.unmeasured
+        r
+        for r in results
+        if r.n in _OVERALL_POINTS and not r.unmeasured and r.n not in left_out
     ]
     if not counted:
         # None of the five on this page (a script whose letters the

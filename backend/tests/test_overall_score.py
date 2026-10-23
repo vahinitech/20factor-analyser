@@ -68,6 +68,26 @@ class OverallScore(unittest.TestCase):
             {"structure": 0.6, "spatial": 0.3, "dynamics": 0.0, "style": 0.1},
         )
 
+    def test_size_on_too_few_words_is_left_out(self):
+        scores = {1: 8.0, 7: 6.0, 5: 0.0, 11: 6.0, 17: 6.0}
+        results = _results(scores, PHOTO)
+        _, with_size = scoring._section_scores(results)
+        _, without = scoring._section_scores(results, (5,))
+        self.assertEqual(with_size, round((320 + 120 + 0 + 60 + 60) / 10))
+        self.assertEqual(without, round((320 + 120 + 60 + 60) / 80 * 10))
+
+    def test_the_word_minimum(self):
+        least = scoring._OVERALL_MIN_SIZE_WORDS
+        self.assertEqual(least, 10)
+        for basis in ("words", "letter groups"):
+            few = {"size_basis": basis, "size_count": least - 1}
+            enough = {"size_basis": basis, "size_count": least}
+            self.assertEqual(scoring._left_out(few), (5,))
+            self.assertEqual(scoring._left_out(enough), ())
+        # Line heights are the stand-in when under three words measured.
+        lines = {"size_basis": "lines", "size_count": 30}
+        self.assertEqual(scoring._left_out(lines), (5,))
+
     def test_with_none_of_the_five_it_falls_back_to_every_factor(self):
         none = tuple(scoring._OVERALL_POINTS) + PHOTO
         sections, overall = scoring._section_scores(_results({}, none))

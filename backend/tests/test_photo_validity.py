@@ -143,11 +143,16 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertIsNone(dynamics["avg"])
         self.assertIsNone(dynamics["avg100"])
         self.assertEqual(dynamics["scoredCount"], 0)
-        # The overall counts only scoring._OVERALL_POINTS, measured ones.
+        # The overall counts only scoring._OVERALL_POINTS, measured ones;
+        # one short line gives Size too few words to count.
+        size = result["results"][4]
+        self.assertTrue(size["basedOn"].endswith(" lines"))
         counted = [
             r
             for r in result["results"]
-            if r["n"] in scoring._OVERALL_POINTS and not r["unmeasured"]
+            if r["n"] in scoring._OVERALL_POINTS
+            and not r["unmeasured"]
+            and r["n"] != 5
         ]
         points = [scoring._OVERALL_POINTS[r["n"]] for r in counted]
         expected = round(

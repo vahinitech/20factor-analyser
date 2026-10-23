@@ -43,7 +43,10 @@ The overall 0-100 score counts five factors, as points out of 100
 | 17 Slant Consistency | 10 |
 
 overall = sum of points x score / 10, over the five that are measured,
-scaled back to 100 when one is not. The other fifteen factors are still
+scaled back to 100 when one is not. Size counts only when it was
+measured on at least 10 words or letter groups
+(`_OVERALL_MIN_SIZE_WORDS`): from 3 words its score was 2 or more points
+off the page's own in 20% of samples, from 10 in 8%. The other fifteen factors are still
 scored and shown as practice findings; they do not move the overall. On
 neat photos of real pages they misread good writing, and each comes back
 once it passes a neat-page test. A page with none of the five measured
