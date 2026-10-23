@@ -223,14 +223,16 @@ function mount(after, opts){
     if (!compareWith || !earlier.some(e=>sameCheck(e, compareWith))) compareWith = earlier[0] || null;
     const shown = mine.slice().reverse().slice(0, SHOWN);
     const rows = compareWith && now ? compare(now, compareWith) : [];
-    const word = r=>r.kind==='up' ? `<span class="pp-up">↑ +${esc(r.change.toFixed(1))}</span>`
+    // Scores stay internal (owner, 2026-10-23): checks by date, skills by
+    // whether they got better.
+    const word = r=>r.kind==='up' ? `<span class="pp-up">↑ ${esc(t('pp.better'))}</span>`
       : r.kind==='same' ? `<span class="pp-same">${esc(t('pp.same'))}</span>` : `<span class="pp-tries">${esc(t('pp.tries'))}</span>`;
     panel.innerHTML = `<h2 id="pp-title">${esc(t('pp.title'))}</h2>
       <p>${esc(now ? t('pp.saved.now') : t('pp.saved.none'))} ${esc(t('pp.private'))}</p>
-      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(e.overall==null?t('pp.list.noscore',{date:day(e.date)}):t('pp.list.score',{date:day(e.date),score:e.overall}))}${e===now?` <b>${esc(t('pp.list.this'))}</b>`:''}</li>`).join('')}</ol>`
+      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(day(e.date))}${e===now?` <b>${esc(t('pp.list.this'))}</b>`:''}</li>`).join('')}</ol>`
         : `<p class="pp-empty">${esc(t('pp.empty'))}</p>`}
-      ${earlier.length ? `<label class="pp-pick">${esc(t('pp.compare'))} <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(e.overall==null?t('pp.option.noscore',{date:day(e.date)}):t('pp.option.score',{date:day(e.date),score:e.overall}))}</option>`).join('')}</select></label>
-        <ul class="pp-compare">${rows.map(r=>`<li data-factor="${r.n}" data-kind="${r.kind}"><span class="pp-name">${esc(r.name)}</span> ${esc(r.was.toFixed(1))} → ${esc(r.now.toFixed(1))} ${word(r)}</li>`).join('')}</ul>`
+      ${earlier.length ? `<label class="pp-pick">${esc(t('pp.compare'))} <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(day(e.date))}</option>`).join('')}</select></label>
+        <ul class="pp-compare">${rows.map(r=>`<li data-factor="${r.n}" data-kind="${r.kind}"><span class="pp-name">${esc(r.name)}</span> ${word(r)}</li>`).join('')}</ul>`
         : now ? `<p class="pp-first">${esc(t('pp.first',{who}))}</p>` : ''}
       <p class="pp-keep">${esc(t('pp.keep'))} <a href="/progress.html">${esc(t('pp.keep.link'))}</a></p>
       <div class="pp-actions">

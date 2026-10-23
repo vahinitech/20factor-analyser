@@ -57,7 +57,7 @@ delete te['p2.title'];
 const t = i18n.translator('te');
 assert.equal(t('p2.title'), en['p2.title'], 'a missing Telugu id falls back to English');
 assert.equal(JSON.stringify(i18n.missing('te')), '["p2.title"]', 'and the missing id is reported');
-assert.equal(t('row.badge', { score: '5.0', stage: t('stage.dev') }), '5.0/10 · మెరుగవుతోంది');
+assert.equal(t('other.item', { skill: 'A', stage: t('stage.dev') }), 'A (మెరుగవుతోంది)');
 assert.equal(t.n('pp.file.loaded', 1), 'సేవ్ అయిన 1 చెక్‌ను లోడ్ చేశాం.');
 assert.equal(i18n.translator('en').n('sn.since.better', 1), '1 skill got better.', 'a count of one uses the one form');
 assert.equal(i18n.translator('en').n('sn.since.better', 3), '3 skills got better.');
@@ -93,7 +93,7 @@ for (const [lang, table] of Object.entries(window.VahiniReportStrings)) {
 }
 // Telugu is written in Telugu: every sentence but the score formats has Telugu letters.
 const latinOnly = Object.entries(window.VahiniReportStrings.te).filter(([id, v]) => typeof v === 'string' && !/[ఀ-౿]/.test(v)
-  && !['meta.locale', 'row.badge', 'other.item', 'pp.option.score', 'sn.outof', 'sn.start.meta'].includes(id));
+  && !['meta.locale', 'other.item', 'sn.start.meta'].includes(id));
 assert.deepEqual(latinOnly.map(([id]) => id), [], 'Telugu table entries without Telugu text');
 
 // Simple English (owner, 2026-10-11): a parent with basic English and a

@@ -92,6 +92,7 @@ async function runHeadlessChecks() {
         inline:[...document.querySelectorAll('#report-host [style]')].filter(e=>/grid-template-columns|max-width/.test(e.getAttribute('style'))).length,
         brand:!!host.querySelector('.sn-top img.sn-logo[src$="assets/vahini-logo.png"]') && /vahinitech\.com/.test(host.querySelector('.sn-top').textContent) && /Your writing snapshot/i.test(host.querySelector('.sn-eyebrow').textContent),
         pill:pill?{band:pill.dataset.band,bg:getComputedStyle(pill).backgroundColor,want:rgb(getComputedStyle(pill).getPropertyValue('--sn-'+pill.dataset.band).trim()),text:pill.textContent}:null,
+        numbers:(t=>(t.match(/out of 100|\/100|\d\.\d\/10|\b\d\.\d\b/)||[null])[0])(pages.map(p=>p.textContent).join(' ')),
         headline:host.querySelector('.sn-title').textContent,
         rings:host.querySelectorAll('.sn-m[data-measure=read] ellipse.sn-m-ring').length,
         readText:host.querySelector('.sn-m[data-measure=read] .sn-m-what p')?.textContent||'',
@@ -153,11 +154,13 @@ async function runHeadlessChecks() {
       {ok:freeReport.rings===2 && /the circled letters most of all/.test(freeReport.readText), name:'Reading row circles the two hardest letters', detail:{rings:freeReport.rings,text:freeReport.readText}},
       // Vidhya's note (owner, 2026-10-14): the skills to work on, her score
       // for the page and her name.
-      {ok:!!freeReport.teacher && /^Two things to work on next\. First, leave the same gap between words\./.test(freeReport.teacher.grow) && /My score for this page: 74 out of 100/.test(freeReport.teacher.grade) && freeReport.teacher.sign==='Vidhya, your handwriting expert teacher', name:'Page 1: Vidhya\'s note names the skills to work on, the score and her name', detail:freeReport.teacher},
-      {ok:!!freeReport.pill && freeReport.pill.band==='good' && freeReport.pill.bg===freeReport.pill.want && /74\/100 · Mastering/.test(freeReport.pill.text), name:'Page 1: the overall score pill takes its band colour and stage (74: yellow, Mastering)', detail:JSON.stringify(freeReport.pill)},
+      // No score on the report (owner, 2026-10-23): Vidhya names the skills
+      // and signs; there is no overall pill and no score line.
+      {ok:!!freeReport.teacher && /^Two things to work on next\. First, leave the same gap between words\./.test(freeReport.teacher.grow) && freeReport.teacher.grade==='' && freeReport.teacher.sign==='Vidhya, your handwriting expert teacher', name:'Page 1: Vidhya\'s note names the skills to work on and her name, with no score', detail:freeReport.teacher},
+      {ok:freeReport.pill===null && !freeReport.numbers, name:'Page 1: no overall score and no score numbers on the report', detail:JSON.stringify({pill:freeReport.pill,numbers:freeReport.numbers})},
       {ok:freeReport.keep==='7' && freeReport.start==='8' && freeReport.tryCall, name:'Page 1: keep doing the strongest skill, start with the first skill to grow', detail:JSON.stringify({keep:freeReport.keep,start:freeReport.start})},
       {ok:freeReport.photo && freeReport.marks===0, name:'Page 1: the photo is shown whole, without numbered boxes (the rows below draw each measurement)', detail:JSON.stringify({photo:freeReport.photo,marks:freeReport.marks})},
-      {ok:JSON.stringify(freeReport.measured)==='["gaps","slope","size","margin","read"]' && freeReport.look.length===0 && freeReport.strips===5 && freeReport.locked>0, name:'Page 1: what we measured, each row drawn on the photo, with the scores outside Free named', detail:JSON.stringify({measured:freeReport.measured,strips:freeReport.strips,locked:freeReport.locked})},
+      {ok:JSON.stringify(freeReport.measured)==='["slope","read","size","gaps","margin"]' && freeReport.look.length===0 && freeReport.strips===5 && freeReport.locked>0, name:'Page 1: what we measured, strongest first, each row drawn on the photo, with the scores outside Free named', detail:JSON.stringify({measured:freeReport.measured,strips:freeReport.strips,locked:freeReport.locked})},
       {ok:JSON.stringify(freeReport.chips.slice().sort((a,b)=>a-b))==='["1","5","7","8","18"]' && freeReport.chipColours, name:'Page 1: a chip per scored skill, its score in its band colour', detail:JSON.stringify(freeReport.chips)},
       {ok:freeReport.steps===3 && freeReport.trace && freeReport.check && freeReport.qr===freeReport.qrWant && freeReport.qrWant!=='', name:'Page 1: three steps, a line to trace, a tick box and a QR code for the first skill\'s worksheet', detail:JSON.stringify({steps:freeReport.steps,qr:freeReport.qr,want:freeReport.qrWant})},
       {ok:freeReport.cta.length===2 && /Indian Patents No\. 584433 and 604895/.test(freeReport.foot) && /vahinitech\.com/.test(freeReport.foot) && /not a school mark/.test(freeReport.foot) && /Spelling/.test(freeReport.foot), name:'Page 1: the two screen buttons and the footer with patents, vahinitech.com and the spelling note', detail:freeReport.foot},
