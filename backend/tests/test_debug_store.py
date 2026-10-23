@@ -2,7 +2,9 @@
 """Stage-only debug storage (debug_store.py).
 
 Off, which is every deployment but a provisioned stage, nothing is
-written. On, each answered upload leaves its photo and its answer.
+written. On, each upload leaves its photo as soon as it is read, and a
+record of how the request ended: answered, refused or failed. A record
+left "started" is a scan the analyser never finished.
 """
 
 import importlib.util
@@ -145,7 +147,10 @@ class EndpointTests(unittest.TestCase):
         self.assertEqual(record["route"], "/ocr")
         self.assertEqual(record["lang"], "en")
         self.assertEqual(record["photo"], os.path.basename(photos[0]))
+        self.assertEqual(record["outcome"], "answered")
+        self.assertEqual(record["status"], 200)
         self.assertEqual(record["response"], res.json())
+        self.assertIn("finished_at", record)
         self.assertIs(self.mod.health()["debug_store"], True)
 
     def test_on_keeps_refusals_answered_with_200_and_reports(self):
@@ -171,7 +176,15 @@ class EndpointTests(unittest.TestCase):
             with open(path, "rb") as fh:
                 self.assertNotIn(b"Vahini", fh.read())
 
-    def test_a_rejected_upload_is_not_kept(self):
+    def record(self):
+        _files, photos, records = self.kept()
+        self.assertEqual((len(photos), len(records)), (1, 1))
+        with open(photos[0], "rb") as fh:
+            self.assertEqual(fh.read(), PNG)
+        with open(records[0], encoding="utf-8") as fh:
+            return json.load(fh)
+
+    def test_a_refused_upload_keeps_its_photo_and_the_refusal(self):
         self.switch("1")
 
         async def unreadable(_raw):
@@ -179,6 +192,55 @@ class EndpointTests(unittest.TestCase):
 
         self.mod._decode_upload = unreadable
         self.assertEqual(self.post().status_code, 422)
+        record = self.record()
+        self.assertEqual(record["outcome"], "refused")
+        self.assertEqual(
+            record["error"],
+            {"status": 422, "detail": "Upload a valid image or PDF."},
+        )
+        self.assertNotIn("response", record)
+
+    def test_a_crashed_scan_keeps_its_photo_and_the_error(self):
+        self.switch("1")
+
+        def crash(_arr, _raw, _lang):
+            raise RuntimeError("reader died " + "x" * 2000)
+
+        self.mod._ocr_process = crash
+        from fastapi.testclient import (  # pylint: disable=import-outside-toplevel
+            TestClient,
+        )
+
+        client = TestClient(self.mod.app, raise_server_exceptions=False)
+        res = client.post(
+            "/ocr",
+            files={"image": ("page.png", PNG, "image/png")},
+            data={"lang": "en"},
+        )
+        self.assertEqual(res.status_code, 500)
+        record = self.record()
+        self.assertEqual(record["outcome"], "failed")
+        self.assertEqual(record["error"]["type"], "RuntimeError")
+        self.assertTrue(record["error"]["detail"].startswith("reader died"))
+        self.assertLessEqual(
+            len(record["error"]["detail"]), debug_store.DETAIL_MAX
+        )
+
+    def test_a_scan_that_never_ends_stays_started(self):
+        store = debug_store.DebugStore(self.folder)
+        kept = store.begin("/api/v2/reports", PNG, "en")
+        self.assertIsNotNone(kept)
+        record = self.record()
+        self.assertEqual(record["outcome"], "started")
+        self.assertEqual(record["route"], "/api/v2/reports")
+        self.assertNotIn("finished_at", record)
+        self.assertFalse(
+            [f for f in files_under(self.folder) if f.endswith(".tmp")]
+        )
+
+    def test_received_outside_an_upload_route_keeps_nothing(self):
+        self.switch("1")
+        debug_store.received(PNG)
         self.assertEqual(files_under(self.folder), [])
 
     def test_a_failed_write_never_fails_the_scan(self):
