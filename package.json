@@ -30,6 +30,7 @@
     "test:language": "node tests/report-language.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
     "test:print-popup": "node tests/print-popup.mjs",
+    "test:report-feedback": "node tests/report-feedback.mjs",
     "test:share-embed": "node tests/report-share-embed.mjs",
     "test:unit": "for t in tests/*.test.mjs; do echo \"== $t\"; node \"$t\" || exit 1; done",
     "coverage:frontend": "c8 npm run -s test:unit"
