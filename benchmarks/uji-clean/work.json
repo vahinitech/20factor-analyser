@@ -31,7 +31,9 @@
   "recovery.reader_calls": 5,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UJI_W13": {
   "decode.bytes": 136234,
@@ -65,7 +67,9 @@
   "recovery.reader_calls": 5,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UJI_W14": {
   "decode.bytes": 132574,
@@ -98,7 +102,9 @@
   "recovery.lines": 4,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UJI_W15": {
   "decode.bytes": 127166,
@@ -131,7 +137,9 @@
   "recovery.lines": 4,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UJI_W16": {
   "decode.bytes": 133132,
@@ -165,7 +173,9 @@
   "recovery.reader_calls": 1,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W18": {
   "decode.bytes": 122317,
@@ -199,7 +209,9 @@
   "recovery.reader_calls": 1,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W21": {
   "decode.bytes": 122908,
@@ -230,10 +242,12 @@
   "printed.lines": 8,
   "printed.runs": 1,
   "recovery.lines": 6,
-  "recovery.reader_calls": 4,
+  "recovery.reader_calls": 3,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W24": {
   "decode.bytes": 135136,
@@ -266,7 +280,9 @@
   "recovery.lines": 4,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W27": {
   "decode.bytes": 144234,
@@ -300,7 +316,9 @@
   "recovery.reader_calls": 5,
   "recovery.runs": 1,
   "scoring.lines": 3,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W30": {
   "decode.bytes": 154689,
@@ -334,7 +352,9 @@
   "recovery.reader_calls": 4,
   "recovery.runs": 1,
   "scoring.lines": 5,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W33": {
   "decode.bytes": 122607,
@@ -367,7 +387,9 @@
   "recovery.lines": 4,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W36": {
   "decode.bytes": 149630,
@@ -401,7 +423,9 @@
   "recovery.reader_calls": 2,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W39": {
   "decode.bytes": 124464,
@@ -434,7 +458,9 @@
   "recovery.lines": 6,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W42": {
   "decode.bytes": 137691,
@@ -468,7 +494,9 @@
   "recovery.reader_calls": 3,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W45": {
   "decode.bytes": 124832,
@@ -501,7 +529,9 @@
   "recovery.lines": 4,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W48": {
   "decode.bytes": 120274,
@@ -535,7 +565,9 @@
   "recovery.reader_calls": 8,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W51": {
   "decode.bytes": 121477,
@@ -569,7 +601,9 @@
   "recovery.reader_calls": 6,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W54": {
   "decode.bytes": 131251,
@@ -600,10 +634,12 @@
   "printed.lines": 11,
   "printed.runs": 1,
   "recovery.lines": 4,
-  "recovery.reader_calls": 4,
+  "recovery.reader_calls": 3,
   "recovery.runs": 1,
   "scoring.lines": 3,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W57": {
   "decode.bytes": 128701,
@@ -637,7 +673,9 @@
   "recovery.reader_calls": 2,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  },
  "UPV_W60": {
   "decode.bytes": 141460,
@@ -671,6 +709,8 @@
   "recovery.reader_calls": 5,
   "recovery.runs": 1,
   "scoring.lines": 4,
-  "scoring.runs": 1
+  "scoring.runs": 1,
+  "turn.runs": 1,
+  "turn.turn": 0
  }
 }
