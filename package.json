@@ -28,6 +28,7 @@
     "test:practice": "node tests/practice-report.mjs",
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
+    "test:parity": "node tests/report-parity.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
     "test:print-popup": "node tests/print-popup.mjs",
     "test:report-feedback": "node tests/report-feedback.mjs",

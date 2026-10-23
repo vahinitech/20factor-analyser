@@ -209,6 +209,7 @@ function mount(after, opts){
   panel.id = 'progress-panel'; panel.className = 'progress-panel';
   panel.setAttribute('aria-labelledby', 'pp-title');
   panel.setAttribute('lang', t.lang);
+  panel.toggleAttribute('data-caseless', !!(global.VahiniI18n && global.VahiniI18n.caseless(t.lang)));
   // Beside the report on a wide screen (the side panel's slot), else
   // under the report.
   const slot = global.document.getElementById('side-progress');

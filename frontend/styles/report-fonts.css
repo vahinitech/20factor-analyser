@@ -4,8 +4,23 @@
 @font-face {font-family:'Hanken Grotesk';src:url('../assets/fonts/HankenGrotesk.ttf') format('truetype');font-weight:100 900;font-display:swap;}
 @font-face {font-family:Caveat;src:url('../assets/fonts/Caveat.ttf') format('truetype');font-weight:400 700;font-display:swap;}
 @font-face {font-family:'Edu SA Beginner';src:url('../assets/fonts/EduSABeginner.ttf') format('truetype');font-weight:400 700;font-display:swap;}
-/* Telugu, for a report printed in Telugu (lang="te" on the report). The
-   unicode-range keeps it to Telugu letters, so English text keeps its faces
-   and a page without Telugu never downloads it. Noto Sans Telugu, OFL. */
+/* Noto Sans Telugu at its own size, for the language picker outside the
+   report (its option reads తెలుగు). OFL. */
 @font-face {font-family:'Noto Sans Telugu';src:url('../assets/fonts/NotoSansTelugu-Regular.woff2') format('woff2');font-weight:400;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
 @font-face {font-family:'Noto Sans Telugu';src:url('../assets/fonts/NotoSansTelugu-Bold.woff2') format('woff2');font-weight:600 800;font-display:swap;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+
+/* Every language keeps the English report (owner, 2026-10-23;
+   docs/12-report-rules.md): the report's font lists are the same in every
+   language, and a script's letters come from one of these three families,
+   placed first in those lists. Each face covers only its own script
+   (unicode-range), so English text never uses it, and is scaled to the
+   size of the English face beside it (size-adjust, measured by
+   scripts/report_font_scale.mjs). A new script adds its faces here, under
+   the same three names. Google Noto, OFL: one family designed for every
+   script. */
+@font-face {font-family:'Vahini Script Serif';src:url('../assets/fonts/NotoSerifTelugu-Regular.woff2') format('woff2');font-weight:400;font-display:swap;size-adjust:88%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Vahini Script Serif';src:url('../assets/fonts/NotoSerifTelugu-Bold.woff2') format('woff2');font-weight:600 800;font-display:swap;size-adjust:88%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Vahini Script Sans';src:url('../assets/fonts/NotoSansTelugu-Regular.woff2') format('woff2');font-weight:400;font-display:swap;size-adjust:93%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Vahini Script Sans';src:url('../assets/fonts/NotoSansTelugu-Bold.woff2') format('woff2');font-weight:600 800;font-display:swap;size-adjust:93%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Vahini Script Hand';src:url('../assets/fonts/NotoSansTelugu-Regular.woff2') format('woff2');font-weight:400;font-display:swap;size-adjust:81%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}
+@font-face {font-family:'Vahini Script Hand';src:url('../assets/fonts/NotoSansTelugu-Bold.woff2') format('woff2');font-weight:600 800;font-display:swap;size-adjust:81%;unicode-range:U+0951-0952,U+0964-0965,U+0C00-0C7F,U+1CDA,U+1CF2,U+200C-200D,U+25CC;}

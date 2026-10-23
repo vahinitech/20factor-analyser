@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-9374f856aceaf60d8f84",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-4e31c7c2f5af6cea1255",
   "creationInfo": {
-    "created": "2026-10-22T12:04:40Z",
+    "created": "2026-10-23T12:28:46Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
@@ -204,6 +204,42 @@
         }
       ],
       "comment": "Locally served report font for reports printed in Telugu (Telugu subset, from the @fontsource/noto-sans-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-NotoSerifTelugu-Bold",
+      "name": "NotoSerifTelugu-Bold.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-700-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3c660f60b2696031c4dd0404040cf45437fb6ddef87de03eca5a721ad0f2109c"
+        }
+      ],
+      "comment": "Locally served report font: the Telugu letters of the report's serif text, scaled to Spectral (Telugu subset, from the @fontsource/noto-serif-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-NotoSerifTelugu-Regular",
+      "name": "NotoSerifTelugu-Regular.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-400-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "580b25337f62d4d2517beae261ce727df1d7185bd99d77f8f41734f4a2ab5a3e"
+        }
+      ],
+      "comment": "Locally served report font: the Telugu letters of the report's serif text, scaled to Spectral (Telugu subset, from the @fontsource/noto-serif-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
     },
     {
       "SPDXID": "SPDXRef-LocalFont-Spectral-Regular",
@@ -3342,6 +3378,16 @@
       "spdxElementId": "SPDXRef-Package-Vahini",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-LocalFont-NotoSansTelugu-Regular"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSerifTelugu-Bold"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSerifTelugu-Regular"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",
