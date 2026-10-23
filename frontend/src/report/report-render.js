@@ -170,9 +170,9 @@ function classificationPanels(summary){
 
 /* Pen capture: the server scores the trace image and marks the four
    Dynamics factors unmeasured; the pen's own per-stroke measurements fill
-   them in here, and the section and overall scores are recomputed with the
-   published weights so every factor counts. */
-const SECTION_WEIGHTS={structure:0.30,spatial:0.30,dynamics:0.20,style:0.20};
+   them in here, and the section scores are recomputed. The overall stays
+   the server's: it counts factors 1, 5, 7, 11 and 17 only
+   (scoring._OVERALL_POINTS, #304), which the pen does not change. */
 function applyPenDynamics(analysis, imu){
   const dyn=imu && imu.dynamics;
   if(!analysis || !Array.isArray(analysis.results) || !dyn) return analysis;
@@ -190,12 +190,8 @@ function applyPenDynamics(analysis, imu){
     s.avg=fs.length?Number((fs.reduce((n,f)=>n+f.score,0)/fs.length).toFixed(1)):null;
     s.avg100=s.avg==null?null:Math.round(s.avg*10);
     s.scoredCount=fs.length;
-    s.weight=SECTION_WEIGHTS[s.id]??s.weight;
   });
-  const scored=(analysis.sections||[]).filter(s=>s.avg100!=null);
-  const wsum=scored.reduce((n,s)=>n+s.weight,0)||1;
-  const overall=Math.round(scored.reduce((n,s)=>n+s.avg100*(s.weight/wsum),0));
-  analysis.overall=overall; analysis.overallMeasured=overall; analysis.measuredCount=live.length;
+  analysis.measuredCount=live.length;
   const ranked=live.slice().sort((a,b)=>a.score-b.score);
   analysis.topWeak=ranked.slice(0,3); analysis.topStrong=ranked.slice().reverse().slice(0,4);
   return analysis;

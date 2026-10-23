@@ -143,10 +143,21 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertIsNone(dynamics["avg"])
         self.assertIsNone(dynamics["avg100"])
         self.assertEqual(dynamics["scoredCount"], 0)
-        live = [s for s in result["sections"] if s["scoredCount"]]
+        # The overall counts only scoring._OVERALL_POINTS, measured ones.
+        counted = [
+            r
+            for r in result["results"]
+            if r["n"] in scoring._OVERALL_POINTS and not r["unmeasured"]
+        ]
+        points = [scoring._OVERALL_POINTS[r["n"]] for r in counted]
         expected = round(
-            sum(s["avg100"] * s["weight"] for s in live)
-            / sum(s["weight"] for s in live)
+            sum(p * r["score"] for p, r in zip(points, counted))
+            / sum(points)
+            * 10
+        )
+        self.assertEqual(dynamics["weight"], 0.0)
+        self.assertAlmostEqual(
+            sum(s["weight"] for s in result["sections"]), 1.0, places=3
         )
         self.assertEqual(result["overall"], expected)
         self.assertEqual(result["overallMeasured"], expected)

@@ -192,9 +192,10 @@ flowchart TB
 
 ## 5. The 20 factors
 
-Four sections, weighted 0.30, 0.30, 0.20 and 0.20. A photo measures no
-motion, so Dynamics gets no weight on a photo and the others are rescaled
-(`scoring.py:83-108, 434-467`).
+Four sections. The overall out of 100 counts five factors only
+(`_OVERALL_POINTS` in `scoring.py`: 1 for 40 points, 7 and 5 for 20, 11
+and 17 for 10); the rest are practice findings
+([03](03-scoring-criteria.md#sections-weights-and-the-overall-score)).
 
 | # | Factor | Section | Tier | Needs the pen | Needs text read |
 |---|---|---|---|---|---|

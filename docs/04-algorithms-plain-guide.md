@@ -254,7 +254,7 @@ it human.
 - **Needs the pen**: a motion quality a still photo can only guess; the IMU pen measures it properly.
 - **Estimated**: a transparent blend of simpler measurements (clearly labelled, not a black box).
 
-### Section 1: Structure (30% of the overall score): *letter shapes & control*
+### Section 1: Structure: *letter shapes & control*
 
 **F1 · Letter Formation Accuracy**: *From image*
 `size_penalty = cv(letter heights); score = 10 − size_penalty·9 + (loopRatio − 0.85)·4`
@@ -285,7 +285,7 @@ loopRatio = closed letters / loopable letters;  score = 10 · loopRatio
 `error = |upperZone − 0.30| + |lowerZone − 0.25|; score = score_from_error(error, 0.12, 0.60)`
 *In plain words:* are tall letters tall enough and tails long enough, in good proportion?
 
-### Section 2: Spatial (30%): *spacing, baseline & layout*
+### Section 2: Spatial: *spacing, baseline & layout*
 
 **F7 · Baseline Alignment**: *Measured*
 `wobble = average RMS distance of letters from the fitted baseline; score = score_from_error(wobble, 0.08, 0.40)`
@@ -315,7 +315,7 @@ score = half from "is the gap about right" + half from "are the gaps even"
 `score = score_from_consistency(|stroke angles|, 0.6, 1.6)`
 *In plain words:* do your up-and-down strokes point a consistent direction?
 
-### Section 3: Dynamics (20%): *speed, pressure & flow (the pen's specialty)*
+### Section 3: Dynamics: *speed, pressure & flow (the pen's specialty)*
 
 > These describe **how the hand moves**, which lives in motion, not in the finished marks. From a photo
 > they are honest estimates; with the **IMU pen** they become truly **Measured**. (Full pen details in §7.)
@@ -334,7 +334,7 @@ score = half from "is the gap about right" + half from "are the gaps even"
 *In plain words:* how often does the pen leave the page? Frequent lifts quietly slow writing down.
 (Impossible to see in a still photo: it's an event **in time**.)
 
-### Section 4: Style & Readability (20%): *slant, legibility & neatness*
+### Section 4: Style & Readability: *slant, legibility & neatness*
 
 **F17 · Slant Consistency**: *Measured*
 `spread = std(per-word slant from shear-search); score = score_from_error(spread, 6, 26)`
@@ -463,20 +463,21 @@ the Model Selection Guide's principle: **"structure is truth; reserve ML for wha
 
 ---
 
-## 6. The 20-factor weighting, one overall score (server: scoring.py)
+## 6. One overall score from five factors (server: scoring.py)
 
 ```
-Section averages (each = the average of its factor scores, 0–10):
-   Structure  (weight 30%)
-   Spatial    (weight 30%)
-   Dynamics   (weight 20%)
-   Style      (weight 20%)
-
-overall (0–100) = Σ  section_average · 10 · weight
+overall (0-100) = ( 40 x Letter Formation
+                  + 20 x Baseline Alignment
+                  + 20 x Size Consistency
+                  + 10 x Line Straightness
+                  + 10 x Slant Consistency ) / 10
 ```
 
-**In plain words:** average the factors inside each of the four families, then blend the four families
-by importance. Structure and Spatial (the legibility fundamentals) count most.
+**In plain words:** five factors make the headline, letter shapes first.
+The other fifteen are still scored and shown as practice findings, but
+they do not move the overall: on neat photos of real pages they misread
+good writing (owner, 23 October 2026). A factor not measured on a page
+is left out and the rest are scaled back to 100.
 
 The report also picks your **top strengths** (highest factors) and **focus areas** (anything below 5,
 else the three lowest): the focus areas are exactly what the practice drills target.

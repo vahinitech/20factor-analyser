@@ -15,8 +15,8 @@
 #     phrased as a question a teacher would say out loud;
 #   - the technical factor names stay attached underneath every group,
 #     so every headline still traces to real measurements;
-#   - presentation only: the 4 weighted sections in scoring.py keep
-#     driving the overall score; this module never rescores anything.
+#   - presentation only: the overall score comes from
+#     scoring._OVERALL_POINTS; this module never rescores anything.
 #
 # The report renderer mirrors PLAIN_GROUPS in a fallback table
 # (frontend/src/report/report-render.js). Change one, change both.

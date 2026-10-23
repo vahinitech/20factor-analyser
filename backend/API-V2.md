@@ -59,13 +59,13 @@ Responses contain:
 - `schema_version`: `2.0`.
 - `scoring_version`: identifies the existing Python scoring implementation. This change does not recalibrate its formulas.
 - `access`: `customer_id`, `authenticated`, `tier` (effective access), `plan_tier` (stored plan), `subscription_status`, `expires_at` (UTC Unix seconds or null), and `capabilities`.
-- `summary`: legacy overall score out of 100, factor counts and score-basis description. The legacy aggregate can include image proxies.
+- `summary`: overall score out of 100, factor counts and score-basis description. The overall counts five factors (letter formation 40 points, baseline 20, size 20, line straightness 10, slant 10); the others are practice findings.
 - `factors`: stable `id`, `number`, `name`, `section_id`, `status`, `score`, `reason` and `measurement`. Pro also gets `practice`.
 - `locked_factors`: IDs and `required_tier`, without restricted data.
 - `recognition`: recognized text; Pro also receives recognition metadata. In it, `ink_rows` is true when the factors were measured on rows found from the ink instead of the reader's lines, and `ink_reason` says why: `language` (a language set in `VAHINI_INK_GEOMETRY_LANGS`) or `read_in_fragments` (the reader read the page in pieces, as it does joined cursive; #277). A code, no text.
 - Pro-only `evidence`, `coaching` and `worksheets`. PDF paths resolve against the website origin.
 - `limitations`: interpretation limits that clients should retain.
-- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, the `weight` the overall score used, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
+- Pro `sections`: the four section scores as the engine computed them for the overall score (`id`, `name`, `score` out of ten or null, `normalized`, `weight`, the section's share of the overall score, `factor_count`, `scored_factor_count`). Compact Pro reports carry `sections: [{id, s, w}]`. Free gets neither, because a section mean includes locked factors. Details for the before/after comparison: [docs/19-comparison-data.md](../docs/19-comparison-data.md).
 - `comparability` on every successful report, both tiers and both formats: `lines`, `words` and `characters` read (null when nothing was read), the `script` of the letters read, reading-engine `languages`, `printed_lines` left out, `page` (`handwriting` or `handwriting_with_print`), the recognition level as `reading`, `passage_aligned`, and `ruleset`. Counts only, no text. A comparison uses them to warn that two pages are not alike.
 - `age_band`: the request's age band as sent (for example `6-7`), only when the request sent one. Not used by any score yet.
 - `ruleset`: the sha256 of the rules the page was scored by, the language pack and the request's `profile`, on every report the scan produced (both tiers, both formats). Never the profile itself.
