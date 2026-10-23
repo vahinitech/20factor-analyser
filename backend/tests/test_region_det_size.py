@@ -1,10 +1,11 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Line recovery's crops are detected near their own size (stage crash,
+"""Line recovery's crops are detected within a pixel budget (stage crash,
 23 October 2026). The engine's page setting raised every crop's short side
-to 2048 pixels, up to Paddle's 4000-pixel cap: a phone photo spent 42 of
-its 47 seconds there, and one photo ran the analyser out of its memory
-limit. The page itself is still detected with the engine's own setting."""
+to 2048 pixels, up to Paddle's 4000-pixel cap: a short crop became
+4000x1500, a phone photo spent 42 of its 47 seconds in recovery, and one
+photo ran the analyser out of its memory limit. Crops keep that scale
+within REGION_DET_PIXELS; the page keeps the engine's own setting."""
 
 import os
 import sys
@@ -49,20 +50,22 @@ def det_size(crop):
 
 
 class TestRegionDetSize(unittest.TestCase):
-    def test_a_wide_line_is_never_blown_up_to_the_page_size(self):
-        # 1300x150 became 4000x460 under the page setting.
+    def test_a_wide_line_keeps_the_page_scale(self):
+        # 1300x150 is detected at 4000x461 (1.8 MP), as before: small
+        # handwriting needs the enlargement to be found.
         h, w = det_size(np.zeros((150, 1300, 3), np.uint8))
-        self.assertLessEqual(max(h, w), ocr_backends.REGION_DET_LONG_SIDE)
-        self.assertGreaterEqual(w, 1300)
+        self.assertEqual(w, 4000)
+        self.assertLessEqual(h * w, ocr_backends.REGION_DET_PIXELS)
 
-    def test_a_short_crop_is_scaled_up_at_most_twice(self):
-        # 400x150 became 4000x1500, the largest memory step.
+    def test_a_short_crop_stays_within_the_pixel_budget(self):
+        # 400x150 became 4000x1500 (6 MP), the step that ran out of memory.
         h, w = det_size(np.zeros((150, 400, 3), np.uint8))
-        self.assertEqual((h, w), (300, 800))
+        self.assertLessEqual(h * w, ocr_backends.REGION_DET_PIXELS * 1.001)
+        self.assertGreater(w, 2000)
 
-    def test_a_crop_wider_than_the_cap_keeps_its_size(self):
-        h, w = det_size(np.zeros((180, 2400, 3), np.uint8))
-        self.assertEqual((h, w), (180, 2400))
+    def test_a_crop_over_the_budget_is_never_shrunk(self):
+        h, w = det_size(np.zeros((1400, 2400, 3), np.uint8))
+        self.assertEqual((h, w), (1400, 2400))
 
     def test_read_region_passes_the_crop_size_and_run_keeps_the_page_one(self):
         engine = Engine()

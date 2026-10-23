@@ -446,20 +446,29 @@ def read_line_letters(crop, lang):
 # short one 4000x1500. On a phone photo with 24 crops that was 42 of the
 # scan's 47 seconds, and each crop took the container from 1.1 GB to as
 # much as 2.1 GB, so one photo on 23 October 2026 ran stage out of its
-# 2500 MiB limit, twice. A crop is now detected at up to REGION_UPSCALE
-# times its own size, its long side at most REGION_DET_LONG_SIDE pixels.
-REGION_UPSCALE = 2.0
-REGION_DET_LONG_SIDE = 1600
+# 2500 MiB limit, twice. The enlargement itself helps: small handwriting
+# needs it to be found (capping the long side at 1600 lost words on four
+# UJI pages, 2 MP on six). So a crop keeps the page setting's scale but at
+# most REGION_DET_PIXELS pixels in all, and is never shrunk. At 3 MP the
+# UJI pages read as before (9.41% of letters wrong against 9.54%) and the
+# 23 October photo peaked at 1.5 GB instead of 2.2 GB.
+PAGE_DET_SIDE = 2048  # the engine's text_det_limit_side_len ("min")
+PADDLE_MAX_SIDE = 4000  # Paddle's own max_side_limit
+REGION_DET_PIXELS = 3_000_000
 
 
 def _region_det_options(crop):
-    """The detector size for one recovery crop: the long side scaled by up
-    to REGION_UPSCALE, never past REGION_DET_LONG_SIDE, never shrunk."""
-    long_side = max(crop.shape[:2])
-    ratio = min(REGION_UPSCALE, max(1.0, REGION_DET_LONG_SIDE / long_side))
+    """The detector size for one recovery crop: the page setting's scale,
+    within Paddle's cap and REGION_DET_PIXELS, never below the crop."""
+    h, w = crop.shape[:2]
+    ratio = min(
+        PAGE_DET_SIDE / max(1, min(h, w)),
+        PADDLE_MAX_SIDE / max(1, max(h, w)),
+        (REGION_DET_PIXELS / max(1, h * w)) ** 0.5,
+    )
     return {
         "text_det_limit_type": "resize_long",
-        "text_det_limit_side_len": int(long_side * ratio),
+        "text_det_limit_side_len": int(max(h, w) * max(1.0, ratio)),
     }
 
 
