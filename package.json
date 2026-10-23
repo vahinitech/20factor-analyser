@@ -19,6 +19,7 @@
     "test:keep": "node tests/keep-my-pages.mjs",
     "test:daily-limit": "node tests/daily-limit.mjs",
     "test:ocr-unavailable": "node tests/ocr-unavailable.mjs",
+    "test:check-dropped": "node tests/check-dropped.mjs",
     "test:handwriting-not-read": "node tests/handwriting-not-read.mjs",
     "test:telugu-choice": "node tests/telugu-choice.mjs",
     "test:notice-art": "node tests/notice-art.mjs",
