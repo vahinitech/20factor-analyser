@@ -196,6 +196,13 @@ class ScanWorkerTests(unittest.TestCase):
         self.assertEqual(result, {"done": "done"})
         self.assertEqual(self.worker.stats()["restarts"], 1)
 
+    def test_refuses_to_start_for_a_module_it_cannot_name(self):
+        # analyser-ocr-server.py once loaded app.py without registering it,
+        # and every scan failed to pickle (found killing a real scan).
+        unnamed = scan_worker.Supervisor("not_registered", self.stub_path, 1)
+        with self.assertRaisesRegex(RuntimeError, "not_registered"):
+            unnamed.start()
+
     def test_health_is_none_while_the_child_starts(self):
         fresh = scan_worker.Supervisor(STUB_NAME, self.stub_path, 1)
         self.assertEqual(fresh.stats()["state"], "starting")

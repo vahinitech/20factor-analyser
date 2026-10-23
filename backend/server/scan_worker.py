@@ -117,6 +117,13 @@ class Supervisor:
 
     # ---- the child's life -------------------------------------------------
     def start(self):
+        if self.module_name not in sys.modules:
+            # The calls name their functions by module (pickle); unknown
+            # here, every scan would fail. Say so at start-up instead.
+            raise RuntimeError(
+                f"scan worker: module {self.module_name!r} is not in "
+                "sys.modules; register it before loading it"
+            )
         with self._cond:
             if self._started:
                 return
