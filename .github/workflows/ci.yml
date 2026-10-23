@@ -464,6 +464,8 @@ jobs:
         run: npm run test:practice
       - name: Print in Telugu and Share on WhatsApp
         run: npm run test:language
+      - name: Student view (one screen, proof for every sentence)
+        run: npm run test:student-view
       - name: The print popup's optional price question and the Request Pro card
         run: npm run test:print-popup
       - name: "How was the report?" asks once, after ten seconds, and sends one fixed answer
