@@ -24,6 +24,7 @@ import httpx
 from backend.tests.test_server_pipeline import _load_server
 from server import (  # backend/ is on sys.path once the helpers load
     perf,
+    scan_slots,
     scan_worker,
 )
 
@@ -248,6 +249,28 @@ class ChildPartsTests(unittest.TestCase):
         row = record.summary()["decode-page"]
         self.assertEqual(row["sizes"], {"pixels": 10})
         self.assertEqual(row["cpu_ms"], 0.0)
+
+
+class ScanSlotsHandOffTests(unittest.IsolatedAsyncioTestCase):
+    async def test_run_hands_the_work_to_the_worker_when_it_is_on(self):
+        calls = []
+
+        class Worker:  # pylint: disable=too-few-public-methods
+            def call(self, fn, *args):
+                calls.append((fn, args))
+                return fn(*args)
+
+        with patch.object(scan_worker, "SUPERVISOR", Worker()), patch.dict(
+            os.environ, {"VAHINI_SCAN_WORKER": "1"}
+        ):
+            self.assertTrue(scan_worker.enabled())
+            self.assertEqual(await scan_slots.run(max, 2, 5), 5)
+        self.assertEqual(calls, [(max, (2, 5))])
+
+    async def test_run_stays_in_this_process_when_it_is_off(self):
+        with patch.dict(os.environ, {"VAHINI_SCAN_WORKER": "0"}):
+            self.assertFalse(scan_worker.enabled())
+            self.assertEqual(await scan_slots.run(min, 2, 5), 2)
 
 
 class ScanLostHTTPTests(unittest.IsolatedAsyncioTestCase):
