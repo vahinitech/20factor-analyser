@@ -84,6 +84,12 @@ score falls linearly and hits zero at the stated limit.
 | 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
 | 12 | Vertical Alignment | line-to-line tilt spread | `10 · (1 − min(1, angle std / 10))` | tilt CV ≤0.20 |
+
+Line angles for 7, 11 and 12 are measured against the page, not the
+photo's edges: the page's tilt is its lines' median angle, and the part
+of it beyond one degree (`TILT_FREE` in `scoring_parts/features.py`) is
+taken as the camera's and taken out first (#304). Within a degree nothing
+is taken out, so a page of four lines with one sinking still shows it.
 | 13 | Speed Consistency | speed proxy from stroke/line-width regularity | `10 · (1 − min(1, width CV / 0.85))` | velocity CV ≤0.20 |
 | 14 | Pressure Consistency | pressure proxy from ink-density variance across lines | `10 · (1 − min(1, ink CV / 0.95))` | CV ≤0.20 |
 | 15 | Stroke Continuity | continuity proxy from word morphology (letters per word vs 5) | `10 · (1 − min(1, |chars/word − 5| / 5))` | 0 unintended breaks |
