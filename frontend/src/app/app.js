@@ -442,6 +442,15 @@ function reportOutcome(outcome){
   try{ if (window.VahiniInsights && typeof VahiniInsights.check === 'function') VahiniInsights.check(outcome); }catch(_e){}
 }
 
+/* "How was the report?" (owner, 2026-10-23): the popup in analyser.html asks
+   once per check, ten seconds after the report appears, so the Friday report
+   can say why reports are read but not printed. Never for a sample run;
+   without the popup's script this does nothing. */
+function askAboutReport(){
+  if (window.VAHINI_SAMPLE_RUN) return;
+  try{ if (window.VahiniReportFeedback && typeof VahiniReportFeedback.arm === 'function') VahiniReportFeedback.arm(); }catch(_e){}
+}
+
 /* ---------- recognition-server availability gate -----------------------
    Scoring runs entirely on the recognition server (see ocr.js); there is
    no offline fallback. Rather than let someone upload and sit through the
@@ -910,6 +919,7 @@ async function runPipeline(){
   // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
   reportOutcome(((analysis.recognition || {}).backend === 'cv-fallback') ? 'no_text' : 'report');
   go('report');
+  askAboutReport();
 }
 
 /* What a printed report is stored as on vahinitech.com (analyser.html

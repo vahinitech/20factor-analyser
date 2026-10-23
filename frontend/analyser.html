@@ -980,5 +980,161 @@
   }, true);
 })();
 </script>
+<!-- ============ "HOW WAS THE REPORT?" ============
+     Owner, 2026-10-23: reports were read on screen and none printed, and
+     nothing said why. Ten seconds after a report appears (counted while the
+     report is on screen and the tab is visible), a small card asks one
+     question with six fixed answers. Once per check and at most once a day
+     in this browser; never for a sample run, never after a print or a share
+     in that check, never on top of the print popup or the feedback form, and
+     never printed. An answer is one fixed code sent through vahinitech.com's
+     window.VahiniInsights.reportFeedback; no text can be typed, so no name or
+     detail about the child can reach it. Without the site script nothing is
+     sent. vahini-web's Friday report counts the codes; keep them in step. -->
+<style>
+  .rfb{position:fixed; right:20px; bottom:84px; z-index:9500; width:min(380px, calc(100vw - 24px));
+    background:var(--v-surface); color:var(--v-text); border:1px solid var(--v-border); border-radius:var(--v-radius-lg);
+    box-shadow:var(--v-shadow-2); padding:18px 18px 16px; font-family:var(--v-font-sans); color-scheme:light;
+    animation:rfbIn .24s cubic-bezier(.22,.61,.36,1);}
+  .rfb[hidden], .rfb [hidden]{display:none;}
+  @keyframes rfbIn{from{opacity:0; transform:translateY(12px);} to{opacity:1; transform:none;}}
+  .rfb__head{display:flex; gap:14px; align-items:center; margin:0 30px 8px 0;}
+  .rfb h2{font-family:var(--v-font-serif); font-weight:700; font-size:21px; line-height:1.2; margin:0; color:var(--v-text);}
+  .rfb__sub{font-size:13.5px; line-height:1.5; color:var(--v-text-2); margin:0 0 12px;}
+  .rfb__opts{display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .rfb__opts button{appearance:none; cursor:pointer; font:600 14px/1.25 var(--v-font-sans); color:var(--v-text);
+    background:var(--v-bg-alt); border:1.5px solid var(--v-border-strong); border-radius:var(--v-radius-md);
+    padding:11px 10px; text-align:left; min-height:46px;}
+  .rfb__opts button:hover, .rfb__opts button:focus-visible{border-color:var(--v-accent); background:var(--v-accent-soft);}
+  .rfb__x{position:absolute; top:10px; right:10px; width:36px; height:36px; border:0; background:transparent;
+    border-radius:50%; font-size:22px; line-height:1; color:var(--v-text-muted); cursor:pointer;}
+  .rfb__x:hover{background:var(--v-bg-alt); color:var(--v-text);}
+  .rfb__done{display:flex; gap:14px; align-items:center; font-size:15px; line-height:1.45;}
+  .rfb__done b{display:block; font-family:var(--v-font-serif); font-size:19px; color:var(--v-text);}
+  /* Pihu, cut to the bird's own outline by cropToFigure() below. */
+  .rfb__pihu{flex:none; width:84px; position:relative; overflow:hidden;}
+  .rfb__pihu img{display:block; width:100%; height:auto;}
+  .rfb__pihu.is-cropped img{position:absolute; max-width:none;}
+  @media (max-width:640px){ .rfb{left:12px; right:12px; bottom:12px; width:auto;} }
+  @media print{ .rfb{display:none !important;} }
+</style>
+<div class="rfb" id="report-feedback" role="dialog" aria-labelledby="rfb-title" data-html2canvas-ignore="true" hidden>
+  <div id="rfb-ask">
+    <button class="rfb__x" id="rfb-close" type="button" aria-label="Close">&times;</button>
+    <div class="rfb__head"><span class="rfb__pihu" hidden></span><h2 id="rfb-title">How was the report?</h2></div>
+    <p class="rfb__sub">One tap tells us what to make better. We don't ask for your name.</p>
+    <div class="rfb__opts">
+      <button type="button" data-answer="useful">Useful</button>
+      <button type="button" data-answer="trying">Just trying it out</button>
+      <button type="button" data-answer="scores_off">Scores don't look right</button>
+      <button type="button" data-answer="print_later">I'll print it later</button>
+      <button type="button" data-answer="no_printout">I don't need a printout</button>
+      <button type="button" data-answer="other">Something else</button>
+    </div>
+  </div>
+  <div class="rfb__done" id="rfb-done" role="status" hidden><span class="rfb__pihu" hidden></span><div><b>Thank you</b>That helps us make the next report better.</div></div>
+</div>
+<script>
+(function(){
+  "use strict";
+  var WAIT_MS = 10000, TICK_MS = 500, THANKS_MS = 2500, PIHU_PX = 84, DAY_KEY = "vahini_report_feedback_day";
+  var box = document.getElementById("report-feedback");
+  var ask = document.getElementById("rfb-ask"), done = document.getElementById("rfb-done");
+  var timer = null, seen = 0, printed = false;
+
+  function today(){
+    var d = new Date();
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function askedToday(){ try{ return localStorage.getItem(DAY_KEY) === today(); }catch(e){ return false; } }
+  function isOn(id, cls){ var n = document.getElementById(id); return !!(n && n.classList.contains(cls)); }
+  function stop(){ if (timer){ clearInterval(timer); timer = null; } }
+
+  // The host's Pihu (VAHINI_REPORT_ART.tip) sits in empty space; show only
+  // the bird, PIHU_PX wide. The drawing itself is not changed. Measured
+  // from the file, not the frame: the thank-you frame is hidden at load.
+  function cropToFigure(img, frame){
+    try{
+      var w = img.naturalWidth, h = img.naturalHeight, c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      var g = c.getContext("2d"); g.drawImage(img, 0, 0);
+      var a = g.getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+      for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) {
+        if (a[(y * w + x) * 4 + 3] > 8){ if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+      }
+      if (x1 < 0) return;
+      var s = PIHU_PX / (x1 - x0 + 1);
+      frame.style.height = Math.round((y1 - y0 + 1) * s) + "px";
+      img.style.width = Math.round(w * s) + "px"; img.style.height = Math.round(h * s) + "px";
+      img.style.left = -Math.round(x0 * s) + "px"; img.style.top = -Math.round(y0 * s) + "px";
+      frame.classList.add("is-cropped");
+    }catch(e){ /* a picture from another origin: shown whole */ }
+  }
+  function showPihu(){
+    var art = window.VAHINI_REPORT_ART || {};
+    if (!art.tip || box.querySelector(".rfb__pihu img")) return;
+    [].forEach.call(box.querySelectorAll(".rfb__pihu"), function(frame){
+      var img = new Image();
+      img.alt = "";
+      img.onload = function(){ frame.hidden = false; cropToFigure(img, frame); };
+      // A picture that does not load leaves the card without one, never a broken image.
+      img.onerror = function(){ img.remove(); frame.hidden = true; };
+      img.src = art.tip;
+      frame.appendChild(img);
+    });
+  }
+
+  function show(){
+    stop();
+    try{ localStorage.setItem(DAY_KEY, today()); }catch(e){}
+    ask.hidden = false; done.hidden = true;
+    showPihu();
+    box.hidden = false;
+  }
+  function close(){ box.hidden = true; }
+
+  function tick(){
+    if (printed || window.VAHINI_SAMPLE_RUN){ stop(); return; }
+    if (document.visibilityState === "hidden" || !isOn("screen-report", "on")) return;
+    seen += TICK_MS;
+    if (seen < WAIT_MS) return;
+    // The print popup or the feedback form is open: wait until it closes.
+    if (isOn("vgate", "on") || isOn("vfb-ov", "on")) return;
+    show();
+  }
+
+  // app.js calls this when a check's report is on screen (askAboutReport).
+  function arm(){
+    stop(); close(); seen = 0; printed = false;
+    if (window.VAHINI_SAMPLE_RUN || askedToday()) return;
+    timer = setInterval(tick, TICK_MS);
+  }
+
+  function answer(code){
+    try{
+      if (window.VahiniInsights && typeof window.VahiniInsights.reportFeedback === "function") window.VahiniInsights.reportFeedback(code);
+    }catch(e){}
+    ask.hidden = true; done.hidden = false;
+    setTimeout(close, THANKS_MS);
+  }
+
+  box.querySelector(".rfb__opts").addEventListener("click", function(e){
+    var b = e.target.closest && e.target.closest("button[data-answer]");
+    if (b) answer(b.getAttribute("data-answer"));
+  });
+  document.getElementById("rfb-close").addEventListener("click", close);
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !box.hidden) close(); });
+
+  // A print or a share already says the report was wanted: do not ask. On
+  // window, in the capture phase, so the print popup's handler cannot hide it.
+  function markPrinted(){ printed = true; stop(); close(); }
+  window.addEventListener("click", function(e){
+    if (e.target.closest && e.target.closest("#print-report, #share-save, #share-pdf")) markPrinted();
+  }, true);
+  window.addEventListener("beforeprint", markPrinted);
+
+  window.VahiniReportFeedback = { arm: arm };
+})();
+</script>
 </body>
 </html>
