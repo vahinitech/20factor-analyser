@@ -250,7 +250,7 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   handwriting_not_read, not_writing_page, server_down, too_large, invalid_file, key_problem,
+   handwriting_not_read, not_writing_page, turned_page, server_down, too_large, invalid_file, key_problem,
    account_unavailable, too_big, heic, unreadable, pdf_unreadable,
    photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
@@ -616,6 +616,36 @@ function imageToBlob(img){
   }).then(b=>b || VahiniOCR.canvasToBlob(c));
 }
 
+/* The photo turned the way the server read it (pyReport.turned, degrees
+   clockwise, #297): a page photographed on its side with no EXIF turn is
+   read upright, and every box and strip in the report is on the upright
+   page, so the report draws from a copy turned the same way. Capped like
+   the upload; resolves to the photo itself when there is nothing to do. */
+function turnedImage(img, turn){
+  if (![90, 180, 270].includes(turn)) return Promise.resolve(img);
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+  const s = Math.min(1, UPLOAD_MAX_SIDE / Math.max(w0, h0));
+  const w = Math.max(1, Math.round(w0 * s)), h = Math.max(1, Math.round(h0 * s));
+  const quarter = turn !== 180;
+  const c = document.createElement('canvas');
+  c.width = quarter ? h : w; c.height = quarter ? w : h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate(turn * Math.PI / 180);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  return new Promise(res=>{
+    const done = url=>{
+      const out = new Image();
+      out.onload = ()=>res(out);
+      out.onerror = ()=>res(img);
+      out.src = url;
+    };
+    if (c.toBlob) c.toBlob(b=>done(b ? URL.createObjectURL(b) : c.toDataURL('image/jpeg', 0.92)), 'image/jpeg', 0.92);
+    else done(c.toDataURL('image/jpeg', 0.92));
+  });
+}
+
 /* Warn, before upload, about the two photo problems that measurably change
    the scores. Calibrated on stage (2026-10-07): a blurred copy of the test
    page scored 68 or 49 against 73 and a quarter-size copy 53, while a dark
@@ -677,7 +707,7 @@ async function runPipeline(){
   if (processPanelHTML !== null){ const pp=$('#screen-process .panel'); if(pp) pp.innerHTML = processPanelHTML; }
   const ph=$('#screen-process .screen-head'); if(ph) ph.style.display='';
   renderLog();
-  const img = state.imageEl;
+  let img = state.imageEl;
   collectIntake();
 
   // Defensive re-check: the "Run analysis" button is normally disabled while
@@ -838,6 +868,20 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'turned_page'){
+    // The lines run up and down and the server could not tell which way
+    // up the page is: refused rather than scored on its side (#297).
+    showReject({
+      outcome: 'turned_page',
+      reason: 'This photo is on its side',
+      detail: 'The lines of writing run up and down in this photo, and we could not tell which way up the page is, so we did not score it. This did not use up one of your free checks.',
+      tips: [
+        'Turn the photo so the lines of writing run across, then upload it again',
+        'Or take a new photo with the top of the page at the top of the screen',
+      ],
+    });
+    return;
+  }
   if (pyReport && pyReport.error_code === 'not_writing_page'){
     // Mostly numbers and sums: a maths or science notebook page. The
     // factors measure letters, words and word gaps, so it is not scored.
@@ -877,6 +921,12 @@ async function runPipeline(){
     measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
+  // A photo the server read turned (#297): draw from a copy turned the
+  // same way, so "From your page" and every strip show it upright.
+  if (pyReport.turned){
+    img = await turnedImage(img, pyReport.turned);
+    if (img !== state.imageEl) detURL = await compressImageURL(img.src, 1100, 0.72);
+  }
   // Redraw the sample with the detected word boxes (orange) + baselines
   // (teal): the detection view shown on the report's first page.
   const boxedURL = drawDetectionOverlay(img, pyReport);

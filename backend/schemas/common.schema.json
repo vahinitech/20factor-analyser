@@ -1001,6 +1001,14 @@
       "pattern": "^([3-9]|1[0-8])-([3-9]|1[0-8])$",
       "description": "The request's age_band as sent, when it sent one: two whole-year ages, such as 6-7. Not used by any score yet (#216); never a birth date, never stored."
     },
+    "pageTurn": {
+      "enum": [
+        90,
+        180,
+        270
+      ],
+      "description": "Degrees the analyser turned the photo clockwise to read it upright, when it was taken sideways or upside down with no EXIF turn (#297). Every box and mark in the report is on the turned photo, so a viewer turns its own copy the same way before drawing them. Absent when the photo was read as it is."
+    },
     "recognitionMetadata": {
       "type": "object",
       "properties": {

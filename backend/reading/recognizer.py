@@ -255,13 +255,15 @@ def _refine_engine_for_line(line_lang: str, backend_name: str) -> str:
     return stages.table().refine_engine(line_lang or "en")
 
 
-def _crop_reader(raw_bytes, proc_arr):
+def _crop_reader(raw_bytes, proc_arr, turn=0):
     """crop_for(line) for the escalation loop: the line's box cut from the
     FULL-RESOLUTION original (paddle's working image is downscaled, and
     the full image reads materially better), padded 6% across and 25% up
     and down plus 6 px. The photo is decoded on the first crop asked for.
     None for a line with no usable box, or when the photo cannot be
-    decoded: such a line keeps the reader's reading, as it always has."""
+    decoded: such a line keeps the reader's reading, as it always has.
+    turn: the page's turn to upright (page_turn.py), as the working copy
+    had it."""
     ph = float(max(1, proc_arr.shape[0]))
     pw = float(max(1, proc_arr.shape[1]))
     full = []
@@ -271,7 +273,7 @@ def _crop_reader(raw_bytes, proc_arr):
             try:
                 with perf.stage("decode.full") as step:
                     full.append(
-                        np.array(computer_vision.decode_image(raw_bytes))
+                        np.array(computer_vision.decode_image(raw_bytes, turn))
                     )
                     step.size(pixels=full[0].shape[0] * full[0].shape[1])
             except Exception:
@@ -303,7 +305,11 @@ def _guard(lower, text, conf):
 
 
 def refine_handwriting_text(
-    raw_bytes: bytes, proc_arr: np.ndarray, hand_lines, backend_name: str
+    raw_bytes: bytes,
+    proc_arr: np.ndarray,
+    hand_lines,
+    backend_name: str,
+    turn: int = 0,
 ):
     """Send each handwriting line up its ladder (backend/languages/
     ladders.json, escalation.py) and keep a higher rung's text when
@@ -337,7 +343,11 @@ def refine_handwriting_text(
     escalation.climb(
         hand_lines,
         backend_name,
-        _crop_reader(raw_bytes, proc_arr) if raw_bytes else lambda _l: None,
+        (
+            _crop_reader(raw_bytes, proc_arr, turn)
+            if raw_bytes
+            else lambda _l: None
+        ),
         _guard,
     )
 
@@ -348,6 +358,7 @@ def extract_hand_lines(
     raw_bytes: bytes = None,
     refine_backend: str = None,
     read_region=None,
+    turn: int = 0,
 ):
     """Shared post-processing: merge repeated readings → region-filter →
     drop non-text-ink layout regions (image/figure/chart/seal) → read the
@@ -357,7 +368,9 @@ def extract_hand_lines(
     with a stronger engine. Returns (all_lines, hand_lines).
 
     read_region(crop, lang) -> lines | None is the scan's own reader
-    (ocr_backends.read_region); see line_recovery.py.
+    (ocr_backends.read_region); see line_recovery.py. turn: how far the
+    working copy was turned to stand upright (page_turn.py), applied to
+    the full-size photo the same way.
     """
     with perf.stage("merge", lines=len(raw_lines)):
         lines = detector.region_filter_lines(
@@ -381,7 +394,9 @@ def extract_hand_lines(
     with perf.stage("join", lines=len(hand_lines)):
         hand_lines = detector.join_row_pieces(hand_lines)
     if refine_backend in ladders.MODES:
-        refine_handwriting_text(raw_bytes, arr, hand_lines, refine_backend)
+        refine_handwriting_text(
+            raw_bytes, arr, hand_lines, refine_backend, turn
+        )
     return lines, hand_lines
 
 
