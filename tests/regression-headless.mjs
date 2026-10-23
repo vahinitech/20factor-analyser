@@ -96,7 +96,7 @@ async function runHeadlessChecks() {
         headline:host.querySelector('.sn-title').textContent,
         rings:host.querySelectorAll('.sn-m[data-measure=read] ellipse.sn-m-ring').length,
         readText:host.querySelector('.sn-m[data-measure=read] .sn-m-what p')?.textContent||'',
-        teacher:host.querySelector('.sn-teacher')?{grow:host.querySelector('.sn-grow').textContent,grade:host.querySelector('.sn-grade')?.textContent||'',sign:host.querySelector('.sn-sign').textContent}:null,
+        teacher:host.querySelector('.sn-teacher')?{grow:[...host.querySelectorAll('.sn-note-table tr')].map(r=>[...r.children].map(c=>c.textContent.trim())),open:host.querySelector('.sn-keep').textContent,grade:host.querySelector('.sn-grade')?.textContent||'',sign:host.querySelector('.sn-sign').textContent}:null,
         keep:host.querySelector('.sn-keep')?host.querySelector('.sn-keep').dataset.factor:null,
         start:host.querySelector('.sn-start')?host.querySelector('.sn-start').dataset.factor:null,
         tryCall:!!host.querySelector('.sn-start .sn-try'),
@@ -156,7 +156,7 @@ async function runHeadlessChecks() {
       // for the page and her name.
       // No score on the report (owner, 2026-10-23): Vidhya names the skills
       // and signs; there is no overall pill and no score line.
-      {ok:!!freeReport.teacher && /^Two things to work on next\. First, leave the same gap between words\./.test(freeReport.teacher.grow) && freeReport.teacher.grade==='' && freeReport.teacher.sign==='Vidhya, your handwriting expert teacher', name:'Page 1: Vidhya\'s note names the skills to work on and her name, with no score', detail:freeReport.teacher},
+      {ok:!!freeReport.teacher && JSON.stringify(freeReport.teacher.grow)===JSON.stringify([['You are a master at','To improve next'],['Your words sit nicely on the line.','Leave the same gap between words.'],['','Make your small letters the same height.']]) && /^Hello! Your handwriting is nice to read\.$/.test(freeReport.teacher.open) && freeReport.teacher.grade==='' && freeReport.teacher.sign==='Vidhya, your handwriting expert teacher', name:'Page 1: Vidhya\'s note, in words: what the writer is a master at beside what to improve next, and her name, with no score', detail:freeReport.teacher},
       {ok:freeReport.pill===null && !freeReport.numbers, name:'Page 1: no overall score and no score numbers on the report', detail:JSON.stringify({pill:freeReport.pill,numbers:freeReport.numbers})},
       {ok:freeReport.keep==='7' && freeReport.start==='8' && freeReport.tryCall, name:'Page 1: keep doing the strongest skill, start with the first skill to grow', detail:JSON.stringify({keep:freeReport.keep,start:freeReport.start})},
       {ok:freeReport.photo && freeReport.marks===0, name:'Page 1: the photo is shown whole, without numbered boxes (the rows below draw each measurement)', detail:JSON.stringify({photo:freeReport.photo,marks:freeReport.marks})},

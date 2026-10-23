@@ -493,18 +493,31 @@ function render(host, data){
      work on next, a promise to practise, and her score for the page.
      Vidhya is the series' teacher; her picture comes from the host like
      every character. Built only from this report's own scores. */
-  const lcFirst=x=>t.lang==='en'&&x?x.charAt(0).toLowerCase()+x.slice(1):x;
   const goalOf=f=>t.has('goal.'+f.n)?t('goal.'+f.n):nameOn(1,f)+'.';
-  const grows=rowFactors.slice(0,2).map(goalOf);
-  const growText=grows.length>1?t('vt.grow.two',{a:lcFirst(grows[0]),b:lcFirst(grows[1])})
-    :grows.length?t('vt.grow.one',{a:lcFirst(grows[0])}):t('vt.grow.none');
-  const keepText=best?(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best)+'.'):'';
+  /* Vidhya's note in words, no scores (owner, 2026-10-23): what the writer
+     is a master at beside what to improve next, as a two-column table.
+     Praise comes only from the five skills the overall counts
+     (scoring._OVERALL_POINTS) at Mastering or Strong, so a measurement
+     known to misread a page never praises it. */
+  const COUNTED=[1,5,7,11,17];
+  const mastered=measured.filter(f=>COUNTED.includes(f.n)&&f.score>=7&&!rowFactors.includes(f))
+    .sort((a,b)=>b.score-a.score||a.n-b.n).slice(0,3);
+  const skillOf=n=>measured.find(f=>f.n===n);
+  const clear=skillOf(1), easy=skillOf(18);
+  const opening=clear&&clear.score>=8.5&&easy&&easy.score>=7?t('vt.open.beautiful')
+    :(clear&&clear.score>=7)||(easy&&easy.score>=7)?t('vt.open.nice'):t('vt.open.thanks');
+  const praised=mastered.map(f=>t.has('well.'+f.n)?t('well.'+f.n):t('keep.title.'+f.n));
+  const improve=rowFactors.slice(0,2).map(goalOf);
+  const noteRows=Math.max(praised.length,improve.length);
+  const noteTable=noteRows?`<table class="sn-note-table"><thead><tr><th scope="col">${esc(t('vt.master'))}</th><th scope="col">${esc(t('vt.improve'))}</th></tr></thead>
+      <tbody>${Array.from({length:noteRows},(_,r)=>`<tr><td>${esc(praised[r]||'')}</td><td>${esc(improve[r]||'')}</td></tr>`).join('')}</tbody></table>`
+    :`<p class="sn-grow">${esc(t('vt.grow.none'))}</p>`;
+  const keepN=(mastered[0]||best||{}).n;
   const teacherNote=best?`<div class="sn-teacher">${artImg('teacher','rp-art-teacher')}<div class="sn-note">
       <h2 class="sn-title">${esc(t('sn.title'))}</h2>
-      <p class="sn-keep" data-factor="${best.n}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(t('vt.well',{keep:keepText}))}</p>
-      <p class="sn-grow">${esc(growText)}</p>
-      <p class="sn-promise">${esc(t('vt.promise'))}</p>
-      <div class="sn-note-end"><p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
+      <p class="sn-keep" data-factor="${keepN}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(opening)}</p>
+      ${noteTable}
+      <div class="sn-note-end"><p class="sn-promise">${esc(t('vt.promise'))}</p><p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
     :`<h2 class="sn-title">${esc(t('sn.title'))}</h2>`;
   // "Look closer": the first two skills to grow; a spelling finding may
   // take the second row.

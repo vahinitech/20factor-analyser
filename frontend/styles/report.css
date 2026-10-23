@@ -1010,6 +1010,14 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-note-end{ display:flex; justify-content:space-between; align-items:baseline; gap:2px 14px; flex-wrap:wrap; margin-top:1px; }
 .free-report.compact-report .sn-note p.sn-grade{ font-weight:700; margin:0; }
 .free-report.compact-report .sn-note p.sn-sign{ font:600 23px/1 var(--handB); color:var(--v-accent-text); margin:0; }
+.free-report.compact-report .sn-note p.sn-promise{ flex:1 1 320px; margin:0; }
+/* What the writer is a master at, beside what to improve next. */
+.sn-note-table{ width:100%; border-collapse:collapse; margin:3px 0 4px; background:var(--v-surface); border-radius:8px; }
+.free-report.compact-report .sn-note-table th, .free-report.compact-report .sn-note-table td{ width:50%; padding:3px 10px; text-align:left; vertical-align:top; font:400 14px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .sn-note-table th{ font-weight:700; color:var(--v-accent-text); }
+.free-report.compact-report .sn-note-table td{ border-top:1px solid var(--v-border); }
+.free-report.compact-report .sn-note-table th:first-child::before{ content:"✓ "; }
+.free-report.compact-report .sn-note-table th:last-child::before{ content:"→ "; }
 .sn-leaf{ width:30px; height:38px; flex:none; }
 .sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
 .sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }

@@ -71,6 +71,7 @@ const RENDER = `window.__render = (opts) => {
     chips: [...host.querySelectorAll('.sn-chip')].map(e => e.dataset.factor),
     bands: [...host.querySelectorAll('.sn-start .sn-meta, .pr-badge')].map(e => e.textContent),
     keep: host.querySelector('.sn-keep') ? host.querySelector('.sn-keep').textContent : '',
+    master: host.querySelector('.sn-note-table tbody td') ? host.querySelector('.sn-note-table tbody td').textContent : '',
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
@@ -154,8 +155,8 @@ try {
     'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
   add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
     'The bundle and the served catalogue carry each skill\'s why, win and page');
-  add(/Your words sit on the line\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
-    'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
+  add(/Your handwriting is nice to read\./.test(free.keep) && /Your words sit nicely on the line\./.test(free.master) && /You are getting better with every page!/.test(free.closing),
+    'Page 1 opens with a strength and page 2 closes with encouragement', { keep: free.keep, master: free.master });
   add(JSON.stringify(free.others) === '["7","18"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
     'Other skills we checked lists the rest, strongest first, then what Pro adds, with no price', { others: free.others, note: free.proNote });
   add(!free.rows.some(r => r.factor === 'spelling'), 'No spelling row without a finding');
