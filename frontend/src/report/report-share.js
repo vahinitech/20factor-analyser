@@ -3,6 +3,8 @@
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Beside the report, on screen only (the side panel never prints):
+   - "Report for" (#report-for): the student view or today's report, redrawn
+     in place (owner, 2026-10-23).
    - "Print in" (#report-lang): redraws the report and "Your progress" in
      the chosen language. Scores, crops, the page photo and the pictures do
      not change, only the words. The choice is kept in this browser.
@@ -274,6 +276,13 @@ function init(){
   if (pick && global.VahiniI18n){
     pick.value = global.VahiniI18n.language();
     pick.addEventListener('change', ()=>applyLanguage(pick.value));
+  }
+  // "Report for" (owner, 2026-10-23): the student view or today's report,
+  // redrawn without a new scan. Kept in this tab only (report-render.js).
+  const forPick = doc.getElementById('report-for');
+  if (forPick && global.VahiniReport && global.VahiniReport.audience){
+    forPick.value = global.VahiniReport.audience();
+    forPick.addEventListener('change', ()=>{ global.VahiniReport.setAudience(forPick.value); global.VahiniReport.rerender(); });
   }
   const btn = doc.getElementById('share-pdf');
   if (btn) btn.addEventListener('click', ()=>{ sharePDF(); });
