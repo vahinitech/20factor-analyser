@@ -45,6 +45,7 @@ SOURCES = [
     "src/report/worksheet-catalog.js",
     "src/report/worksheets.js",
     "src/report/strings/en.js",
+    "src/report/strings/en-us.js",
     "src/report/strings/te.js",
     "src/report/i18n.js",
     "src/report/progress.js",

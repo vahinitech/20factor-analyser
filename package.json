@@ -38,7 +38,8 @@
     "test:report-feedback": "node tests/report-feedback.mjs",
     "test:share-embed": "node tests/report-share-embed.mjs",
     "test:unit": "for t in tests/*.test.mjs; do echo \"== $t\"; node \"$t\" || exit 1; done",
-    "coverage:frontend": "c8 npm run -s test:unit"
+    "coverage:frontend": "c8 npm run -s test:unit",
+    "test:student-language": "node tests/student-language.mjs"
   },
   "devDependencies": {
     "c8": "12.0.0",
