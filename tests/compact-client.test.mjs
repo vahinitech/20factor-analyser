@@ -18,6 +18,11 @@ const missing=context.VahiniCompact.decode({...response,factors:[{n:1,s:null,st:
 assert.equal(missing.analysis.results[0].score,null);
 assert.equal(missing.analysis.results[0].unmeasured,true);
 console.log('PASS compact client: five Free factors, preserved scores, null handling and version validation');
+// A page the server set upright (#297) says how far it turned it; anything
+// but a quarter, half or three-quarter turn is drawn as sent.
+for(const turned of [90,180,270])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,turned);
+for(const turned of [undefined,0,45,'90',-90,360])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,0);
+console.log('PASS compact client: turned is 90, 180 or 270, otherwise 0');
 // Practice report (#122): the catalogue's exercises, tips and settings reach
 // the renderer; an archived catalogue without them gives none.
 for(const name of fs.readdirSync('backend/catalogs')){
