@@ -31,6 +31,33 @@ for (const [id, value] of Object.entries(us)) {
 }
 assert.ok(!Object.values(us).some(v => /practis/i.test(v)), 'American English says practice');
 
+// Which English a reader gets: Indian by default, American when set or
+// for a reader in the Americas with an en-US browser; other languages
+// never change. Read on the device only.
+{
+  const store = {};
+  window.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
+  window.navigator = { language: 'en-US' };
+  const word = () => i18n.translator('en')('stu.practise');
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  assert.equal(i18n.english(), /^America\//.test(zone) ? 'us' : 'in', 'no setting: the time zone and the browser decide');
+  store.vahini_report_english = 'us';
+  assert.equal(i18n.english(), 'us');
+  assert.equal(word(), 'Practice this week', 'American English: practice');
+  assert.equal(i18n.translator('en').locale, 'en-US', 'American dates and numbers');
+  assert.equal(i18n.translator('te')('stu.practise'), te['stu.practise'], 'Telugu is not changed');
+  assert.equal(i18n.translator('en')('stu.sp.pill'), en['stu.sp.pill'], 'a sentence American English does not change comes from en.js');
+  store.vahini_report_english = 'in';
+  assert.equal(word(), 'Practise this week', 'Indian English: practise');
+  store.vahini_report_english = 'something else';
+  window.navigator = { language: 'en-IN' };
+  assert.equal(i18n.english(), 'in', 'an en-IN browser reads Indian English anywhere');
+  window.localStorage = { getItem: () => { throw new Error('blocked'); } };
+  assert.equal(i18n.english(), 'in', 'blocked storage and an en-IN browser: Indian English');
+  delete window.localStorage;
+  delete window.navigator;
+}
+
 // Completeness: list what is missing per language, then fail on it.
 let failed = false;
 for (const [lang, table] of Object.entries(LANGS)) {
