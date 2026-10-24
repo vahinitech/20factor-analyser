@@ -4,6 +4,8 @@
 // - a first visit opens it by itself: "I am", the photo button (Take a
 //   photo on a phone, Choose a photo on a computer), "Try a sample",
 //   "Analyse", each lit with the note beside it, Next and then Done;
+// - after the cookie card is answered, never on top of it, and never
+//   after the visitor has clicked or typed;
 // - once per browser: Done, Skip, Escape or a chosen photo ends it for good,
 //   and "Show me around" brings it back;
 // - Pihu is the host's cut layers when the host maps them, the whole bird
@@ -79,6 +81,31 @@ try {
     await page.waitForTimeout(2000);
     assert.equal(await page.locator('#pihu-guide').count(), 0, 'not after a click');
     assert.equal(await page.evaluate(() => localStorage.getItem('vahini_guide_check')), null, 'and it waits for another visit');
+    await ctx.close();
+  }
+
+  // The cookie card comes first: the guide waits until it is answered, and
+  // answering it does not count as being busy.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    await ctx.addInitScript(() => {
+      document.addEventListener('DOMContentLoaded', () => {
+        const card = document.createElement('div'); card.id = 'vt-cc'; card.className = 'cc';
+        card.innerHTML = '<button id="cc-accept">OK</button>';
+        card.style.cssText = 'position:fixed;left:12px;bottom:12px;z-index:9999;background:#fff;padding:20px';
+        document.body.appendChild(card); document.body.classList.add('cc-open');
+        card.querySelector('button').addEventListener('click', () => { document.body.classList.remove('cc-open'); card.remove(); });
+      });
+    });
+    const page = await ctx.newPage();
+    await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
+    await page.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.waitForTimeout(3000);
+    assert.equal(await page.locator('#pihu-guide').count(), 0, 'not while the cookie card shows');
+    await page.click('#cc-accept');
+    await guide(page).waitFor({ timeout: 3000 });
+    assert.equal(await page.locator('.pg-n').innerText(), '1 of 4', 'then the guide starts');
     await ctx.close();
   }
 

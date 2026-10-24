@@ -9,7 +9,8 @@
    and a short note says what the button does, with Next and Skip. Once per
    browser for each set; "Show me around" brings it back. Escape, Skip, a
    chosen photo or a new screen ends it. With motion turned off Pihu
-   appears beside each button without flying.
+   appears beside each button without flying. It waits for the cookie card
+   and never interrupts a visitor who is already busy.
 
    Pihu is the drawings library's original bird, from the host's map: the
    cut layers (window.VAHINI_GUIDE_ART: body, wingBack, wingFront) so the
@@ -165,17 +166,33 @@ function start(kind){
 const onScreen = (id) => { const s = doc.getElementById(id); return !!(s && s.classList.contains('on')); };
 /* It never interrupts: a visitor who has already clicked, tapped or typed
    since the page or the report appeared is busy, so the guide waits for
-   another visit (or "Show me around"). */
+   another visit (or "Show me around"). The site's cookie card comes first
+   on a first visit: the guide waits until it is answered (the host keeps
+   body.cc-open while it shows), and answering it does not count as busy. */
+const COOKIE_CARD = '#vt-cc';
 let touchedAt = 0;
-['pointerdown', 'keydown'].forEach((t) => doc.addEventListener(t, () => { touchedAt = Date.now(); }, true));
+['pointerdown', 'keydown'].forEach((t) => doc.addEventListener(t, (e) => {
+  if (!(e.target && e.target.closest && e.target.closest(COOKIE_CARD))) touchedAt = Date.now();
+}, true));
 const idleSince = (t0) => touchedAt < t0;
+const cookieCard = () => doc.body.classList.contains('cc-open');
 const otherPopup = () => onScreen('vgate') || onScreen('vfb-ov') || (doc.getElementById('report-feedback') && !doc.getElementById('report-feedback').hidden);
+/* Starts `kind` after `ms` on an idle page, once the cookie card is answered. */
+function whenFree(kind, screen, ms){
+  const t0 = Date.now();
+  const tryStart = () => {
+    if (open || !onScreen(screen) || !idleSince(t0) || otherPopup()) return;
+    if (cookieCard()){ global.setTimeout(tryStart, 500); return; }
+    start(kind);
+  };
+  const afterCard = () => (cookieCard() ? global.setTimeout(afterCard, 500) : global.setTimeout(tryStart, ms));
+  afterCard();
+}
 
 /* After a report is on screen (app.js): the two stops, once per browser. */
 function report(){
   if (seen('report')) return;
-  const t0 = Date.now();
-  global.setTimeout(() => { if (onScreen('screen-report') && !open && idleSince(t0) && !otherPopup()) start('report'); }, 1200);
+  whenFree('report', 'screen-report', 1200);
 }
 
 function init(){
@@ -184,8 +201,7 @@ function init(){
   const againReport = doc.getElementById('guide-again-report');
   if (againReport) againReport.addEventListener('click', (e) => { e.preventDefault(); start('report'); });
   if (!doc.getElementById('who-bar') || seen('check')) return;
-  const t0 = Date.now();
-  global.setTimeout(() => { if (onScreen('screen-upload') && !open && idleSince(t0) && !otherPopup()) start('check'); }, 900);
+  whenFree('check', 'screen-upload', 900);
 }
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
 else init();
