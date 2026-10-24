@@ -130,7 +130,12 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   the writing and never the child, and end on encouragement. Never "weak",
   "poor", "bad", "wrong", "problem", "inadequate", "fail", "lowest" or
   "mistake" in
-  report text or catalogue text, in any language. Stage labels:
+  report text or catalogue text, in any language. One exception (owner,
+  2026-10-24): the student view's headings "Spelling mistakes" and
+  "Grammar mistakes", in plain words a child knows; the tests allow those
+  two ids only. English follows the place: Indian English (British
+  spelling) by default, American English (`strings/en-us.js`) for a
+  reader in the Americas. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.
 - **A choice that cannot be honoured blocks at Run, not after the report.**

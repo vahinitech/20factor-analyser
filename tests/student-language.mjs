@@ -3,7 +3,8 @@
 // Words and sentences to check in the student view (#317), on the free
 // sample page with a `language` section added to its data:
 // - a card for words and one for sentences, only from the server's
-//   findings, at most three of each;
+//   findings, at most three of each, first in the student view (owner,
+//   2026-10-24);
 // - each finding shows the child's own ink at its place (a cut of the
 //   photo), never our reading of the child's word, and the word to write;
 // - a page not checked, or checked with nothing found, shows no card and
@@ -22,7 +23,8 @@ for (const f of ['frontend/src/report/strings/en.js', 'frontend/src/report/strin
 const { en, te } = context.window.VahiniReportStrings;
 for (const id of Object.keys(en).filter((k) => /^stu\.(sp|gr|lang)\./.test(k))) {
   assert.ok(id in te, `te.js has ${id}`);
-  assert.ok(!/\b(mistake|wrong|bad|poor)\b/i.test(en[id]), `${id}: words for children`);
+  // The two headings say "mistakes" (owner, 2026-10-24); nothing else may.
+  if (!/\.pill$/.test(id)) assert.ok(!/\b(mistake|wrong|bad|poor)\b/i.test(en[id]), `${id}: words for children`);
 }
 
 // Places on the sample photo's hardest row (its measured letters).
@@ -77,12 +79,37 @@ try {
     for (const w of ['eviclc', 'Sumef', 'ove ']) assert.ok(!shown.includes(w), `our reading "${w.trim()}" is never shown as the child's word`);
     assert.ok(shown.includes(en['stu.sp.copied']), 'says the words come from the copied sentence');
     assert.ok(shown.includes(en['stu.sp.letters']) && shown.includes(en['stu.sp.missing_letter']), 'a short reason for each word');
-    assert.equal(await words.locator('.stu-proof ellipse.stu-m-word').count(), 3, 'the row strip circles the words on it');
     assert.equal(await sentences.locator('.stu-right').innerText(), 'she sings');
     assert.ok(shown.includes(en['stu.gr.verb_s']), 'the rule in one line');
-    assert.equal(await sentences.locator('.stu-proof line.stu-m-sentence').count(), 1, 'the sentence is underlined on the strip');
     assert.equal(await page.locator('.stu-lang .stu-tip').count(), 2, "Pihu's tip on each card");
+    // Compact (owner, 2026-10-24: no wasted space): words beside
+    // sentences in one card, each finding on one line, the practice card
+    // beside the skills, each skill's strip beside its sentence.
+    assert.equal(await page.locator('.stu-lang.stu-card').count(), 1, 'one card for words and sentences');
+    const [wb, sb] = [await words.boundingBox(), await sentences.boundingBox()];
+    assert.ok(Math.abs(wb.y - sb.y) < 2 && sb.x > wb.x + wb.width - 1, 'words and sentences side by side');
+    for (const h of await page.locator('.stu-fix').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().height))) {
+      assert.ok(h <= 60, `a finding takes one line (${h}px)`);
+    }
+    const [five, work] = [await page.locator('.stu-five').boundingBox(), await page.locator('.stu-work').boundingBox()];
+    assert.ok(work.x > five.x + five.width - 1, 'the practice card sits beside the skills, not below them');
+    const row = await page.locator('.stu-five .stu-row-body').first().boundingBox();
+    const proof = await page.locator('.stu-five .stu-row-body .stu-proof').first().boundingBox();
+    assert.ok(proof.x > row.x + 40, "each skill's strip sits beside its sentence");
+    const order = await page.locator('section.stu > *').evaluateAll((els) => els.map((e) => e.className));
+    assert.ok(order[0].includes('stu-lang'), `words and sentences come first (owner, 2026-10-24): ${order.join(' | ')}`);
     assert.equal(sent.length, 0, 'nothing is sent');
+    await page.close();
+  }
+
+  // English follows the place: Indian English (practise) by default,
+  // American English (practice) when set (owner, 2026-10-24).
+  for (const [english, word] of [['in', 'Practise this week'], ['us', 'Practice this week']]) {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    await useDesign(page);
+    await page.addInitScript((e) => { try { localStorage.setItem('vahini_report_english', e); } catch {} }, english);
+    await page.goto('http://127.0.0.1:4213/frontend/sample-report.html?example=free&for=student', { waitUntil: 'networkidle' });
+    assert.ok((await page.locator('.stu').innerText()).includes(word), `${english}: "${word}"`);
     await page.close();
   }
 
@@ -95,7 +122,7 @@ try {
     const { page } = await open('&for=student', language);
     assert.equal(await page.locator('.stu').count(), 1, `${what}: the student view is there`);
     assert.equal(await page.locator('.stu-lang').count(), 0, `${what}: no words or sentences card`);
-    assert.ok(!/no (spelling|grammar)? ?mistakes/i.test(await page.locator('.stu').innerText()), `${what}: never "no mistakes"`);
+    assert.ok(!/\bno (spelling |grammar )?mistakes/i.test(await page.locator('.stu').innerText()), `${what}: never "no mistakes"`);
     await page.close();
   }
 

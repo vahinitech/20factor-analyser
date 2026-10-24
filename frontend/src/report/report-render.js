@@ -851,7 +851,8 @@ function render(host, data){
     const fiveRows=rowsOf.map(f=>{const st=state(f), pr=proofOf(f,st==='keep'?'keep':'look');
       return `<li class="stu-row stu-row-${st}" data-factor="${f.n}" data-state="${st}">${mark(st,false)}<div class="stu-row-body"><p>${esc(t(pr?pr.say:'stu.noproof'))} ${mark(st,true)}</p>${proofBox(pr)}</div></li>`;}).join('');
     const fiveCard=`<div class="stu-card stu-five"><h2>${esc(t.n('stu.five',live5.length))}</h2><ul>${fiveRows}</ul></div>`;
-    // Words and sentences to check (#317): only what the server's
+    // Words and sentences to check (#317), first on the screen (owner,
+    // 2026-10-24): only what the server's
     // language check found, each shown as the child's own ink at its
     // place and the word to write. Never our reading of the child's word,
     // which can be off by a letter, and never "no mistakes": nothing
@@ -870,34 +871,24 @@ function render(host, data){
       return `<svg class="stu-ink${cls?' '+cls:''}" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${(x1-x0).toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('stu.lang.ink'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></svg>`;
     };
     const LG_ARROW='<svg class="stu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>';
-    // One strip of the row that holds the first finding, every finding on
-    // that row marked: rings round words, a line under sentences.
-    const lgStrip=(list,mark)=>{
-      const first=list.map(lgPlace).find(Boolean);
-      if(!first) return '';
-      const same=list.map(lgPlace).filter(p=>p&&p.line===first.line);
-      const xs=same.map(p=>p.bbox), x0=Math.min(...xs.map(b=>b[0])), x1=Math.max(...xs.map(b=>b[0]+b[2]));
-      const y0=Math.min(...xs.map(b=>b[1])), y1=Math.max(...xs.map(b=>b[1]+b[3]));
-      return `<div class="stu-proof">${strip(pad([x0,y0,x1-x0,y1-y0],0.25,0.3),vw=>xs.map(b=>mark(b,vw)).join(''))}</div>`;
-    };
-    const lgRing=(b,vw)=>`<ellipse class="stu-m-word" cx="${b[0]+b[2]/2}" cy="${b[1]+b[3]/2}" rx="${(b[2]*0.62).toFixed(1)}" ry="${(b[3]*0.62).toFixed(1)}" stroke-width="${(vw*0.008).toFixed(2)}"/>`;
-    const lgUnder=(b,vw)=>line([b[0],b[1]+b[3]*1.02],[b[0]+b[2],b[1]+b[3]*1.02],'stu-m-sentence',vw*0.009,'10 7');
+    // One compact card: words beside sentences, each finding on one line
+    // (the child's ink, an arrow, the word to write with its reason under
+    // it), a one-line tip under each. The ink is the proof, so no strip.
     const lgFix=(f,why)=>{const p=lgPlace(f);
-      return `<li class="stu-fix">${p?lgInk(p.bbox,'',p.placed==='estimated'):''}${LG_ARROW}<span class="stu-right">${esc(f.suggestion)}</span><span class="stu-fix-why">${esc(why)}</span></li>`;};
+      return `<li class="stu-fix">${p?lgInk(p.bbox,'',p.placed==='estimated'):''}${LG_ARROW}<span class="stu-fix-text"><span class="stu-right">${esc(f.suggestion)}</span><span class="stu-fix-why">${esc(why)}</span></span></li>`;};
     const lgTip=key=>`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(t(key))}</span></p>`;
     let langCards='';
     if(lgSec){
       const words=(lgSec.spelling||[]).slice(0,3), sentences=(lgSec.grammar||[]).slice(0,3);
       const copied=words.some(f=>f.against==='sentence');
-      const wordCard=words.length?`<div class="stu-card stu-words" data-lang="spelling"><span class="stu-pill stu-pill-lang">${esc(t('stu.sp.pill'))}</span>
-        ${copied?`<p class="stu-lang-note">${esc(t('stu.sp.copied'))}</p>`:''}
-        ${lgStrip(words,lgRing)}<ul class="stu-fixes">${words.map(f=>lgFix(f,t('stu.sp.'+f.kind))).join('')}</ul>${lgTip('stu.sp.tip')}</div>`:'';
-      const sentenceCard=sentences.length?`<div class="stu-card stu-sentences" data-lang="grammar"><span class="stu-pill stu-pill-lang">${esc(t('stu.gr.pill'))}</span>
-        ${lgStrip(sentences,lgUnder)}<ul class="stu-fixes">${sentences.map(f=>lgFix(f,t('stu.gr.'+f.rule))).join('')}</ul>${lgTip('stu.gr.tip')}</div>`:'';
-      if(wordCard||sentenceCard) langCards=`<div class="stu-grid stu-lang">${wordCard}${sentenceCard}</div>`;
+      const wordPart=words.length?`<div class="stu-lang-sec stu-words" data-lang="spelling"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.sp.pill'))}</span>${copied?`<span class="stu-lang-note">${esc(t('stu.sp.copied'))}</span>`:''}</div>
+        <ul class="stu-fixes">${words.map(f=>lgFix(f,t('stu.sp.'+f.kind))).join('')}</ul>${lgTip('stu.sp.tip')}</div>`:'';
+      const sentencePart=sentences.length?`<div class="stu-lang-sec stu-sentences" data-lang="grammar"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.gr.pill'))}</span></div>
+        <ul class="stu-fixes">${sentences.map(f=>lgFix(f,t('stu.gr.'+f.rule))).join('')}</ul>${lgTip('stu.gr.tip')}</div>`:'';
+      if(wordPart||sentencePart) langCards=`<div class="stu-card stu-lang">${wordPart}${sentencePart}</div>`;
     }
     const more=`<button type="button" class="stu-more" aria-expanded="false" data-open="${esc(t('stu.teacher.hide'))}" data-closed="${esc(t('stu.teacher'))}">${esc(t('stu.teacher'))}</button>`;
-    return `<section class="stu" aria-label="${esc(t('stu.label'))}" data-html2canvas-ignore="true"><div class="stu-grid">${greetCard}${workCard}</div>${fiveCard}${langCards}${more}</section>`;
+    return `<section class="stu" aria-label="${esc(t('stu.label'))}" data-html2canvas-ignore="true">${langCards}<div class="stu-main${workCard?'':' stu-main-one'}">${greetCard}${workCard}${fiveCard}</div>${more}</section>`;
   };
   host.classList.toggle('stu-view',student);
   host.classList.toggle('stu-folded',student);

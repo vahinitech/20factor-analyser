@@ -15,12 +15,21 @@ import assert from 'node:assert/strict';
 
 const window = {};
 const context = vm.createContext({ window, localStorage: undefined });
-for (const file of ['frontend/src/report/strings/en.js', 'frontend/src/report/strings/te.js', 'frontend/src/report/i18n.js']) {
+for (const file of ['frontend/src/report/strings/en.js', 'frontend/src/report/strings/en-us.js', 'frontend/src/report/strings/te.js', 'frontend/src/report/i18n.js']) {
   runSource(file, context);
 }
 const { en, te } = window.VahiniReportStrings;
 const i18n = window.VahiniI18n;
 const LANGS = { te };
+
+// American English only replaces English sentences, with the same
+// placeholders, and changes the spelling of practise (owner, 2026-10-24).
+const us = window.VahiniReportStrings['en-US'];
+for (const [id, value] of Object.entries(us)) {
+  assert.ok(id in en, `en-us.js: ${id} is an English id`);
+  assert.deepEqual(String(value).match(/\{\w+\}/g) || [], String(en[id]).match(/\{\w+\}/g) || [], `en-us.js: ${id} keeps the placeholders`);
+}
+assert.ok(!Object.values(us).some(v => /practis/i.test(v)), 'American English says practice');
 
 // Completeness: list what is missing per language, then fail on it.
 let failed = false;
@@ -83,7 +92,10 @@ const teBlock = python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/);
 assert.ok(teBlock, 'practice_catalog.AVOID_WORDS_TE exists');
 const AVOID_TE = [...teBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 assert.ok(AVOID_TE.length >= AVOID.length, 'a Telugu word for every avoided English word');
-const texts = table => Object.values(table).flatMap(v => (v && typeof v === 'object') ? Object.values(v) : [v]);
+// The owner's exception (2026-10-24): the student view's two headings,
+// "Spelling mistakes" and "Grammar mistakes", in every language.
+const HEADINGS = new Set(['stu.sp.pill', 'stu.gr.pill']);
+const texts = table => Object.entries(table).filter(([id]) => !HEADINGS.has(id)).flatMap(([, v]) => (v && typeof v === 'object') ? Object.values(v) : [v]);
 for (const [lang, table] of Object.entries(window.VahiniReportStrings)) {
   for (const text of texts(table)) {
     assert.ok(!banned.test(text), `${lang}: avoid ${String(text.match(banned)?.[0])} in ${text}`);
