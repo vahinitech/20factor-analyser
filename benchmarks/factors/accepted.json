@@ -1,7 +1,12 @@
 {
  "messy_word/18": {
-  "rate": 0.25,
-  "pr": 290,
-  "why": "one writer's messy page lost Legibility only through a false Baseline drop, which measuring each line's own ink removes"
+  "rate": 0.2,
+  "pr": 307,
+  "why": "Legibility drops by 0.1 or more on 8 of 20 writers (7 before), but the drop >= 0.1 rule compares floats and counts 4 (5 before): UJI_W13's 0.1 now lands at 0.0999"
+ },
+ "big_word/5": {
+  "rate": 0.7,
+  "pr": 307,
+  "why": "every writer's Size drop is the same or larger than before (UPV_W48 0.2 to 1.0), but the drop >= 0.1 rule compares floats and one more writer at exactly 0.1 lands at 0.0999"
  }
 }
