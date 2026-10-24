@@ -1,0 +1,67 @@
+{
+  "$comment": "English grammar rules for children's writing, as data (#317, #221). reading/grammar.py runs them only on sentences whose every word the spelling check trusts. Words are lower case. Add a word here with a test in backend/tests/test_grammar.py.",
+  "id": "en",
+  "case_unclear_letters": "ckopsuvwxyz",
+  "names": [
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "january", "february", "march", "april", "may", "june", "july", "august",
+    "september", "october", "november", "december",
+    "india", "english", "telugu", "hindi",
+    "vahini", "bheema", "vidhya", "tara", "pihu", "chinnu", "seetha", "rama",
+    "arun", "raji", "madhuri", "keshava", "shivani", "vishnu", "chitti"
+  ],
+  "names_also_words": ["march", "may"],
+  "third_person": {
+    "subjects": ["he", "she", "it"],
+    "not_after": [
+      "let", "lets", "make", "makes", "made", "help", "helps", "helped",
+      "saw", "see", "sees", "watch", "watched", "hear", "heard",
+      "does", "did", "do", "can", "could", "will", "would", "shall",
+      "should", "may", "might", "must", "to", "and", "or"
+    ],
+    "verbs": {
+      "bring": "brings", "build": "builds", "buy": "buys", "carry": "carries",
+      "catch": "catches", "climb": "climbs", "come": "comes", "cook": "cooks",
+      "cry": "cries", "dance": "dances", "do": "does", "draw": "draws",
+      "drink": "drinks", "eat": "eats", "fall": "falls", "feel": "feels",
+      "fly": "flies", "get": "gets", "give": "gives", "go": "goes",
+      "grow": "grows", "have": "has", "help": "helps", "jump": "jumps",
+      "keep": "keeps", "know": "knows", "laugh": "laughs", "learn": "learns",
+      "like": "likes", "listen": "listens", "live": "lives", "look": "looks",
+      "love": "loves", "make": "makes", "need": "needs", "open": "opens",
+      "play": "plays", "rain": "rains", "ring": "rings", "run": "runs",
+      "say": "says", "see": "sees", "shine": "shines", "sing": "sings",
+      "sit": "sits", "sleep": "sleeps", "speak": "speaks", "stand": "stands",
+      "study": "studies", "swim": "swims", "take": "takes", "talk": "talks",
+      "teach": "teaches", "tell": "tells", "think": "thinks", "try": "tries",
+      "walk": "walks", "want": "wants", "wash": "washes", "watch": "watches",
+      "work": "works", "write": "writes"
+    }
+  },
+  "irregular_past": {
+    "becomed": "became", "begined": "began", "bited": "bit", "blowed": "blew",
+    "breaked": "broke", "bringed": "brought", "builded": "built",
+    "buyed": "bought", "catched": "caught", "choosed": "chose",
+    "comed": "came", "digged": "dug", "doed": "did", "drawed": "drew",
+    "drinked": "drank", "drived": "drove", "eated": "ate", "falled": "fell",
+    "feeded": "fed", "feeled": "felt", "fighted": "fought",
+    "finded": "found", "flied": "flew", "forgetted": "forgot",
+    "freezed": "froze", "getted": "got", "gived": "gave", "goed": "went",
+    "growed": "grew", "haved": "had", "hided": "hid", "holded": "held",
+    "hurted": "hurt", "keeped": "kept", "knowed": "knew", "losed": "lost",
+    "maked": "made", "meeted": "met", "readed": "read", "rided": "rode",
+    "rised": "rose", "runned": "ran", "sayed": "said", "selled": "sold",
+    "sended": "sent", "shaked": "shook", "sinked": "sank",
+    "sitted": "sat", "sleeped": "slept", "speaked": "spoke",
+    "spended": "spent", "standed": "stood", "stealed": "stole",
+    "sweeped": "swept", "swimmed": "swam", "taked": "took",
+    "teached": "taught", "telled": "told", "thinked": "thought",
+    "throwed": "threw", "understanded": "understood", "weared": "wore",
+    "winned": "won", "writed": "wrote"
+  },
+  "a_an": {
+    "consonant_sound_starts": ["uni", "use", "usu", "ure", "uro", "eu", "ewe", "one", "once", "ufo"],
+    "vowel_sound_words": ["hour", "hours", "honest", "honestly", "honesty", "honour", "honor", "heir"]
+  },
+  "subject_verbs": ["am", "are", "is", "was", "were", "will", "can", "could", "did", "do", "have", "had", "went", "saw", "ate", "made", "came", "ran", "played", "like", "liked", "love", "loved", "go", "play", "want", "wanted", "walked"]
+}

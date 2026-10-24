@@ -66,7 +66,8 @@ stages are `decode`, `detect` (and `detect.ink` when rows are found from
 the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
 one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
 `passage`, `fragments` (the reader's boxes against the ink rows, #277),
-`evidence`, `features`, `scoring` and `practice`. CPU time is
+`evidence`, `features`, `scoring`, `language` (spelling and grammar,
+#317) and `practice`. CPU time is
 the time of the thread the stage ran on; work a library does on its own
 threads (Paddle's) shows in the wall time only. A scan's work keeps the
 request's context on the scan thread (`scan_slots.run`), so concurrent

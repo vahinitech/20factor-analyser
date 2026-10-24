@@ -157,6 +157,10 @@ def build_compact(payload, access, include=()):
                 "passage_aligned",
             )
         }
+        if payload.get("language"):
+            # Spelling and grammar found on the page (#317), with the
+            # text because they are about the words read.
+            report["language"] = payload["language"]
     if access["tier"] == "pro":
         # Section means use every factor: Pro only, like the expanded form.
         report["sections"] = comparison_data.compact_sections(analysis)

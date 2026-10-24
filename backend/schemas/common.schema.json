@@ -1009,6 +1009,207 @@
       ],
       "description": "Degrees the analyser turned the photo clockwise to read it upright, when it was taken sideways or upside down with no EXIF turn (#297). Every box and mark in the report is on the turned photo, so a viewer turns its own copy the same way before drawing them. Absent when the photo was read as it is."
     },
+    "languageCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "checked",
+        "reason"
+      ],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "checked": {
+          "type": "boolean"
+        },
+        "reason": {
+          "enum": [
+            null,
+            "not_english",
+            "no_letter_scores",
+            "no_text",
+            "error"
+          ]
+        },
+        "rows": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "read",
+            "checked",
+            "not_read",
+            "over_cap",
+            "unclear"
+          ],
+          "properties": {
+            "read": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "checked": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "not_read": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "over_cap": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "unclear": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "spelling": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "written",
+              "suggestion",
+              "kind",
+              "places"
+            ],
+            "properties": {
+              "written": {
+                "type": "string",
+                "minLength": 1
+              },
+              "suggestion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "enum": [
+                  "letter_order",
+                  "missing_letter",
+                  "extra_letter",
+                  "other_letter",
+                  "letters"
+                ]
+              },
+              "places": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "line",
+                    "bbox",
+                    "placed"
+                  ],
+                  "properties": {
+                    "line": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "bbox": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "integer"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "placed": {
+                      "enum": [
+                        "letters",
+                        "estimated"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "grammar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "rule",
+              "written",
+              "suggestion",
+              "places"
+            ],
+            "properties": {
+              "rule": {
+                "enum": [
+                  "capital_name",
+                  "capital_i",
+                  "a_an",
+                  "verb_s",
+                  "past_tense",
+                  "me_and"
+                ]
+              },
+              "written": {
+                "type": "string",
+                "minLength": 1
+              },
+              "suggestion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "places": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "line",
+                    "bbox",
+                    "placed"
+                  ],
+                  "properties": {
+                    "line": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "bbox": {
+                      "type": [
+                        "array",
+                        "null"
+                      ],
+                      "items": {
+                        "type": "integer"
+                      },
+                      "minItems": 4,
+                      "maxItems": 4
+                    },
+                    "placed": {
+                      "enum": [
+                        "letters",
+                        "estimated"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "description": "Spelling and grammar on the page (#317): words the writer spelt another way, checked against the reader's letter scores so a misread is never reported, and sentences a fixed English rule would change. Places are processed-image pixels; `estimated` places come from the share of the line's text, not from the letters. Never part of a score, never stored. `checked` false with a reason when the page was not checked; an empty list never means the page has no mistakes."
+    },
     "recognitionMetadata": {
       "type": "object",
       "properties": {

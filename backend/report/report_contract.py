@@ -246,6 +246,10 @@ def public_report(payload, access):
         # The photo was read turned this far clockwise (page_turn.py):
         # boxes and marks are on the turned photo (#297).
         report["turned"] = payload["turned"]
+    if payload.get("language"):
+        # Spelling and grammar (reading/language_check.py, #317): every
+        # tier, like the recognised text it comes from.
+        report["language"] = payload["language"]
     if payload.get("ok"):
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)
