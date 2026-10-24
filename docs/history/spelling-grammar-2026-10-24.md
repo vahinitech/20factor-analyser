@@ -138,6 +138,21 @@ Why it still misses most: the reader often reads a misspelt word as the
 right one (its training pulls towards real words), or as something too
 far from either to pair, and then there is nothing to judge.
 
+**Grammar on a line, not a sentence.** At first a rule ran only on a
+sentence whose every word was trusted. Children's pages, like the planted
+ones, often have no full stop the reader sees, so the whole page was one
+sentence and one unchecked word silenced every rule: a page the reader
+read perfectly ("she sing every morning") got no mark. A mark now needs
+only the lines it looks at (and the line of the word before it) to be
+trusted. That let four new marks through on GNHK, all wrong by the
+transcript: "i" read out of "in" or a cut word, and "an TV". So "I" is
+now judged only before a doing word on the same line (i ran, i am), and
+a or an only before a lower-case word of three letters or more. GNHK is
+back to no grammar marks; the 20 benchmark pages get 14 lower-case-name
+marks, each right for pages written all in lower case. A line holding a
+grammar mark is read again (up to three more rows) so the mark sits on
+the letters, not on an estimate.
+
 **Grammar.** A rule for a capital after a full stop was built and
 removed: on GNHK all nine of its marks were wrong by the transcript. The
 reader reads stray marks as full stops and loses small ones, and its

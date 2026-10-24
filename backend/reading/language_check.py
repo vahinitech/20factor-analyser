@@ -50,6 +50,10 @@ from vision import letter_boxes
 ROW_MIN = 0.80
 ROWS_MAX = 6
 WORDS_PER_ROW = 4
+# Rows read again only to place a grammar mark on its letters (a row with
+# nothing to check was not read again, so its words' places were only
+# estimated from their share of the text). A count, like ROWS_MAX.
+PLACE_ROWS_MAX = 3
 # Capital-letter rules need this much of the letter's score in the case
 # it was read in.
 CASE_SURE = 0.9
@@ -485,6 +489,59 @@ def _place(tokens):
     return out
 
 
+def _place_on_letters(arr, lines, again, findings, read_scores):
+    """Read again up to PLACE_ROWS_MAX rows that carry a grammar mark with
+    an estimated place, and move each of the mark's words onto its
+    letters when the row reads the same words again. Returns how many
+    rows were read."""
+    want = []
+    for f in findings:
+        for t in f["tokens"]:
+            if t.get("placed") == "estimated" and t.get("line") not in want:
+                want.append(t.get("line"))
+    index = {l.get("evidence_id"): i for i, l in enumerate(lines)}
+    rows = [index[w] for w in want if w in index and index[w] not in again]
+    read = 0
+    for i in rows[:PLACE_ROWS_MAX]:
+        got = _read_again(arr, lines[i], read_scores)
+        if got is None:
+            continue
+        read += 1
+        moved = _moved_words(_text(lines[i]), got[0], got[1])
+        ident = lines[i].get("evidence_id")
+        for f in findings:
+            for t in f["tokens"]:
+                box = moved.get(tuple(t.get("span") or ()))
+                if t.get("line") == ident and box:
+                    t["bbox"], t["placed"] = box, "letters"
+    return read
+
+
+def _moved_words(old_text, new_text, by_index):
+    """{(start, end) in old_text: letters' box} for each word the new
+    reading of the row reads the same."""
+    old, new = spelling.tokens(old_text), spelling.tokens(new_text)
+    matcher = difflib.SequenceMatcher(
+        None,
+        [w.lower() for w, _s, _e in old],
+        [w.lower() for w, _s, _e in new],
+        autojunk=False,
+    )
+    moved = {}
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op != "equal":
+            continue
+        for k in range(i2 - i1):
+            _w, s0, e0 = old[i1 + k]
+            _n, s1, e1 = new[j1 + k]
+            box = _union(
+                [by_index[c][2] for c in range(s1, e1) if c in by_index]
+            )
+            if box:
+                moved[(s0, e0)] = box
+    return moved
+
+
 def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
     """The `language` section of a report. langs: the scan's resolved
     reading languages; read_scores(crop, lang) is
@@ -553,6 +610,8 @@ def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
         and t.get("suggestion")
         and (t.get("against") or t["raw"].lower() not in past)
     ]
+    found = grammar.find(stream)
+    placed = _place_on_letters(arr, lines, again, found, read_scores)
     grammar_out = [
         {
             "rule": f["rule"],
@@ -560,7 +619,7 @@ def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
             "suggestion": f["suggestion"],
             "places": _place(f["tokens"]),
         }
-        for f in grammar.find(stream)
+        for f in found
     ]
     return {
         "version": 1,
@@ -568,7 +627,7 @@ def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
         "reason": None,
         "rows": {
             "read": len(lines),
-            "checked": read_again,
+            "checked": read_again + placed,
             "not_read": len(chosen) - read_again,
             "over_cap": over_cap,
             "unclear": unclear,

@@ -8,16 +8,22 @@ and eat, and "me and Bheema" as the subject.
 Their words are data in backend/languages/skills/en.json (#221 keeps
 language rules as data); this module only applies them.
 
-A rule is applied to a sentence only when every word of it is trusted:
-the spelling check (reading/language_check.py) read it as a listed word
-or a name on a clear row, or checked it against the ink. The reader's
-misreads would otherwise make false grammar marks: of 22 matches of the
-old browser rules on 200 real pages, 14 came from misreads (#317). Rules
+A rule's mark is kept only when every word on the lines it looks at,
+and on the line of the word before it, is trusted: the spelling check
+(reading/language_check.py) read it as a listed word or a name on a
+clear row, or checked it against the ink. The reader's misreads would
+otherwise make false grammar marks: of 22 matches of the old browser
+rules on 200 real pages, 14 came from misreads (#317). Lines, not whole
+sentences, because children's pages often have no full stop the reader
+sees, and one unchecked word would then silence the whole page. Rules
 about capitals also need the case to be clear: letters such as c, o and
 s look the same in both cases, and are never judged.
 
 A rule that looks at two or more words needs them on one line as the
-reader read it: across lines the reading order can be wrong.
+reader read it: across lines the reading order can be wrong. "I" is
+judged only before a doing word (i ran, i am) and a or an only before a
+lower-case word of three letters or more: on real pages the reader read
+"in" as "i", and abbreviations (TV) follow "an" correctly.
 
 No rule about full stops or a capital after one. The reader drops small
 dots and reads stray marks as dots: on 183 real pages (GNHK) all nine
@@ -125,17 +131,19 @@ def _sentence_findings(words, r):
     lows = [t["text"].lower() for t in words]
     for i, t in enumerate(words):
         text, low = t["text"], lows[i]
-        if text == "i" and t.get("case_sure", False):
+        if (
+            text == "i"
+            and t.get("case_sure", False)
+            and i + 1 < len(words)
+            and lows[i + 1] in r["subject_verbs"]
+            and _one_line(words[i : i + 2])
+        ):
             out.append(_finding("capital_i", [t], "I"))
         elif low in r["names"] and text[:1].islower() and _case_ok(t, r):
             out.append(_finding("capital_name", [t], _cap(text)))
         if low in ("a", "an") and i + 1 < len(words):
             nxt = words[i + 1]["text"]
-            if (
-                nxt[:1].isalpha()
-                and len(nxt) > 1
-                and _one_line(words[i : i + 2])
-            ):
+            if nxt.islower() and len(nxt) > 2 and _one_line(words[i : i + 2]):
                 want = "an" if _vowel_sound(nxt, r) else "a"
                 if want != low:
                     word = _cap(want) if text[:1].isupper() else want
@@ -182,11 +190,19 @@ def find(tokens):
     sentence ends in reading order, each {"text": the word to judge,
     "raw": as written, "trusted", "case_sure", "end"} plus whatever the
     caller needs back. Each finding is {"rule", "written", "suggestion",
-    "tokens"}; sentences with any untrusted word are skipped."""
+    "tokens"}; a finding is dropped when a line it looks at holds an
+    untrusted word."""
     r = rules()
+    trusted = {}
+    for t in tokens:
+        if not t.get("end"):
+            key = t.get("line")
+            trusted[key] = trusted.get(key, True) and bool(t.get("trusted"))
     out = []
     for words in _sentences(tokens):
-        if not all(t.get("trusted") for t in words):
-            continue
-        out.extend(_sentence_findings(words, r))
+        for f in _sentence_findings(words, r):
+            first = words.index(f["tokens"][0])
+            looked = f["tokens"] + words[max(0, first - 1) : first]
+            if all(trusted.get(t.get("line"), False) for t in looked):
+                out.append(f)
     return out

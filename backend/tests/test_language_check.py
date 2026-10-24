@@ -389,6 +389,17 @@ class TestRegion(unittest.TestCase):
         self.assertEqual(out["rows"]["unclear"], 1)
         self.assertEqual(out["spelling"], [])
 
+    def test_a_grammar_mark_is_moved_onto_its_letters(self):
+        # The row has nothing for the spelling check, so its places were
+        # estimated; it is read again to put the mark on the letters.
+        reader = FakeReader(["she sing every day"])
+        out = run([line("she sing every day")], reader)
+        self.assertEqual(reader.calls, 1)
+        place = out["grammar"][0]["places"][0]
+        self.assertEqual(place["placed"], "letters")
+        self.assertEqual(out["rows"]["checked"], 1)
+        self.assertEqual(out["rows"]["not_read"], 0)
+
     def test_words_per_row_are_capped(self):
         text = "freind smal evry becaus untill recieve"
         out = run([line(text)], FakeReader([text]))
@@ -611,6 +622,12 @@ class TestGrammar(unittest.TestCase):
             rules_found(sentence("We play") + sentence("then we eat")), []
         )
 
+    def test_i_only_before_a_doing_word_and_a_an_only_before_a_word(self):
+        # On real pages the reader read "in" as "i"; "an TV" is right.
+        self.assertEqual(rules_found(sentence("we sat i the park")), [])
+        self.assertEqual(rules_found(sentence("we saw an TV show")), [])
+        self.assertEqual(rules_found(sentence("we saw a ox")), [])
+
     def test_two_word_rules_stay_on_one_line(self):
         tokens = sentence("She sing every morning")
         tokens[0]["line"], tokens[1]["line"] = "line_1", "line_2"
@@ -630,10 +647,26 @@ class TestGrammar(unittest.TestCase):
             rules_found(sentence("I met tara")),
         )
 
-    def test_a_sentence_with_an_untrusted_word_is_skipped(self):
+    def test_a_line_with_an_untrusted_word_is_skipped(self):
         tokens = sentence("She sing every morning")
         tokens[2]["trusted"] = False
         self.assertEqual(rules_found(tokens), [])
+
+    def test_an_untrusted_word_on_another_line_does_not_silence_this_one(
+        self,
+    ):
+        # No full stop read: one sentence over two lines. The second
+        # line's unchecked word does not stop the first line's mark.
+        first = sentence("she sing every morning", end=False)
+        second = sentence("we goed home")
+        for t in first:
+            t["line"] = "line_1"
+        for t in second[:-1]:
+            t["line"] = "line_2"
+        second[1]["trusted"] = False
+        self.assertEqual(
+            rules_found(first + second), [("verb_s", "she sing", "she sings")]
+        )
 
     def test_may_and_march_are_words_too(self):
         self.assertEqual(rules_found(sentence("We may march home")), [])

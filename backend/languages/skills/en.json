@@ -63,5 +63,5 @@
     "consonant_sound_starts": ["uni", "use", "usu", "ure", "uro", "eu", "ewe", "one", "once", "ufo"],
     "vowel_sound_words": ["hour", "hours", "honest", "honestly", "honesty", "honour", "honor", "heir"]
   },
-  "subject_verbs": ["am", "are", "is", "was", "were", "will", "can", "could", "did", "do", "have", "had", "went", "saw", "ate", "made", "came", "ran", "played", "like", "liked", "love", "loved", "go", "play", "want", "wanted", "walked"]
+  "subject_verbs": ["am", "are", "is", "was", "were", "will", "can", "could", "did", "do", "have", "had", "went", "saw", "ate", "made", "came", "ran", "played", "like", "liked", "love", "loved", "go", "play", "want", "wanted", "walked", "think", "know", "see", "got", "wrote", "read", "sat", "sang", "drew"]
 }
