@@ -37,6 +37,7 @@ added to the request's record in the front (perf.adopt), so Server-Timing,
 import importlib.util
 import itertools
 import os
+import pickle
 import socket
 import subprocess
 import sys
@@ -75,6 +76,11 @@ def configure(module_name, path, threads):
     the front loaded it under, so the scan functions it is sent resolve)
     and its scan threads. Starts nothing."""
     global SUPERVISOR  # pylint: disable=global-statement
+    if module_name == "__main__":
+        # app.py run as a script: the child would load its own __main__,
+        # not app.py, and every scan would be lost. Scan in this process.
+        print("[scan-worker] off: app.py runs as __main__", flush=True)
+        return None
     if SUPERVISOR is None:
         SUPERVISOR = Supervisor(module_name, path, threads)
     return SUPERVISOR
@@ -104,6 +110,10 @@ class Supervisor:
         self.path = str(path)
         self.threads = max(1, int(threads))
         self._cond = threading.Condition()
+        # Held while writing to the child, apart from _cond, so the watcher
+        # can always take _cond to deliver an answer while a large call is
+        # being written (with three slots, holding _cond here deadlocked).
+        self._send_lock = threading.Lock()
         self._ids = itertools.count(1)
         self._pending = {}
         self._proc = None
@@ -169,6 +179,18 @@ class Supervisor:
             except (EOFError, OSError):
                 if not self._stopping:
                     self._restart()
+                continue
+            except Exception as exc:  # pylint: disable=broad-except
+                # An answer this process cannot unpickle. Its call is not
+                # known, so end the child: its calls fail as WorkerDied
+                # and run once more, instead of this thread dying and
+                # every scan after it waiting for ever.
+                print(
+                    f"[scan-worker] unreadable answer ({exc!r}); "
+                    "ending the worker",
+                    flush=True,
+                )
+                self._proc.kill()
                 continue
             self._deliver(msg)
 
@@ -243,18 +265,22 @@ class Supervisor:
         with self._cond:
             while self._conn is None:
                 self._cond.wait()
+            conn = self._conn
             call_id = next(self._ids)
             self._pending[call_id] = future
-            try:
-                self._conn.send((kind, call_id) + payload)
-            except (OSError, ValueError) as exc:
-                # The child is gone and the watcher has not seen it yet.
+        try:
+            with self._send_lock:
+                conn.send((kind, call_id) + payload)
+        except (OSError, ValueError) as exc:
+            # The child is gone and the watcher has not seen it yet.
+            with self._cond:
                 self._pending.pop(call_id, None)
-                raise WorkerDied(str(exc)) from exc
-            except Exception:
-                # The call itself would not pickle: not the child's fault.
+            raise WorkerDied(str(exc)) from exc
+        except Exception:
+            # The call itself would not pickle: not the child's fault.
+            with self._cond:
                 self._pending.pop(call_id, None)
-                raise
+            raise
         return call_id, future
 
     def _call_once(self, fn, args):
@@ -320,12 +346,24 @@ def _load(module_name, path):
     return module
 
 
+def _portable(exc):
+    """exc, or a RuntimeError with its text when the front could not
+    rebuild it: an exception unpickles by calling its class with its args,
+    which fails for HTTPException(status_code=...) or RungDown(stage,
+    reason)."""
+    try:
+        pickle.loads(pickle.dumps(exc))
+        return exc
+    except Exception:  # pylint: disable=broad-except
+        return RuntimeError(f"{type(exc).__name__}: {exc}")
+
+
 def _run(send, call_id, fn, args):
     with perf.scan() as record:
         try:
             value, ok = fn(*args), True
         except Exception as exc:  # pylint: disable=broad-except
-            value, ok = exc, False
+            value, ok = _portable(exc), False
     rows = perf.export(record)
     try:
         send(("result", call_id, ok, value, rows))

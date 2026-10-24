@@ -61,6 +61,34 @@ STUB = textwrap.dedent("""
         return threading.Lock()
 
 
+    class TwoArgs(Exception):
+        # Rebuilt from its args on unpickling, which takes two: like
+        # escalation.RungDown, or HTTPException(status_code=...).
+        def __init__(self, stage, reason):
+            super().__init__(f"{stage} cannot read: {reason}")
+
+
+    def refuse_two_args():
+        raise TwoArgs("paddle-en", "model missing")
+
+
+    def _cannot_load():
+        raise TypeError("this answer cannot be read here")
+
+
+    class LoadsBadly:
+        def __reduce__(self):
+            return (_cannot_load, ())
+
+
+    def loads_badly():
+        return LoadsBadly()
+
+
+    def echo(data):
+        return data
+
+
     def die():
         os.kill(os.getpid(), signal.SIGKILL)
 
@@ -144,6 +172,90 @@ class ScanWorkerTests(unittest.TestCase):
             self.worker.call(self.stub.unpicklable)
         self.assertEqual(self.worker.call(self.stub.add, 1, 1), 2)
 
+    def call_within(self, seconds, fn, *args):
+        """worker.call, failing the test instead of hanging past seconds."""
+        out = {}
+
+        def run():
+            try:
+                out["value"] = self.worker.call(fn, *args)
+            except Exception as exc:  # pylint: disable=broad-except
+                out["error"] = exc
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        thread.join(seconds)
+        if thread.is_alive():
+            self.fail(f"{fn.__name__} got no answer in {seconds} s")
+        if "error" in out:
+            raise out["error"]
+        return out["value"]
+
+    def test_an_error_the_server_cannot_rebuild_still_comes_back(self):
+        # Once, the server's reader thread died unpickling such an error,
+        # and this scan, and every scan after it, waited for ever.
+        with self.assertRaisesRegex(RuntimeError, "TwoArgs: paddle-en"):
+            self.call_within(15, self.stub.refuse_two_args)
+        self.assertEqual(self.call_within(15, self.stub.add, 1, 1), 2)
+        self.assertEqual(self.worker.stats()["restarts"], 0)
+
+    def test_an_answer_the_server_cannot_read_ends_the_child(self):
+        # Its call is not known, so the child is ended: the scan is lost
+        # (twice), and the next scan runs, rather than all of them hanging.
+        with self.assertRaises(scan_worker.ScanLost):
+            self.call_within(30, self.stub.loads_badly)
+        self.assertEqual(self.call_within(30, self.stub.add, 2, 3), 5)
+
+    def test_large_calls_on_three_slots_with_health_do_not_stall(self):
+        # Three slots writing and reading large pages while /health polls.
+        # The sender once held the lock the reader needed to deliver an
+        # answer, and with three slots that stalled within a second: the
+        # child's main thread waited to send a health answer behind a
+        # large result the server was not reading.
+        worker = scan_worker.Supervisor(STUB_NAME, self.stub_path, 3)
+        self.addCleanup(worker.stop)
+        # The child of the moment, so a lambda; killing it frees a stalled
+        # send, which stop() would otherwise wait behind.
+        # pylint: disable-next=protected-access,unnecessary-lambda
+        self.addCleanup(lambda: worker._proc.kill())
+        worker.start()
+        self.assertTrue(_wait(lambda: worker.stats()["state"] == "ready"))
+        page = b"p" * (16 << 20)
+        stop = threading.Event()
+        counts = {"scans": 0}
+        errors = []
+
+        def scans():
+            while not stop.is_set():
+                try:
+                    worker.call(self.stub.echo, page)
+                    counts["scans"] += 1
+                except Exception as exc:  # pylint: disable=broad-except
+                    errors.append(exc)
+                    return
+
+        def health():
+            while not stop.is_set():
+                worker.health(timeout=30)
+
+        threads = [
+            threading.Thread(target=target, daemon=True)
+            for target in (scans, scans, scans, health)
+        ]
+        for thread in threads:
+            thread.start()
+        last, still = -1, 0
+        deadline = time.monotonic() + 8
+        while time.monotonic() < deadline and still < 4:
+            time.sleep(1)
+            still = still + 1 if counts["scans"] == last else 0
+            last = counts["scans"]
+        stop.set()
+        self.assertLess(still, 4, f"stalled after {last} scans")
+        for thread in threads:
+            thread.join(10)
+        self.assertEqual(errors, [])
+
     def test_a_killed_scan_runs_once_more_on_a_new_child(self):
         flag = self.flag("died")
         self.assertEqual(
@@ -203,6 +315,14 @@ class ScanWorkerTests(unittest.TestCase):
         unnamed = scan_worker.Supervisor("not_registered", self.stub_path, 1)
         with self.assertRaisesRegex(RuntimeError, "not_registered"):
             unnamed.start()
+
+    def test_app_run_as_a_script_scans_in_its_own_process(self):
+        # The child would load its own __main__, not app.py.
+        with patch.object(scan_worker, "SUPERVISOR", None):
+            self.assertIsNone(scan_worker.configure("__main__", "app.py", 1))
+            self.assertIsNone(scan_worker.SUPERVISOR)
+            with patch.dict(os.environ, {"VAHINI_SCAN_WORKER": "1"}):
+                self.assertFalse(scan_worker.enabled())
 
     def test_health_is_none_while_the_child_starts(self):
         fresh = scan_worker.Supervisor(STUB_NAME, self.stub_path, 1)
