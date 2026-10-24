@@ -33,7 +33,9 @@ upright is worse than leaving a turned one:
   (over at least MIN_LINES lines) say which way, and they do not
   disagree; otherwise `unsure`, and the server refuses the page rather
   than score it.
-- no clear direction: left as it is, as before.
+- no clear direction: left as it is, as before. So is a page whose lines
+  run up and down only at the letter size of whole joined-up words
+  (_joined_up): a short list in joined-up writing is upright.
 - not Latin script (Telugu): marks above and below the line sit
   differently, so the signs are not trusted. Lines up and down are
   refused, and a page is never turned over.
@@ -137,14 +139,16 @@ def _ink(gray):
     )
 
 
-def _letter_size(ink):
-    """The pieces' longer side, the median by ink: a letter, or a
-    joined word's height. The same whichever way the page lies."""
+def _letter_size(ink, side=np.maximum):
+    """The pieces' longer side (or, with side=np.minimum, their shorter
+    side), the median by ink: a letter, or for joined-up writing a whole
+    word's length (its shorter side is then its height). The same
+    whichever way the page lies."""
     _n, _l, stats, _ = cv2.connectedComponentsWithStats(ink, 8)
     stats = stats[1:]
     if stats.size == 0:
         return 0.0
-    side = np.maximum(
+    side = side(
         stats[:, cv2.CC_STAT_WIDTH], stats[:, cv2.CC_STAT_HEIGHT]
     ).astype(float)
     area = stats[:, cv2.CC_STAT_AREA].astype(float)
@@ -308,6 +312,19 @@ def _prefers(reading):
     return int(gap >= READ_MARGIN) - int(gap <= -READ_MARGIN)
 
 
+def _joined_up(ink, d):
+    """True when lines that seem to run up and down are joined-up writing
+    lying across. When every word is one piece of ink, the median piece
+    is a whole word, d is longer than the gap between lines, and the
+    smear stacks a list of short lines into columns: an upright list of
+    words read as a page on its side, and was refused or turned. A smear
+    the size of the words' height then finds the lines across. A real
+    page on its side runs up and down at both sizes, so this only ever
+    leaves a page as it is."""
+    fine = max(3, int(round(SMEAR * _letter_size(ink, np.minimum))))
+    return fine < d and _across(ink, fine) > -DIRECTION_SURE
+
+
 def measure(rgb, latin=True, read=None, lang="en"):
     """The Verdict for an RGB page (numpy array, any size). read(crop,
     lang) -> lines with "score" is the scan's recogniser, or None."""
@@ -319,6 +336,8 @@ def measure(rgb, latin=True, read=None, lang="en"):
         return UPRIGHT
     d = max(3, int(round(SMEAR * _letter_size(ink))))
     across = _across(ink, d)
+    if across <= -DIRECTION_SURE and _joined_up(ink, d):
+        return Verdict(across=across)
     if across > -DIRECTION_SURE:
         if not latin or across < DIRECTION_SURE:
             return Verdict(across=across)

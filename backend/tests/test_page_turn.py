@@ -25,6 +25,7 @@ import os
 import sys
 import unittest
 
+import cv2
 import numpy as np
 from PIL import Image
 
@@ -167,6 +168,53 @@ class TestTurnedOver(unittest.TestCase):
             self.assertEqual(agrees.turn, 180, (path, agrees.as_dict()))
             refuses = page_turn.measure(arr, read=_reader(False))
             self.assertEqual(refuses.turn, 0, path)
+
+
+def _joined_list(words_per_line, x_h, asc):
+    """An upright list in joined-up writing, drawn: each word one stroke,
+    a wave one x-height tall with a loop above every third letter, one or
+    two words to a line, 64 px apart. Every word is one piece of ink, as
+    when a child joins each word up."""
+    rng = np.random.default_rng(3)
+    page = np.full((1600, 1200), 255, np.uint8)
+    for y in range(120, 1500, 64):
+        x = 80.0
+        for _ in range(words_per_line):
+            letters = 6 + int(rng.integers(-2, 3))
+            t = np.arange(letters * 8 + 1) / 8.0
+            ys = y - x_h / 2 * (1 - np.cos(t * 2 * np.pi))
+            loop = (t.astype(int) % 3 == 1) * np.maximum(
+                0, np.sin((t % 1) * np.pi)
+            )
+            ys = ys - asc * x_h * loop
+            pts = np.stack([x + t * x_h * 0.9, ys], axis=1).astype(np.int32)
+            cv2.polylines(page, [pts], False, 0, 3, cv2.LINE_AA)
+            x += letters * x_h * 0.9 + x_h * 1.3
+    return np.dstack([page] * 3)
+
+
+class TestJoinedUpWriting(unittest.TestCase):
+    """A short list in joined-up writing is upright. With each word one
+    piece of ink, the letter size was a whole word, the smear stacked the
+    lines into columns, and the page was refused as on its side."""
+
+    def test_an_upright_joined_up_list_is_left_alone(self):
+        for words, x_h, asc in ((1, 22, 0.4), (2, 16, 0.8)):
+            page = _joined_list(words, x_h, asc)
+            for taken in (0, 180):
+                for latin, read in (
+                    (True, None),
+                    (True, _undecided),
+                    (False, None),
+                ):
+                    verdict = page_turn.measure(
+                        page_turn.turned(page, taken), latin=latin, read=read
+                    )
+                    self.assertEqual(
+                        (verdict.turn, verdict.unsure),
+                        (0, False),
+                        (words, taken, latin, verdict.as_dict()),
+                    )
 
 
 class TestTelugu(unittest.TestCase):
