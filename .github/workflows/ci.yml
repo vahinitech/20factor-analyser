@@ -469,7 +469,7 @@ jobs:
         run: npm run test:language
       - name: The print popup's optional price question and the Request Pro card
         run: npm run test:print-popup
-      - name: "How was the report?" asks once, after ten seconds, and sends one fixed answer
+      - name: '"How was the report?" asks once, after ten seconds, and sends one fixed answer'
         run: npm run test:report-feedback
       - name: The shared PDF carries the receipt and the page photo, still two pages
         run: npm run test:share-embed
