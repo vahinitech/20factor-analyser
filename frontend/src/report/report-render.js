@@ -443,6 +443,9 @@ function render(host, data){
   const langSec=data.language&&data.language.checked?data.language:null;
   const spelling=langSec?(langSec.spelling||[]).filter(f=>f&&f.suggestion):[];
   const firstSpelling=spelling[0];
+  // Grammar from the same check (owner, 2026-10-25: on the parent report
+  // too, not only the student view).
+  const grammar=langSec?(langSec.grammar||[]).filter(f=>f&&f.suggestion&&f.rule):[];
   const free=analysis.access?.tier==='free';
   const tier=free?'free':'pro';
   const cat=practiceCatalog(analysis);
@@ -485,9 +488,17 @@ function render(host, data){
   // left out, up to the tier's number. The first one is "Start here".
   const rowFactors=(maintenance?sorted:toGrow).slice(0,lim.areas_max);
   const first=rowFactors[0]||null;
-  const spellingStatus=!langSec ? t('spelling.notchecked')
-    : spelling.length ? t.n('spelling.found', spelling.length)
-    : t('spelling.clear');
+  // Page 1's "Spelling and grammar" line (owner, 2026-10-25): how many
+  // words and sentences page 2 has, never "no mistakes".
+  const langStatus=(()=>{
+    if(!langSec) return t('lang.notchecked');
+    const parts=[spelling.length?t.n('lang.words',spelling.length):'',grammar.length?t.n('lang.sentences',grammar.length):''].filter(Boolean);
+    if(!parts.length) return t('lang.clear');
+    return t('lang.found',{what:parts.length>1?t('lang.and',{a:parts[0],b:parts[1]}):parts[0]});
+  })();
+  // On the row of "A close look at your own writing", whose right side is
+  // empty, so page 1 is no taller (both reports stay on two A4 sheets).
+  const langLine=`<p class="sn-lang" data-lang-found="${spelling.length+grammar.length}"><b>${esc(t('lang.title'))}</b> <span>${esc(langStatus)}</span></p>`;
   const writer=String(intake.writerName||'').trim();
   // Brand row with the Vahini logo and the website; the patent numbers on
   // every page (owner instruction, 2026-10-10). Both stay as written in
@@ -713,7 +724,7 @@ function render(host, data){
   const shownN=new Set([...mRows.flatMap(r=>r.scores),18,20,2,9,4,3,13,14,15,16]);
   const leftover=measured.filter(f=>!shownN.has(f.n)).map(f=>f.n).sort((a,b)=>a-b);
   const measuredHTML=`<div class="sn-h3row"><h3 class="sn-h3">${esc(t('m.title'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
-      <p class="sn-m-sub">${esc(mSub)}</p>${mRows.slice().sort((a,b)=>rowScore(b)-rowScore(a)).map(mRow).join('')}
+      <div class="sn-subrow"><p class="sn-m-sub">${esc(mSub)}</p>${langLine}</div>${mRows.slice().sort((a,b)=>rowScore(b)-rowScore(a)).map(mRow).join('')}
       ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[2,9,4,3])}${pen}${howTable}`;
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
@@ -724,7 +735,7 @@ function render(host, data){
       <div class="sn-turn" aria-label="${esc(t('sn.turn.aria'))}"><b>${esc(t('sn.turn'))}</b><div class="sn-guide"><span class="md-hand">${esc(firstEx.example||MODEL_WORDS[firstEx.model]||'')}</span></div><div class="sn-guide"></div><p class="sn-chk"><i aria-hidden="true"></i>${esc(firstEx.check)}</p></div>
       ${qr?`<div class="sn-qr" aria-label="${esc(t('sn.qr.alt'))}">${qr}<span>${esc(t('sn.qr'))}</span></div>`:''}</div></div>`:'';
   const cta=`<div class="sn-cta screen-only" data-html2canvas-ignore="true">${firstSheet?`<a class="sn-b1" href="${esc(sheetURL(firstSheet))}" target="_blank" rel="noopener">⇩&nbsp; ${esc(t('sn.download'))}</a>`:''}<a class="sn-b2" href="analyser.html" data-action="new-report">↻&nbsp; ${esc(t('sn.again'))}</a></div>`;
-  const page1Note=[t('sn.note'),spellingStatus,rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
+  const page1Note=[t('sn.note'),rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
   const page1=`<section class="page free-report compact-report snapshot-page snapshot-${tier}" data-screen-label="Your review">
       <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}</div></div>
       ${teacherNote}${sinceLine}
@@ -783,7 +794,17 @@ function render(host, data){
   };
   // Page 2's spelling row: the largest pattern's exercise, with the
   // child's words and the pattern's practice words (owner, 2026-10-24).
+  // Grammar's own ink, fix and rule, in a row's left column.
+  const placeOfFinding=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
+  const inkOne=(f,cls='')=>`<span class="pr-saw-one${cls}">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')(placeOfFinding(f))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></span>`;
+  const gramRules=(extra='')=>{
+    const rules=[...new Set(grammar.map(f=>f.rule))].filter(r=>t.has('stu.gr.'+r));
+    return rules.length||extra?`<ul class="pr-gr-rules">${rules.map(r=>`<li>${esc(t('stu.gr.'+r))}</li>`).join('')}${extra?`<li>${esc(extra)}</li>`:''}</ul>`:'';
+  };
   const spellingRow=n=>{
+    // With grammar too, one "Spelling and grammar" row keeps the report on
+    // two A4 sheets (owner, 2026-10-25).
+    const both=grammar.length>0;
     const top=spellPatterns[0], area=cat&&cat.spelling;
     const exId=top&&top.entry&&top.entry.exercise;
     const ex=area&&area.exercises&&(area.exercises.find(e=>e.id===exId)||area.exercises[0]);
@@ -792,19 +813,35 @@ function render(host, data){
     printed.tips.spelling=tips.map(e=>e.id);
     const d=dose('good');
     const shown=(top?top.found:spelling).slice(0,2);
-    const placeOfWord=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
     const others=spellPatterns.slice(1).filter(g=>g.name);
-    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling" data-pattern="${esc(top?top.id:'other')}">
-      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(top&&top.name?t('spell.title.pattern',{pattern:top.name}):t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t.n('spell.badge',spelling.length))}</span></div>
-        <div class="pr-saw pr-saw-ink">${shown.map(f=>`<span class="pr-saw-one">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')(placeOfWord(f))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></span>`).join('')}</div>
-        <p class="pr-saw-why">${esc(top&&top.rule?top.rule:t('stu.sp.'+firstSpelling.kind))}</p>
+    const spellTitle=top&&top.name?t('spell.title.pattern',{pattern:top.name}):t('spell.title');
+    return `<article class="practice-row coaching-card spelling-row${both?' with-grammar':''}" data-factor="spelling" data-pattern="${esc(top?top.id:'other')}">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(both?t('lang.title'):spellTitle)}</h3><span class="pr-badge spelling">${esc(both?t('lang.and',{a:t.n('lang.words',spelling.length),b:t.n('lang.sentences',grammar.length)}):t.n('spell.badge',spelling.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${shown.map(f=>inkOne(f)).join('')}${both?grammar.slice(0,2).map(f=>inkOne(f,' pr-gr-one')).join(''):''}</div>
+        <p class="pr-saw-why">${both?`<b>${esc(spellTitle)}.</b> `:''}${esc(top&&top.rule?top.rule:t('stu.sp.'+firstSpelling.kind))}</p>
         ${top&&top.words.length?`<p class="pr-saw-words">${esc(t('spell.words'))} <span class="pr-saw-list">${esc(top.words.join(', '))}</span></p>`:''}
-        ${others.length?`<p class="pr-saw-also">${esc(t('spell.also',{list:others.map(g=>g.name).join(', ')}))}</p>`:''}</div>
+        ${others.length?`<p class="pr-saw-also">${esc(t('spell.also',{list:others.map(g=>g.name).join(', ')}))}</p>`:''}
+        ${both?gramRules(t('gram.also')):''}</div>
       <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:top?top.words.slice(0,2).join(' '):firstSpelling.suggestion}},{n:1,band:'strong'}):''}
         <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.length?`<div class="pr-tips">${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}</div>`:''}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
     </article>`;
   };
-  const rows=chosen.rows.map(skillRow).join('')+(firstSpelling?spellingRow(chosen.rows.length+1):'');
+  // Grammar beside spelling (owner, 2026-10-25): the page's own ink for
+  // each sentence, the fix, one plain rule each, and "Read it aloud".
+  const grammarRow=n=>{
+    const fixes=grammar.slice(0,3).map(f=>f.suggestion);
+    const ex={id:'gram.read-aloud',title:t('gram.ex.title'),steps:t('gram.ex.steps'),unit:'sentence',model:'trace',example:fixes.slice(0,2).join('. ')+'.'};
+    const d=dose('good');
+    return `<article class="practice-row coaching-card grammar-row" data-factor="grammar">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('gram.title'))}</h3><span class="pr-badge spelling">${esc(t.n('gram.badge',grammar.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${grammar.slice(0,3).map(f=>inkOne(f)).join('')}</div>
+        ${gramRules()}</div>
+      <div class="pr-practice">${exerciseBlock({entry:ex},{n:1,band:'strong'})}
+        <p class="pr-plan">${esc(t('gram.plan',{tries:3,days:d?Math.min(d.days,5):5}))}</p><div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
+    </article>`;
+  };
+  const rows=chosen.rows.map(skillRow).join('')
+    +(firstSpelling?spellingRow(chosen.rows.length+1):grammar.length?grammarRow(chosen.rows.length+1):'');
   const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>b.score-a.score||a.n-b.n);
   const praise=f=>{const b=bandOf(f.score);
     if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return t('other.composite');
@@ -968,8 +1005,11 @@ const FIT_SLACK_PX = 6;
    it went (data-trim). Only where the two columns sit side by side. */
 const TRIM_STEPS = ['more', 'why', 'win'];
 /* The spelling row (#317) follows the same rule: the other patterns go
-   first, then the practice words, then the pattern's rule. */
+   first, then the practice words, then the pattern's rule. The grammar row
+   drops its rules. */
 const SPELL_TRIM_STEPS = ['also', 'words', 'rule'];
+const LANG_TRIM_STEPS = ['also', 'words', 'rules', 'rule', 'gram2'];   // gram2: the second sentence's ink
+const GRAMMAR_TRIM_STEPS = ['rules'];
 function trimSkillColumns(host){
   // The student view folds the pages on screen (display:none), where no row
   // can be measured. Open them for the measurement only, in this same task,
@@ -981,12 +1021,12 @@ function trimSkillColumns(host){
 }
 function trimRows(host){
   (host || document).querySelectorAll('.practice-row').forEach(row=>{
-    const spell = row.classList.contains('spelling-row');
-    const steps = spell ? SPELL_TRIM_STEPS : TRIM_STEPS;
+    const spell = row.classList.contains('spelling-row'), gram = row.classList.contains('grammar-row');
+    const steps = spell ? (row.classList.contains('with-grammar') ? LANG_TRIM_STEPS : SPELL_TRIM_STEPS) : gram ? GRAMMAR_TRIM_STEPS : TRIM_STEPS;
     steps.forEach(s=>row.classList.remove('trim-' + s));
     row.removeAttribute('data-trim');
     const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
-    if (!left || !right || (!spell && !left.querySelector('.pr-about'))) return;
+    if (!left || !right || (!spell && !gram && !left.querySelector('.pr-about'))) return;
     if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
     const tall = ()=>{
       left.style.alignSelf = right.style.alignSelf = 'start';

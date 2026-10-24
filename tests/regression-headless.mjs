@@ -116,6 +116,7 @@ async function runHeadlessChecks() {
         qrWant:firstSheet?'https://vahinitech.com/assets/worksheets/'+firstSheet.id+'.pdf':'',
         cta:[...host.querySelectorAll('.sn-cta a')].map(a=>a.textContent.trim()),
         foot:host.querySelector('.snapshot-page .run-foot').textContent,
+        lang:(host.querySelector('.snapshot-page .sn-lang')||{}).textContent||'',
         practiceFactors:[...document.querySelectorAll('#report-host .coaching-card')].map(c=>c.dataset.factor).filter(f=>/^\d+$/.test(f)),
         pro:document.querySelector('#report-host .pro-note')?.textContent||''
       };
@@ -163,7 +164,7 @@ async function runHeadlessChecks() {
       {ok:JSON.stringify(freeReport.measured)==='["slope","read","size","gaps","margin"]' && freeReport.look.length===0 && freeReport.strips===5 && freeReport.locked>0, name:'Page 1: what we measured, strongest first, each row drawn on the photo, with the scores outside Free named', detail:JSON.stringify({measured:freeReport.measured,strips:freeReport.strips,locked:freeReport.locked})},
       {ok:JSON.stringify(freeReport.chips.slice().sort((a,b)=>a-b))==='["1","5","7","8","18"]' && freeReport.chipColours, name:'Page 1: a chip per scored skill, its score in its band colour', detail:JSON.stringify(freeReport.chips)},
       {ok:freeReport.steps===3 && freeReport.trace && freeReport.check && freeReport.qr===freeReport.qrWant && freeReport.qrWant!=='', name:'Page 1: three steps, a line to trace, a tick box and a QR code for the first skill\'s worksheet', detail:JSON.stringify({steps:freeReport.steps,qr:freeReport.qr,want:freeReport.qrWant})},
-      {ok:freeReport.cta.length===2 && /Indian Patents No\. 584433 and 604895/.test(freeReport.foot) && /vahinitech\.com/.test(freeReport.foot) && /not a school mark/.test(freeReport.foot) && /Spelling/.test(freeReport.foot), name:'Page 1: the two screen buttons and the footer with patents, vahinitech.com and the spelling note', detail:freeReport.foot},
+      {ok:freeReport.cta.length===2 && /Indian Patents No\. 584433 and 604895/.test(freeReport.foot) && /vahinitech\.com/.test(freeReport.foot) && /not a school mark/.test(freeReport.foot) && !/Spelling/.test(freeReport.foot) && /^Spelling and grammar/.test(freeReport.lang.trim()), name:'Page 1: the two screen buttons, the footer with patents and vahinitech.com, and spelling and grammar on their own line', detail:freeReport.foot+' | '+freeReport.lang},
       {ok:freeReport.practiceFactors.includes(freeReport.start) && freeReport.look.every(l=>freeReport.practiceFactors.includes(l.f)), name:'Free report pairs each skill to grow with practice space', detail:JSON.stringify({start:freeReport.start,practice:freeReport.practiceFactors})},
       {ok:/Pro checks 15 more skills/.test(freeReport.pro) && !/₹|price/i.test(freeReport.pro), name:'Free report explains what Pro adds, with no price'},
       {ok:sheets.cards>0 && sheets.linked===sheets.cards, name:'Each practice card links its skill worksheet', detail:JSON.stringify(sheets)},

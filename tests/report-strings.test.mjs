@@ -106,7 +106,7 @@ assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => window.VahiniReport
   ['నేర్చుకుంటోంది', 'మెరుగవుతోంది', 'పట్టు సాధిస్తోంది', 'బలంగా ఉంది']);
 assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => en['stage.' + b]), ['Learning', 'Improving', 'Mastering', 'Strong']);
 // The Telugu says the spelling check covered English words only.
-for (const id of ['spelling.notchecked', 'spelling.found', 'spelling.clear', 'sn.spell.saw']) {
+for (const id of ['lang.title', 'lang.notchecked', 'lang.clear', 'sn.spell.saw']) {
   const value = window.VahiniReportStrings.te[id];
   for (const text of typeof value === 'object' ? Object.values(value) : [value]) {
     assert.match(text, /ఇంగ్లీష్/, `te ${id} says the check covered English words`);

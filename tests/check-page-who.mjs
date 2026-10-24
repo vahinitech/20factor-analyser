@@ -121,6 +121,40 @@ try {
     assert.equal(await page.locator('.scan-line.now').count(), 1, 'the line being read is still marked');
     await ctx.close();
   }
+  // "Does this page copy a sentence?" (owner, 2026-10-25): folded and empty
+  // by default; what is typed goes with the photo as expected_text; empty
+  // sends nothing to compare; the sample page never takes it.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem('vahini_guide_check', '1'); } catch {} });
+    const page = await ctx.newPage();
+    const bodies = [];
+    await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
+    await page.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
+    await page.route('**/api/v2/reports?**', (r) => { bodies.push(r.request().postDataBuffer().toString('latin1')); r.fulfill({ status: 502, contentType: 'text/html', body: '<h1>502</h1>' }); });
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    const box = page.locator('#copy-sentence');
+    assert.equal(await box.evaluate((d) => d.open), false, 'folded by default');
+    assert.match(await box.locator('summary').innerText(), /Does this page copy a sentence\?[\s\S]*Optional/);
+    const expected = (body) => (body.match(/name="expected_text"\r\n\r\n([^\r]*)/) || [])[1];
+    const send = async () => {
+      bodies.length = 0;   // a local page also tries a second address
+      await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
+      await page.waitForFunction(() => !document.querySelector('#go-process').disabled);
+      await page.click('#go-process');
+      for (let i = 0; i < 100 && !bodies.length; i++) await page.waitForTimeout(100);
+      await page.waitForTimeout(500);
+      const body = bodies[bodies.length - 1];
+      await page.evaluate(() => { const b = [...document.querySelectorAll('#screen-process button, #screen-process a')].find((x) => /another photo/i.test(x.textContent)); if (b) b.click(); else document.querySelector('#new-report')?.click(); });
+      await page.waitForSelector('#screen-upload.on', { timeout: 20000 });
+      return body;
+    };
+    assert.equal(expected(await send()) || '', '', 'empty by default: nothing to compare');
+    await page.click('#copy-sentence summary');
+    await page.fill('#cs-text', '  Seetha and   Rama practise slowly with care. ');
+    assert.equal(expected(await send()), 'Seetha and Rama practise slowly with care.', 'the typed sentence goes with the photo, tidied');
+    await ctx.close();
+  }
   console.log('check-page-who: I am and Report in at 390 and 1440 px, kept and never sent; the sweep reads the photo line by line');
 } finally {
   if (browser) await browser.close();

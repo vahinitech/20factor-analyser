@@ -295,6 +295,18 @@
       <label><input type="radio" name="write-lang" value="te"> <span lang="te">తెలుగు</span> Telugu <small>Not yet scored</small></label>
       <p class="write-lang-note" id="write-lang-note" role="status" hidden>Telugu handwriting is not scored yet. The check will tell you, and it will not use a free check. For a score today, write four lines in English.</p>
     </fieldset>
+    <!-- An optional sentence the page copies (owner, 2026-10-25). Spelling is
+         then checked against it, which finds far more than free writing.
+         Empty means free writing, notes or anything else: nothing assumed.
+         Sent with the photo for that check only, never kept. -->
+    <details class="copy-sentence" id="copy-sentence">
+      <summary><b>Does this page copy a sentence?</b> <small>Optional. Type it and we check spelling against it.</small></summary>
+      <div class="cs-body">
+        <label for="cs-text">The sentence on this page</label>
+        <textarea id="cs-text" maxlength="300" rows="2" spellcheck="false" placeholder="Type the sentence as it was given, e.g. Seetha and Rama practise slowly with care."></textarea>
+        <p class="cs-note">We compare the words on the page with this sentence. Leave it empty for free writing, notes or anything else.</p>
+      </div>
+    </details>
 
     <!-- Photos are never stored (vahinitech.com privacy statement, 4.2), and
          the page says so where the photo is chosen. -->
