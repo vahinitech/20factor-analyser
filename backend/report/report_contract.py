@@ -129,7 +129,10 @@ def structured_report(payload):
             "returned_factor_count": len(factors),
             "scored_factor_count": len(available),
             "proxy_factor_count": sum(f["status"] == "proxy" for f in factors),
-            "score_basis": "Existing weighted section score, including image proxies.",
+            "score_basis": (
+                "Points out of 100 from five factors: letter formation 40, "
+                "baseline 20, size 20, line straightness 10, slant 10."
+            ),
         },
         "factors": factors,
         "recognition": {
@@ -139,7 +142,7 @@ def structured_report(payload):
         "limitations": [
             "Scores are heuristic practice feedback, not a diagnosis.",
             "Normalized scores are not accuracy or confidence percentages.",
-            "The legacy overall score can include proxy factors.",
+            "The overall score counts five of the factors; the others are practice findings.",
         ],
     }
 

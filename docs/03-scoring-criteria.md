@@ -2,7 +2,8 @@
 
 What the analyser scores, how each score is computed, and where the
 cut-offs sit. Everything on this page is read from the code, not
-described from memory: sections and weights from `_SECTIONS`, factor
+described from memory: sections from `_SECTIONS`, the overall's points
+from `_OVERALL_POINTS`, factor
 definitions from `_FACTOR_META` / `_FACTOR_EXTRAS` and `build_analysis()`,
 all in `backend/scoring.py`; the formulas from `_score_factor_map()`,
 which runs one file per section in `backend/scoring_parts/`
@@ -20,15 +21,38 @@ measurements are made is a separate walkthrough:
 ## Sections, weights and the overall score
 
 Each factor scores 0-10. A section's score is the plain average of its
-factors; the overall 0-100 score is the weighted average of the section
-scores:
+measured factors:
 
-| Section | Weight | Factors |
-|---|---|---|
-| Structure — letter shapes, size & control | 30% | 1-6 |
-| Spatial — spacing, baseline & layout | 30% | 7-12 |
-| Dynamics — speed, pressure & flow | 20% | 13-16 |
-| Style & Readability — slant, legibility & neatness | 20% | 17-20 |
+| Section | Factors |
+|---|---|
+| Structure: letter shapes, size and control | 1-6 |
+| Spatial: spacing, baseline and layout | 7-12 |
+| Dynamics: speed, pressure and flow | 13-16 |
+| Style and Readability: slant, legibility and neatness | 17-20 |
+
+The overall 0-100 score counts five factors, as points out of 100
+(owner, 23 October 2026; the evidence is in
+[history/neat-pages-score-2026-10-23.md](history/neat-pages-score-2026-10-23.md)):
+
+| Factor | Points |
+|---|---|
+| 1 Letter Formation | 40 |
+| 7 Baseline Alignment | 20 |
+| 5 Size Consistency | 20 |
+| 11 Line Straightness | 10 |
+| 17 Slant Consistency | 10 |
+
+overall = sum of points x score / 10, over the five that are measured,
+scaled back to 100 when one is not. Size counts only when it was
+measured on at least 10 words or letter groups
+(`_OVERALL_MIN_SIZE_WORDS`): from 3 words its score was 2 or more points
+off the page's own in 20% of samples, from 10 in 8%. The other fifteen factors are still
+scored and shown as practice findings; they do not move the overall. On
+neat photos of real pages they misread good writing, and each comes back
+once it passes a neat-page test. A page with none of the five measured
+gets the earlier blend (the section scores weighted 0.30, 0.30, 0.20 and
+0.20). A section's serialized `weight` is its share of the overall: the
+points of its counted factors on that page.
 
 ## Bands
 
@@ -114,8 +138,8 @@ paper does not count as reach; reach =
 - **From a photo, Dynamics (13-16) are not scored.** True speed, pressure
   and pen lifts are motion, not ink. Photo reports mark these four factors
   `unmeasured` (`conf: "imu"`, score `null` in the version-2 API), leave
-  them out of section and overall averages, rankings and coaching, and
-  serialize renormalised section weights (Dynamics 0). The static-ink
+  them out of section averages, rankings and coaching. None of them is
+  in the overall, so Dynamics' serialized weight is 0. The static-ink
   proxy formulas above remain only as documentation of what the pen path
   replaces. The dual-IMU sensor pen measures them directly, and the
   report marks pen-measured factors (`imuMeasured`).

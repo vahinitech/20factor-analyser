@@ -113,6 +113,19 @@ _SECTIONS = [
     },
 ]
 
+# The overall score out of 100, as points per factor (owner, 23 October
+# 2026, #304): only the five measurements that hold up on neat photos of
+# real pages count. The other factors are still scored and shown as
+# practice findings; each comes back into the overall once it passes the
+# neat-page test in docs/history/neat-pages-score-2026-10-23.md. A factor
+# not measured on a page is left out and the rest are scaled to 100.
+_OVERALL_POINTS = {1: 40, 7: 20, 5: 20, 11: 10, 17: 10}
+# Size Consistency counts in the overall only when measured on at least
+# this many words (or letter groups): from 3 words its score was 2 or
+# more points off the page's own in 20% of draws, from 10 in 8% (owner,
+# 23 October 2026, #305). It is still scored and shown below that.
+_OVERALL_MIN_SIZE_WORDS = 10
+
 _FACTOR_META = {
     1: ("structure", "Letter Formation Accuracy", "shape regularity proxy"),
     2: ("structure", "Stroke Order Consistency", "stroke order proxy"),
@@ -323,7 +336,7 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
         _factor_result(n, fx, scores, supplied, basis, checks, zone_based)
         for n in range(1, 21)
     ]
-    sections, overall = _section_scores(results)
+    sections, overall = _section_scores(results, _left_out(fx))
     measured_results = [r for r in results if not r.unmeasured]
     ranked = sorted(measured_results, key=lambda r: float(r.score))
     top_weak = ranked[:3]
@@ -452,9 +465,20 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
     )
 
 
-def _section_scores(results):
+def _left_out(fx):
+    """Measured factors the overall leaves out on this page: Size when
+    it rests on too few words (_OVERALL_MIN_SIZE_WORDS)."""
+    few = (
+        fx.get("size_basis") not in ("words", "letter groups")
+        or int(fx.get("size_count") or 0) < _OVERALL_MIN_SIZE_WORDS
+    )
+    return (5,) if few else ()
+
+
+def _section_scores(results, left_out=()):
     """The four sections and the overall score. A section's score is the
-    mean of its measured factors."""
+    mean of its measured factors; the overall is the points-weighted mean
+    of the measured factors in _OVERALL_POINTS, less those in left_out."""
     sections = []
     for sec_meta in _SECTIONS:
         fs = [r for r in results if r.sec == sec_meta["id"]]
@@ -472,21 +496,48 @@ def _section_scores(results):
             )
         )
 
-    live_sections = [s for s in sections if s.avg100 is not None]
-    wsum = sum(float(s.weight) for s in live_sections) or 1.0
-    # The serialized weights are the ones the overall score actually used:
-    # a section with no measured factor (Dynamics from a photo) carries 0
-    # and the others are renormalised to sum to 1, so clients cannot
-    # recompute a different headline from the published weights.
+    counted = [
+        r
+        for r in results
+        if r.n in _OVERALL_POINTS and not r.unmeasured and r.n not in left_out
+    ]
+    if not counted:
+        # None of the five on this page (a script whose letters the
+        # reader cannot read): the old blend of every measured factor,
+        # so a page that has scores still gets a headline.
+        return sections, _all_factor_overall(sections)
+    total = float(sum(_OVERALL_POINTS[r.n] for r in counted))
+    # The serialized weights are each section's share of the overall:
+    # the points of its counted factors on this page, out of those
+    # counted, 0 for a section with none.
+    for section in sections:
+        section.weight = round(
+            sum(_OVERALL_POINTS[r.n] for r in counted if r.sec == section.id)
+            / total,
+            4,
+        )
+    overall = int(
+        round(
+            sum(_OVERALL_POINTS[r.n] * float(r.score) for r in counted)
+            / total
+            * 10
+        )
+    )
+    return sections, overall
+
+
+def _all_factor_overall(sections):
+    """The overall before 23 October 2026: the section means weighted by
+    _SECTIONS, renormalised over the sections with a measured factor.
+    Sets each section's serialized weight to the share it used."""
+    live = [s for s in sections if s.avg100 is not None]
+    wsum = sum(float(s.weight) for s in live) or 1.0
     for section in sections:
         section.weight = (
             round(float(section.weight) / wsum, 4)
             if section.avg100 is not None
             else 0.0
         )
-    overall = int(
-        round(
-            sum(float(s.avg100 or 0) * float(s.weight) for s in live_sections)
-        )
+    return int(
+        round(sum(float(s.avg100 or 0) * float(s.weight) for s in live))
     )
-    return sections, overall

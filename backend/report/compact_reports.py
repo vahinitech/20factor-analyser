@@ -66,7 +66,7 @@ def dictionary():
         "limitations": [
             "Scores are heuristic practice feedback, not a diagnosis.",
             "Normalized scores are not accuracy or confidence percentages.",
-            "The overall score can include image proxies.",
+            "The overall score counts five of the factors; the others are practice findings.",
         ],
         "practice": practice_catalog.practice_block(),
     }

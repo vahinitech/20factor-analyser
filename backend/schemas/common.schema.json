@@ -906,7 +906,7 @@
           "maximum": 20
         }
       },
-      "description": "One of the four sections as the engine scored it (scoring.build_analysis): the mean of its measured factors, 0-10 with one decimal, null when none was measured. weight is what the overall score used (0 for a section with no score). Pro only, since the mean includes factors Free cannot see."
+      "description": "One of the four sections as the engine scored it (scoring.build_analysis): the mean of its measured factors, 0-10 with one decimal, null when none was measured. weight is the section's share of the overall score: the points of its factors that the overall counted on this page (scoring._OVERALL_POINTS), 0 when it has none. Pro only, since the mean includes factors Free cannot see."
     },
     "comparability": {
       "type": "object",

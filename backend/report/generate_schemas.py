@@ -521,9 +521,11 @@ def common():
                     "One of the four sections as the engine scored it "
                     "(scoring.build_analysis): the mean of its measured "
                     "factors, 0-10 with one decimal, null when none was "
-                    "measured. weight is what the overall score used "
-                    "(0 for a section with no score). Pro only, since the "
-                    "mean includes factors Free cannot see."
+                    "measured. weight is the section's share of the "
+                    "overall score: the points of its factors that the "
+                    "overall counted on this page (scoring._OVERALL_POINTS), "
+                    "0 when it has none. Pro only, since the mean includes "
+                    "factors Free cannot see."
                 ),
             ),
             "comparability": closed(
@@ -1223,8 +1225,9 @@ def compact():
                 "description": (
                     "Pro only: the engine's section scores in short form. "
                     "s is the score out of ten (null when the section has "
-                    "no measured factor), w the weight the overall score "
-                    "used. Names come from the catalogue's sections."
+                    "no measured factor), w the section's share of the "
+                    "overall score (0 when the overall counted none of its "
+                    "factors). Names come from the catalogue's sections."
                 ),
                 "items": closed(
                     {

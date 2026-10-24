@@ -27,6 +27,8 @@ explains every number the engine produces.
 
 **Overall: 83 / 100** — the weighted average of the three sections a photo can score (Structure 37.5%, Spatial 37.5%, Style 25% after renormalising; Dynamics needs the sensor pen).
 
+That was how the overall was made when this example was run. Since 23 October 2026 it counts five factors only ([03-scoring-criteria.md](03-scoring-criteria.md#sections-weights-and-the-overall-score)), so the same page would get a different overall today.
+
 | Section | Weight | Score |
 |---|---|---|
 | Structure — letter shapes, size & control | 30% | 83 |

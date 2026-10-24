@@ -280,7 +280,7 @@
     "sections": {
       "type": "array",
       "maxItems": 4,
-      "description": "Pro only: the engine's section scores in short form. s is the score out of ten (null when the section has no measured factor), w the weight the overall score used. Names come from the catalogue's sections.",
+      "description": "Pro only: the engine's section scores in short form. s is the score out of ten (null when the section has no measured factor), w the section's share of the overall score (0 when the overall counted none of its factors). Names come from the catalogue's sections.",
       "items": {
         "type": "object",
         "additionalProperties": false,
