@@ -94,6 +94,7 @@ from server import (
 from typing import List, Literal
 from reading.gpu_detect import gpu_zero_caveat, nvidia_gpu_present
 from reading import escalation  # each line up its ladder (#219)
+from reading import language_check  # spelling and grammar (#317)
 from languages import stages  # which engine reads each script (#208)
 from languages import ladders  # the order stages read a line (#219)
 from languages import profile as profiles  # school/class/child rules (#220)
@@ -326,6 +327,13 @@ scan_worker.configure(__name__, __file__, scan_slots.SLOTS.max_active)
 # own PaddleOCR recogniser, so only where PaddleOCR reads the page.
 _READ_LETTERS = (
     ocr_backends.read_line_letters
+    if OCR_BACKEND in ("paddle", "hybrid", "auto")
+    else None
+)
+# Spelling checks a word against the same recogniser's letter scores
+# (reading/language_check.py, #317), so only where PaddleOCR reads.
+_READ_SCORES = (
+    ocr_backends.read_line_scores
     if OCR_BACKEND in ("paddle", "hybrid", "auto")
     else None
 )
@@ -1284,6 +1292,9 @@ def _report_python_process(
         }
 
     photo = computer_vision.photo_size(raw, verdict.turn)
+    language = _language(
+        arr, hand_lines, lang, selected_backend, expected_text
+    )
     return {
         "ok": True,
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
@@ -1320,7 +1331,33 @@ def _report_python_process(
         "factor_regions": vl.get("factor_regions", {}),
         "measurements": vl.get("measurements", {}),
         "ambiguous_word_gaps": vl.get("ambiguous_word_gaps", []),
+        "language": language,
     }
+
+
+def _language(arr, hand_lines, lang, selected_backend, expected_text):
+    """The report's spelling and grammar section (#317). It reads at most
+    language_check.ROWS_MAX rows again and never touches a score; if it
+    fails, the scan still answers, without the section's findings."""
+    if selected_backend in ("ink-geometry", "cv-fallback"):
+        return {"version": 1, "checked": False, "reason": "no_letter_scores"}
+
+    def read(crop, line_lang):
+        perf.count("reader_calls")
+        return _READ_SCORES(crop, line_lang)
+
+    with perf.stage("language", lines=len(hand_lines)):
+        try:
+            return language_check.check(
+                arr,
+                hand_lines,
+                recognizer.resolve_langs(lang),
+                read if _READ_SCORES else None,
+                expected_text,
+            )
+        except Exception:  # pylint: disable=broad-except
+            log.exception("language check failed")
+            return {"version": 1, "checked": False, "reason": "error"}
 
 
 def _ruleset(profile):

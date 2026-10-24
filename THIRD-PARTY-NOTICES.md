@@ -92,6 +92,16 @@ image.
 
 ---
 
+## Word lists
+
+**SCOWL 2020.12.07** (Spell Checker Oriented Word Lists), © 2000-2018
+Kevin Atkinson and the contributors named in its notice, permissive
+licence (use, copy, modify, distribute and sell, with the notice kept).
+`backend/languages/words/en.txt.gz` and `never-suggest.txt.gz` are built
+from it by `scripts/build_wordlist.py`; the full notice is
+`backend/languages/words/SCOWL-Copyright.txt`.
+<http://wordlist.aspell.net/>
+
 ## Hosted runtime services (no code redistributed)
 
 | Service | Provider | Terms |

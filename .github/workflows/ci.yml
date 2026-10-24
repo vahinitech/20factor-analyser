@@ -94,6 +94,10 @@ jobs:
             backend/vision/ink_geometry.py scripts/ink_geometry_eval.py \
             backend/vision/page_turn.py \
             backend/reading/recognizer.py backend/reading/escalation.py \
+            backend/reading/spelling.py backend/reading/grammar.py \
+            backend/reading/language_check.py \
+            backend/tests/test_language_check.py \
+            scripts/build_wordlist.py scripts/language_eval.py \
             backend/tests/test_escalation.py \
             backend/config.py backend/server/cache.py \
             backend/languages/tags.py backend/tests/test_lang_tags.py \

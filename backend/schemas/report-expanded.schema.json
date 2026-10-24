@@ -441,6 +441,9 @@
     "turned": {
       "$ref": "common.schema.json#/definitions/pageTurn"
     },
+    "language": {
+      "$ref": "common.schema.json#/definitions/languageCheck"
+    },
     "evidence": {
       "type": "object",
       "required": [

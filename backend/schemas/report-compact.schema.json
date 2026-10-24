@@ -277,6 +277,9 @@
     "turned": {
       "$ref": "common.schema.json#/definitions/pageTurn"
     },
+    "language": {
+      "$ref": "common.schema.json#/definitions/languageCheck"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,
@@ -391,6 +394,9 @@
       "text"
     ],
     "recognition": [
+      "text"
+    ],
+    "language": [
       "text"
     ],
     "text": [

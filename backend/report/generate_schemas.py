@@ -25,6 +25,7 @@ from languages.profile import MAX_BYTES as PROFILE_BYTES
 from report.practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
 from report.json_schema import DRAFT
 from report.report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
+from reading.grammar import RULES as GRAMMAR_RULES
 
 OUT = Path(__file__).resolve().parents[1] / "schemas"
 BASE = "https://vahinitech.com/schemas/analyser/v2/"
@@ -604,6 +605,7 @@ def common():
                     "when the photo was read as it is."
                 ),
             },
+            "languageCheck": language_check(),
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -612,6 +614,102 @@ def common():
             },
         },
     }
+
+
+def language_check():
+    """The report's `language` section (reading/language_check.py)."""
+    place = closed(
+        {
+            "line": nullable("string"),
+            "bbox": {
+                "type": ["array", "null"],
+                "items": {"type": "integer"},
+                "minItems": 4,
+                "maxItems": 4,
+            },
+            "placed": {"enum": ["letters", "estimated"]},
+        }
+    )
+    places = {"type": "array", "minItems": 1, "items": place}
+    text = {"type": "string", "minLength": 1}
+    return closed(
+        {
+            "version": {"const": 1},
+            "checked": {"type": "boolean"},
+            "reason": {
+                "enum": [
+                    None,
+                    "not_english",
+                    "no_letter_scores",
+                    "no_text",
+                    "error",
+                ]
+            },
+            "rows": closed(
+                {
+                    key: {"type": "integer", "minimum": 0}
+                    for key in (
+                        "read",
+                        "checked",
+                        "not_read",
+                        "over_cap",
+                        "unclear",
+                    )
+                }
+            ),
+            "spelling": {
+                "type": "array",
+                "items": closed(
+                    {
+                        "written": text,
+                        "suggestion": text,
+                        "kind": {
+                            "enum": [
+                                "letter_order",
+                                "missing_letter",
+                                "extra_letter",
+                                "other_letter",
+                                "letters",
+                            ]
+                        },
+                        "against": {
+                            "enum": ["list", "sentence"],
+                            "description": (
+                                "list: the word is not in the word list "
+                                "and suggestion is the likeliest meant "
+                                "word; sentence: the child copied or "
+                                "wrote a dictated sentence and "
+                                "suggestion is that sentence's word."
+                            ),
+                        },
+                        "places": places,
+                    }
+                ),
+            },
+            "grammar": {
+                "type": "array",
+                "items": closed(
+                    {
+                        "rule": {"enum": list(GRAMMAR_RULES)},
+                        "written": text,
+                        "suggestion": text,
+                        "places": places,
+                    }
+                ),
+            },
+        },
+        required=["version", "checked", "reason"],
+        description=(
+            "Spelling and grammar on the page (#317): words the writer "
+            "spelt another way, checked against the reader's letter "
+            "scores so a misread is never reported, and sentences a fixed "
+            "English rule would change. Places are processed-image "
+            "pixels; `estimated` places come from the share of the line's "
+            "text, not from the letters. Never part of a score, never "
+            "stored. `checked` false with a reason when the page was not "
+            "checked; an empty list never means the page has no mistakes."
+        ),
+    )
 
 
 def practice_limits():
@@ -1028,6 +1126,7 @@ def expanded():
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
             "turned": ref("pageTurn"),
+            "language": ref("languageCheck"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -1219,6 +1318,7 @@ def compact():
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
             "turned": ref("pageTurn"),
+            "language": ref("languageCheck"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,
@@ -1287,6 +1387,7 @@ def compact():
     schema["dependencies"] = {
         "counts": ["text"],
         "recognition": ["text"],
+        "language": ["text"],
         "text": ["counts", "recognition"],
     }
     schema["allOf"] = [

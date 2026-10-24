@@ -439,6 +439,61 @@ def read_line_letters(crop, lang):
     return rec_text, seen[0]
 
 
+class _KeepScores:
+    """Stands in for the recogniser's CTC decoder for one call and keeps
+    the whole score matrix it is given (columns x characters), which the
+    decoder otherwise reduces to each column's best character."""
+
+    def __init__(self, post):
+        self._post = post
+        self.matrices = []
+
+    def __call__(self, pred, *args, **kwargs):
+        self.matrices = [np.asarray(p, dtype=np.float32) for p in pred[0]]
+        return self._post(pred, *args, **kwargs)
+
+    def __getattr__(self, name):
+        return getattr(self._post, name)
+
+
+def read_line_scores(crop, lang):
+    """One line crop read again by the scan's own recogniser, keeping
+    every column's score for every character: (rec_text, matrix,
+    characters), or None. rec_text is as read_line_letters gives it;
+    matrix[column][i] is the recogniser's probability that the column
+    holds characters[i] (0 is CTC's blank). The spelling check
+    (reading/spelling.py) asks how well a dictionary word fits these
+    scores. Uses the cached engine under its lock, so no second model is
+    loaded."""
+    try:
+        engine = get_engine(lang or "en")
+    except Exception:  # pylint: disable=broad-except
+        return None
+    pipeline = getattr(engine, "paddlex_pipeline", None)
+    inner = getattr(pipeline, "_pipeline", pipeline)
+    model = getattr(inner, "text_rec_model", None)
+    post = getattr(model, "post_op", None)
+    characters = getattr(post, "character", None)
+    if model is None or post is None or not characters:
+        return None
+    keep = _KeepScores(post)
+    with _lock_for_engine(engine):
+        model.post_op = keep
+        try:
+            got = list(model([crop], return_word_box=True))
+        except Exception:  # pylint: disable=broad-except
+            return None
+        finally:
+            model.post_op = post
+    if not got or not keep.matrices:
+        return None
+    try:
+        rec_text = got[0]["rec_text"]
+    except (KeyError, TypeError, IndexError):
+        return None
+    return rec_text, keep.matrices[0], list(characters)
+
+
 # How large line recovery's crops are when the detector looks at them.
 # The engine's page setting (VAHINI_OCR_DET_LIMIT_SIDE_LEN, 2048) raises the
 # SHORT side to 2048, which suits a page but blows a one-line crop up until

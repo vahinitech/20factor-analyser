@@ -20,13 +20,13 @@ checks for each, and the condition under which it runs.
 | Slant consistency | Done | factor 17, geometry | every scan |
 | Open vs closed loops | Done | factor 3, a proxy from which letters OCR read, not per-letter contour tracing | needs recognised text |
 | Line quality, shakiness | Done | factor 4, stroke-width variance | every scan |
-| Grammar, phrasing | Done | `craft.js` rules | needs recognised text with reasonable confidence |
+| Grammar, phrasing | Server, not shown yet | `reading/grammar.py` rules on trusted sentences (#317); `craft.js` has older rules nothing calls | English, sentences whose words the spelling check trusts |
 | Homophones (your/you're, its/it's) | Done | `craft.js` rules | needs recognised text |
 | Missing apostrophe, comma, full stop | Done | `craft.js` | needs recognised text |
 | Letter formatting, sign-off | Done | `craft.js` | letter-type documents only |
 | Cursive / semi-cursive / print style | Done | `computer_vision.infer_writing_style`, from ink-blob connectivity per line, shown as descriptive context, never scored (no curriculum treats one style as more "correct") | needs Latin-letter OCR text, ≥12 letters read |
 | Stray capitals, per-letter shape variance | Not done | was part of the same retired browser-side pass (`letters.js`) | — |
-| Spelling mistakes | Not done | same as above | — |
+| Spelling mistakes | Server, not shown yet | `reading/spelling.py`: SCOWL word list, each unlisted word checked against the reader's letter scores (#317); strict, finds few | English, at most six rows a page |
 | Telugu, Hindi letter reading | Partial | the recognition server, engine and accuracy vary by script | needs recognition server |
 
 The geometry factors run on every scan and do not depend on reading the
@@ -82,7 +82,7 @@ OCR text as a secondary signal.
 | Gap | Impact | Fix |
 |---|---|---|
 | Letter-level findings partially retired | Cursive/print style detection is back (server-side, see "What works today"); stray capitals, letterform variance and punctuation audit still don't run: these were part of the same retired browser-side pass (`letters.js`) with no server equivalent yet | Reimplement the remaining checks server-side once there is budget for it |
-| No spelling check | Spelling mistakes are not flagged at all | Same rewrite as above, or a dictionary pass on recognised text |
+| Spelling finds few words in free writing | The reader turns most misspelt words into other words, so the ink check sees few of them (docs/history/spelling-grammar-2026-10-24.md) | Check a copied or dictated sentence's own words against the ink |
 | Feedback endpoint not centralised | Lead-capture data from the PDF download dialog is stored in the browser's local storage and posted to `/persist/feedback`, but nothing in this repo implements that service | Deploy a feedback-capture backend and point the deployment's reverse proxy at it; see `docs/15-persistence.md` |
 | No real IMU pen data | The four Dynamics factors are estimated from a photo, not measured from pen motion | Capture from the dual-IMU sensor pen |
 | Indic geometry thresholds tuned on Latin samples | Telugu and Hindi quality scores are less reliable than English | Refit the reference bands on Indic handwriting samples |
@@ -99,9 +99,9 @@ OCR text as a secondary signal.
 2. Deploy the feedback endpoint so lead-capture data is centralised
    instead of living only in the browser.
 3. Reimplement a server-side pass for the remaining retired letter-level
-   findings (stray capitals, letterform variance, spelling; style mix is
-   done, see "What works today"), the single biggest gap against what a
-   human coach checks.
+   findings (stray capitals, letterform variance; style mix is done, see
+   "What works today"; spelling and grammar are #317), the single biggest
+   gap against what a human coach checks.
 
 ### Mid-term
 4. Refit geometry reference bands on Indic samples.
