@@ -70,5 +70,23 @@
     "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/LICENSE",
     "sha256": "eacb6e3b470b5894f81fa7091663983068a391ad1741f868e70b131051ad48ea",
     "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSerifTelugu-Regular.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-400-normal.woff2",
+    "sha256": "580b25337f62d4d2517beae261ce727df1d7185bd99d77f8f41734f4a2ab5a3e",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSerifTelugu-Bold.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-700-normal.woff2",
+    "sha256": "3c660f60b2696031c4dd0404040cf45437fb6ddef87de03eca5a721ad0f2109c",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "notoseriftelugu-OFL.txt",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/LICENSE",
+    "sha256": "eacb6e3b470b5894f81fa7091663983068a391ad1741f868e70b131051ad48ea",
+    "license": "OFL-1.1"
   }
 ]
