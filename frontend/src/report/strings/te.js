@@ -341,9 +341,8 @@ S.te = {
   'pp.noforget': 'ఈ బ్రౌజర్ వాటిని తీసేయనివ్వలేదు.',
 
   /* The student view: a draft for a Telugu teacher to check (Guntur pilot, sheet sent 2026-10-23). */
-  'side.for': 'రిపోర్ట్ ఎవరి కోసం',
-  'side.for.parent': 'తల్లిదండ్రులు, టీచర్లు',
-  'side.for.student': 'విద్యార్థులు',
+  'side.view.student': 'విద్యార్థి రిపోర్ట్',
+  'side.view.parent': 'తల్లిదండ్రుల రిపోర్ట్',
   'stu.label': 'విద్యార్థి కోసం',
   'stu.greet': 'బాగా రాశావు!',
   'stu.greet.name': 'బాగా రాశావు, {name}!',

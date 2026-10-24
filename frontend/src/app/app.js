@@ -128,6 +128,7 @@ const PASSAGES = [
 /* ---------- screens / steps ---------- */
 const STEP_OF = { upload:0, imu:0, process:1, report:2 };
 function go(name){
+  if (window.VahiniGuide) VahiniGuide.close();   // Pihu's guide ends with its screen
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#screen-'+name).classList.add('on');
   const idx = STEP_OF[name] != null ? STEP_OF[name] : 0;
@@ -448,6 +449,7 @@ function reportOutcome(outcome){
    can say why reports are read but not printed. Never for a sample run;
    without the popup's script this does nothing. */
 function askAboutReport(){
+  if (window.VahiniGuide) VahiniGuide.report();   // Print and the other view, once per browser
   if (window.VAHINI_SAMPLE_RUN) return;
   try{ if (window.VahiniReportFeedback && typeof VahiniReportFeedback.arm === 'function') VahiniReportFeedback.arm(); }catch(_e){}
 }
@@ -506,18 +508,24 @@ function startServicePolling(){
   serviceCheckTimer = setInterval(checkService, 10000);
 }
 
-/* Preview the uploaded photo in the process screen. Scoring runs server-side
-   now, so there is no in-browser detection overlay to draw; without this
-   the stage box would sit empty (and visibly black) for the whole pipeline. */
+/* Preview the uploaded photo in the process screen and sweep it line by
+   line until the report (owner, 2026-10-25; src/app/scan-sweep.js). The
+   scoring runs on the server; the sweep shows the photo's own lines. */
+let stopSweep = null;
 function showProcStagePreview(img){
   const host = $('#proc-stage');
   if (!host) return;
-  const old = host.querySelector('img.proc-preview'); if (old) old.remove();
+  if (stopSweep){ stopSweep(); stopSweep = null; }
+  host.classList.remove('is-scanning');
+  host.querySelectorAll('.scan-sweep, .scan-cap, .scan-bars, img.proc-preview').forEach(el=>el.remove());
   const el = document.createElement('img');
   el.className = 'proc-preview';
   el.alt = 'uploaded handwriting sample';
   el.src = img.src;
   host.appendChild(el);
+  if (!window.VahiniScanSweep) return;
+  const sweep = ()=>{ if (el.isConnected) stopSweep = VahiniScanSweep.start(host, el); };
+  if (el.complete && el.naturalWidth) sweep(); else el.addEventListener('load', sweep, { once: true });
 }
 
 /* ---------- expected passage ---------- */

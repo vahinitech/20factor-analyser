@@ -94,6 +94,24 @@
 .run-hint { display:none; flex-basis:100%; margin:8px 0 0; font-size:14px; color:var(--v-text-2); text-align:center; }
 #go-process:disabled + .run-hint { display:block; }
 .dz-sub { margin:4px 0 12px; font-size:14px; color:var(--v-text-2); }
+/* Who is checking, and the report's language: one row under the heading. */
+.who-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px; margin-top:14px; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.who-pick { display:flex; flex-wrap:wrap; align-items:center; gap:8px; border:0; margin:0; padding:0; min-width:0; }
+.who-pick legend { float:left; margin-right:6px; padding:0; font-weight:700; font-size:15px; color:var(--v-text); }
+.who-opt { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border:1px solid var(--v-border); border-radius:var(--v-radius-pill); background:var(--v-bg); font-size:15px; color:var(--v-text); cursor:pointer; }
+.who-opt:has(input:checked) { border-color:var(--v-accent); background:var(--v-accent-soft); color:var(--v-accent-text); font-weight:600; }
+.who-opt:has(input:focus-visible) { outline:2px solid var(--v-accent); outline-offset:2px; }
+.who-opt input { margin:0; accent-color:var(--v-accent); }
+.who-lang { display:inline-flex; align-items:center; gap:8px; margin-left:auto; font-weight:700; font-size:15px; color:var(--v-text); }
+.who-lang select { font:inherit; font-weight:400; padding:5px 10px; border:1px solid var(--v-border); border-radius:var(--v-radius-sm); background:var(--v-bg); color:var(--v-text); }
+@media (max-width:720px) {
+  .who-bar { gap:6px 10px; margin-top:10px; padding:8px 10px; }
+  .who-pick { gap:6px; }
+  .who-pick legend { font-size:14px; margin-right:2px; }
+  .who-opt { padding:4px 9px; gap:4px; font-size:14px; }
+  .who-lang { margin-left:0; font-size:14px; }
+  .who-lang select { padding:4px 8px; }
+}
 /* What's new: one line under the heading, the full list on a tap. */
 .whats-new { margin-top:12px; }
 .whats-new summary { display:flex; align-items:center; gap:8px; max-width:100%; width:max-content; padding:5px 12px; border:1px solid var(--v-border); border-radius:var(--v-radius-pill); background:var(--v-surface); color:var(--v-text-2); font-size:14px; line-height:1.4; cursor:pointer; list-style:none; box-sizing:border-box; }
@@ -104,6 +122,10 @@
 .wn-line { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .wn-line time, .wn-list time { font-weight:600; color:var(--v-text); }
 .wn-all { flex:none; font-weight:600; color:var(--v-accent-text); }
+.wn-count { flex:none; font-size:12px; color:var(--v-text-muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wn-line.wn-in { animation:wnIn .45s ease; }
+@keyframes wnIn { from { transform:translateY(60%); opacity:0; } to { transform:none; opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .wn-line.wn-in { animation:none; } }
 .wn-all::after { content:" \203A"; }
 .whats-new[open] .wn-all::after { content:" \2039"; }
 .wn-panel { max-width:640px; margin-top:8px; padding:14px 16px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
@@ -114,3 +136,29 @@
   .whats-new summary { font-size:13px; padding:5px 10px; }
   .wn-list li { grid-template-columns:1fr; gap:0; }
 }
+
+/* Pihu's guide (src/app/guide.js): a lit ring round the button, the rest of
+   the page dimmed, Pihu perched at its corner and a short note. */
+.pg { position:absolute; top:0; left:0; width:0; height:0; z-index:9600; }
+.pg-ring { position:absolute; border-radius:var(--v-radius-md); box-shadow:0 0 0 4px var(--v-accent), 0 0 0 200vmax color-mix(in srgb, var(--v-dark) 55%, transparent); pointer-events:none; transition:left .45s ease, top .45s ease, width .45s ease, height .45s ease; }
+.pg-say { position:absolute; box-sizing:border-box; padding:14px 16px 12px; border-radius:var(--v-radius-md); background:var(--v-surface); color:var(--v-text); box-shadow:var(--v-shadow-lg, 0 10px 30px color-mix(in srgb, var(--v-dark) 30%, transparent)); font:15px/1.45 var(--v-font-sans); transition:left .45s ease, top .45s ease; }
+.pg-say .pg-n { margin:0 0 4px; font-size:12px; color:var(--v-text-muted); }
+.pg-say h2 { margin:0 0 4px; font:700 17px/1.3 var(--v-font-serif); color:var(--v-text); }
+.pg-say p { margin:0; }
+.pg-act { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.pg-act button { font:600 14px var(--v-font-sans); padding:7px 14px; border-radius:var(--v-radius-pill); border:1px solid var(--v-border); background:transparent; color:var(--v-text-2); cursor:pointer; }
+.pg-act .pg-next { background:var(--v-accent); border-color:var(--v-accent); color:var(--v-on-accent); }
+.pg-act button:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; }
+.pg-bird { position:absolute; top:0; left:0; aspect-ratio:1; pointer-events:none; filter:drop-shadow(0 6px 8px color-mix(in srgb, var(--v-dark) 25%, transparent)); }
+.pg-bird img { position:absolute; inset:0; width:100%; height:100%; }
+/* The wings beat from the shoulders while Pihu flies. */
+.pg-bird .pg-wf { transform-origin:48% 59%; }
+.pg-bird .pg-wb { transform-origin:72% 57%; }
+.pg-bird.is-flying .pg-wf { animation:pgBeatFront .28s ease-in-out infinite; }
+.pg-bird.is-flying .pg-wb { animation:pgBeatBack .28s ease-in-out infinite; }
+.pg-bird:not(.pg-bird--layers).is-flying .pg-body { animation:pgBob .28s ease-in-out infinite; }
+@keyframes pgBeatFront { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-28deg); } }
+@keyframes pgBeatBack { 0%,100% { transform:rotate(0); } 50% { transform:rotate(24deg); } }
+@keyframes pgBob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .pg-ring, .pg-say { transition:none; } .pg-bird .pg-wf, .pg-bird .pg-wb, .pg-bird .pg-body { animation:none !important; } }
+@media print { .pg { display:none !important; } }

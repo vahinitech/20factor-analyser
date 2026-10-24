@@ -90,8 +90,9 @@ const plain = (s) => {
 };
 const listed = [...block.matchAll(/<li><time datetime="([\d-]+)">[^<]+<\/time> <span>([^<]*)<\/span><\/li>/g)].map((m) => [m[1], plain(m[2])]);
 assert.deepEqual(listed, items.map((i) => [i.date, i.text]), 'the built list is the JSON, in order');
-const line = block.match(/<span class="wn-line">([\s\S]*?)<\/span><span class="wn-all">/);
+const line = block.match(/<span class="wn-line">([\s\S]*?)<\/span><span class="wn-count">1 of (\d+)<\/span><span class="wn-all">/);
 assert.ok(line && plain(line[1]).endsWith(items[0].text), 'the line shows the newest change before the script runs');
+assert.equal(+line[2], items.length, '"1 of" counts every change on the list');
 const [y, m, d] = items[0].date.split('-');
 const month = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'.split(' ')[+m - 1];
 assert.ok(block.includes(`Updated ${+d} ${month} ${y}.`), `"Updated ${+d} ${month} ${y}" in the list`);

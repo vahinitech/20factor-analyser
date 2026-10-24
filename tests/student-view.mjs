@@ -7,8 +7,8 @@
 // - no score and no skill name in the card; sentences of ten words or fewer;
 // - the pages fold behind "Details for your teacher" on screen, and print as
 //   two A4 pages with the card left out;
-// - "Report for" switches back without a new scan, and the choice is never
-//   sent anywhere;
+// - the "Student view" / "Parent report" link under the report switches
+//   without a new scan, and the choice is never sent anywhere;
 // - nothing runs off a phone screen, in English or in Telugu.
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
@@ -53,7 +53,8 @@ try {
     const { page } = await open('');
     assert.equal(await page.locator('.stu').count(), 0, 'no student card without ?for=student');
     assert.equal(await page.locator('section.page:visible').count(), 2, 'both pages show');
-    assert.equal(await page.locator('#report-for').inputValue(), 'parent', '"Report for" starts on parents and teachers');
+    assert.equal(await page.locator('#report-for').count(), 0, 'no "Report for" beside the report (owner, 2026-10-25)');
+    assert.equal(await page.locator('#view-switch').innerText(), en['side.view.student'], 'the link under the report offers the student view');
     await page.close();
   }
 
@@ -99,12 +100,15 @@ try {
     await page.emulateMedia({ media: 'screen' });
     await page.evaluate(() => window.dispatchEvent(new Event('afterprint')));
     assert.equal(await page.locator('section.page:visible').count(), 0, 'folded again after printing');
-    // "Report for" switches back without a new scan; nothing is sent.
-    await page.selectOption('#report-for', 'parent');
+    // The link under the report switches back without a new scan; nothing
+    // is sent.
+    assert.equal(await page.locator('#view-switch').innerText(), en['side.view.parent']);
+    await page.click('#view-switch');
     assert.equal(await page.locator('.stu').count(), 0, 'switching to parents removes the card');
     assert.equal(await page.locator('section.page:visible').count(), 2);
     assert.equal(await page.evaluate(() => sessionStorage.getItem('vahini_report_for')), 'parent', 'kept in this tab');
-    await page.selectOption('#report-for', 'student');
+    assert.equal(await page.locator('#view-switch').innerText(), en['side.view.student']);
+    await page.click('#view-switch');
     assert.equal(await page.locator('.stu').count(), 1, 'and back');
     assert.deepEqual(sent.filter((s) => /student|report_for/.test(s)), [], 'the choice is never sent');
     await page.close();

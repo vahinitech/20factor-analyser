@@ -349,9 +349,8 @@ S.en = {
   'pp.noforget': 'This browser did not let us remove them.',
 
   /* The student view (owner, 2026-10-23, option A): one screen, one strength, one thing to practise, every skill beside the proof from the student's own page. Short sentences that point at the marks; no score, no skill names (wording sheet, vahini-web student report plan). */
-  'side.for': 'Report for',
-  'side.for.parent': 'Parents and teachers',
-  'side.for.student': 'Students',
+  'side.view.student': 'Student view',
+  'side.view.parent': 'Parent report',
   'stu.label': 'For the student',
   'stu.greet': 'Well done!',
   'stu.greet.name': 'Well done, {name}!',

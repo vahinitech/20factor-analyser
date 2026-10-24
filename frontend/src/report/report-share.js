@@ -3,8 +3,13 @@
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Beside the report, on screen only (the side panel never prints):
-   - "Report for" (#report-for): the student view or today's report, redrawn
-     in place (owner, 2026-10-23).
+   - "I am" and "Report in" above the check (#who-bar, owner, 2026-10-25):
+     a student gets the student view; a parent or guardian (the default), a
+     teacher or someone checking their own writing gets the parent report.
+     "Report in" and "Print in" are one choice. Both stay in this browser
+     and are never sent.
+   - Under the report, "Student view" or "Parent report" (#view-switch)
+     redraws the other view of the same check, with no new scan.
    - "Print in" (#report-lang): redraws the report and "Your progress" in
      the chosen language. Scores, crops, the page photo and the pictures do
      not change, only the words. The choice is kept in this browser.
@@ -134,6 +139,7 @@ function tr(){
 }
 /* The side panel's own words follow "Print in" too. */
 function translatePanel(){
+  switchLabel();
   const t = tr();
   doc.querySelectorAll('[data-i18n]').forEach(el=>{
     const id = el.getAttribute('data-i18n');
@@ -271,18 +277,63 @@ async function sharePDF(){
   } finally { busy = false; }
 }
 
+/* "I am" (owner, 2026-10-25). Kept in this browser (localStorage) so the
+   next check starts the same way; ?for=student on the address still opens
+   the student view. Never sent with a check. */
+const WHO_KEY = 'vahini_check_who';
+const WHO = ['parent', 'student', 'teacher', 'self'];
+function savedWho(){
+  let v = null;
+  try{ v = new URLSearchParams(global.location.search).get('for') === 'student' ? 'student' : null; }catch(_e){ /* no address */ }
+  if (!v){ try{ v = global.localStorage.getItem(WHO_KEY); }catch(_e){ /* blocked */ } }
+  return WHO.includes(v) ? v : 'parent';
+}
+function viewFor(who){ return who === 'student' ? 'student' : 'parent'; }
+function switchLabel(){
+  const btn = doc.getElementById('view-switch');
+  if (!btn || !global.VahiniReport) return;
+  const id = global.VahiniReport.audience() === 'student' ? 'side.view.parent' : 'side.view.student';
+  btn.setAttribute('data-i18n', id);
+  const t = tr();
+  btn.textContent = t(id);
+}
+function wireWho(){
+  const R = global.VahiniReport;
+  if (!R || !R.setAudience) return;
+  const radios = [...doc.querySelectorAll('input[name="check-who"]')];
+  const who = savedWho();
+  radios.forEach(r=>{
+    r.checked = r.value === who;
+    r.addEventListener('change', ()=>{
+      if (!r.checked) return;
+      try{ global.localStorage.setItem(WHO_KEY, r.value); }catch(_e){ /* this visit only */ }
+      R.setAudience(viewFor(r.value));
+      switchLabel();
+    });
+  });
+  if (radios.length) R.setAudience(viewFor(who));
+  const btn = doc.getElementById('view-switch');
+  if (btn) btn.addEventListener('click', ()=>{
+    R.setAudience(R.audience() === 'student' ? 'parent' : 'student');
+    R.rerender();
+    ready = null;
+    switchLabel();
+  });
+  switchLabel();
+}
+
 function init(){
   const pick = doc.getElementById('report-lang');
   if (pick && global.VahiniI18n){
     pick.value = global.VahiniI18n.language();
     pick.addEventListener('change', ()=>applyLanguage(pick.value));
   }
-  // "Report for" (owner, 2026-10-23): the student view or today's report,
-  // redrawn without a new scan. Kept in this tab only (report-render.js).
-  const forPick = doc.getElementById('report-for');
-  if (forPick && global.VahiniReport && global.VahiniReport.audience){
-    forPick.value = global.VahiniReport.audience();
-    forPick.addEventListener('change', ()=>{ global.VahiniReport.setAudience(forPick.value); global.VahiniReport.rerender(); });
+  wireWho();
+  const topLang = doc.getElementById('check-lang');
+  if (topLang && global.VahiniI18n){
+    topLang.value = global.VahiniI18n.language();
+    topLang.addEventListener('change', ()=>{ if (pick) pick.value = topLang.value; applyLanguage(topLang.value); });
+    if (pick) pick.addEventListener('change', ()=>{ topLang.value = pick.value; });
   }
   const btn = doc.getElementById('share-pdf');
   if (btn) btn.addEventListener('click', ()=>{ sharePDF(); });

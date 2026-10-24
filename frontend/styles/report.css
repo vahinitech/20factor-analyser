@@ -1180,7 +1180,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .report-layout{ display:grid; grid-template-columns:minmax(0,210mm) 300px; gap:24px; justify-content:center; align-items:start; }
   .report-side{ position:sticky; top:140px; max-height:calc(100vh - 160px); overflow:auto; margin:24px 0 40px; padding:0; }
 }
-@media print{ .report-side, .report-layout > aside{ display:none !important; } }
+/* Under the report: the other view of the same check (screen only). */
+.view-switch{ margin:-44px 0 40px; text-align:center; font-family:var(--sans); }
+.view-switch__btn{ background:none; border:0; padding:6px 8px; font:inherit; font-size:14px; color:var(--v-accent-text); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.view-switch__btn:focus-visible{ outline:2px solid var(--v-accent); outline-offset:2px; border-radius:6px; }
+@media screen and (min-width:1200px){ .report-layout > .view-switch{ grid-column:1; grid-row:2; } .report-layout > .report-side{ grid-column:2; grid-row:1 / span 2; } }
+@media print{ .report-side, .report-layout > aside, .view-switch{ display:none !important; } }
 /* The shared PDF: html2canvas draws the page as on a wide screen. */
 .pdf-capture .page{ margin:0 !important; box-shadow:none !important; width:210mm !important; min-height:297mm !important; }
 .pdf-capture body{ background:var(--v-paper); }
