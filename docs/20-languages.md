@@ -418,6 +418,38 @@ all change the report. Each needs before and after screenshots and
 Until then the report keeps its current labels, and the new fields live
 only in the JSON.
 
+**Every language keeps the English report** (owner, 2026-10-23: the report
+will come in many languages, and it is credible only if each looks like
+the English one). Only the words change. Fonts, sizes and places are
+the rule in [12-report-rules.md](12-report-rules.md#every-language-keeps-the-english-report),
+held by `tests/report-parity.mjs`. Adding a report language:
+
+1. Words: `frontend/src/report/strings/<lang>.js` with every id of `en.js`
+   (`tests/report-strings.test.mjs`), reviewed by a teacher who writes the
+   language. Keep sentences no longer than the English: a longer one makes
+   the renderer hide a line in a practice row or zoom a printed page, and
+   the parity test lists each case under "words longer than English".
+2. The language and its script in `frontend/src/report/i18n.js` (`LANGS`,
+   `SCRIPT`). A script without capitals is already in `CASELESS`.
+3. A script other than Latin: its faces in
+   `frontend/styles/report-fonts.css` under the three existing names,
+   `Vahini Script Serif`, `Vahini Script Sans` and `Vahini Script Hand`, each
+   limited to the script's letters with `unicode-range`. Use Google Noto
+   (Noto Serif and Noto Sans in the script), the one family designed for
+   every script, self-hosted from the `@fontsource` packages with the
+   licence, `sources.json`, `THIRD-PARTY-NOTICES.md` and SBOM entries. Add
+   a row per face to `scripts/report_font_scale.mjs` and set each face's
+   `size-adjust` to what it measures.
+4. Latin languages (German, French, Spanish, Portuguese) need no font:
+   Spectral, Hanken Grotesk and Caveat carry their letters. Edu SA Beginner,
+   the tracing face of the practice lines, has no accented letters, so a
+   language whose practice words have them needs a tracing face first.
+5. Nothing in `report.css` or the renderer may name a language. Run
+   `npm run test:parity`: it fails on any element whose font size, weight,
+   line height or font list differs from English, any block that moves,
+   a print longer than two A4 pages, a face not scaled to its English face,
+   or a character no report font covers.
+
 ## 11. Maturity levels
 
 Each language pack carries its level. The server never scores above it.

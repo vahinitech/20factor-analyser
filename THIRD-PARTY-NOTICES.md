@@ -146,6 +146,8 @@ Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the S
 
 **Noto Sans Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-sans-telugu` npm package version 5.3.0 (`NotoSansTelugu-Regular.woff2`, `NotoSansTelugu-Bold.woff2`, licence `notosanstelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). A report printed or saved in Telugu uses it, so the PDF shows Telugu on any device.
 
+**Noto Serif Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-serif-telugu` npm package version 5.3.0 (`NotoSerifTelugu-Regular.woff2`, `NotoSerifTelugu-Bold.woff2`, licence `notoseriftelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). It sets the Telugu letters of text the report sets in its serif face (Spectral), scaled to Spectral's letter size, so a Telugu report keeps the English report's fonts and sizes (docs/12-report-rules.md).
+
 ## Browser libraries served with the report
 
 These files are vendored unchanged in `frontend/scripts/vendor/` (npm

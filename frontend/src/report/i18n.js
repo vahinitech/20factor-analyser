@@ -11,6 +11,14 @@
 (function (global) {
 'use strict';
 const LANGS = ['en', 'te'];
+// Each language's script, and the scripts without capital letters: their
+// reports drop letter spacing and capitals (report.css, data-caseless).
+// Nothing else about a report may depend on its language
+// (docs/12-report-rules.md, tests/report-parity.mjs).
+const SCRIPT = { en: 'latin', te: 'telugu' };
+const CASELESS = new Set(['telugu', 'devanagari', 'bengali', 'gurmukhi', 'gujarati', 'odia', 'tamil', 'kannada', 'malayalam', 'sinhala', 'thai', 'arabic', 'hebrew']);
+const script = lang => SCRIPT[lang] || 'latin';
+const caseless = lang => CASELESS.has(script(lang));
 const KEY = 'vahini_report_lang';
 const has = (o, k) => !!o && Object.prototype.hasOwnProperty.call(o, k);
 let current = null;
@@ -65,5 +73,5 @@ function missing(lang){
   return Object.keys(all.en || {}).filter(id=>!has(all[lang], id));
 }
 
-global.VahiniI18n = { LANGS, language, setLanguage, translator, missing };
+global.VahiniI18n = { LANGS, language, setLanguage, translator, missing, script, caseless };
 })(window);

@@ -169,7 +169,9 @@
     // Page 1 (version C, 2026-10-11; measured rows, owner approval
     // 2026-10-13): one strength, one place to start, then what we measured.
     add(host.querySelectorAll('.sn-keep').length===1 && host.querySelectorAll('.sn-start').length===1 && host.querySelectorAll('.sn-m').length===4 && !host.querySelector('.sn-look') && !host.querySelector('.fscore'), 'Page 1 keeps one strength, one place to start and what we measured');
-    add(!host.querySelector('.report-score-table') && host.querySelector('.sn-score b').textContent===String(makeAnalysis([8.2,6.1,9.0,7.5,4.2,6.8,7.1,5.5,3.9,6.0,7.8,5.1,6.4,6.9,7.2,5.8,4.8,6.6,7.0,6.3]).overall) && /\/100/.test(host.querySelector('.sn-score').textContent), 'Overall score stays visible without a long score table');
+    // Scores stay internal (owner, 2026-10-23): no overall, no score
+    // numbers anywhere on the report, stage words instead.
+    add(!host.querySelector('.report-score-table') && !host.querySelector('.sn-score') && !/out of 100|\/100|\d\.\d\/10/.test(host.textContent) && [...host.querySelectorAll('.sn-chip b')].every(b=>!/\d/.test(b.textContent)), 'No score numbers on the report, only stage words');
     add([...host.querySelectorAll('.practice-row')].length===3 && [...host.querySelectorAll('.practice-row')].every(r=>r.querySelector('[data-exercise]')) && [...host.querySelectorAll('.sn-m')].every(r=>r.querySelector('svg image') && r.querySelector('svg line')), 'Each skill to grow has its exercise, and page 1 draws each measurement on the upload');
     add([...host.querySelectorAll('.page')].map(p=>p.dataset.screenLabel).join('|')==='Your review|Practise and improve', 'All report sections appear in the required order');
     add(!host.querySelector('.projection-chart'), 'Compact free report omits the speculative prediction');

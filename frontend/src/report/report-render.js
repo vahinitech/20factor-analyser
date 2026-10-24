@@ -421,6 +421,7 @@ function render(host, data){
   lastRender = { host, data };
   const t=translatorFor(data);
   host.setAttribute('lang', t.lang);
+  host.toggleAttribute('data-caseless', !!(global.VahiniI18n && VahiniI18n.caseless(t.lang)));
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
@@ -483,8 +484,6 @@ function render(host, data){
     const sheet=worksheetFor(f);
     return sheet?`<p class="practice-sheet">${esc(t('row.sheet'))} <a href="${esc(sheetURL(sheet))}">${esc(sheet.title)} (PDF)</a></p>`:'';
   };
-  const rawOverall=analysis.overallMeasured ?? analysis.overall;
-  const overall=Number.isFinite(rawOverall)?rawOverall:null;
   // The last check saved in this browser, for the change line and the chips.
   const prev=history&&history.date?history:null;
   const prevScore=Object.fromEntries((prev&&Array.isArray(prev.factors)?prev.factors:[]).map(f=>[f.n,f.score]));
@@ -494,8 +493,10 @@ function render(host, data){
   const BETTER_BY=0.3;
   const gain=f=>Number.isFinite(prevScore[f.n])?f.score-prevScore[f.n]:null;
   const improved=measured.filter(f=>gain(f)!==null&&gain(f)>=BETTER_BY-1e-9);
-  const sinceLine=prev&&Number.isFinite(prev.overall)&&overall!=null
-    ?`<p class="since-last">${esc(t('sn.since',{date:fmtDay(prev.date),was:prev.overall,now:overall}))}${improved.length?` ${esc(t.n('sn.since.better',improved.length))}`:''}</p>`:'';
+  // Scores stay internal; the report says how many skills got better
+  // (owner, 2026-10-23: no numbers on the report).
+  const sinceLine=prev&&improved.length
+    ?`<p class="since-last">${esc(t('sn.since',{date:fmtDay(prev.date)}))} ${esc(t.n('sn.since.better',improved.length))}</p>`:'';
   const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
     return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
 
@@ -512,26 +513,40 @@ function render(host, data){
 
   /* ---- page 1: "Your writing snapshot" (version C, owner approval
      2026-10-11) -------------------------------------------------------- */
-  const overallBandId=overall==null?null:bandOf(overall/10);
-  const scorePill=overall==null?'':`<span class="sn-score band-${overallBandId}" data-band="${overallBandId}"><b>${overall}</b><small>${esc(t('sn.outof'))} · ${esc(stage(overallBandId))}</small></span>`;
+  // No overall score on the report (owner, 2026-10-23): it is kept for
+  // progress and comparison, never shown.
   const best=sorted.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0]||measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
   /* Vidhya's note (owner, 2026-10-14): the page opens the way a teacher
      writes on a child's work. What went well, the one or two skills to
      work on next, a promise to practise, and her score for the page.
      Vidhya is the series' teacher; her picture comes from the host like
      every character. Built only from this report's own scores. */
-  const lcFirst=x=>t.lang==='en'&&x?x.charAt(0).toLowerCase()+x.slice(1):x;
   const goalOf=f=>t.has('goal.'+f.n)?t('goal.'+f.n):nameOn(1,f)+'.';
-  const grows=rowFactors.slice(0,2).map(goalOf);
-  const growText=grows.length>1?t('vt.grow.two',{a:lcFirst(grows[0]),b:lcFirst(grows[1])})
-    :grows.length?t('vt.grow.one',{a:lcFirst(grows[0])}):t('vt.grow.none');
-  const keepText=best?(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best)+'.'):'';
+  /* Vidhya's note in words, no scores (owner, 2026-10-23): what the writer
+     is a master at beside what to improve next, as a two-column table.
+     Praise comes only from five skills at Mastering or Strong (1, 5, 7,
+     11, 17: the set #305 proposes for the overall, its
+     scoring._OVERALL_POINTS), so a measurement known to misread a page
+     never praises it. */
+  const COUNTED=[1,5,7,11,17];
+  const mastered=measured.filter(f=>COUNTED.includes(f.n)&&f.score>=7&&!rowFactors.includes(f))
+    .sort((a,b)=>b.score-a.score||a.n-b.n).slice(0,3);
+  const skillOf=n=>measured.find(f=>f.n===n);
+  const clear=skillOf(1), easy=skillOf(18);
+  const opening=clear&&clear.score>=8.5&&easy&&easy.score>=7?t('vt.open.beautiful')
+    :(clear&&clear.score>=7)||(easy&&easy.score>=7)?t('vt.open.nice'):t('vt.open.thanks');
+  const praised=mastered.map(f=>t.has('well.'+f.n)?t('well.'+f.n):t('keep.title.'+f.n));
+  const improve=rowFactors.slice(0,2).map(goalOf);
+  const noteRows=Math.max(praised.length,improve.length);
+  const noteTable=noteRows?`<table class="sn-note-table"><thead><tr><th scope="col">${esc(t('vt.master'))}</th><th scope="col">${esc(t('vt.improve'))}</th></tr></thead>
+      <tbody>${Array.from({length:noteRows},(_,r)=>`<tr><td>${esc(praised[r]||'')}</td><td>${esc(improve[r]||'')}</td></tr>`).join('')}</tbody></table>`
+    :`<p class="sn-grow">${esc(t('vt.grow.none'))}</p>`;
+  const keepN=(mastered[0]||best||{}).n;
   const teacherNote=best?`<div class="sn-teacher">${artImg('teacher','rp-art-teacher')}<div class="sn-note">
       <h2 class="sn-title">${esc(t('sn.title'))}</h2>
-      <p class="sn-keep" data-factor="${best.n}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(t('vt.well',{keep:keepText}))}</p>
-      <p class="sn-grow">${esc(growText)}</p>
-      <p class="sn-promise">${esc(t('vt.promise'))}</p>
-      <div class="sn-note-end">${overall!=null?`<p class="sn-grade">${esc(t('vt.score',{score:overall,stage:stage(overallBandId)}))}</p>`:''}<p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
+      <p class="sn-keep" data-factor="${keepN}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(opening)}</p>
+      ${noteTable}
+      <div class="sn-note-end"><p class="sn-promise">${esc(t('vt.promise'))}</p><p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
     :`<h2 class="sn-title">${esc(t('sn.title'))}</h2>`;
   // "Look closer": the first two skills to grow; a spelling finding may
   // take the second row.
@@ -567,7 +582,7 @@ function render(host, data){
   };
   const startCard=first?`<div class="sn-start" data-factor="${first.n}"><div class="sn-start-top">${LEAF}<span class="sn-pill">${esc(t('sn.start'))}</span></div>${SPARK}
       <h3>${esc(t.has('goal.'+first.n)?t('goal.'+first.n):nameOn(1,first))}</h3>${stepList(t.has('look.'+first.n)?t('look.'+first.n):'').map(s=>`<p>${esc(s)}</p>`).join('')}
-      <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(first.score.toFixed(1))}/10</span> · ${esc(stage(bandOf(first.score)))}</p>
+      <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(stage(bandOf(first.score)))}</span></p>
       <span class="sn-try">${PENCIL}${esc(t('sn.start.try.'+(firstExModel&&t.has('sn.start.try.'+firstExModel.unit)?firstExModel.unit:'row')))}</span></div>`:'';
   const chipList=measured.slice().sort((a,b)=>a.n-b.n);
   /* ---- "What we measured on your page" (owner, 2026-10-13, #137): one
@@ -576,7 +591,10 @@ function render(host, data){
      measurement; scores outside its tier are named, not hidden. Estimates,
      blends and the pen skills are labelled as what they are. ------------ */
   const chipHTML=f=>{const band=bandOf(f.score), g=improved.includes(f);
-    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;};
+    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(stage(band))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better'))}">↑</span>`:''}</b></div>`;};
+  // Strongest first, wherever skills are listed (owner, 2026-10-23).
+  const byScore=ns=>ns.slice().sort((a,b)=>(live(b)?live(b).score:-1)-(live(a)?live(a).score:-1)||a-b);
+  const rowScore=r=>{const v=r.scores.map(live).filter(Boolean).map(f=>f.score);return v.length?v.reduce((x,y)=>x+y,0)/v.length:-1;};
   const ms=data.measurements||{};
   const live=n=>measured.find(f=>f.n===n);
   const scoreChip=n=>{const f=live(n);
@@ -646,21 +664,21 @@ function render(host, data){
     const said=t(ms.reading.confidence_pct>=70?'m.read.easy':'m.read.hard')+' '+t(hard.length>1?'m.read.circled':hard.length?'m.read.circled.one':'m.read.line');
     mRows.push({key:'read',strip:strip(pad(L.bbox,0.03,0.3),draw),text:said,how:t(hard.length?'m.read.how':'m.read.how.line'),scores:[1,19]});
   }
-  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${r.scores.map(scoreChip).join('')}</div></div>`;
-  const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${ns.map(scoreChip).join('')}</div></div>`;
+  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${byScore(r.scores).map(scoreChip).join('')}</div></div>`;
+  const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${byScore(ns).map(scoreChip).join('')}</div></div>`;
   const counts=data.pipeline||{};
   const mSub=t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
   const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${[13,14,15,16].map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
   // The whole map, measurement by measurement, on screen only: what we
   // measure, the scores built from it, and whether a page can show it.
   const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[2,9,4],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',[13,14,15,16],'pen']];
-  const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>{const f=live(n);return esc(t('chip.'+n))+(f?` <b>${esc(f.score.toFixed(1))}</b>`:'');}).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
+  const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>esc(t('chip.'+n))).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
   // A score whose measurement row could not be drawn (no photo, or too
   // little to measure) is still shown, never dropped.
   const shownN=new Set([...mRows.flatMap(r=>r.scores),18,20,2,9,4,3,13,14,15,16]);
   const leftover=measured.filter(f=>!shownN.has(f.n)).map(f=>f.n).sort((a,b)=>a-b);
   const measuredHTML=`<div class="sn-h3row"><h3 class="sn-h3">${esc(t('m.title'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
-      <p class="sn-m-sub">${esc(mSub)}</p>${mRows.map(mRow).join('')}
+      <p class="sn-m-sub">${esc(mSub)}</p>${mRows.slice().sort((a,b)=>rowScore(b)-rowScore(a)).map(mRow).join('')}
       ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[2,9,4,3])}${pen}${howTable}`;
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
@@ -673,7 +691,7 @@ function render(host, data){
   const cta=`<div class="sn-cta screen-only" data-html2canvas-ignore="true">${firstSheet?`<a class="sn-b1" href="${esc(sheetURL(firstSheet))}" target="_blank" rel="noopener">⇩&nbsp; ${esc(t('sn.download'))}</a>`:''}<a class="sn-b2" href="analyser.html" data-action="new-report">↻&nbsp; ${esc(t('sn.again'))}</a></div>`;
   const page1Note=[t('sn.note'),spellingStatus,rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
   const page1=`<section class="page free-report compact-report snapshot-page snapshot-${tier}" data-screen-label="Your review">
-      <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}${scorePill}</div></div>
+      <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}</div></div>
       ${teacherNote}${sinceLine}
       ${measured.length?`
       <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
@@ -721,7 +739,7 @@ function render(host, data){
     const exs=row.exercises, tips=row.tips.map(e=>localEntry(e,t.lang));
     const lastKind=exs.length?exs[exs.length-1].entry.model:'line';
     return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
-      <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(t('row.badge',{score:f.score.toFixed(1),stage:stage(band)}))}</span></div>
+      <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(stage(band))}</span></div>
         ${stagePath(band)}${aboutBlock(f)}${practiceSheet(f)}</div>
       <div class="pr-practice">${exs.map(x=>exerciseBlock(x,f)).join('')||`<p class="pr-steps">${esc(t('row.fallback'))}</p>`}
         <p class="pr-plan">${esc(planText(row.planBand||band,exs.length))}</p>${tips.length?`<div class="pr-tips">${tips.map(tipBlock).join('')}</div>`:''}
@@ -743,12 +761,12 @@ function render(host, data){
     </article>`;
   };
   const rows=chosen.rows.map(skillRow).join('')+(firstSpelling?spellingRow(chosen.rows.length+1):'');
-  const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n);
+  const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>b.score-a.score||a.n-b.n);
   const praise=f=>{const b=bandOf(f.score);
     if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return t('other.composite');
     return b==='strong'?t('other.strong'):b==='good'?t('other.good'):'';};
   const locked=Math.max(0,20-analysis.results.length);
-  const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),score:f.score.toFixed(1),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
+  const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
       ${free&&locked?`<p class="pro-note"><b>${esc(t('pro.ask'))}</b> ${esc(t('pro.more',{n:locked}))}</p>`:''}</div>`:'';
   // When writing feels hard: encouragement and where to read more, never a
   // diagnosis or a promise (owner, 2026-10-11).

@@ -472,6 +472,11 @@ jobs:
         run: npm run test:language
       - name: Student view (one screen, proof for every sentence)
         run: npm run test:student-view
+      # Every language keeps the English report: elements, font sizes,
+      # weights, line heights, font lists and places, two A4 pages, script
+      # faces scaled to their English face (docs/12-report-rules.md).
+      - name: Every language keeps the English report's fonts, sizes and places
+        run: npm run test:parity
       - name: The print popup's optional price question and the Request Pro card
         run: npm run test:print-popup
       - name: '"How was the report?" asks once, after ten seconds, and sends one fixed answer'

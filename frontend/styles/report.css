@@ -48,10 +48,14 @@
   --sn-focus:      var(--band-focus);
 
   /* Type */
-  --serif: var(--v-font-serif);
-  --sans:  var(--v-font-sans);
-  --handA: "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
-  --handB: "Caveat", cursive;                            /* actual, loose  */
+  /* The same lists in every language: a script's letters come from the
+     "Vahini Script" faces first (report-fonts.css), everything else from
+     the English faces after them: the website theme's, or the report's own
+     bundled faces where the host page has no theme. */
+  --serif: "Vahini Script Serif", var(--v-font-serif, Spectral, Georgia, serif);
+  --sans:  "Vahini Script Sans", var(--v-font-sans, "Hanken Grotesk", sans-serif);
+  --handA: "Vahini Script Hand", "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
+  --handB: "Vahini Script Hand", "Caveat", cursive;                            /* actual, loose  */
 
   --pg-pad: 17mm;
 }
@@ -932,24 +936,16 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 @media screen and (max-width:600px){ .progress-panel .pp-compare{ columns:1; } }
 @media print{ .progress-panel{ display:none !important; } }
 
-/* Printed in Telugu ("Print in", lang="te" on the report and on "Your
-   progress"). Noto Sans Telugu comes first in every face, but its
-   unicode-range holds only Telugu letters, so English words, numbers and
-   the Latin practice text keep their own faces. The font is declared in
-   report-fonts.css and loads only when Telugu is on the page. These stacks
-   name the report's own bundled faces rather than the host's tokens, so a
-   Telugu print never depends on the host's stylesheet for its script. */
-[lang="te"]{
-  --serif: "Noto Sans Telugu", Spectral, Georgia, serif;
-  --sans:  "Noto Sans Telugu", "Hanken Grotesk", sans-serif;
-  --handA: "Noto Sans Telugu", "Edu SA Beginner", "Comic Sans MS", cursive;
-  --handB: "Noto Sans Telugu", "Caveat", cursive;
-}
-.report-host[lang="te"], .progress-panel[lang="te"]{ font-family:var(--sans); }
-/* Letter spacing splits Telugu letters from their vowel signs and joined
-   consonants, and Telugu has no capitals: the small spaced capitals of
-   the labels stay plain in Telugu. */
-.report-host[lang="te"] .page, .report-host[lang="te"] .page *{ letter-spacing:normal; text-transform:none; }
+/* Every language keeps the English report (docs/12-report-rules.md): no
+   rule here names a language. The report and "Your progress" are set in
+   the report's sans in every language, so text the stylesheet gives no
+   face still takes the script's face. */
+.report-host, .progress-panel{ font-family:var(--sans); }
+/* A script without capitals (data-caseless, from VahiniI18n.caseless):
+   letter spacing would split its letters from their vowel signs, and the
+   labels' spaced capitals have nothing to capitalise. Sizes and places do
+   not change. */
+.report-host[data-caseless] .page, .report-host[data-caseless] .page *{ letter-spacing:normal; text-transform:none; }
 
 /* Page 2 is the practice sheet (2026-10-11): a label pointing back to page 1
    on the left, and on the right a drawn model to copy and lines to try it. */
@@ -1010,6 +1006,14 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-note-end{ display:flex; justify-content:space-between; align-items:baseline; gap:2px 14px; flex-wrap:wrap; margin-top:1px; }
 .free-report.compact-report .sn-note p.sn-grade{ font-weight:700; margin:0; }
 .free-report.compact-report .sn-note p.sn-sign{ font:600 23px/1 var(--handB); color:var(--v-accent-text); margin:0; }
+.free-report.compact-report .sn-note p.sn-promise{ flex:1 1 320px; margin:0; }
+/* What the writer is a master at, beside what to improve next. */
+.sn-note-table{ width:100%; border-collapse:collapse; margin:3px 0 4px; background:var(--v-surface); border-radius:8px; }
+.free-report.compact-report .sn-note-table th, .free-report.compact-report .sn-note-table td{ width:50%; padding:3px 10px; text-align:left; vertical-align:top; font:400 14px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .sn-note-table th{ font-weight:700; color:var(--v-accent-text); }
+.free-report.compact-report .sn-note-table td{ border-top:1px solid var(--v-border); }
+.free-report.compact-report .sn-note-table th:first-child::before{ content:"✓ "; }
+.free-report.compact-report .sn-note-table th:last-child::before{ content:"→ "; }
 .sn-leaf{ width:30px; height:38px; flex:none; }
 .sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
 .sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }
@@ -1197,10 +1201,10 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .pdf-busy .page::after{ content:none; }
 .pdf-capture .sn-cn{ overflow-wrap:normal; }
 .pdf-capture .sn-try{ display:flex; width:fit-content; }
-/* The Latin practice letters keep their spacing in a Telugu report. */
-.report-host[lang="te"] .page .sn-guide .md-hand{ letter-spacing:.3em; }
-.report-host[lang="te"] .page .md-ladder .md-hand, .report-host[lang="te"] .page .md-zones .md-hand{ letter-spacing:.22em; }
-.report-host[lang="te"] .page .md-slant .md-hand{ letter-spacing:.3em; }
+/* The Latin practice letters keep their spacing in a caseless script's report. */
+.report-host[data-caseless] .page .sn-guide .md-hand{ letter-spacing:.3em; }
+.report-host[data-caseless] .page .md-ladder .md-hand, .report-host[data-caseless] .page .md-zones .md-hand{ letter-spacing:.22em; }
+.report-host[data-caseless] .page .md-slant .md-hand{ letter-spacing:.3em; }
 /* Pro's two tips sit side by side, and its lines to try are slimmer, so
    three skills with two exercises each and a spelling row stay on one
    sheet in Telugu too. */

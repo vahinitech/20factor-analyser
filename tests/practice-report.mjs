@@ -71,6 +71,7 @@ const RENDER = `window.__render = (opts) => {
     chips: [...host.querySelectorAll('.sn-chip')].map(e => e.dataset.factor),
     bands: [...host.querySelectorAll('.sn-start .sn-meta, .pr-badge')].map(e => e.textContent),
     keep: host.querySelector('.sn-keep') ? host.querySelector('.sn-keep').textContent : '',
+    master: host.querySelector('.sn-note-table tbody td') ? host.querySelector('.sn-note-table tbody td').textContent : '',
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
@@ -136,8 +137,8 @@ try {
   add(row5first(free) === 'size.two-line-ladder' && free.rows.every(r => r.model && r.models.every(m => m !== 'focus')),
     'A first check picks by need (the two-line ladder for letter size) and draws each exercise\'s own model', free.rows.map(r => [r.exercises, r.models]));
   const row = n => free.rows.find(r => r.factor === n);
-  add(/6\.1\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
-    && row('1').now === 'Mastering' && row('1').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
+  add(row('5').badge === 'Improving' && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
+    && row('1').now === 'Mastering' && row('1').done.length === 2, 'Rows show the stage, no score, and the stage path', free.rows);
   // Tries follow the row's own skill (owner, 2026-10-11): letter size is
   // Improving (6.1), so 10 a day; letter shapes is Mastering (7.0), so 5.
   add(/10 tries a day, for 7 days\./.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('1').plan),
@@ -154,10 +155,10 @@ try {
     'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
   add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
     'The bundle and the served catalogue carry each skill\'s why, win and page');
-  add(/Your words sit on the line\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
-    'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
-  add(JSON.stringify(free.others) === '["18","7"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
-    'Other skills we checked lists the rest, then what Pro adds, with no price', { others: free.others, note: free.proNote });
+  add(/Your handwriting is nice to read\./.test(free.keep) && /Your words sit nicely on the line\./.test(free.master) && /You are getting better with every page!/.test(free.closing),
+    'Page 1 opens with a strength and page 2 closes with encouragement', { keep: free.keep, master: free.master });
+  add(JSON.stringify(free.others) === '["7","18"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
+    'Other skills we checked lists the rest, strongest first, then what Pro adds, with no price', { others: free.others, note: free.proNote });
   add(!free.rows.some(r => r.factor === 'spelling'), 'No spelling row without a finding');
   add(free.art.length === 0, 'Without a picture map the report has no pictures');
 
@@ -309,7 +310,7 @@ try {
     'The panel lists this writer\'s saved checks, newest first', panel.list);
   add(panel.options.length === 2 && /1 October/.test(panel.options[0]), 'Compare defaults to the previous check', panel.options);
   const kinds = Object.fromEntries(panel.rows.map(r => [r[0], r[1]]));
-  add(kinds[5] === 'up' && /↑ \+0\.6/.test(panel.rows.find(r => r[0] === '5')[2]) && kinds[8] === 'same' && kinds[7] === 'tries'
+  add(kinds[5] === 'up' && /↑ better$/.test(panel.rows.find(r => r[0] === '5')[2]) && !panel.rows.some(r => /\d/.test(r[2])) && kinds[8] === 'same' && kinds[7] === 'tries'
     && /needs a few more tries/.test(panel.rows.find(r => r[0] === '7')[2]) && !panel.rows.some(r => /↓/.test(r[2])),
     'Rises of 0.3 get an up arrow; a fall says it needs a few more tries, never a down arrow', panel.rows);
   add(panel.keep === '/progress.html', 'The panel points to Keep my pages for other devices');
