@@ -174,7 +174,22 @@ def _size_places(lines):
     return out
 
 
-def _line_angle(item):
+def _camera_deg(lines):
+    """The camera's share of the page's tilt, which the line-angle scores
+    take out before measuring (features._camera_tilt, #306), so a mark
+    and its score agree on a turned photo."""
+    # The scorer imports vision; importing it back at load time would
+    # make a loop (computer_vision does the same).
+    # pylint: disable=import-outside-toplevel
+    from scoring_parts.features import _camera_tilt
+    from scoring_parts.page import _page_tilt_degrees
+
+    return _camera_tilt(_page_tilt_degrees(lines))
+
+
+def _line_angle(item, camera_deg=0.0):
+    """A line's angle in degrees from its outline's top edge, against
+    the page (camera_deg taken out), unsigned."""
     poly = item.get("poly") or []
     if len(poly) < 2:
         return None
@@ -183,12 +198,16 @@ def _line_angle(item):
         float(
             np.degrees(np.arctan2(float(poly[1][1]) - float(poly[0][1]), dx))
         )
+        - camera_deg
     )
     return angle if np.isfinite(angle) else None
 
 
 def _angle_places(lines):
-    angled = [(l, a) for l in lines if (a := _line_angle(l)) is not None]
+    camera = _camera_deg(lines)
+    angled = [
+        (l, a) for l in lines if (a := _line_angle(l, camera)) is not None
+    ]
     if len(angled) < 2:
         return []
     rows = _order(
@@ -358,12 +377,14 @@ def page_measurements(arr, accepted, read_letters=None):
     out = {"lines": len(accepted)}
     # The slope drawn is the one Writing on the line is scored from: each
     # line's outline from the reader (its top edge gives the angle,
-    # scoring.py), drawn along the outline's bottom edge. A fitted
-    # baseline can catch a neighbouring line where outlines overlap.
+    # scoring.py), against the page as the score measures it (#306),
+    # drawn along the outline's bottom edge. A fitted baseline can catch
+    # a neighbouring line where outlines overlap.
+    camera = _camera_deg(accepted)
     angled = [
         (item, a)
         for item in accepted
-        if (a := _line_angle(item)) is not None
+        if (a := _line_angle(item, camera)) is not None
         and len(item.get("poly") or []) >= 4
     ]
     if angled:

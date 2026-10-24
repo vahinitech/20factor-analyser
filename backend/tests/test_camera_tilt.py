@@ -14,6 +14,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 import scoring
 from scoring_parts import features
+from vision import marked_places
 
 
 def _lines(angles):
@@ -60,6 +61,43 @@ class CameraTilt(unittest.TestCase):
         self.assertAlmostEqual(_slope([0, 0, 0, 4]), 1.0, places=2)
         # The same page turned 3 degrees: the sinking line still shows.
         self.assertGreater(_slope([3, 3, 3, 7]), 1.5)
+
+
+def _marked(angles):
+    """The slope measurement and the factor-7 marks the report gets."""
+    arr = np.full((480, 720, 3), 255, dtype=np.uint8)
+    lines = _lines(angles)
+    for i, l in enumerate(lines, 1):
+        l["evidence_id"] = f"line_{i}"
+    slope = marked_places.page_measurements(arr, lines)["slope"]
+    look = [
+        p["region_id"]
+        for p in marked_places._angle_places(lines)
+        if p["role"] == "look"
+    ]
+    return slope, look
+
+
+class MarksAgreeWithTheScore(unittest.TestCase):
+    """The report's slope row and line marks measure against the page,
+    as Baseline and Line Straightness do since this fix."""
+
+    def test_a_turned_photo_of_level_lines(self):
+        slope, look = _marked([4, 4, 4, 4])
+        self.assertAlmostEqual(slope["mean_deg"], 1.0, places=1)
+        self.assertLess(slope["line"]["angle"], 1.1)
+        self.assertEqual(look, [])
+
+    def test_one_sinking_line_on_a_turned_photo(self):
+        slope, look = _marked([3, 3, 3, 7])
+        self.assertEqual(slope["line"]["region_id"], "line_4")
+        self.assertAlmostEqual(slope["line"]["angle"], 5.0, places=1)
+        self.assertEqual(look, ["line_4"])
+
+    def test_a_straight_photo_is_as_before(self):
+        slope, look = _marked([0, 0, 0, 4])
+        self.assertAlmostEqual(slope["line"]["angle"], 4.0, places=1)
+        self.assertEqual(look, ["line_4"])
 
 
 if __name__ == "__main__":
