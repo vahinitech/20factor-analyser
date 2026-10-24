@@ -91,11 +91,12 @@ const firstDiff = (a, b, keys, slack = 0) => {
   return null;
 };
 const warnings = [];
+let langs = [];
 
 await up();
 const browser = await chromium.launch({ headless: true });
 try {
-  const langs = await (async () => {
+  langs = await (async () => {
     const page = await browser.newPage();
     await page.goto(BASE + '/frontend/sample-report.html', { waitUntil: 'load' });
     const l = await page.evaluate(() => VahiniI18n.LANGS);
@@ -152,9 +153,12 @@ const ranges = [...fontsCss.matchAll(/@font-face\s*\{[^}]*font-family:'Vahini Sc
   .map(([a, b]) => [a, b ?? a]);
 const covered = cp => cp < 0x0250 || (cp >= 0x2000 && cp <= 0x27BF) || ranges.some(([a, b]) => cp >= a && cp <= b);
 const ctx = { window: {} };
-for (const f of ['en', 'te']) new Function('window', readFileSync(`frontend/src/report/strings/${f}.js`, 'utf8'))(ctx.window);
-for (const [lang, table] of Object.entries(ctx.window.VahiniReportStrings || {})) {
-  const text = JSON.stringify(table);
+// Every language in VahiniI18n.LANGS, so a new one is checked with nothing
+// to add here.
+for (const f of langs) new Function('window', readFileSync(`frontend/src/report/strings/${f}.js`, 'utf8'))(ctx.window);
+add(langs.length > 0 && langs.every(l => ctx.window.VahiniReportStrings && ctx.window.VahiniReportStrings[l]), 'Every language in VahiniI18n.LANGS has its strings table', langs);
+for (const lang of langs) {
+  const text = JSON.stringify(ctx.window.VahiniReportStrings[lang] || {});
   const missing = [...new Set([...text].filter(ch => !covered(ch.codePointAt(0))))];
   add(missing.length === 0, `${lang}: every character of its report words has a report font`, missing.join(' '));
 }
