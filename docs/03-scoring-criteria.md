@@ -100,7 +100,10 @@ Line angles for 7, 11 and 12 are measured against the page, not the
 photo's edges: the page's tilt is its lines' median angle, and the part
 of it beyond one degree (`TILT_FREE` in `scoring_parts/features.py`) is
 taken as the camera's and taken out first (#304). Within a degree nothing
-is taken out, so a page of four lines with one sinking still shows it.
+is taken out, so a page of four lines with one sinking still shows it. The report's
+slope row and its line marks (`marked_places.py`) measure the same way,
+so a turned photo of level lines is not called sloping beside a high
+score.
 
 Every factor's report card also carries a `basedOn` count (how many
 letters/words/lines fed it) and an evidence sentence naming the

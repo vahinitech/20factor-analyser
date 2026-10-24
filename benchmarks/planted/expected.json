@@ -57,10 +57,10 @@
 },
 "tilted_line": {
 "letter_marked": 1.0,
-"marked": 1.0,
+"marked": 0.95,
 "marks_per_page": {
 "5": 0.7,
-"7": 1.15,
+"7": 1.0,
 "8": 1.2
 },
 "score_mean": {
