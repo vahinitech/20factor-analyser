@@ -110,6 +110,32 @@ try {
     await page.close();
   }
 
+  // The folded pages are measured as if they were open: the practice rows
+  // trim exactly as in today's report (Pro, Telugu: the longest rows), so
+  // "Details for your teacher", a print without the print hook and the
+  // shared PDF all show the same page 2.
+  {
+    const rowsOf = async (query, unfold) => {
+      const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      await useDesign(page);
+      await page.addInitScript(() => { try { localStorage.setItem('vahini_report_lang', 'te'); } catch {} });
+      await page.goto(`http://127.0.0.1:4207/frontend/sample-report.html?example=pro${query}`, { waitUntil: 'networkidle' });
+      await page.evaluate(() => document.fonts.ready);
+      if (unfold) await page.click('.stu-more');
+      const trim = await page.locator('.practice-row').evaluateAll((list) => list.map((r) => `${r.dataset.factor}:${r.dataset.trim || '-'}`));
+      await page.close();
+      return trim;
+    };
+    const parent = await rowsOf('', false);
+    assert.ok(parent.some((r) => !r.endsWith(':-')), `the Pro Telugu sample trims a row in today's report: ${parent}`);
+    assert.deepEqual(await rowsOf('&for=student', true), parent, 'the unfolded pages trim their rows as today\'s report does');
+    const { page } = await open('&for=student', { lang: 'te' });
+    await page.emulateMedia({ media: 'print' });
+    const pdf = (await page.pdf({ format: 'A4', printBackground: true })).toString('latin1');
+    assert.equal((pdf.match(/\/Type\s*\/Page[^s]/g) || []).length, 2, 'printed without the print hook, still two A4 pages');
+    await page.close();
+  }
+
   // A phone, in English and in Telugu.
   for (const lang of ['en', 'te']) {
     const { page } = await open('&for=student', { width: 390, lang });
