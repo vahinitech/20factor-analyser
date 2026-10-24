@@ -32,6 +32,7 @@
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
     "test:student-view": "node tests/student-view.mjs",
+    "test:check-page-who": "node tests/check-page-who.mjs",
     "test:parity": "node tests/report-parity.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
     "test:print-popup": "node tests/print-popup.mjs",
