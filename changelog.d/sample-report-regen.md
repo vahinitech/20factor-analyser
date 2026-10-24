@@ -1,0 +1,1 @@
+- The sample report is regenerated with the current scoring: the new overall from five skills (#305), slope against the page (#306) and size against the expected size (#307). It now shows 59, from 74 on the old formula. The circles on the check page sample move to the places the analyser marks now; one size circle that fell outside the shown part of the photo is dropped.
