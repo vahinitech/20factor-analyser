@@ -35,10 +35,10 @@ const LANGUAGE = {
   reason: null,
   rows: { read: 9, checked: 2, not_read: 0, over_cap: 0, unclear: 0 },
   spelling: [
-    { written: 'eviclc', suggestion: 'quick', kind: 'letters', against: 'sentence', places: place([153, 820, 120, 70]) },
-    { written: 'Sumef', suggestion: 'jumps', kind: 'other_letter', against: 'sentence', places: place([300, 820, 110, 70]) },
-    { written: 'ove', suggestion: 'over', kind: 'missing_letter', against: 'sentence', places: place([428, 820, 60, 70]) },
-    { written: 'tu', suggestion: 'the', kind: 'letters', against: 'sentence', places: place([500, 820, 40, 70]) },
+    { written: 'leters', suggestion: 'letters', kind: 'missing_letter', pattern: 'double', against: 'sentence', places: place([153, 820, 120, 70]) },
+    { written: 'freind', suggestion: 'friend', kind: 'letter_order', pattern: 'ie_ei', against: 'sentence', places: place([300, 820, 110, 70]) },
+    { written: 'smal', suggestion: 'small', kind: 'missing_letter', pattern: 'double', against: 'sentence', places: place([428, 820, 60, 70]) },
+    { written: 'evry', suggestion: 'every', kind: 'missing_letter', pattern: 'vowels', against: 'sentence', places: place([500, 820, 40, 70]) },
   ],
   grammar: [
     { rule: 'verb_s', written: 'she sing', suggestion: 'she sings', places: place([153, 804, 200, 88], 'estimated') },
@@ -73,12 +73,18 @@ try {
     assert.equal(await words.count(), 1, 'a card for words');
     assert.equal(await sentences.count(), 1, 'a card for sentences');
     assert.equal(await words.locator('.stu-fix').count(), 3, 'at most three words');
-    assert.deepEqual(await words.locator('.stu-right').allTextContents(), ['quick', 'jumps', 'over'], 'the words to write, in order');
+    assert.deepEqual(await words.locator('.stu-right').allTextContents(), ['letters', 'friend', 'small'], 'the words to write, in order');
     assert.equal(await words.locator('.stu-fix svg.stu-ink image').count(), 3, "each word is the child's own ink, cut from the photo");
     const shown = await page.locator('.stu-lang').innerText();
-    for (const w of ['eviclc', 'Sumef', 'ove ']) assert.ok(!shown.includes(w), `our reading "${w.trim()}" is never shown as the child's word`);
+    for (const w of ['leters', 'freind', 'smal']) assert.ok(!new RegExp(`\\b${w}\\b`).test(shown), `our reading "${w}" is never shown as the child's word`);
     assert.ok(shown.includes(en['stu.sp.copied']), 'says the words come from the copied sentence');
-    assert.ok(shown.includes(en['stu.sp.letters']) && shown.includes(en['stu.sp.missing_letter']), 'a short reason for each word');
+    // A teacher's view (owner, 2026-10-24): each word names its pattern,
+    // and the patterns are practised with more words than the child's.
+    assert.ok(shown.includes('Double letters') && shown.includes('i and e together'), 'each word names its spelling pattern');
+    const patterns = await words.locator('.stu-patterns li').evaluateAll((els) => els.map((e) => [e.dataset.pattern, e.querySelector('.stu-pattern-words').textContent]));
+    assert.equal(patterns[0][0], 'double', 'the largest pattern first');
+    assert.ok(patterns[0][1].startsWith('letters, small') && patterns[0][1].split(', ').length > 2, `the child's words, then practice words: ${patterns[0][1]}`);
+    assert.ok(shown.includes('Some words have two of the same letter'), "the largest pattern's rule is the tip");
     assert.equal(await sentences.locator('.stu-right').innerText(), 'she sings');
     assert.ok(shown.includes(en['stu.gr.verb_s']), 'the rule in one line');
     assert.equal(await page.locator('.stu-lang .stu-tip').count(), 2, "Pihu's tip on each card");

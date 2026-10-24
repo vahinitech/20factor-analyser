@@ -22,5 +22,8 @@ S['en-US'] = {
   'stu.nostrength': 'Here is one thing to practice.',
   'stu.practise': 'Practice this week',
   'stu.tag.now': 'Practice this week',
+  'stu.sp.patterns': 'Practice these patterns:',
+  'spell.also': 'Also practice: {list}.',
+  'spell.words': 'Practice these words:',
 };
 })(window);

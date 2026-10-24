@@ -446,6 +446,28 @@ function render(host, data){
   const free=analysis.access?.tier==='free';
   const tier=free?'free':'pro';
   const cat=practiceCatalog(analysis);
+  // Spelling as a teacher practises it (owner, 2026-10-24): findings
+  // grouped by the pattern the server named, the largest group first; each
+  // pattern brings its rule, its exercise and practice words from the
+  // catalogue, so the child practises the pattern, not one word.
+  const spellPatterns=(()=>{
+    const lib=(cat&&cat.spelling&&cat.spelling.patterns)||[];
+    const groups=[];
+    spelling.forEach(f=>{
+      const id=f.pattern||'other';
+      let g=groups.find(x=>x.id===id);
+      if(!g){ const entry=lib.find(p=>p.id===id)||lib.find(p=>p.id==='other')||null; g={id,entry,found:[]}; groups.push(g); }
+      g.found.push(f);
+    });
+    const local=g=>{const e=g.entry||{}, own=(e.i18n||{})[t.lang]||{};
+      return {name:own.name||e.name||'', rule:own.rule||e.rule||''};};
+    groups.forEach(g=>{
+      Object.assign(g,local(g));
+      const mine=g.found.map(f=>f.suggestion.toLowerCase());
+      g.words=[...new Set([...mine,...((g.entry&&g.entry.words)||[])])].slice(0,6);
+    });
+    return groups.sort((a,b)=>b.found.length-a.found.length);
+  })();
   const lim=practiceLimits(analysis, cat, tier);
   // Skill names: in another language the English name follows in brackets
   // on its first use on each page, so a teacher and a parent mean the same
@@ -759,18 +781,26 @@ function render(host, data){
         <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}">${turnHTML(lastKind)}</div></div></div>
     </article>`;
   };
+  // Page 2's spelling row: the largest pattern's exercise, with the
+  // child's words and the pattern's practice words (owner, 2026-10-24).
   const spellingRow=n=>{
-    const f=firstSpelling, area=cat&&cat.spelling;
-    const ex=area&&area.exercises&&area.exercises[0];
+    const top=spellPatterns[0], area=cat&&cat.spelling;
+    const exId=top&&top.entry&&top.entry.exercise;
+    const ex=area&&area.exercises&&(area.exercises.find(e=>e.id===exId)||area.exercises[0]);
     const tips=area?rotate(area.tips||[],(lastPractice.tips||{}).spelling,lim.tips_max):[];
     if(ex) printed.exercises.spelling=[ex.id];
     printed.tips.spelling=tips.map(e=>e.id);
     const d=dose('good');
-    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling">
-      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t('spell.badge'))}</span></div>
-        <p class="pr-saw pr-saw-ink">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')((f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></p>
-        <p class="pr-saw-why">${esc(t('stu.sp.'+f.kind))}${f.against==='sentence'?' '+esc(t('stu.sp.copied')):''}</p></div>
-      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:f.suggestion}},{n:1,band:'strong'}):''}
+    const shown=(top?top.found:spelling).slice(0,2);
+    const placeOfWord=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
+    const others=spellPatterns.slice(1).filter(g=>g.name);
+    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling" data-pattern="${esc(top?top.id:'other')}">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(top&&top.name?t('spell.title.pattern',{pattern:top.name}):t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t.n('spell.badge',spelling.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${shown.map(f=>`<span class="pr-saw-one">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')(placeOfWord(f))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></span>`).join('')}</div>
+        <p class="pr-saw-why">${esc(top&&top.rule?top.rule:t('stu.sp.'+firstSpelling.kind))}</p>
+        ${top&&top.words.length?`<p class="pr-saw-words">${esc(t('spell.words'))} <span class="pr-saw-list">${esc(top.words.join(', '))}</span></p>`:''}
+        ${others.length?`<p class="pr-saw-also">${esc(t('spell.also',{list:others.map(g=>g.name).join(', ')}))}</p>`:''}</div>
+      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:top?top.words.slice(0,2).join(' '):firstSpelling.suggestion}},{n:1,band:'strong'}):''}
         <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.length?`<div class="pr-tips">${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}</div>`:''}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
     </article>`;
   };
@@ -885,7 +915,10 @@ function render(host, data){
       const words=(lgSec.spelling||[]).slice(0,3), sentences=(lgSec.grammar||[]).slice(0,3);
       const copied=words.some(f=>f.against==='sentence');
       const wordPart=words.length?`<div class="stu-lang-sec stu-words" data-lang="spelling"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.sp.pill'))}</span>${copied?`<span class="stu-lang-note">${esc(t('stu.sp.copied'))}</span>`:''}</div>
-        <ul class="stu-fixes">${words.map(f=>lgFix(f,t('stu.sp.'+f.kind))).join('')}</ul>${lgTip('stu.sp.tip')}</div>`:'';
+        <ul class="stu-fixes">${words.map(f=>{const g=spellPatterns.find(x=>x.found.includes(f));
+          return lgFix(f,g&&g.name?g.name:t('stu.sp.'+f.kind));}).join('')}</ul>
+        ${spellPatterns.some(g=>g.name)?`<div class="stu-patterns"><p class="stu-patterns-head">${esc(t('stu.sp.patterns'))}</p><ul>${spellPatterns.slice(0,2).filter(g=>g.name).map(g=>`<li data-pattern="${esc(g.id)}"><b>${esc(g.name)}:</b> <span class="stu-pattern-words">${esc(g.words.join(', '))}</span></li>`).join('')}</ul></div>`:''}
+        ${spellPatterns[0]&&spellPatterns[0].rule?`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(spellPatterns[0].rule)}</span></p>`:lgTip('stu.sp.tip')}</div>`:'';
       const sentencePart=sentences.length?`<div class="stu-lang-sec stu-sentences" data-lang="grammar"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.gr.pill'))}</span></div>
         <ul class="stu-fixes">${sentences.map(f=>lgFix(f,t('stu.gr.'+f.rule))).join('')}</ul>${lgTip('stu.gr.tip')}</div>`:'';
       if(wordPart||sentencePart) langCards=`<div class="stu-card stu-lang">${wordPart}${sentencePart}</div>`;
@@ -934,6 +967,9 @@ const FIT_SLACK_PX = 6;
    then the "why" sentence, then the win box, and mark the row with how far
    it went (data-trim). Only where the two columns sit side by side. */
 const TRIM_STEPS = ['more', 'why', 'win'];
+/* The spelling row (#317) follows the same rule: the other patterns go
+   first, then the practice words, then the pattern's rule. */
+const SPELL_TRIM_STEPS = ['also', 'words', 'rule'];
 function trimSkillColumns(host){
   // The student view folds the pages on screen (display:none), where no row
   // can be measured. Open them for the measurement only, in this same task,
@@ -945,10 +981,12 @@ function trimSkillColumns(host){
 }
 function trimRows(host){
   (host || document).querySelectorAll('.practice-row').forEach(row=>{
-    TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
+    const spell = row.classList.contains('spelling-row');
+    const steps = spell ? SPELL_TRIM_STEPS : TRIM_STEPS;
+    steps.forEach(s=>row.classList.remove('trim-' + s));
     row.removeAttribute('data-trim');
     const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
-    if (!left || !right || !left.querySelector('.pr-about')) return;
+    if (!left || !right || (!spell && !left.querySelector('.pr-about'))) return;
     if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
     const tall = ()=>{
       left.style.alignSelf = right.style.alignSelf = 'start';
@@ -956,7 +994,7 @@ function trimRows(host){
       left.style.alignSelf = right.style.alignSelf = '';
       return over;
     };
-    for (const step of TRIM_STEPS){
+    for (const step of steps){
       if (!tall()) break;
       row.classList.add('trim-' + step);
       row.setAttribute('data-trim', step);

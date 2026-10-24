@@ -247,7 +247,7 @@ try {
     await renderLongest(page, pro);
     const pages = async () => ((await page.pdf({ format: 'A4', printBackground: true })).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
     const rows = await page.evaluate(() => ({ lang: document.getElementById('report-host').getAttribute('lang'), rows: document.querySelectorAll('.practice-row').length, spelling: document.querySelector('.spelling-row .pr-skill').textContent }));
-    add(rows.lang === 'te' && rows.rows === 4 && /receive/.test(rows.spelling) && /రెండు అక్షరాలు/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row gives the word and its reason in Telugu`, rows);
+    add(rows.lang === 'te' && rows.rows === 4 && /letters/.test(rows.spelling) && /రెండు ఒకే అక్షరాలు/.test(rows.spelling) && /ఒకే అక్షరం రెండుసార్లు/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row names its pattern and gives its rule in Telugu`, rows);
     await page.emulateMedia({ media: 'print' });
     add(await pages() === 2, `${label}: prints on exactly two A4 pages`);
     await page.evaluate(() => {

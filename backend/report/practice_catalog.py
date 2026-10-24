@@ -201,22 +201,87 @@ def _tip(own, tid, text, helps=None):
     return {"id": tid, "helps": _helps(own, helps or {}), "text": text}
 
 
-# The spelling row: shown only when the limited spelling check found a
-# word, extra to the skill rows. It belongs to no factor, so it helps
-# none.
+# Spelling, as an English teacher sees it (owner, 2026-10-24): a
+# misspelling is a sign of a spelling pattern the child has not got yet,
+# so practice is the pattern, with several words, not one word copied.
+# The server names each finding's pattern (backend/reading/spelling.py,
+# PATTERNS); each pattern here has a short rule, practice words and its
+# exercise. The spelling row belongs to no factor, so it helps none.
+def _spell(eid, title, steps, example, check):
+    return _ex(
+        0,
+        eid,
+        1,
+        (title, "word", "latin", None, "trace"),
+        (steps, example, check),
+    )
+
+
 SPELLING = {
     "exercises": (
-        _ex(
-            0,
+        _spell(
             "spell.look-cover-write",
-            1,
-            ("Look, cover, write", "word", "latin", None, "trace"),
-            (
-                "Look at the word. Cover it and write it from memory."
-                " Then check it.",
-                "",
-                "My word matches the one I looked at.",
-            ),
+            "Look, cover, write",
+            "Look at the word. Cover it and write it from memory."
+            " Then check it.",
+            "",
+            "My word matches the one I looked at.",
+        ),
+        _spell(
+            "spell.ie-ei",
+            "i and e words",
+            "Read each word aloud. Write the ie words in one list and the"
+            " ei words in another. Underline ie or ei.",
+            "friend piece receive",
+            "I can say which words have ie and which have ei.",
+        ),
+        _spell(
+            "spell.double-letters",
+            "Double letters",
+            "Say the word and clap its parts. Write it and circle the"
+            " double letters. Write two more words with the same pair.",
+            "letter small happy",
+            "Each word has its double letters.",
+        ),
+        _spell(
+            "spell.silent-letters",
+            "Silent letters",
+            "Say the word slowly. Write it and circle the letter you cannot"
+            " hear. Cover it and write it again.",
+            "write know while",
+            "I wrote the silent letter in each word.",
+        ),
+        _spell(
+            "spell.vowel-sounds",
+            "Vowel sounds",
+            "Say the word and listen to the vowel sound. Write it and"
+            " colour the vowel letters. Find two words with the same vowels.",
+            "neat clear every",
+            "The vowels in my words match the list.",
+        ),
+        _spell(
+            "spell.word-endings",
+            "Word endings",
+            "Split the word into its root and its ending. Write the root,"
+            " then add the ending. Make two more words with that ending.",
+            "slow + ly = slowly",
+            "Each word has the right ending.",
+        ),
+        _spell(
+            "spell.sound-letters",
+            "Same sound, other letters",
+            "Say the word and find the sound. Write it and underline the"
+            " letters for that sound. Write two more words with them.",
+            "quick back duck",
+            "I used the same letters for the same sound.",
+        ),
+        _spell(
+            "spell.sounds-in-order",
+            "Sounds in order",
+            "Say each sound of the word in order. Write one letter for each"
+            " sound as you say it. Read it back.",
+            "c-a-r-e",
+            "My letters are in the order I said them.",
         ),
     ),
     "tips": (
@@ -231,7 +296,74 @@ SPELLING = {
             "Split a long word into small parts. Learn one part at a time.",
         ),
     ),
+    # The patterns, in the order the server tries them. ``words`` are the
+    # practice words the report adds to the child's own; ``exercise`` is
+    # the pattern's exercise above.
+    "patterns": (
+        {
+            "id": "ie_ei",
+            "name": "i and e together",
+            "rule": "Most words put i before e, like friend. After c, e"
+            " comes first, like receive.",
+            "words": ("friend", "field", "piece", "believe", "receive"),
+            "exercise": "spell.ie-ei",
+        },
+        {
+            "id": "silent",
+            "name": "Silent letters",
+            "rule": "Some letters are not heard, like w in write and h in"
+            " while.",
+            "words": ("write", "know", "while", "climb", "because"),
+            "exercise": "spell.silent-letters",
+        },
+        {
+            "id": "double",
+            "name": "Double letters",
+            "rule": "Some words have two of the same letter, like letters"
+            " and small.",
+            "words": ("letter", "little", "small", "happy", "dinner"),
+            "exercise": "spell.double-letters",
+        },
+        {
+            "id": "sound_letters",
+            "name": "Same sound, other letters",
+            "rule": "One sound can use other letters, like ck in quick and"
+            " s in draws.",
+            "words": ("quick", "back", "draws", "phone", "city"),
+            "exercise": "spell.sound-letters",
+        },
+        {
+            "id": "endings",
+            "name": "Word endings",
+            "rule": "Learn the ending as one part: slow and ly make slowly.",
+            "words": ("slowly", "careful", "jumped", "playing", "practise"),
+            "exercise": "spell.word-endings",
+        },
+        {
+            "id": "order",
+            "name": "Sounds in order",
+            "rule": "Say each sound in order as you write the word.",
+            "words": ("care", "from", "girl", "was"),
+            "exercise": "spell.sounds-in-order",
+        },
+        {
+            "id": "vowels",
+            "name": "Vowel sounds",
+            "rule": "Some sounds need two vowels, like ea in neat. Some"
+            " vowels are easy to miss, like e in every.",
+            "words": ("neat", "clear", "every", "keep", "round"),
+            "exercise": "spell.vowel-sounds",
+        },
+        {
+            "id": "other",
+            "name": "Look, cover, write",
+            "rule": "Learn a hard word in small parts.",
+            "words": (),
+            "exercise": "spell.look-cover-write",
+        },
+    ),
 }
+PATTERN_IDS = tuple(p["id"] for p in SPELLING["patterns"])
 
 FACTORS = {
     1: {
@@ -1605,6 +1737,63 @@ TELUGU_EXERCISES = {
         ),
         "check": "నా కొత్త ప్రతి మొదటిదానికంటే చక్కగా ఉంది.",
     },
+    "spell.ie-ei": {
+        "title": "i, e పదాలు",
+        "steps": (
+            "ప్రతి పదాన్ని గట్టిగా చదవండి. ie పదాలు ఒక జాబితాలో, ei పదాలు"
+            " మరో జాబితాలో రాయండి. ie లేదా ei కింద గీత గీయండి."
+        ),
+        "check": "ఏ పదాల్లో ie, ఏ పదాల్లో ei ఉందో చెప్పగలను.",
+    },
+    "spell.double-letters": {
+        "title": "రెండు ఒకే అక్షరాలు",
+        "steps": (
+            "పదం చెప్పి దాని భాగాలకు చప్పట్లు కొట్టండి. రాసి రెండు ఒకే"
+            " అక్షరాల చుట్టూ గుండ్రం గీయండి. అదే జంటతో ఇంకో రెండు పదాలు"
+            " రాయండి."
+        ),
+        "check": "ప్రతి పదంలో రెండు ఒకే అక్షరాలు ఉన్నాయి.",
+    },
+    "spell.silent-letters": {
+        "title": "పలకని అక్షరాలు",
+        "steps": (
+            "పదాన్ని నెమ్మదిగా చెప్పండి. రాసి, వినిపించని అక్షరం చుట్టూ"
+            " గుండ్రం గీయండి. మూసి మళ్ళీ రాయండి."
+        ),
+        "check": "ప్రతి పదంలో పలకని అక్షరం రాశాను.",
+    },
+    "spell.vowel-sounds": {
+        "title": "అచ్చు శబ్దాలు",
+        "steps": (
+            "పదం చెప్పి అచ్చు శబ్దం వినండి. రాసి అచ్చు అక్షరాలకు రంగు"
+            " వేయండి. అవే అచ్చులున్న రెండు పదాలు కనుక్కోండి."
+        ),
+        "check": "నా పదాల్లో అచ్చులు జాబితాతో సరిపోతాయి.",
+    },
+    "spell.word-endings": {
+        "title": "పదం చివర్లు",
+        "steps": (
+            "పదాన్ని మూలం, చివర్గా విడదీయండి. మూలం రాసి చివర్ కలపండి."
+            " అదే చివర్తో ఇంకో రెండు పదాలు చేయండి."
+        ),
+        "check": "ప్రతి పదానికి సరైన చివర్ ఉంది.",
+    },
+    "spell.sound-letters": {
+        "title": "ఒకే శబ్దం, వేరే అక్షరాలు",
+        "steps": (
+            "పదం చెప్పి శబ్దాన్ని కనుక్కోండి. రాసి ఆ శబ్దం అక్షరాల కింద"
+            " గీత గీయండి. అవే అక్షరాలతో ఇంకో రెండు పదాలు రాయండి."
+        ),
+        "check": "ఒకే శబ్దానికి ఒకే అక్షరాలు వాడాను.",
+    },
+    "spell.sounds-in-order": {
+        "title": "వరుసగా శబ్దాలు",
+        "steps": (
+            "పదంలో ప్రతి శబ్దాన్ని వరుసగా చెప్పండి. చెబుతూ ప్రతి శబ్దానికి"
+            " ఒక అక్షరం రాయండి. మళ్ళీ చదవండి."
+        ),
+        "check": "నేను చెప్పిన వరుసలోనే అక్షరాలు ఉన్నాయి.",
+    },
     "spell.look-cover-write": {
         "title": "చూడండి, మూయండి, రాయండి",
         "steps": (
@@ -1765,6 +1954,79 @@ def _all_entries():
     for area in (*FACTORS.values(), SPELLING):
         yield from area["exercises"]
         yield from area["tips"]
+
+
+# The spelling patterns' names and rules in Telugu (draft for the pilot
+# school's Telugu teacher). English words stay in English.
+TELUGU_PATTERNS = {
+    "ie_ei": {
+        "name": "i, e కలిసి",
+        "rule": "చాలా పదాల్లో e ముందు i వస్తుంది, friend లాగా. c తర్వాత"
+        " e ముందు వస్తుంది, receive లాగా.",
+    },
+    "silent": {
+        "name": "పలకని అక్షరాలు",
+        "rule": "కొన్ని అక్షరాలు రాస్తాం కానీ పలకం, write లో w, while లో"
+        " h లాగా.",
+    },
+    "double": {
+        "name": "రెండు ఒకే అక్షరాలు",
+        "rule": "కొన్ని పదాల్లో ఒకే అక్షరం రెండుసార్లు వస్తుంది, letters,"
+        " small లాగా.",
+    },
+    "sound_letters": {
+        "name": "ఒకే శబ్దం, వేరే అక్షరాలు",
+        "rule": "ఒక శబ్దానికి వేరే అక్షరాలు ఉండవచ్చు, quick లో ck, draws"
+        " లో s లాగా.",
+    },
+    "endings": {
+        "name": "పదం చివర్లు",
+        "rule": "చివరి భాగాన్ని ఒకటిగా నేర్చుకోండి: slow, ly కలిస్తే"
+        " slowly.",
+    },
+    "order": {
+        "name": "వరుసగా శబ్దాలు",
+        "rule": "రాసేటప్పుడు ప్రతి శబ్దాన్ని వరుసగా చెప్పండి.",
+    },
+    "vowels": {
+        "name": "అచ్చు శబ్దాలు",
+        "rule": "కొన్ని శబ్దాలకు రెండు అచ్చులు కావాలి, neat లో ea లాగా."
+        " every లో e సులువుగా మరచిపోతాం.",
+    },
+    "other": {
+        "name": "చూడండి, మూయండి, రాయండి",
+        "rule": "కష్టమైన పదాన్ని చిన్న భాగాలుగా నేర్చుకోండి.",
+    },
+}
+for _pattern in SPELLING["patterns"]:
+    _pattern["i18n"] = {"te": dict(TELUGU_PATTERNS[_pattern["id"]])}
+
+
+def _pattern_problems():
+    """Each spelling pattern: its exercise exists, its words are plain
+    lower-case words, its rule follows the plain-English rules, and it
+    has every translation."""
+    found = []
+    exercises = {e["id"] for e in SPELLING["exercises"]}
+    banned = avoid_pattern()
+    for p in SPELLING["patterns"]:
+        if p["exercise"] not in exercises:
+            found.append(f"pattern {p['id']}: unknown exercise")
+        if any(not w.isalpha() or not w.islower() for w in p["words"]):
+            found.append(f"pattern {p['id']}: words must be plain words")
+        for text in (p["name"], p["rule"]):
+            if banned.search(text) or EM_DASH in text:
+                found.append(f"pattern {p['id']}: avoid word in {text!r}")
+            for sentence in sentences(text):
+                if len(sentence.split()) > WORDS_PER_SENTENCE_MAX:
+                    found.append(f"pattern {p['id']}: long sentence")
+        for lang in LANGUAGES:
+            te = p.get("i18n", {}).get(lang, {})
+            if not te.get("name") or not te.get("rule"):
+                found.append(f"pattern {p['id']}: no {lang} translation")
+    if PATTERN_IDS[-1] != "other":
+        found.append("the last spelling pattern must be other")
+    return found
 
 
 def _attach_translations():
@@ -2236,6 +2498,7 @@ def problems():
             found += _translation_problems(entry)
         for ex in area["exercises"]:
             found += _exercise_problems(ex, number not in PEN_FACTORS, sheets)
+    found += _pattern_problems()
     if set(DOSAGE) != {s["band"] for s in STAGES}:
         found.append("dosage must cover every band")
     if set(TIERS) != {"free", "pro"}:
@@ -2276,6 +2539,9 @@ def practice_block():
         "spelling": {
             "exercises": _plain(SPELLING["exercises"]),
             "tips": _plain(SPELLING["tips"]),
+            "patterns": [
+                {**p, "words": list(p["words"])} for p in SPELLING["patterns"]
+            ],
         },
     }
 

@@ -199,6 +199,52 @@ class TestWords(unittest.TestCase):
                 self.assertNotIn(cand, never)
 
 
+class TestPatterns(unittest.TestCase):
+    """Each misspelling's pattern, as a teacher groups them (owner,
+    2026-10-24), and the catalogue that practises each one."""
+
+    def test_a_teacher_s_groups(self):
+        for written, meant, want in (
+            ("freind", "friend", "ie_ei"),
+            ("recieve", "receive", "ie_ei"),
+            ("leters", "letters", "double"),
+            ("smal", "small", "double"),
+            ("untill", "until", "double"),
+            ("rite", "write", "silent"),
+            ("wile", "while", "silent"),
+            ("nife", "knife", "silent"),
+            ("becaus", "because", "silent"),
+            ("quik", "quick", "sound_letters"),
+            ("drawz", "draws", "sound_letters"),
+            ("slowley", "slowly", "endings"),
+            ("practis", "practise", "endings"),
+            ("playng", "playing", "endings"),
+            ("caer", "care", "order"),
+            ("evry", "every", "vowels"),
+            ("neet", "neat", "vowels"),
+            ("wurd", "word", "vowels"),
+            ("tox", "fox", "other"),
+        ):
+            self.assertEqual(spelling.pattern(written, meant), want, written)
+
+    def test_findings_carry_their_pattern(self):
+        out = run(
+            [line("My freind is here.")], FakeReader(["My freind is here."])
+        )
+        self.assertEqual(out["spelling"][0]["pattern"], "ie_ei")
+
+    def test_the_catalogue_has_every_pattern(self):
+        from report import practice_catalog  # pylint: disable=C0415
+
+        self.assertEqual(practice_catalog.PATTERN_IDS, spelling.PATTERNS)
+        exercises = {e["id"] for e in practice_catalog.SPELLING["exercises"]}
+        for p in practice_catalog.SPELLING["patterns"]:
+            self.assertIn(p["exercise"], exercises)
+            self.assertIn("te", p["i18n"])
+            for word in p["words"]:
+                self.assertTrue(spelling.is_word(word), word)
+
+
 class TestSpellingOnInk(unittest.TestCase):
     def test_clear_misspelling_is_found_with_its_place(self):
         out = run(

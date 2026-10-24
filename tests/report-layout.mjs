@@ -83,7 +83,13 @@ export async function renderLongest(page, pro){
   await page.evaluate(pro=>{
     const d=window.VAHINI_SAMPLE_REPORT;
     // One word from the server's spelling check (#317), on the sample's hardest row.
-    const language={version:1,checked:true,reason:null,grammar:[],spelling:[{written:'recieve',suggestion:'receive',kind:'letter_order',against:'list',places:[{line:'line_5',bbox:[153,820,120,70],placed:'letters'}]}]};
+    // The longest spelling row: four words over three patterns (#317).
+    const at=x=>[{line:'line_5',bbox:[x,820,120,70],placed:'letters'}];
+    const language={version:1,checked:true,reason:null,grammar:[],spelling:[
+      {written:'recieve',suggestion:'receive',kind:'letter_order',pattern:'ie_ei',against:'list',places:at(153)},
+      {written:'leters',suggestion:'letters',kind:'missing_letter',pattern:'double',against:'list',places:at(290)},
+      {written:'smal',suggestion:'small',kind:'missing_letter',pattern:'double',against:'list',places:at(430)},
+      {written:'rite',suggestion:'write',kind:'missing_letter',pattern:'silent',against:'list',places:at(560)}]};
     const recognition={...(d.analysis.recognition||{}),level:'high'};
     const analysis=pro?{...d.analysis,recognition}:{...d.analysis,access:{tier:'free'},recognition,results:d.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
     const crops={};

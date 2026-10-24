@@ -42,7 +42,7 @@ const RENDER = `window.__render = (opts) => {
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
   window.VahiniCraft = { ...window.__craft };
-  const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
+  const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', pattern: 'ie_ei', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
   const host = document.getElementById('report-host');
   const out = VahiniReport.render(host, { analysis, intake: {}, recognizedText: o.text || 'I recieve it', crops: d.factor_regions || {}, detURL: d.photo, history: o.history || null, language });
   const rows = [...host.querySelectorAll('.practice-row')].map(r => ({
@@ -175,8 +175,8 @@ try {
   // to the skills. It shows the word to write, never our reading.
   const spelled = await page.evaluate(() => window.__render({ free: true, spelling: true }));
   add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /receive/.test(spelled.text) && !/We read recieve/.test(spelled.text)
-    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.look-cover-write',
-    'A spelling finding adds its own row after the skills', spelled.rows.map(r => r.factor));
+    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.ie-ei' && /i and e together/.test(spelled.text) && /receive friend/.test(spelled.text) && /receive, friend, field, piece/.test(spelled.text),
+    'A spelling finding adds its own row after the skills, practising its pattern (i and e) with more words than the one', spelled.rows.map(r => r.factor));
 
   // Pro: band decides (up to 2), tier caps; a Mastering skill gets one.
   const pro = await page.evaluate(() => window.__render({ scores: { 3: 3.0, 6: 7.6 } }));
