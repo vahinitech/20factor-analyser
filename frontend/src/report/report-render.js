@@ -882,6 +882,15 @@ const FIT_SLACK_PX = 6;
    it went (data-trim). Only where the two columns sit side by side. */
 const TRIM_STEPS = ['more', 'why', 'win'];
 function trimSkillColumns(host){
+  // The student view folds the pages on screen (display:none), where no row
+  // can be measured. Open them for the measurement only, in this same task,
+  // so nothing is painted open and page 2 trims as in today's report.
+  const hosts = host && host.classList ? [host] : [...document.querySelectorAll('.report-host')];
+  const opened = hosts.filter(h=>h.classList.contains('stu-folded') && !h.classList.contains('stu-printing'));
+  opened.forEach(h=>h.classList.add('stu-printing'));
+  try{ trimRows(host); }finally{ opened.forEach(h=>h.classList.remove('stu-printing')); }
+}
+function trimRows(host){
   (host || document).querySelectorAll('.practice-row').forEach(row=>{
     TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
     row.removeAttribute('data-trim');
