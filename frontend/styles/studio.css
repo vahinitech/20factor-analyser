@@ -296,3 +296,14 @@ body.studio{ background:var(--v-bg, #E9E9EA); }
   .report-host{ padding:0; }
   .warn-banner{ display:none; }
 }
+
+/* ---- A check that got no answer: waiting for the server (app.js showDropped) */
+.drop-wait{ max-width:300px; margin:0 auto 22px; }
+.drop-wait__bar{ height:8px; border-radius:99px; background:var(--paper-edge); overflow:hidden; position:relative; }
+.drop-wait__bar span{ position:absolute; top:0; bottom:0; width:40%; border-radius:99px; background:var(--accent); animation:dropWait 1.6s ease-in-out infinite; }
+@keyframes dropWait{ from{ left:-40%; } to{ left:100%; } }
+@media (prefers-reduced-motion:reduce){ .drop-wait__bar span{ animation:none; left:0; } }
+.drop-wait p{ font-size:13px; color:var(--ink-2); margin:8px 0 0; }
+.drop-actions{ display:flex; flex-direction:column; gap:10px; align-items:center; }
+.drop-actions a.btn{ text-decoration:none; }
+.drop-note{ font-size:13.5px; margin:14px auto 0; }

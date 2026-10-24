@@ -250,7 +250,8 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   handwriting_not_read, not_writing_page, turned_page, server_down, too_large, invalid_file, key_problem,
+   handwriting_not_read, not_writing_page, turned_page, server_down,
+   server_restarting, server_back, check_failed_twice, too_large, invalid_file, key_problem,
    account_unavailable, too_big, heic, unreadable, pdf_unreadable,
    photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
@@ -604,6 +605,111 @@ function showReject(rej){
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
 
+function showServerDown(){
+  const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
+  showReject({
+    outcome: 'server_down',
+    reason: 'Recognition server not reachable',
+    detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
+      + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
+    tips: serverDownTips([
+      'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
+      'Or start it directly: python backend/server/app.py',
+      'Then reload this page and upload the photo again',
+    ]),
+  });
+}
+
+/* A check that got no answer (owner, 2026-10-23). On stage that day one
+   photo stopped the analyser mid-scan and the page said "not reachable";
+   sent again, the same photo stopped it again. Now the page waits for the
+   server to answer its health check, then offers this photo once more, on
+   a tap, never by itself. A second drop of the same photo ends with "we
+   could not check this photo": it is not offered a third time. A request
+   that got no answer did not use up a free check (daily_limit.py spends
+   one only on a report). */
+const DROP_WAIT_MS = 90000, DROP_POLL_MS = 3000;
+let droppedPhoto = null;   // the photo whose check last got no answer
+let dropWait = 0;          // bumped to stop a wait the visitor left
+
+function showDropNotice(n){
+  const panel = $('#screen-process .panel');
+  if (!panel) return;
+  if (processPanelHTML === null) processPanelHTML = panel.innerHTML;
+  const head = $('#screen-process .screen-head'); if (head) head.style.display = 'none';
+  reportOutcome(n.outcome);
+  const card = document.createElement('div'); card.className = 'reject-card';
+  const art = noticeArt(n.outcome);
+  if (art) card.appendChild(artImg(art, 'reject-art'));
+  const h = document.createElement('h2'); h.textContent = n.title; card.appendChild(h);
+  const p = document.createElement('p'); p.className = 'reject-detail'; p.textContent = n.detail; card.appendChild(p);
+  if (n.waiting){
+    const wait = document.createElement('div'); wait.className = 'drop-wait';
+    wait.innerHTML = '<div class="drop-wait__bar" role="progressbar" aria-label="Waiting for the checker"><span></span></div>';
+    const note = document.createElement('p'); note.textContent = n.waiting; wait.appendChild(note);
+    card.appendChild(wait);
+  }
+  const actions = document.createElement('div'); actions.className = 'drop-actions';
+  n.actions.forEach(a=>{
+    const el = document.createElement(a.href ? 'a' : 'button');
+    el.className = 'btn ' + (a.primary ? 'btn-primary' : 'btn-ghost');
+    el.textContent = a.label;
+    if (a.href) el.href = a.href; else el.addEventListener('click', a.run);
+    actions.appendChild(el);
+  });
+  card.appendChild(actions);
+  if (n.note){ const note = document.createElement('p'); note.className = 'reject-detail drop-note'; note.textContent = n.note; card.appendChild(note); }
+  panel.textContent = ''; panel.appendChild(card);
+}
+
+function chooseAnotherPhoto(){ dropWait++; droppedPhoto = null; clearSample(); go('upload'); }
+
+async function showDropped(img){
+  if (droppedPhoto === img){
+    droppedPhoto = null;
+    showDropNotice({
+      outcome: 'check_failed_twice',
+      title: 'We could not check this photo',
+      detail: 'It stopped the checker twice. A photo of another page usually works. This did not use up a free check.',
+      actions: [
+        { label: 'Choose another photo', primary: true, run: chooseAnotherPhoto },
+        { label: 'Ask our team', href: '/reach.html?topic=handwriting' },
+      ],
+      note: 'The photo was not saved.',
+    });
+    return;
+  }
+  droppedPhoto = img;
+  const mine = ++dropWait;
+  showDropNotice({
+    outcome: 'server_restarting',
+    title: 'The checker is starting again',
+    detail: 'It stopped part way through your photo. Your photo is still here on your phone.',
+    waiting: 'Waiting for it. This usually takes under half a minute.',
+    actions: [{ label: 'Choose another photo', run: chooseAnotherPhoto }],
+  });
+  const until = Date.now() + DROP_WAIT_MS;
+  while (mine === dropWait && Date.now() < until){
+    const res = await VahiniOCR.checkHealth();
+    if (mine !== dropWait) return;
+    if (res && res.ok){
+      serviceUp = true; applyServiceGate();
+      showDropNotice({
+        outcome: 'server_back',
+        title: 'The checker is ready',
+        detail: 'Try this photo once more. This does not use up a free check.',
+        actions: [
+          { label: 'Check this photo again', primary: true, run: ()=>{ dropWait++; runPipeline(); } },
+          { label: 'Choose another photo', run: chooseAnotherPhoto },
+        ],
+      });
+      return;
+    }
+    await new Promise(r=>setTimeout(r, DROP_POLL_MS));
+  }
+  if (mine === dropWait){ droppedPhoto = null; showServerDown(); }
+}
+
 /* The photo as uploaded: JPEG, long side capped at the server's own working
    size (VAHINI_OCR_MAX_SIDE, 2600), which it would resize to anyway. A full-
    size PNG was 1.2 MB for a 960x1280 photo and 6.1 MB for 3024x4032; the JPEG
@@ -906,21 +1012,11 @@ async function runPipeline(){
     });
     return;
   }
-  if (!pyReport || pyReport.ok === false || !pyReport.analysis){
-    const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
-    showReject({
-      outcome: 'server_down',
-      reason: 'Recognition server not reachable',
-      detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
-        + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
-      tips: serverDownTips([
-        'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python backend/server/app.py',
-        'Then reload this page and upload the photo again',
-      ]),
-    });
-    return;
-  }
+  // No answer at all (a dropped connection, a 502): wait for the server and
+  // offer this photo once more. A refusal with a body keeps its own screen.
+  if (!pyReport){ showDropped(img); return; }
+  if (pyReport.ok === false || !pyReport.analysis){ showServerDown(); return; }
+  droppedPhoto = null;
   const pyTiming = pyReport._timing || null;
   const vlResult = {
     document_context: pyReport.document_context || null,

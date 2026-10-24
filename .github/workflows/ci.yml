@@ -452,6 +452,8 @@ jobs:
         run: npm run test:daily-limit
       - name: A page the server could not read asks for a retry, never a score
         run: npm run test:ocr-unavailable
+      - name: A check with no answer waits for the server and offers the photo once more
+        run: npm run test:check-dropped
       - name: A Telugu page the reader could not read is refused, never scored
         run: npm run test:handwriting-not-read
       - name: Picking Telugu sends lang=te and says it is not scored yet
