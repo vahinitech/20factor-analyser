@@ -1308,6 +1308,19 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .stu-mk-now{ background:var(--v-warning-bg); color:var(--v-warning); }
 .stu-mk-later{ background:var(--v-bg-alt); color:var(--v-text-muted); }
 .stu-mk-grow{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+/* Words and sentences to check (#317): the child's own ink, an arrow, the word to write. */
+.stu-pill-lang{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+.stu-lang-note{ color:var(--v-text-muted); font-size:14px !important; }
+.stu-fixes{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.stu-fix{ display:grid; grid-template-columns:auto auto minmax(0,1fr); grid-template-areas:"ink arrow right" "why why why"; align-items:center; gap:4px 10px; }
+.stu-ink{ grid-area:ink; height:44px; width:auto; max-width:160px; border:1px solid var(--v-border); border-radius:8px; background:var(--v-paper); }
+.stu-arrow{ grid-area:arrow; width:20px; height:20px; fill:none; stroke:var(--v-text-muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.stu-right{ grid-area:right; font:600 28px/1.1 var(--handB); color:var(--v-success); min-width:0; overflow-wrap:anywhere; }
+.stu-fix-why{ grid-area:why; color:var(--v-text-2); font-size:14px; }
+.stu-tip{ display:flex; gap:10px; align-items:center; border-radius:12px; padding:8px 12px; background:var(--v-bg-alt); color:var(--v-text-2); font-size:15px !important; }
+.stu-tip-art{ width:40px; height:40px; object-fit:contain; flex:none; }
+.stu-m-word{ stroke:var(--v-highlight); fill:none; }
+.stu-m-sentence{ stroke:var(--v-warning); fill:none; stroke-linecap:round; }
 .stu-more{ justify-self:center; border:0; background:none; padding:6px; font:600 15px var(--sans); color:var(--v-text-muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
 /* Folded on screen only: print (stu-printing) and the shared PDF (pdf-busy) take the pages as they are. */
 @media screen{ html:not(.pdf-busy) .report-host.stu-folded:not(.stu-printing) > section.page{ display:none; } }
