@@ -23,7 +23,9 @@ and has the scan's own recogniser read it:
    A word of at least MIN_LETTERS letters at MIN_SCORE confidence or
    more, whose middle lies in the candidate and outside every found
    line, is kept; anything else is left out, as before. A second round
-   reads what the first left unread.
+   reads what the first left unread, except a place the first round
+   already read without keeping a word: the crop is the same, give or
+   take a pixel, and so is its reading.
 
 detector.join_row_pieces then joins a recovered piece to the rest of its
 line. Everything here depends only on the photo and the found lines, so
@@ -56,6 +58,11 @@ ROUNDS = 2
 WORD_OVERLAP = 0.40
 MAX_WORD_HEIGHT = 1.5  # line heights
 RULE_LENGTH = 0.25  # of the page width or height
+# A second-round candidate this much like a first-round one that kept
+# nothing is that crop again. On the stage photos of 23 October 2026 such
+# repeats were 27 of 41 second-round reads (63 of 93 seconds) and none of
+# them, there or on the UJI pages, kept a word.
+REPEAT_OVERLAP = 0.80
 
 
 def _ink(gray, line_h):
@@ -187,7 +194,18 @@ def _inside(point, box):
     return x <= point[0] <= x + w and y <= point[1] <= y + h
 
 
-def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
+def _same_place(a, b):
+    """Intersection over union of two [x, y, w, h] boxes."""
+    ix = max(0.0, min(a[0] + a[2], b[0] + b[2]) - max(a[0], b[0]))
+    iy = max(0.0, min(a[1] + a[3], b[1] + b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    union = a[2] * a[3] + b[2] * b[3] - inter
+    return inter / union if union > 0 else 0.0
+
+
+def recover_lines(
+    arr, lines, read, lang=languages.DEFAULT_LANG, fruitless=None
+):
     """Words read from the writing the detector missed (missed_regions),
     each shaped like a reader's line and marked "recovered";
     detector.join_row_pieces joins them into lines. read(crop, lang)
@@ -195,7 +213,10 @@ def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
     ocr_backends.read_region). A word counts when its middle lies in the
     missed region, outside every found line, read with MIN_SCORE
     confidence or more, holding at least MIN_LETTERS letters (a smudge
-    reads as "22" or "-"), and at most MAX_WORD_HEIGHT lines tall."""
+    reads as "22" or "-"), and at most MAX_WORD_HEIGHT lines tall.
+    fruitless, when given, holds the boxes of earlier rounds' reads that
+    kept no word: a candidate in the same place (REPEAT_OVERLAP) is not
+    read again, and this round's fruitless reads are added to it."""
     if read is None:
         return []
     out = []
@@ -203,6 +224,12 @@ def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
     heights = [float(l["box"][3]) for l in lines if _readable(l)]
     line_h = float(np.median(heights)) if heights else float(page_h)
     for region in missed_regions(arr, lines)[:MAX_READS]:
+        if fruitless is not None and any(
+            _same_place(region["box"], box) >= REPEAT_OVERLAP
+            for box in fruitless
+        ):
+            continue
+        kept_before = len(out)
         x, y, w, h = region["box"]
         pad = max(4, int(round(h * 0.15)))
         x0, y0 = max(0, x - pad), max(0, y - pad)
@@ -249,6 +276,8 @@ def recover_lines(arr, lines, read, lang=languages.DEFAULT_LANG):
                     "recovered": True,
                 }
             )
+        if fruitless is not None and len(out) == kept_before:
+            fruitless.append(region["box"])
     return out
 
 
@@ -258,8 +287,9 @@ def add_missed(arr, lines, read, lang=languages.DEFAULT_LANG):
     found line that is not readable (a garbage reading) gives way to the
     recovered words covering at least half its width. ROUNDS passes: a
     crop read only in part leaves the rest for a tighter crop."""
+    fruitless = []
     for _ in range(ROUNDS):
-        found = recover_lines(arr, lines, read, lang)
+        found = recover_lines(arr, lines, read, lang, fruitless)
         if not found:
             break
         found = detector.merge_lines(found)

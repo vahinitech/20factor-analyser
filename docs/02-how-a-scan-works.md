@@ -18,9 +18,45 @@ Consistency (5), Baseline Alignment (7), Word Spacing (8) and Legibility (18)
 | Size limits | Request body over 6 MiB refused; file over 5 MiB refused (413) | `upload_limits.py:12-53`, `_read_upload` in `server/app.py:183-187` |
 | Busy server | No free scan slot: 503 with `Retry-After` | `scan_slots.py:61-70` |
 | Decode | JPEG, PNG, WebP; PDF uses page 1 only, drawn at 150 DPI | `computer_vision.to_numpy`, `computer_vision.py:39-99` |
-| Turn upright | The phone's EXIF orientation is applied, then RGB | `computer_vision.py:84` |
+| Turn upright | The phone's EXIF orientation is applied, then RGB | `computer_vision.decode_image` |
+| Which way up | A photo taken sideways or upside down with no EXIF turn is found from its writing and turned upright before anything is read; when the lines run up and down and the way up is unclear, the page is refused (below) | `vision/page_turn.py`, `_upright` in `server/app.py` |
 | Shrink | Longest side at most `VAHINI_OCR_MAX_SIDE` (2200 by default, never under 960), LANCZOS. The website's stage compose file sets 2600; production uses the default | `config.py:96-98` |
 | Repeat answers | The same bytes within 180 s get the stored answer | `cache.py`, key built at `server/app.py:835-840` |
+
+**Which way up (#297).** On 23 October 2026 a school photographed a notebook
+page sideways; the photo had no EXIF turn, and the report scored the sideways
+text (3 lines on an 18-line page, Line alignment 8.0). `page_turn.measure`
+now looks at the page before it is read, on a copy at most 1200 px long, with
+no model of its own:
+
+1. *Which direction the lines run.* The ink is smeared along one axis by
+   three quarters of a letter: along the lines, letters and words join into
+   long thin strips; across them they do not. How elongated the smeared
+   pieces are and how long their runs are, compared both ways, give
+   `across`. Every handwritten page in the benchmarks scores 2.2 or more
+   upright (the sample page 3.5), so a quarter turn scores -2.2 or less;
+   the cut-off is 1.
+2. *Which way is up.* Letters reach further above the small-letter band
+   than below it (b d f h k l t and capitals against g j p q y), and lines
+   start at one margin and end ragged.
+3. *The reader's word*, when a turn is in question: the two longest line crops
+   are read as they lie and turned over by the scan's own recogniser, and
+   the clearly more confident reading (by 0.08 or more) wins.
+
+A page whose lines run across is turned over only when the signs lean
+upside down and the reader agrees; without a reader it is never turned over.
+A page whose lines run up and down is turned a quarter when the reader, or
+the signs over three lines or more, say which way and the two do not
+disagree; otherwise it is refused with `turned_page`. Telugu (any request
+that is not English or `auto`) is never turned over and is refused when its
+lines run up and down: its marks sit above and below the line differently,
+so the signs are not trusted for it until tested. A turned page is decoded
+again with the turn before the shrink, so it gives exactly the pixels, the
+full-size crops and the scores of the same photo taken upright
+(`backend/tests/test_page_turn.py` proves it on the sample page and the UJI
+pages). The report says `turned: 90` (or 180, 270) and the check page turns
+its own copy of the photo the same way before drawing it. An upright page
+costs about 30 ms and never asks the reader.
 
 The shrunk, upright picture is the **processed image**. Every box in a report
 (`bbox`, `source_size`, `coordinate_space: "processed-image"`) is in its
@@ -120,6 +156,7 @@ depends only on the photo, so the same photo gives the same lines.
 | OCR ran and found nothing | Lines are found from ink alone (`cv-fallback`) and the report is made without the skills that need reading | `computer_vision.fallback_line_regions`, `computer_vision.py:166-248`; `server/app.py:653-661` |
 | Still nothing | `no_handwriting`, "No handwriting found" | `server/app.py:662-676` |
 | Asked for as Telugu (`lang=te`), and fewer than three in four letters read are Telugu, or the reader's mean confidence is under 0.80 | `handwriting_not_read` screen; not counted against the daily limit. The Telugu reader returns Latin fragments on handwriting, so no report is made from them | `recognizer.telugu_not_read` |
+| The lines run up and down and which way is up is unclear (or the page is Telugu) | `turned_page` screen, "turn the photo so the lines run across"; not counted against the daily limit | `page_turn.measure`, `_upright` in `server/app.py` |
 | Digits and maths signs are 35% or more of the letters, digits and signs read (at least 12 of them): a maths or science page | `not_writing_page` screen, "write four lines of English"; not counted against the daily limit | `recognizer.not_writing_page` |
 
 **When the family typed the passage**, each read line whose text is at least

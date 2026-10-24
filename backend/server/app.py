@@ -62,6 +62,7 @@ from vision import (
 from vision import (
     ink_geometry,
 )  # lines and geometry from the ink, for unread scripts
+from vision import page_turn  # which way up the photo is (#297)
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 from scoring_parts import (
     needs as factor_needs,
@@ -523,6 +524,57 @@ def _not_writing_page_payload(engine, lang, counts, extra=None):
     return payload
 
 
+# A page whose lines run up and down when the analyser cannot tell which
+# way up it is (page_turn.py, #297). Scoring it sideways gave confident
+# numbers that meant nothing, so it is refused. Like no_handwriting it is
+# never cached and never counts as a free check.
+TURNED_PAGE_DETAIL = (
+    "The writing in this photo runs up and down, and the analyser could "
+    "not tell which way up the page is, so it was not scored. Turn the "
+    "photo so the lines run across, then try again."
+)
+
+
+def _turned_page_payload(engine, lang, verdict, extra=None):
+    payload = {
+        "ok": False,
+        "engine": engine,
+        "error_code": "turned_page",
+        "error": TURNED_PAGE_DETAIL,
+        "page_turn": verdict.as_dict(),
+        "rec_texts": [],
+        "rec_polys": [],
+        "rec_scores": [],
+        "full_text": "",
+        "lang": lang,
+    }
+    if extra:
+        payload.update(extra)
+    return payload
+
+
+def _upright(arr, raw, lang):
+    """(arr, verdict): the working copy with the page upright
+    (page_turn.py). A turned page is decoded again with the turn before
+    the downscale, so its pixels, and every score, are exactly what the
+    same photo taken upright gives. The up-or-down signs are measured on
+    Latin writing, so only English and "auto" pages are turned over or
+    checked with the reader; any other script is left as it lies, or
+    refused when its lines run up and down."""
+    latin = set(lang.split(",")) <= {"auto", "en"}
+    with perf.stage("turn") as step:
+        verdict = page_turn.measure(
+            arr, latin=latin, read=_READ_REGION if latin else None
+        )
+        step.size(turn=verdict.turn)
+    if verdict.turn and not verdict.unsure:
+        log.info("page turned: %s", verdict.as_dict())
+        arr = computer_vision.to_numpy(
+            raw, max_side=MAX_OCR_SIDE, turn=verdict.turn
+        )
+    return arr, verdict
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -532,6 +584,9 @@ def _ocr_process(arr, raw, lang):
     selected_backend = "paddle"
     compare_meta = {}
     try:
+        arr, verdict = _upright(arr, raw, lang)
+        if verdict.unsure:
+            return _turned_page_payload("pp-ocrv5", lang, verdict)
         raw_lines, last_err, selected_backend, compare_meta = (
             recognizer.collect_lines(arr, lang)
         )
@@ -541,6 +596,7 @@ def _ocr_process(arr, raw, lang):
             raw_bytes=raw,
             refine_backend=selected_backend,
             read_region=_READ_REGION,
+            turn=verdict.turn,
         )
         if lines and not hand_lines:
             # Text was detected but every line is printed: refuse rather
@@ -600,6 +656,7 @@ def _ocr_process(arr, raw, lang):
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
+        **({"turned": verdict.turn} if verdict.turn else {}),
         "engine": f"pp-ocrv5+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
@@ -667,6 +724,9 @@ def _analyze_vl_process(arr, raw, lang):
     selected_backend = "paddle"
     compare_meta = {}
     try:
+        arr, verdict = _upright(arr, raw, lang)
+        if verdict.unsure:
+            return _turned_page_payload("pp-ocrv5+vl", lang, verdict)
         raw_lines, last_err, selected_backend, compare_meta = (
             recognizer.collect_lines(arr, lang)
         )
@@ -676,6 +736,7 @@ def _analyze_vl_process(arr, raw, lang):
             raw_bytes=raw,
             refine_backend=selected_backend,
             read_region=_READ_REGION,
+            turn=verdict.turn,
         )
         if lines and not hand_lines:
             # Every detected line is printed: refuse to analyse the page
@@ -797,6 +858,7 @@ def _analyze_vl_process(arr, raw, lang):
         "full_text": "\n".join(texts),
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
+        **({"turned": verdict.turn} if verdict.turn else {}),
         "document_context": vl.get("document_context", {}),
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
@@ -903,6 +965,14 @@ def _report_python_process(
     selected_backend = "paddle"
     compare_meta = {}
     try:
+        arr, verdict = _upright(arr, raw, lang)
+        if verdict.unsure:
+            return _turned_page_payload(
+                "pp-ocrv5+python-report",
+                lang,
+                verdict,
+                extra={"analysis": None},
+            )
         if _ink_mode(lang):
             # A language the reader cannot find the lines of: measured
             # from the ink (ink_geometry.py), nothing read.
@@ -918,6 +988,7 @@ def _report_python_process(
                 raw_bytes=raw,
                 refine_backend=selected_backend,
                 read_region=_READ_REGION,
+                turn=verdict.turn,
             )
         if lines and not hand_lines:
             # Every detected line is printed. Scoring machine type as
@@ -1152,7 +1223,7 @@ def _report_python_process(
             ),
         }
 
-    photo = computer_vision.photo_size(raw)
+    photo = computer_vision.photo_size(raw, verdict.turn)
     return {
         "ok": True,
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
@@ -1180,6 +1251,9 @@ def _report_python_process(
         # The uploaded photo's own size, so version-2 reports can give
         # factor marks in its pixels (comparison_data.factor_marks).
         **dict(zip(("photo_w", "photo_h"), photo or ())),
+        # How far the photo was turned to read it upright (#297): the
+        # browser turns its own copy the same way before drawing.
+        **({"turned": verdict.turn} if verdict.turn else {}),
         "document_context": vl.get("document_context", {}),
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),

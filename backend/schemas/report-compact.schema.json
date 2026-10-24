@@ -274,6 +274,9 @@
     "age_band": {
       "$ref": "common.schema.json#/definitions/ageBand"
     },
+    "turned": {
+      "$ref": "common.schema.json#/definitions/pageTurn"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,
