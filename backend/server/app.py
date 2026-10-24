@@ -1339,13 +1339,18 @@ def _language(arr, hand_lines, lang, selected_backend):
     fails, the scan still answers, without the section's findings."""
     if selected_backend in ("ink-geometry", "cv-fallback"):
         return {"version": 1, "checked": False, "reason": "no_letter_scores"}
+
+    def read(crop, line_lang):
+        perf.count("reader_calls")
+        return _READ_SCORES(crop, line_lang)
+
     with perf.stage("language", lines=len(hand_lines)):
         try:
             return language_check.check(
                 arr,
                 hand_lines,
                 recognizer.resolve_langs(lang),
-                _READ_SCORES,
+                read if _READ_SCORES else None,
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("language check failed")
