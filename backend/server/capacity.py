@@ -6,6 +6,9 @@ Measured on the deploy box (stage, 2026-10-07: 4 cores, 7.9 GB shared host,
 PP-OCRv5 mobile det + en rec on CPU, 960x1280 and 3024x4032 photos):
 
 - process with models loaded and warm: ~1.0 GB (en), ~1.1 GB (en + te)
+- with the scan worker (scan_worker.py, #299) the models live in a child
+  and the server process that answers HTTP adds ~0.1 GB (2026-10-23:
+  106 MB RSS, 57 MB of it anonymous, VAHINI_OCR_GPU=0, no models)
 - each extra OCR engine copy: 70-210 MB (BASE already holds the first)
 - working memory of one running scan: ~0.6 GB (kernel memory.peak 1.61 GB
   against ~1.0 GB idle)
@@ -43,7 +46,7 @@ def _env_num(name, default, minimum=0):
 
 def constants():
     return {
-        "base_mb": _env_num("VAHINI_SCAN_BASE_MB", 1100, 1),
+        "base_mb": _env_num("VAHINI_SCAN_BASE_MB", 1200, 1),
         "scan_mb": _env_num("VAHINI_SCAN_MEM_MB", 600, 1),
         "replica_mb": _env_num("VAHINI_SCAN_REPLICA_MB", 200),
         "threads_per_scan": int(_env_num("VAHINI_SCAN_THREADS", 2, 1)),

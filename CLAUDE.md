@@ -34,6 +34,13 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   with a load-test measurement (`backend/tools/load_test.py`, stage only), and
   never remove the cap. Model and numbers:
   #97 and `docs/13-api-and-capacity.md`.
+- **Scans run in a child process the server outlives** (`backend/server/scan_worker.py`,
+  #299, on in the image with `VAHINI_SCAN_WORKER=1`). The process that answers
+  HTTP never loads a model; anything passed to `scan_slots.run` must be a
+  module-level function with arguments that pickle. A scan lost with the child
+  runs once more the same way, never on a lighter path (owner decision on #299:
+  same photo, same score), and a second loss is 503 `ocr_unavailable`. Unit
+  tests run scans in-process; `test_scan_worker.py` kills a real child.
 - **The bundle and the asset stamps are build output, never committed.**
   `engine.bundle.js` and the `?v=<hash>` on each page's `scripts/core/*.js`
   and `styles/*.css` (vahini-web and Cloudflare cache those for 30 days)

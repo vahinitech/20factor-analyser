@@ -11,6 +11,7 @@
 # pylint: disable=invalid-name
 # pylint: enable=invalid-name
 
+import sys
 from importlib import util
 from pathlib import Path
 
@@ -24,6 +25,10 @@ spec = util.spec_from_file_location("ppocr_server", str(PP_OCR_SERVER_PATH))
 if spec is None or spec.loader is None:
     raise RuntimeError("Failed to load server/app.py")
 module = util.module_from_spec(spec)
+# Registered by name: the scan worker is sent app.py's scan functions by
+# reference (pickle), and its child process loads app.py under this name
+# (server/scan_worker.py).
+sys.modules[spec.name] = module
 spec.loader.exec_module(module)
 app = module.app
 

@@ -139,14 +139,17 @@ class Scan:
         with self._lock:
             self._stages.append(step)
 
+    def steps(self):
+        """The stages run so far, in the order they finished."""
+        with self._lock:
+            return list(self._stages)
+
     def summary(self):
         """{stage name: totals over its runs}, in the order each stage
         first finished: runs, wall_ms, cpu_ms, mem_mb (when the container
         reports memory), and the summed sizes and counts."""
-        with self._lock:
-            steps = list(self._stages)
         out = {}
-        for step in steps:
+        for step in self.steps():
             row = out.setdefault(
                 step.name,
                 {
@@ -209,6 +212,40 @@ def stage(name, **sizes):
         if mem0 is not None and mem1 is not None:
             step.mem_mb = (mem1 - mem0) / 1048576.0
         _STAGE.reset(token)
+        record.add(step)
+
+
+def export(record):
+    """The stages of a scan as plain rows (names and numbers only), to
+    hand from the scan worker's process to the server's (scan_worker.py)."""
+    return [
+        {
+            "name": step.name,
+            "sizes": dict(step.sizes),
+            "counts": dict(step.counts),
+            "wall_ms": step.wall_ms,
+            "cpu_ms": step.cpu_ms,
+            "mem_mb": step.mem_mb,
+        }
+        for step in record.steps()
+    ]
+
+
+def adopt(rows):
+    """Add exported stages to the current scan, as if they had run here.
+    Outside a scan it does nothing; anything that is not a number is
+    dropped, as stage() drops it."""
+    record = _SCAN.get()
+    if record is None:
+        return
+    for row in rows or ():
+        step = Stage(_name(row.get("name", "")))
+        step.size(**(row.get("sizes") or {}))
+        for key, value in (row.get("counts") or {}).items():
+            step.count(key, value)
+        step.wall_ms = _number(row.get("wall_ms")) or 0.0
+        step.cpu_ms = _number(row.get("cpu_ms")) or 0.0
+        step.mem_mb = _number(row.get("mem_mb"))
         record.add(step)
 
 

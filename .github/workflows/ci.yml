@@ -89,6 +89,7 @@ jobs:
             backend/vision/marked_places.py backend/vision/letter_geometry.py \
             backend/reading/print_hand.py backend/vision/letter_boxes.py \
             backend/server/scan_slots.py backend/server/capacity.py \
+            backend/server/scan_worker.py backend/tests/test_scan_worker.py \
             backend/reading/detector.py backend/reading/line_recovery.py \
             backend/vision/ink_geometry.py scripts/ink_geometry_eval.py \
             backend/vision/page_turn.py \

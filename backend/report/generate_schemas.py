@@ -1811,6 +1811,25 @@ def health():
                     },
                 }
             ),
+            "scan_worker": closed(
+                {
+                    "enabled": {"type": "boolean"},
+                    "state": {
+                        "enum": ["starting", "ready", "restarting"],
+                    },
+                    "restarts": {"type": "integer", "minimum": 0},
+                    "last_exit": nullable("integer"),
+                },
+                required=["enabled"],
+                description=(
+                    "The process that runs the scans, apart from the one "
+                    "that answers requests (backend/server/scan_worker.py, "
+                    "#299): its state, restarts since the server started, "
+                    "and the exit code of the last one that ended (-9 is "
+                    "SIGKILL; in a memory-limited container, the OOM "
+                    "killer). Only enabled when it is off."
+                ),
+            ),
             "debug_store": {
                 "type": "boolean",
                 "description": (
