@@ -1,0 +1,15 @@
+{
+  "about": "What's new on the check page, newest first. One plain line per change a parent or teacher would notice, each taken from the changelog fragments it names (changelog.d/<topic>.md, or CHANGELOG.md once released). build_bundle.py --stamp writes the newest ten into analyser.html; tests/whats-new.test.mjs holds the rules.",
+  "items": [
+    {"date": "2026-10-24", "text": "The report starts with strengths and uses words, not score numbers.", "prs": [308], "changelog": ["report-no-numbers"]},
+    {"date": "2026-10-24", "text": "A one-screen report for pupils, each comment beside their own writing.", "prs": [309], "changelog": ["student-view"]},
+    {"date": "2026-10-24", "text": "If our server restarts during a check, the page waits and offers your photo again.", "prs": [300, 303], "changelog": ["scan-worker", "check-dropped"]},
+    {"date": "2026-10-24", "text": "Neat writing is no longer pulled down by margins or line lengths.", "prs": [305], "changelog": ["interim-overall"]},
+    {"date": "2026-10-24", "text": "Lines that are hard to read get a faster second look, so long pages finish sooner.", "prs": [298, 311], "changelog": ["recovery-crop-size", "recovery-skip-repeats"]},
+    {"date": "2026-10-23", "text": "Photos taken sideways or upside down are turned the right way up.", "prs": [301, 313], "changelog": ["turned-page-297", "turn-joined-writing"]},
+    {"date": "2026-10-22", "text": "Letter size is measured correctly on pages whose lines slope.", "prs": [290], "changelog": ["sample-page-scores"]},
+    {"date": "2026-10-21", "text": "A page of neat handwriting is no longer mistaken for a printed form.", "prs": [267], "changelog": ["202-page-print-share"]},
+    {"date": "2026-10-21", "text": "Joined-up writing is measured along whole lines, not in broken pieces.", "prs": [278], "changelog": ["cursive-from-ink"]},
+    {"date": "2026-10-20", "text": "Maths and science pages get a clear note asking for four lines of English.", "prs": [260], "changelog": ["not-writing-page"]}
+  ]
+}

@@ -464,6 +464,8 @@ jobs:
         run: npm run test:not-writing-page
       - name: A photo read turned is drawn turned; one that cannot be set upright is refused
         run: npm run test:turned-page
+      - name: "What's new: one line above the upload, the next change on each visit"
+        run: npm run test:whats-new
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)

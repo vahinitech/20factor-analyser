@@ -22,6 +22,7 @@
 import base64
 import glob
 import hashlib
+import html
 import importlib.util
 import json
 import os
@@ -67,6 +68,68 @@ ASSET_REF = re.compile(
     r'((?:src|href)=")((?:scripts/core|scripts/vendor|styles)/[\w.-]+\.'
     r'(?:js|css))(?:\?v=[0-9a-f]*)?(")'
 )
+
+
+# "What's new" on the check page (owner, 2026-10-24): one line at the top
+# showing one of the latest changes, a different one on each visit
+# (scripts/core/whats-new.js), over the full list. The lines are written
+# for parents and teachers in whats-new.json, each naming the changelog
+# fragments it comes from; tests/whats-new.test.mjs holds the rules. Like
+# the stamps, the list is written into the page by --stamp and never
+# committed, so two PRs never conflict on it.
+WHATS_NEW = os.path.join(HERE, "whats-new.json")
+WHATS_NEW_PAGE = os.path.join(HERE, "analyser.html")
+WHATS_NEW_SHOWN = 10
+WHATS_NEW_REGION = re.compile(
+    r"(<!-- whats-new:begin[^>]*-->)[\s\S]*?(<!-- whats-new:end -->)"
+)
+MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def _day(date):
+    year, month, day = date.split("-")
+    return f"{int(day)} {MONTHS[int(month) - 1]}", year
+
+
+def _whats_new_item(item):
+    day, _ = _day(item["date"])
+    return (
+        f'<time datetime="{item["date"]}">{day}</time> '
+        f'<span>{html.escape(item["text"], quote=False)}</span>'
+    )
+
+
+def whats_new_html():
+    """The check page's What's new block, from whats-new.json."""
+    with open(WHATS_NEW, "r", encoding="utf-8") as f:
+        items = json.load(f)["items"][:WHATS_NEW_SHOWN]
+    day, year = _day(items[0]["date"])
+    rows = "".join(
+        f"\n        <li>{_whats_new_item(item)}</li>" for item in items
+    )
+    return (
+        '\n    <details class="whats-new" id="whats-new">'
+        '\n      <summary><span class="wn-dot" aria-hidden="true"></span>'
+        f'<span class="wn-line">{_whats_new_item(items[0])}</span>'
+        '<span class="wn-all">What\'s new</span></summary>'
+        f'\n      <div class="wn-panel"><p class="wn-head">Updated {day}'
+        f" {year}. The latest changes to the free check, newest first.</p>"
+        f'\n      <ol class="wn-list">{rows}\n      </ol></div>'
+        "\n    </details>\n    "
+    )
+
+
+def fill_whats_new(fill):
+    """Write the What's new block into analyser.html, or empty it (the
+    committed form). Returns True when the page changed."""
+    with open(WHATS_NEW_PAGE, "r", encoding="utf-8") as f:
+        text = f.read()
+    body = whats_new_html() if fill else ""
+    out = WHATS_NEW_REGION.sub(lambda m: m.group(1) + body + m.group(2), text)
+    if out != text:
+        with open(WHATS_NEW_PAGE, "w", encoding="utf-8", newline="\n") as f:
+            f.write(out)
+    return out != text
 
 
 def practice_source():
@@ -147,6 +210,8 @@ def stamp_pages():
     after stamping the @import URLs inside the stylesheets, so a sheet's
     own stamp also changes when a file it imports changes."""
     changed = _rewrite_imports(True)
+    if fill_whats_new(True):
+        changed.append("analyser.html (what's new)")
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
@@ -166,6 +231,8 @@ def strip_pages():
     """Remove every ?v= stamp from frontend/*.html and the stylesheets'
     @import URLs (the committed form)."""
     changed = _rewrite_imports(False)
+    if fill_whats_new(False):
+        changed.append("analyser.html (what's new)")
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
@@ -187,6 +254,10 @@ if __name__ == "__main__":
     #   python frontend/build_bundle.py           build engine.bundle.js
     #   python frontend/build_bundle.py --stamp   ...and stamp the pages
     #   python frontend/build_bundle.py --strip   remove stamps from pages
+    #   python frontend/build_bundle.py --whats-new   print the What's new block
+    if "--whats-new" in sys.argv:
+        print(whats_new_html())
+        sys.exit(0)
     if "--strip" in sys.argv:
         for name in strip_pages():
             print(f"[build] removed asset stamps from {name}")
