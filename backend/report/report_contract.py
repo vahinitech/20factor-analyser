@@ -242,6 +242,10 @@ def public_report(payload, access):
     if payload.get("age_band"):
         # Echoed as sent; no score reads it yet (#212, #216).
         report["age_band"] = payload["age_band"]
+    if payload.get("turned"):
+        # The photo was read turned this far clockwise (page_turn.py):
+        # boxes and marks are on the turned photo (#297).
+        report["turned"] = payload["turned"]
     if payload.get("ok"):
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)
