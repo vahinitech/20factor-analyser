@@ -672,6 +672,16 @@ def language_check():
                                 "letters",
                             ]
                         },
+                        "against": {
+                            "enum": ["list", "sentence"],
+                            "description": (
+                                "list: the word is not in the word list "
+                                "and suggestion is the likeliest meant "
+                                "word; sentence: the child copied or "
+                                "wrote a dictated sentence and "
+                                "suggestion is that sentence's word."
+                            ),
+                        },
                         "places": places,
                     }
                 ),

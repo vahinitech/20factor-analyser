@@ -378,6 +378,51 @@ def judge(logp, word, letter_cols):
     }
 
 
+# A copied or dictated sentence (expected_text) says which word was
+# meant, so only that word is scored against the reading: the same
+# question as above with one candidate that is known to be right, so the
+# limits can be lower. Set from 40 copied pages in the benchmark writers'
+# letters (docs/history/spelling-grammar-2026-10-24.md): 1,000 times and
+# 0.7 let through 39 planted misspellings and no other word.
+SENTENCE_WRITTEN_LN = math.log(1000.0)
+SENTENCE_LETTER_MIN = 0.7
+
+
+def judge_meant(logp, word, meant, letter_cols):
+    """What the ink says about a word read differently from the word the
+    sentence holds. Returns {"status": "as_meant" (the ink fits the
+    sentence's word: the reader misread it) | "written" (the writer wrote
+    `word`) | "unclear", "margin", "letter_min"}."""
+    read, want = labels(word), labels(meant)
+    if read is None or want is None:
+        return {"status": "unclear"}
+    read_ll = ctc_log_likelihood(logp, read)
+    want_ll = ctc_log_likelihood(logp, want)
+    if not math.isfinite(read_ll):
+        return {"status": "unclear"}
+    margin = read_ll - want_ll if math.isfinite(want_ll) else math.inf
+    if margin <= MISREAD_LN:
+        return {"status": "as_meant", "margin": round(margin, 2)}
+    letter_min = min(
+        (
+            math.exp(logp[c, lab])
+            for c, lab in zip(letter_cols, [x for x in read if x != _APOS])
+            if 0 <= c < logp.shape[0]
+        ),
+        default=0.0,
+    )
+    status = (
+        "written"
+        if margin >= SENTENCE_WRITTEN_LN and letter_min >= SENTENCE_LETTER_MIN
+        else "unclear"
+    )
+    return {
+        "status": status,
+        "margin": round(min(margin, 999.0), 2),
+        "letter_min": round(letter_min, 3),
+    }
+
+
 def _same_case(word, like):
     if like[:1].isupper() and like[1:].islower():
         return word[:1].upper() + word[1:]

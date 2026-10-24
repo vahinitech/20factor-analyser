@@ -7,3 +7,8 @@
   sentences the check trusts. Measured on 223 pages: no correctly spelt
   word was reported, and few misspellings were found
   (`docs/history/spelling-grammar-2026-10-24.md`). No score changed.
+- With a copied or dictated sentence (`expected_text`), each word read
+  differently from the sentence is checked against the sentence's own word
+  on the ink. On planted pages this found 9 to 16% of the misspellings
+  where free writing found under 1%, and flagged nothing on pages copied
+  correctly.

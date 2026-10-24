@@ -108,8 +108,8 @@ class FakeReader:
 PAGE = np.full((900, 1400, 3), 255, dtype=np.uint8)
 
 
-def run(lines, reader):
-    return language_check.check(PAGE, lines, ["en"], reader)
+def run(lines, reader, expected=""):
+    return language_check.check(PAGE, lines, ["en"], reader, expected)
 
 
 class TestCtc(unittest.TestCase):
@@ -277,6 +277,94 @@ class TestSpellingOnInk(unittest.TestCase):
         out = language_check.check(PAGE, [line("my freind")], ["en"], None)
         self.assertFalse(out["checked"])
         self.assertNotIn("spelling", out)
+
+
+def copied(read, meant, reader=None, **kw):
+    """A page where the child copied `meant` and the reader read `read`."""
+    return run([line(read, **kw)], reader or FakeReader([read]), meant)
+
+
+class TestSentence(unittest.TestCase):
+    """A copied or dictated sentence: the meant word is known."""
+
+    def test_a_clear_difference_is_the_childs_with_the_sentence_word(self):
+        read = "Vahini and Bheema write leters evry day"
+        meant = "Vahini and Bheema write letters every day"
+        out = copied(read, meant)
+        found = [
+            (f["written"], f["suggestion"], f["against"])
+            for f in out["spelling"]
+        ]
+        self.assertEqual(
+            found,
+            [
+                ("leters", "letters", "sentence"),
+                ("evry", "every", "sentence"),
+            ],
+        )
+
+    def test_a_listed_word_copied_wrong_is_found_too(self):
+        # rite is a word; the sentence says write.
+        read = "they rite letters"
+        out = copied(read, "they write letters")
+        self.assertEqual(
+            [(f["written"], f["suggestion"]) for f in out["spelling"]],
+            [("rite", "write")],
+        )
+
+    def test_a_misread_is_not_the_childs(self):
+        # The reader read tetters, but its l column is nearly as much t.
+        read = "they write tetters"
+        out = copied(
+            read,
+            "they write letters",
+            FakeReader([read], {read: {11: ("l", 0.45)}}),
+        )
+        self.assertEqual(out["spelling"], [])
+
+    def test_a_line_read_as_its_sentence_is_not_read_again(self):
+        reader = FakeReader([])
+        text = "they write letters"
+        out = copied(text, text, reader)
+        self.assertEqual(reader.calls, 0)
+        self.assertEqual(out["spelling"], [])
+
+    def test_split_and_unlike_words_make_no_claim(self):
+        # wri te is write split in two; and is nothing like the.
+        out = copied("they wri te and", "they write the")
+        self.assertEqual(out["spelling"], [])
+
+    def test_a_dropped_word_does_not_stop_the_others(self):
+        # "big" was not read; leters and rownd still pair with their words.
+        read = "vidhya drawz rownd leters on the line"
+        out = copied(read, "vidhya draws big round letters on the line")
+        self.assertEqual(
+            [(f["written"], f["suggestion"]) for f in out["spelling"]],
+            [("drawz", "draws"), ("rownd", "round"), ("leters", "letters")],
+        )
+
+    def test_no_grammar_on_a_given_sentence(self):
+        read = "she sing every day"
+        out = copied(read, read, FakeReader([]))
+        self.assertEqual(out["grammar"], [])
+
+    def test_a_row_read_in_pieces_still_lines_up(self):
+        # The reader read one row as two pieces; neither matches a
+        # sentence line on its own, the page as a whole does.
+        pieces = [
+            line("vahini and", y=100, x=40, ident="a"),
+            line("bheema rite leters", y=100, x=300, ident="b"),
+        ]
+        out = run(
+            pieces,
+            FakeReader(["bheema rite leters"]),
+            "vahini and bheema write letters",
+        )
+        self.assertEqual(
+            [(f["written"], f["suggestion"]) for f in out["spelling"]],
+            [("rite", "write"), ("leters", "letters")],
+        )
+        self.assertEqual(out["spelling"][0]["places"][0]["line"], "b")
 
 
 class TestRegion(unittest.TestCase):

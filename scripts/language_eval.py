@@ -13,6 +13,9 @@ models volume mounted; one container at a time on the shared host.
           (scripts/planted_pages.py) of the benchmark sentences with
           misspellings planted (MISSPELT), read by the real reader: how
           many planted words are found, and what else is.
+    copied  the same writers copying the benchmark sentences, once with
+          the planted misspellings and once correctly, each checked
+          against the sentences as expected_text (the copy mode).
 
 For each page it re-reads every row the check would consider (no row
 cap, so the decision can be studied offline), times each re-read, and
@@ -24,6 +27,7 @@ thresholds and the row cap to those lines.
     python scripts/language_eval.py uji > uji.jsonl
     python scripts/language_eval.py gnhk <results/raw> <pages> <truth> > gnhk.jsonl
     python scripts/language_eval.py planted <ujipenchars2.txt> > planted.jsonl
+    python scripts/language_eval.py copied <ujipenchars2.txt> [seed] > copied.jsonl
     python scripts/language_eval.py summary uji.jsonl gnhk.jsonl
 """
 
@@ -60,6 +64,9 @@ LIMITS = {
     (spelling, "MISREAD_LN"): spelling.MISREAD_LN,
     (spelling, "WRITTEN_LN"): spelling.WRITTEN_LN,
     (spelling, "LETTER_MIN"): spelling.LETTER_MIN,
+    (spelling, "SENTENCE_WRITTEN_LN"): spelling.SENTENCE_WRITTEN_LN,
+    (spelling, "SENTENCE_LETTER_MIN"): spelling.SENTENCE_LETTER_MIN,
+    (language_check, "ROW_MIN"): language_check.ROW_MIN,
     (language_check, "ROWS_MAX"): language_check.ROWS_MAX,
     (language_check, "WORDS_PER_ROW"): language_check.WORDS_PER_ROW,
 }
@@ -67,6 +74,9 @@ OPEN = {
     (spelling, "MISREAD_LN"): -1e9,
     (spelling, "WRITTEN_LN"): -1e9,
     (spelling, "LETTER_MIN"): 0.0,
+    (spelling, "SENTENCE_WRITTEN_LN"): -1e9,
+    (spelling, "SENTENCE_LETTER_MIN"): 0.0,
+    (language_check, "ROW_MIN"): 0.0,
     (language_check, "ROWS_MAX"): 10**6,
     (language_check, "WORDS_PER_ROW"): 10**6,
 }
@@ -83,7 +93,7 @@ def _boxes_text(truth_at, places):
     ).strip()
 
 
-def _page(arr, lines, truth_at=None):
+def _page(arr, lines, truth_at=None, expected=""):
     """Two passes over the page. "open": every row with an odd word read
     again and every judged word kept as a finding with its margin and
     weakest letter, for studying the thresholds. "report": the section
@@ -91,12 +101,14 @@ def _page(arr, lines, truth_at=None):
     timings = []
     _set(OPEN)
     opened = language_check.check(
-        arr, lines, ["en"], _reader(timings), detail=True
+        arr, lines, ["en"], _reader(timings), expected, detail=True
     )
     _set(LIMITS)
     timings = []
     t0 = time.perf_counter()
-    report = language_check.check(arr, lines, ["en"], _reader(timings))
+    report = language_check.check(
+        arr, lines, ["en"], _reader(timings), expected
+    )
     total = round((time.perf_counter() - t0) * 1000, 1)
     out = {
         "ms": total,
@@ -243,6 +255,52 @@ def planted(uji_path):
         print(json.dumps(dict(out, page=writer)), flush=True)
 
 
+def copied(uji_path, seed=1):
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    # pylint: disable=import-outside-toplevel
+    import numpy as np
+    import planted_pages as pp
+    from reading import recognizer as rec
+
+    reader = pp.real_reader()
+    writers = pp.parse(pp.fetch(uji_path))
+    right = list(pp.SENTENCES)
+    meant = dict(zip(MISSPELT, right))
+    meant.update(zip(right, right))
+    rng = np.random.default_rng(seed)
+    for writer in sorted(writers):
+        letters = writers[writer]
+        if not all(ch in letters for s in MISSPELT for ch in s if ch != " "):
+            continue
+        for kind, sentences in (("misspelt", MISSPELT), ("clean", right)):
+            pp.SENTENCES = sentences
+            img, lines, _truth = pp.build_page(letters, rng, "clean", "photo")
+            raw, _err, backend, _meta = reader.collect_lines(img, "auto")
+            _found, hand = reader.extract_hand_lines(
+                img, raw, refine_backend=backend
+            )
+            for i, l in enumerate(hand):
+                l.setdefault("evidence_id", f"line_{i}")
+                l.setdefault("text_as_read", l.get("text", ""))
+            expected = "\n".join(meant[l["text"]] for l in lines)
+            aligned = rec.align_to_expected(hand, expected)
+            pairs = [
+                (w, m)
+                for l in lines
+                for w, m in zip(l["text"].split(), meant[l["text"]].split())
+                if w != m
+            ]
+            out = _page(img, hand, expected=expected)
+            out.update(
+                kind=kind,
+                planted=pairs,
+                aligned=(aligned or {}).get("aligned"),
+                written=" / ".join(l["text"] for l in lines),
+            )
+            print(json.dumps(dict(out, page=writer)), flush=True)
+    pp.SENTENCES = right
+
+
 def summary(paths):
     """The report pass of saved runs: findings, pages with one, the
     writer's own among spelling findings (GNHK), times."""
@@ -287,6 +345,8 @@ def main(argv):
         gnhk(argv[2], argv[3], argv[4])
     elif len(argv) == 3 and argv[1] == "planted":
         planted(argv[2])
+    elif len(argv) in (3, 4) and argv[1] == "copied":
+        copied(argv[2], int(argv[3]) if len(argv) == 4 else 1)
     elif len(argv) >= 3 and argv[1] == "summary":
         summary(argv[2:])
     else:

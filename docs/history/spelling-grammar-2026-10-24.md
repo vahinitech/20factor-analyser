@@ -5,7 +5,8 @@ which words they spelt wrong, which sentences are wrong, and where on the
 page each one is (#317). The owner asked for it in the free report, with
 a dictionary, and for the check to look at only part of the page so scans
 do not slow down. This note records how the check works, what it was
-measured on and why its limits are where they are. It adds a `language`
+measured on and why its limits are where they are, for free writing and
+for a copied or dictated sentence. It adds a `language`
 section to the report response; nothing displays it yet, and no score
 changed.
 
@@ -58,6 +59,17 @@ exactly (#317).
 5. **Where.** Each finding has its place on the page: from the letters'
    own columns on a row read again, estimated from the share of the line's
    text otherwise (`placed: estimated`).
+6. **A copied or dictated sentence.** When the scan comes with
+   `expected_text`, the words read on the whole page, in reading order,
+   are lined up with the sentence's words (the whole page, because the
+   reader often reads a row in pieces that match no sentence line on their
+   own). A word read that stands against a different sentence word, at
+   least three letters long, within one letter of its length and at least
+   0.7 alike (difflib ratio), is scored against that one word: 1,000 times
+   more likely as read, and every letter scoring 0.7 or more, means the
+   child wrote it so; the suggestion is the sentence's word
+   (`against: sentence`). Any word counts, listed or not (rite for write).
+   Grammar is not run on such a page: the sentence was given.
 
 The word list is SCOWL 2020.12.07 (Kevin Atkinson; its licence is in
 `backend/languages/words/SCOWL-Copyright.txt`), sizes up to 60 from the
@@ -98,6 +110,34 @@ something else, or read the row too unsurely to judge. The rest of the
 loss is the ink check refusing to call close cases. This is the reader's
 limit on free writing, not the word list's.
 
+### A copied or dictated sentence
+
+The same 20 writers' letters, each writing four of the benchmark
+sentences twice: once with 16 misspellings planted (the 13 of the free
+writing test, plus rite, wile and ovr, which the free check cannot see
+because they are words or too short), once correctly, each checked against the
+correct sentences as `expected_text`. The limits were chosen on the first
+set of 40 pages; the second set (another random draw of sentences and
+letters) was run once afterwards, as a check.
+
+| Pages | Planted words | Found | Other flags |
+|---|--:|--:|--:|
+| 20 with misspellings, used to choose the limits | 229 | 37 (16%) | 0 |
+| 20 copied correctly, same draw | 0 | n/a | 0 |
+| 20 with misspellings, the check | 232 | 22 (9%) | 2 |
+| 20 copied correctly, the check | 0 | n/a | 0 |
+
+Free writing found 1 of 193 planted words on the same writers; the
+sentence finds 10 to 37 times as many, and no copied-correctly page got a
+flag. Both other flags in the check set were at a planted misspelling with
+the right suggestion, but the reader had read the child's word wrong
+(prattis for practis, beters for leters). So the report must show the
+child's own ink at the place, never our reading of it as "you wrote".
+
+Why it still misses most: the reader often reads a misspelt word as the
+right one (its training pulls towards real words), or as something too
+far from either to pair, and then there is nothing to judge.
+
 **Grammar.** A rule for a capital after a full stop was built and
 removed: on GNHK all nine of its marks were wrong by the transcript. The
 reader reads stray marks as full stops and loses small ones, and its
@@ -125,10 +165,10 @@ slowest page (six long rows). Every scan records it as the `language` stage
 
 ## Next
 
-- **A known sentence.** When the child copies or writes a dictated
-  sentence (`expected_text`), the intended word is known, so the ink check
-  can score the sentence's own word instead of guessing candidates. That
-  should find far more misspellings at the same strictness; measure it on
-  the planted pages before claiming it.
+- The report cards (#317 mock-up), after the owner's approval. Show the
+  child's own ink at each place and the right word, never our reading of
+  the child's word.
+- Copy and dictation pages with a sentence picker at upload (#317 mock-up
+  C), since that mode finds 10 to 37 times as much.
 - Children's own pages from the pilot, with consent, marked by their
   teacher, for testing only and deleted after.

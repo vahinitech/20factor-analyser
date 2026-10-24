@@ -1292,7 +1292,9 @@ def _report_python_process(
         }
 
     photo = computer_vision.photo_size(raw, verdict.turn)
-    language = _language(arr, hand_lines, lang, selected_backend)
+    language = _language(
+        arr, hand_lines, lang, selected_backend, expected_text
+    )
     return {
         "ok": True,
         "engine": f"pp-ocrv5+python-report+{selected_backend}",
@@ -1333,7 +1335,7 @@ def _report_python_process(
     }
 
 
-def _language(arr, hand_lines, lang, selected_backend):
+def _language(arr, hand_lines, lang, selected_backend, expected_text):
     """The report's spelling and grammar section (#317). It reads at most
     language_check.ROWS_MAX rows again and never touches a score; if it
     fails, the scan still answers, without the section's findings."""
@@ -1351,6 +1353,7 @@ def _language(arr, hand_lines, lang, selected_backend):
                 hand_lines,
                 recognizer.resolve_langs(lang),
                 read if _READ_SCORES else None,
+                expected_text,
             )
         except Exception:  # pylint: disable=broad-except
             log.exception("language check failed")

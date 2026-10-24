@@ -26,8 +26,20 @@ the step's time stays small, measured in
 docs/history/spelling-grammar-2026-10-24.md, and perf records it on
 every scan as the "language" stage.
 
+When the child copied a sentence or wrote one from dictation
+(`expected_text`), the words read on the whole page, in reading order,
+are lined up with the sentence's words. Where one word read stands
+against one word of the sentence and they differ, the word the child
+meant is known, so the reading is scored against that one word
+(spelling.judge_meant), whether or not it is in the word list. The whole
+page is lined up, not line by line, because the reader often reads a row
+in pieces that match no sentence line on their own. The grammar rules
+are not run: the sentence was given. Only lines holding such a word are
+read again, under the same caps.
+
 Nothing here is stored: the section goes back in the response only."""
 
+import difflib
 import re
 
 import numpy as np
@@ -102,11 +114,16 @@ def _text(line):
     return str(line.get("text_as_read", line.get("text", "")) or "")
 
 
-def _choose(lines):
-    """Which lines are read again: (chosen ids, over the cap, unclear)."""
+def _has_odd(line):
+    return any(_odd(w) for w, _s, _e in spelling.tokens(_text(line)))
+
+
+def _choose(lines, needs):
+    """Which lines are read again: (chosen ids, over the cap, unclear).
+    needs(i, line) says whether the line holds a word to check."""
     wanted, unclear = [], 0
     for i, l in enumerate(lines):
-        if not any(_odd(w) for w, _s, _e in spelling.tokens(_text(l))):
+        if not needs(i, l):
             continue
         score = float(l.get("score", 0.0) or 0.0)
         if score < ROW_MIN:
@@ -268,9 +285,124 @@ def _checked_line(line, again):
     return text, out
 
 
-def _plain_line(line):
+# A word read is paired with a different sentence word only when their
+# letters are this alike (difflib ratio) and it has at least
+# PAIR_LETTERS letters: neet and neat are 0.75, rite and write 0.89, and
+# and the 0.33. Lower let through the reader's run-together pieces
+# (tersevry for letters) and cut words (da for day).
+PAIR_MIN = 0.7
+PAIR_LETTERS = 3
+
+
+def _similar(a, b):
+    """How alike two words are, 0 when their lengths differ by more than
+    one letter (a word the reader split, wri te, or joined is not a
+    spelling) or the word read is shorter than PAIR_LETTERS."""
+    if abs(len(a) - len(b)) > 1 or len(a) < PAIR_LETTERS:
+        return 0.0
+    return difflib.SequenceMatcher(None, a, b, autojunk=False).ratio()
+
+
+def _pair_block(read, meant):
+    """[(k, j)] pairing read[k] with meant[j], in order, most alike in
+    total, only pairs at least PAIR_MIN alike (_similar): a dropped,
+    added or split word around them does not stop the others pairing."""
+    n, m = len(read), len(meant)
+    best = [[0.0] * (m + 1) for _ in range(n + 1)]
+    for k in range(n - 1, -1, -1):
+        for j in range(m - 1, -1, -1):
+            r = _similar(read[k], meant[j])
+            take = r + best[k + 1][j + 1] if r >= PAIR_MIN else -1.0
+            best[k][j] = max(take, best[k + 1][j], best[k][j + 1])
+    out, k, j = [], 0, 0
+    while k < n and j < m:
+        r = _similar(read[k], meant[j])
+        if r >= PAIR_MIN and best[k][j] == r + best[k + 1][j + 1]:
+            out.append((k, j))
+            k, j = k + 1, j + 1
+        elif best[k][j] == best[k + 1][j]:
+            k += 1
+        else:
+            j += 1
+    return out
+
+
+def _page_pairs(line_tokens, meant):
+    """{(line index, start, end): the sentence's word} for each word read
+    that lines up with a different word of the sentence, the whole page
+    in reading order against the whole sentence. Where the two do not
+    line up word for word (the reader drops, adds and splits words), only
+    alike words are paired (_pair_block)."""
+    read = [
+        (i, w, s, e)
+        for i, tokens in enumerate(line_tokens)
+        for w, s, e in tokens
+    ]
+    a = [r[1].lower() for r in read]
+    b = [w.lower() for w in meant]
+    matcher = difflib.SequenceMatcher(None, a, b, autojunk=False)
+    out = {}
+    for op, i1, i2, j1, j2 in matcher.get_opcodes():
+        if op != "replace":
+            continue
+        if i2 - i1 == j2 - j1:
+            pairs = [
+                (k, k)
+                for k in range(i2 - i1)
+                if _similar(a[i1 + k], b[j1 + k]) >= PAIR_MIN
+            ]
+        else:
+            pairs = _pair_block(a[i1:i2], b[j1:j2])
+        for k, j in pairs:
+            i, _w, s, e = read[i1 + k]
+            out[(i, s, e)] = meant[j1 + j]
+    return out
+
+
+def _sentence_line(line, again, meant_for):
+    """Tokens of a line read again on a sentence page: each word lined up
+    with a different word of the sentence (meant_for, by its span) is
+    judged against that word. The tokens are never given to the grammar
+    rules (trusted is False)."""
+    text, by_index, logp, _matrix, _chars = again
+    found = spelling.tokens(text)
+    spans = [(s, e) for _w, s, e in found]
+    windows = dict(zip(spans, _windows(spans, sorted(by_index.items()), logp)))
+    out, judged = [], 0
+    for word, start, end in found:
+        own = [by_index[i] for i in range(start, end) if i in by_index]
+        token = {
+            "raw": word,
+            "text": word,
+            "line": line.get("evidence_id"),
+            "span": [start, end],
+            "bbox": _union([b for _c, _col, b in own]),
+            "placed": "letters",
+            "trusted": False,
+            "status": "as_meant",
+        }
+        meant = meant_for.get((start, end))
+        window = windows.get((start, end))
+        if meant and window and judged < WORDS_PER_ROW:
+            judged += 1
+            lo, hi = window
+            cols = [c - lo for _ch, c, _b in own]
+            verdict = spelling.judge_meant(
+                logp[lo : hi + 1], word, meant, cols
+            )
+            token["status"] = verdict["status"]
+            token["suggestion"] = meant
+            token["against"] = "sentence"
+            token["margin"] = verdict.get("margin")
+            token["letter_min"] = verdict.get("letter_min")
+            token["row_score"] = line.get("score")
+        out.append(token)
+    return text, out
+
+
+def _plain_line(line, sentence=False):
     """Tokens of a line not read again: trusted when listed (or a name)
-    on a clear row, with estimated places."""
+    on a clear row and not on a sentence page, with estimated places."""
     text = _text(line)
     score = float(line.get("score", 0.0) or 0.0)
     out = []
@@ -285,7 +417,7 @@ def _plain_line(line):
                 "bbox": _estimated_box(line, text, start, end),
                 "placed": "estimated",
                 "case_sure": score >= CASE_ROW_MIN,
-                "trusted": listed and score >= ROW_MIN,
+                "trusted": listed and score >= ROW_MIN and not sentence,
                 "status": "word" if listed else "unchecked",
             }
         )
@@ -353,12 +485,13 @@ def _place(tokens):
     return out
 
 
-def check(arr, hand_lines, langs, read_scores, detail=False):
+def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
     """The `language` section of a report. langs: the scan's resolved
     reading languages; read_scores(crop, lang) is
     ocr_backends.read_line_scores, or None where PaddleOCR does not read
-    the page. detail adds each spelling finding's margin and weakest
-    letter, for scripts/language_eval.py only."""
+    the page; expected_text: the sentence the child copied or wrote from
+    dictation, if any. detail adds each spelling finding's margin and
+    weakest letter, for scripts/language_eval.py only."""
     english = [l for l in hand_lines if _english(l, langs)]
     if not english:
         return {"version": 1, "checked": False, "reason": "not_english"}
@@ -367,25 +500,49 @@ def check(arr, hand_lines, langs, read_scores, detail=False):
     lines = _rows(english)
     if not lines:
         return {"version": 1, "checked": False, "reason": "no_text"}
-    chosen, over_cap, unclear = _choose(lines)
-    stream, read_again = [], 0
+    meant = [w for w, _s, _e in spelling.tokens(expected_text or "")]
+    if meant:
+        first = _page_pairs([spelling.tokens(_text(l)) for l in lines], meant)
+        marked = {i for i, _s, _e in first}
+        chosen, over_cap, unclear = _choose(lines, lambda i, _l: i in marked)
+    else:
+        chosen, over_cap, unclear = _choose(lines, lambda _i, l: _has_odd(l))
+    again = {
+        i: _read_again(arr, lines[i], read_scores) for i in sorted(chosen)
+    }
+    again = {i: a for i, a in again.items() if a is not None}
+    if meant:
+        # Line the page up again with what the chosen lines read now.
+        tokens = [
+            spelling.tokens(again[i][0] if i in again else _text(l))
+            for i, l in enumerate(lines)
+        ]
+        pairs = _page_pairs(tokens, meant)
+    stream = []
     for i, line in enumerate(lines):
-        again = _read_again(arr, line, read_scores) if i in chosen else None
-        if again is not None:
-            read_again += 1
-            text, words = _checked_line(line, again)
+        if i in again and meant:
+            for_line = {(s, e): w for (j, s, e), w in pairs.items() if j == i}
+            text, words = _sentence_line(line, again[i], for_line)
+        elif i in again:
+            text, words = _checked_line(line, again[i])
         else:
-            text, words = _plain_line(line)
+            text, words = _plain_line(line, sentence=bool(meant))
         stream.extend(_with_ends(text, words))
+    read_again = len(again)
     past = grammar.rules()["past"]
     spelling_out = [
         {
             "written": t["raw"],
             "suggestion": t["suggestion"],
             "kind": spelling.kind(t["raw"], t["suggestion"]),
+            "against": t.get("against", "list"),
             "places": _place([t]),
             **(
-                {"margin": t.get("margin"), "letter_min": t.get("letter_min")}
+                {
+                    "margin": t.get("margin"),
+                    "letter_min": t.get("letter_min"),
+                    "row_score": t.get("row_score"),
+                }
                 if detail
                 else {}
             ),
@@ -394,7 +551,7 @@ def check(arr, hand_lines, langs, read_scores, detail=False):
         if not t.get("end")
         and t.get("status") == "written"
         and t.get("suggestion")
-        and t["raw"].lower() not in past
+        and (t.get("against") or t["raw"].lower() not in past)
     ]
     grammar_out = [
         {
