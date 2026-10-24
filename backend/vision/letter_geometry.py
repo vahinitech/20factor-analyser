@@ -579,12 +579,19 @@ def measure_page(arr, lines):
 # - a word with a digit is left out, as every character of a number is
 #   full height;
 # - the expected size follows the page from top to bottom (Theil-Sen of
-#   the words' heights against where they sit): a phone held at an angle
-#   to the page makes far lines smaller in pixels than near ones. One
-#   word, or one line, written larger still stands out from it.
+#   the words' heights against where their line sits): a phone held at
+#   an angle to the page makes far lines smaller in pixels than near
+#   ones. One word, or one line, written larger still stands out from
+#   it. The trend is fitted only from SIZE_TREND_LINES lines or more,
+#   and from each line's place, not each word's: words on one line sit
+#   a few pixels apart, so their pairs gave any slope at all and the
+#   fit followed the words' own sizes (one line of uneven words read
+#   even), and on two lines the trend was the gap between them (a
+#   second line written half as large again read even).
 SIZE_LINE_MIN = 0.5
 SIZE_BAND = (0.15, 0.8)
 SIZE_MIN_WORDS = 3
+SIZE_TREND_LINES = 4
 
 
 def size_words(lines, geo, page_h):
@@ -592,23 +599,26 @@ def size_words(lines, geo, page_h):
     measures, in line order; [] when fewer than SIZE_MIN_WORDS."""
     heights = [float((l.get("box") or [0, 0, 0, 0])[3]) for l in lines]
     usual = float(np.median(heights)) if heights else 0.0
-    words = []
+    words, ys = [], []
     for line, g, box_h in zip(lines, geo, heights):
         if not g or box_h < SIZE_LINE_MIN * usual or box_h <= 0:
             continue
         if not SIZE_BAND[0] <= g["xheight"] / box_h <= SIZE_BAND[1]:
             continue
+        box = line.get("box") or [0, 0, 0, 0]
+        y = (float(box[1]) + box_h / 2.0) / max(1.0, float(page_h))
         for wd in g["words"]:
             if wd["xheight"] and not wd.get("digits"):
                 words.append((line, wd))
+                ys.append(y)
     if len(words) < SIZE_MIN_WORDS:
         return []
-    ys = [
-        (wd["bbox"][1] + wd["bbox"][3] / 2.0) / max(1.0, float(page_h))
-        for _, wd in words
-    ]
-    slope, icpt = _theil_sen(ys, [wd["xheight"] for _, wd in words])
-    median = float(np.median([wd["xheight"] for _, wd in words]))
+    sizes = [wd["xheight"] for _, wd in words]
+    median = float(np.median(sizes))
+    if len({id(line) for line, _ in words}) >= SIZE_TREND_LINES:
+        slope, icpt = _theil_sen(ys, sizes)
+    else:
+        slope, icpt = 0.0, median
     out = []
     for (line, wd), y in zip(words, ys):
         expected = slope * y + icpt

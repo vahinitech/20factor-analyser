@@ -74,6 +74,24 @@ class SizeWords(unittest.TestCase):
         rows.append(_line(600, 20.0, [(20.0, False), (32.0, False)]))
         self.assertEqual(max(_sizes(rows)), 1.6)
 
+    def test_one_line_of_uneven_words_stays_uneven(self):
+        # Words on a line sit a few pixels apart, the taller ones lower
+        # (their boxes reach further down): no trend comes from that.
+        heights = (14.0, 22.0, 18.0, 26.0, 15.0, 20.0, 24.0)
+        line, geo = _line(300, 20.0, [(h, False) for h in heights])
+        for wd, h in zip(geo["words"], heights):
+            wd["bbox"][1] = 300 + (h - 20.0) / 2.0
+            wd["bbox"][3] = h * 2.5
+        sizes = _sizes([(line, geo)])
+        self.assertEqual(sizes, [round(h / 20.0, 2) for h in heights])
+
+    def test_a_second_line_written_larger_stands_out(self):
+        rows = [
+            _line(300, 20.0, EVEN + EVEN),
+            _line(400, 30.0, [(30.0, False)] * 6),
+        ]
+        self.assertEqual(_sizes(rows), [0.8] * 6 + [1.2] * 6)
+
     def test_too_few_words_measure_nothing(self):
         rows = [_line(100, 20.0, [(20.0, False)] * 2)]
         self.assertEqual(_sizes(rows), [])
