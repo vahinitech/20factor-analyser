@@ -1,0 +1,1 @@
+- `docs/06-reading-engines.md` names the algorithm behind each reading model (DB detector, CTC recogniser, GFL layout model), the English model production and stage each use, and no longer describes the speed-based layout fallback that #112 removed.
