@@ -156,9 +156,11 @@ try {
     const font = await page.evaluate(async () => {
       await document.fonts.ready;
       const h = document.querySelector('#report-host .page h2');
-      return { family: getComputedStyle(h).fontFamily, loaded: [...document.fonts].some(f => f.family.replace(/"/g, '') === 'Noto Sans Telugu' && f.status === 'loaded'), check: document.fonts.check("16px 'Noto Sans Telugu'", 'అక్షరం') };
+      return { family: getComputedStyle(h).fontFamily, loaded: [...document.fonts].some(f => f.family.replace(/"/g, '') === 'Vahini Script Serif' && f.status === 'loaded'), check: document.fonts.check("16px 'Vahini Script Serif'", 'అక్షరం') };
     });
-    add(/^"?Noto Sans Telugu/.test(font.family) && font.loaded && font.check, `${tier}: the bundled Noto Sans Telugu loads and leads the Telugu faces`, font);
+    // The same font list as English, the bundled Telugu face first
+    // (tests/report-parity.mjs holds every other element to English).
+    add(/^"?Vahini Script Serif"?, Spectral/.test(font.family) && font.loaded && font.check, `${tier}: the bundled Telugu face (Noto Serif Telugu) loads and leads the report's own font list`, font);
     await page.emulateMedia({ media: 'print' });
     const pdf = (await page.pdf({ format: 'A4', printBackground: true })).toString('latin1');
     add(/NotoSansTelugu/.test(pdf), `${tier}: the saved PDF embeds Noto Sans Telugu`);

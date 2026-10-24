@@ -394,6 +394,7 @@ function render(host, data){
   lastRender = { host, data };
   const t=translatorFor(data);
   host.setAttribute('lang', t.lang);
+  host.toggleAttribute('data-caseless', !!(global.VahiniI18n && VahiniI18n.caseless(t.lang)));
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
