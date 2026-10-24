@@ -80,7 +80,14 @@ assert.ok(region.index < page.indexOf('id="start-check"'), 'the line sits above 
 assert.match(page, /<script src="scripts\/core\/whats-new\.js(\?v=[0-9a-f]+)?" defer><\/script>/, 'the page loads the line script');
 
 const block = execFileSync('python3', ['frontend/build_bundle.py', '--whats-new'], { cwd: root, encoding: 'utf8' });
-const plain = (s) => s.replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+// Text as a reader sees it: tags removed until none are left, then each
+// entity decoded once, in a single pass (so "&amp;lt;" stays "&lt;").
+const ENTITIES = { '&amp;': '&', '&lt;': '<', '&gt;': '>' };
+const plain = (s) => {
+  let text = s, before;
+  do { before = text; text = text.replace(/<[^<>]*>/g, ''); } while (text !== before);
+  return text.replace(/&(?:amp|lt|gt);/g, (e) => ENTITIES[e]).replace(/\s+/g, ' ').trim();
+};
 const listed = [...block.matchAll(/<li><time datetime="([\d-]+)">[^<]+<\/time> <span>([^<]*)<\/span><\/li>/g)].map((m) => [m[1], plain(m[2])]);
 assert.deepEqual(listed, items.map((i) => [i.date, i.text]), 'the built list is the JSON, in order');
 const line = block.match(/<span class="wn-line">([\s\S]*?)<\/span><span class="wn-all">/);
