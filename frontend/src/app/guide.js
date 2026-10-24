@@ -163,11 +163,19 @@ function start(kind){
 }
 
 const onScreen = (id) => { const s = doc.getElementById(id); return !!(s && s.classList.contains('on')); };
+/* It never interrupts: a visitor who has already clicked, tapped or typed
+   since the page or the report appeared is busy, so the guide waits for
+   another visit (or "Show me around"). */
+let touchedAt = 0;
+['pointerdown', 'keydown'].forEach((t) => doc.addEventListener(t, () => { touchedAt = Date.now(); }, true));
+const idleSince = (t0) => touchedAt < t0;
+const otherPopup = () => onScreen('vgate') || onScreen('vfb-ov') || (doc.getElementById('report-feedback') && !doc.getElementById('report-feedback').hidden);
 
 /* After a report is on screen (app.js): the two stops, once per browser. */
 function report(){
   if (seen('report')) return;
-  global.setTimeout(() => { if (onScreen('screen-report') && !open) start('report'); }, 1200);
+  const t0 = Date.now();
+  global.setTimeout(() => { if (onScreen('screen-report') && !open && idleSince(t0) && !otherPopup()) start('report'); }, 1200);
 }
 
 function init(){
@@ -176,7 +184,8 @@ function init(){
   const againReport = doc.getElementById('guide-again-report');
   if (againReport) againReport.addEventListener('click', (e) => { e.preventDefault(); start('report'); });
   if (!doc.getElementById('who-bar') || seen('check')) return;
-  global.setTimeout(() => { if (onScreen('screen-upload') && !open) start('check'); }, 900);
+  const t0 = Date.now();
+  global.setTimeout(() => { if (onScreen('screen-upload') && !open && idleSince(t0) && !otherPopup()) start('check'); }, 900);
 }
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
 else init();

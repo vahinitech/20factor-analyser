@@ -41,7 +41,10 @@ async function printWith(browser, timezoneId, price) {
     return route.fulfill({ status: 200, contentType: 'application/json', body: '{"ok":true}' });
   });
   await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
-  await page.addInitScript(() => { window.print = () => { window.__printed = (window.__printed || 0) + 1; }; });
+  await page.addInitScript(() => {
+    window.print = () => { window.__printed = (window.__printed || 0) + 1; };
+    try { localStorage.setItem('vahini_guide_check', '1'); localStorage.setItem('vahini_guide_report', '1'); } catch {}   // Pihu's guide seen
+  });
   await page.goto(BASE + '/frontend/analyser.html', { waitUntil: 'load' });
   await page.evaluate(() => document.getElementById('print-report').click());
   await page.waitForSelector('#vgate.on');

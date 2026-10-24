@@ -68,6 +68,20 @@ try {
     await ctx.close();
   }
 
+  // It never interrupts: a click before it would start keeps it away.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    const page = await ctx.newPage();
+    await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
+    await page.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
+    await page.goto(URL, { waitUntil: 'domcontentloaded' });
+    await page.mouse.click(5, 5);
+    await page.waitForTimeout(2000);
+    assert.equal(await page.locator('#pihu-guide').count(), 0, 'not after a click');
+    assert.equal(await page.evaluate(() => localStorage.getItem('vahini_guide_check')), null, 'and it waits for another visit');
+    await ctx.close();
+  }
+
   // Skip, and a chosen photo, end it for good.
   {
     const { page, ctx } = await open({ width: 1280, height: 900 });
