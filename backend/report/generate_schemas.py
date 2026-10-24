@@ -26,6 +26,7 @@ from report.practice_catalog import AVOID_WORDS, MODELS, STEPS_MAX, UNITS
 from report.json_schema import DRAFT
 from report.report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 from reading.grammar import RULES as GRAMMAR_RULES
+from reading.spelling import PATTERNS as SPELLING_PATTERNS
 
 OUT = Path(__file__).resolve().parents[1] / "schemas"
 BASE = "https://vahinitech.com/schemas/analyser/v2/"
@@ -672,6 +673,15 @@ def language_check():
                                 "letters",
                             ]
                         },
+                        "pattern": {
+                            "enum": list(SPELLING_PATTERNS),
+                            "description": (
+                                "The spelling pattern a teacher would "
+                                "practise (reading/spelling.py PATTERNS); "
+                                "the catalogue's practice.spelling.patterns "
+                                "gives its rule, words and exercise."
+                            ),
+                        },
                         "against": {
                             "enum": ["list", "sentence"],
                             "description": (
@@ -887,7 +897,42 @@ def practice_block():
                 "type": "array",
                 "items": {"type": "string", "enum": list(UNITS)},
             },
-            "spelling": closed({"exercises": exercises, "tips": tips}),
+            "spelling": closed(
+                {
+                    "exercises": exercises,
+                    "tips": tips,
+                    # From the spelling patterns (#317, owner 2026-10-24);
+                    # catalogues before have none.
+                    "patterns": {
+                        "type": "array",
+                        "items": closed(
+                            {
+                                "id": {"enum": list(SPELLING_PATTERNS)},
+                                "name": {"type": "string", "minLength": 1},
+                                "rule": {"type": "string", "minLength": 1},
+                                "words": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string",
+                                        "pattern": "^[a-z]+$",
+                                    },
+                                },
+                                "exercise": {"type": "string"},
+                                "i18n": {
+                                    "type": "object",
+                                    "additionalProperties": closed(
+                                        {
+                                            "name": {"type": "string"},
+                                            "rule": {"type": "string"},
+                                        }
+                                    ),
+                                },
+                            }
+                        ),
+                    },
+                },
+                required=["exercises", "tips"],
+            ),
         },
         description=(
             "Practice settings (docs/10-practice-framework.md): stage names "

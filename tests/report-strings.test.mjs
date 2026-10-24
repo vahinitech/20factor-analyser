@@ -98,7 +98,6 @@ assert.equal(t.n('pp.file.loaded', 1), 'సేవ్ అయిన 1 చెక్
 assert.equal(i18n.translator('en').n('sn.since.better', 1), '1 skill got better.', 'a count of one uses the one form');
 assert.equal(i18n.translator('en').n('sn.since.better', 3), '3 skills got better.');
 assert.equal(i18n.translator('xx')('p2.title'), en['p2.title'], 'an unknown language is English');
-assert.equal(t.html('spell.saw', { word: '<b>recieve</b>', suggestion: '<b>receive</b>' }).includes('<b>recieve</b>'), true);
 assert.ok(i18n.translator('en').html('pp.keep').includes('&quot;Keep my pages&quot;'), 'html() escapes the table text');
 runSource('frontend/src/report/strings/te.js', context);
 
@@ -107,8 +106,11 @@ assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => window.VahiniReport
   ['నేర్చుకుంటోంది', 'మెరుగవుతోంది', 'పట్టు సాధిస్తోంది', 'బలంగా ఉంది']);
 assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => en['stage.' + b]), ['Learning', 'Improving', 'Mastering', 'Strong']);
 // The Telugu says the spelling check covered English words only.
-for (const id of ['spelling.deferred', 'spelling.notext', 'spelling.found', 'spelling.clear', 'spell.saw', 'sn.spell.saw']) {
-  assert.match(window.VahiniReportStrings.te[id], /ఇంగ్లీష్/, `te ${id} says the check covered English words`);
+for (const id of ['spelling.notchecked', 'spelling.found', 'spelling.clear', 'sn.spell.saw']) {
+  const value = window.VahiniReportStrings.te[id];
+  for (const text of typeof value === 'object' ? Object.values(value) : [value]) {
+    assert.match(text, /ఇంగ్లీష్/, `te ${id} says the check covered English words`);
+  }
 }
 
 // Words for children, both languages; no em dash anywhere.

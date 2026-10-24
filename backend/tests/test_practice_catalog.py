@@ -303,6 +303,32 @@ class CatalogueRules(unittest.TestCase):
             found = " ".join(practice_catalog.problems())
         self.assertIn("translation for unknown id x.gone", found)
 
+    def test_spelling_pattern_rules_catch_a_bad_pattern(self):
+        cases = [
+            ({"exercise": "spell.none"}, "unknown exercise"),
+            ({"words": ("write", "Know")}, "words must be plain words"),
+            ({"rule": "Fix the wrong letters."}, "avoid word"),
+            (
+                {
+                    "rule": "Some letters are never heard when you say the"
+                    " word out loud to a friend at school."
+                },
+                "long sentence",
+            ),
+            ({"i18n": {}}, "no te translation"),
+        ]
+        for change, message in cases:
+            spelling = copy.deepcopy(practice_catalog.SPELLING)
+            first = dict(spelling["patterns"][0], **change)
+            spelling["patterns"] = (first, *spelling["patterns"][1:])
+            with patch.object(practice_catalog, "SPELLING", spelling):
+                found = practice_catalog.problems()
+            self.assertTrue(any(message in f for f in found), (change, found))
+        ids = tuple(reversed(practice_catalog.PATTERN_IDS))
+        with patch.object(practice_catalog, "PATTERN_IDS", ids):
+            found = " ".join(practice_catalog.problems())
+        self.assertIn("the last spelling pattern must be other", found)
+
     def test_the_telugu_avoid_list_covers_every_english_word(self):
         # One Telugu word or more for each English one (draft, for review).
         self.assertGreaterEqual(

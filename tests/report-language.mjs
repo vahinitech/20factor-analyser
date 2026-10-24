@@ -246,8 +246,8 @@ try {
     await page.waitForSelector('#report-host .practice-page');
     await renderLongest(page, pro);
     const pages = async () => ((await page.pdf({ format: 'A4', printBackground: true })).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-    const rows = await page.evaluate(() => ({ lang: document.getElementById('report-host').getAttribute('lang'), rows: document.querySelectorAll('.practice-row').length, spelling: document.querySelector('.spelling-row .pr-saw').textContent }));
-    add(rows.lang === 'te' && rows.rows === 4 && /ఇంగ్లీష్ పదాల/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row says it checked English words only`, rows);
+    const rows = await page.evaluate(() => ({ lang: document.getElementById('report-host').getAttribute('lang'), rows: document.querySelectorAll('.practice-row').length, spelling: document.querySelector('.spelling-row .pr-skill').textContent }));
+    add(rows.lang === 'te' && rows.rows === 4 && /letters/.test(rows.spelling) && /రెండు ఒకే అక్షరాలు/.test(rows.spelling) && /ఒకే అక్షరం రెండుసార్లు/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row names its pattern and gives its rule in Telugu`, rows);
     await page.emulateMedia({ media: 'print' });
     add(await pages() === 2, `${label}: prints on exactly two A4 pages`);
     await page.evaluate(() => {

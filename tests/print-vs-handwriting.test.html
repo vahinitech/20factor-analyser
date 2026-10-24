@@ -141,6 +141,7 @@
       intake:{ role:'individual', writerName:'' },
       analysis, imu, expectedText:'The quick brown fox', recognizedText:'The quick brown fox',
       ocrEngine:'server', detURL:PAGE_URL, crops:evidence, measurements:MEASURED, letterFindings:null, history:null,
+      language:analysis.language||null,
       pipeline:{ nLines:3, nWords:9, nChars:36, ocrEngine:'server' },
     });
     return host;
@@ -226,22 +227,25 @@
     renderReport(aligned,'classification-host',{});
     add(classifiedHost.querySelectorAll('.page').length===2 && !classifiedHost.querySelector('[data-screen-label="IMU Capture"]'), 'Pen-mode reader report also preserves two pages');
     add([...classifiedHost.querySelectorAll('.pg-num')].map(e=>e.textContent).join(',')==='01,02', 'Page numbering follows the two-page layout');
+    // Spelling comes from the server's check (#317), never a browser list.
     const spellingAnalysis=makeAnalysis(Array(20).fill(4));
-    spellingAnalysis.textClassification={handwritten:[{id:'line_7',text:'I recieve a useful lesson.',included_in_scoring:true}],printed:[{text:'becuase',included_in_scoring:false}]};
+    const checked=spelling=>({version:1,checked:true,reason:null,spelling,grammar:[]});
+    const word=(written,suggestion)=>({written,suggestion,kind:'letter_order',against:'list',places:[{line:'line_2',bbox:[300,160,120,30],placed:'letters'}]});
+    spellingAnalysis.language=checked([word('recieve','receive')]);
     renderReport(spellingAnalysis,'classification-host');
     add(factors('.practice-row')==='1,2,3,spelling', 'Spelling adds its own practice row after the skills');
-    add(/receive/.test(classifiedHost.textContent) && !/becuase/.test(classifiedHost.textContent), 'Spelling correction uses handwritten source text and excludes printed words');
-    spellingAnalysis.recognition.level='low';renderReport(spellingAnalysis,'classification-host');
-    add(!factors('.sn-look').includes('spelling') && /not clear enough/.test(classifiedHost.textContent), 'Low-confidence OCR defers spelling instead of accusing the writer');
-    spellingAnalysis.recognition.level='high';spellingAnalysis.textClassification.handwritten[0].included_in_scoring=false;
+    const srow=classifiedHost.querySelector('.spelling-row');
+    add(/receive/.test(srow.textContent) && !/recieve/.test(srow.textContent) && !!srow.querySelector('.pr-saw-ink svg.stu-ink image'), "The spelling row shows the child's own ink and the word to write, never our reading of the word");
+    add(/1 word to check, on page 2/.test(classifiedHost.textContent), 'Page 1 says how many words to check');
+    spellingAnalysis.language={version:1,checked:false,reason:'not_english'};
     renderReport(spellingAnalysis,'classification-host');
-    add(!factors('.sn-look').includes('spelling'), 'Score-excluded handwriting does not supply spelling findings');
-    const corrections=VahiniCraft.checkSpelling('recieve becuase definately RECIEVE');
-    add(corrections.length===4 && corrections[0].suggestion==='receive' && corrections[3].start===27, 'Common spelling checker returns corrections and source offsets');
-    add(VahiniCraft.checkSpelling('colour centre favourite Malli constructor తెలుగు').length===0, 'Regional spellings, unknown names, non-English script and object keys are not flagged');
-    spellingAnalysis.textClassification.handwritten=[{id:'line_1',text:'<img src=x> recieve',included_in_scoring:true}];
+    add(!factors('.practice-row').includes('spelling') && /Spelling: not checked on this page/.test(classifiedHost.textContent), 'A page the server did not check gets no spelling row and says so');
+    spellingAnalysis.language=checked([]);
     renderReport(spellingAnalysis,'classification-host');
-    add(!classifiedHost.querySelector('[data-factor="spelling"] img, img[src="x"]'), 'Spelling source snippets are escaped');
+    add(!factors('.practice-row').includes('spelling') && /no word we could be sure of/.test(classifiedHost.textContent), 'Nothing found: no row, and no claim that the page has no mistakes');
+    spellingAnalysis.language=checked([word('<img src=x>','<img src=x>')]);
+    renderReport(spellingAnalysis,'classification-host');
+    add(!classifiedHost.querySelector('[data-factor="spelling"] img, img[src="x"]'), 'Spelling text is escaped');
     const empty=makeAnalysis(Array(20).fill(0));empty.results.forEach(f=>f.unmeasured=true);
     renderReport(empty,'classification-host');
     add(classifiedHost.querySelectorAll('.sn-look, .sn-start').length===0 && /clearer photo/.test(classifiedHost.textContent), 'Unavailable measurements do not fabricate three faults');
@@ -251,7 +255,7 @@
     add(!/weeks to fast/.test(host.textContent||'') && !host.querySelector('.projection-chart'), 'Projection does not claim validated gains or photo speed');
 
     const txt=host.textContent||'';
-    add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /our list of common English words/.test(txt), 'Limited spelling check never certifies an error-free document');
+    add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /Spelling: not checked on this page/.test(txt), 'A page without the server\'s check says spelling was not checked, never that it has no mistakes');
     add(/We left out 3 printed lines/i.test(txt), 'Printed text exclusion remains visible');
     // Worksheets, each skill's page and the "when writing feels hard" page
     // (owner, 2026-10-11): free reading on vahinitech.com, never a sales page.

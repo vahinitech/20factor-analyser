@@ -446,6 +446,84 @@ def joined(word):
     return False
 
 
+# The spelling patterns a teacher groups misspellings by, in the order
+# they are tried (the practice catalogue's SPELLING["patterns"] has the
+# same ids with a rule, practice words and an exercise for each).
+PATTERNS = (
+    "ie_ei",
+    "silent",
+    "double",
+    "sound_letters",
+    "endings",
+    "order",
+    "vowels",
+    "other",
+)
+_CONSONANTS = set("bcdfghjklmnpqrstvxz")
+# A letter a speaker does not hear, with the letters that make it silent.
+_SILENT = (("wr", "r"), ("kn", "n"), ("wh", "w"), ("mb", "m"), ("gh", ""))
+_ENDINGS = ("ly", "ful", "ise", "ice", "ed", "ing", "tion", "es", "s")
+# Letters that can spell the same sound, folded to one spelling.
+_SOUND_FOLD = (
+    ("ck", "k"),
+    ("ph", "f"),
+    ("qu", "kw"),
+    ("x", "ks"),
+    ("c", "k"),
+    ("q", "k"),
+    ("z", "s"),
+)
+
+
+def _undouble(word):
+    return re.sub(r"([bcdfghjklmnpqrstvwxz])\1", r"\1", word)
+
+
+def _fold_sounds(word):
+    for a, b in _SOUND_FOLD:
+        word = word.replace(a, b)
+    return _undouble(word)
+
+
+def _skeleton(word):
+    return re.sub(r"[aeiouwy]", "", word)
+
+
+def pattern(written, meant):
+    """Which spelling pattern a teacher would practise for `written`
+    spelt as `meant`: one of PATTERNS. The first that explains the
+    difference wins; "other" when none does."""
+    w, m = str(written or "").lower(), str(meant or "").lower()
+    if w == m:
+        return "other"
+    if ("ie" in m and "ei" in w) or ("ei" in m and "ie" in w):
+        if w.replace("ei", "ie") == m.replace("ei", "ie"):
+            return "ie_ei"
+    for full, heard in _SILENT:
+        if full in m and m.replace(full, heard, 1) == w:
+            return "silent"
+    if w != m and _undouble(w) == _undouble(m):
+        return "double"
+    if _fold_sounds(w) == _fold_sounds(m):
+        return "sound_letters"
+    for end in _ENDINGS:
+        if m.endswith(end) and len(m) > len(end) + 2:
+            root = m[: -len(end)]
+            if (
+                w.startswith(root[:-1])
+                and w[len(root) - 1 :] != m[len(root) - 1 :]
+            ):
+                return "endings"
+    # A silent e at the end (becaus, car for care), after the endings.
+    if m.endswith("e") and m[:-1] == w:
+        return "silent"
+    if sorted(w) == sorted(m) and kind(w, m) == "letter_order":
+        return "order"
+    if _skeleton(w) == _skeleton(m):
+        return "vowels"
+    return "other"
+
+
 def kind(written, meant):
     """Which kind of slip turns meant into written, for the tip:
     letter_order, missing_letter, extra_letter, other_letter or letters

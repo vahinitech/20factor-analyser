@@ -430,21 +430,44 @@ function render(host, data){
   const sorted=measured.filter(f=>![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
   const toGrow=sorted.filter(f=>f.score<8.5);
   const maintenance=!toGrow.length && sorted.length>0;
-  const readable=['high','passage-verified'].includes(rec.level);
-  // Classification entries preserve original OCR, unlike passage-corrected
-  // text. Never check the printed stream or score-excluded regions.
+  // The handwriting the reader read (classification keeps the original
+  // reading; printed and score-excluded lines are left out).
   const classification=analysis.textClassification;
   const sources=classification
     ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.evidence_id||r.id,text:r.text}))
     : [{id:null,text:recognizedText}];
-  const hasText=sources.some(r=>String(r.text||'').trim());
-  // English spelling runs only on a page the server read as English (#221).
-  const spelling=readable && window.VahiniCraft
-    ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text,analysis.comparability).map(f=>({...f,region:r.id}))) : [];
+  // Spelling comes from the server's check (#317: the `language` section,
+  // each word checked against the reader's letter scores), not from a list
+  // in the browser (owner, 2026-10-24). No section, or a page the server
+  // did not check, makes no claim either way.
+  const langSec=data.language&&data.language.checked?data.language:null;
+  const spelling=langSec?(langSec.spelling||[]).filter(f=>f&&f.suggestion):[];
   const firstSpelling=spelling[0];
   const free=analysis.access?.tier==='free';
   const tier=free?'free':'pro';
   const cat=practiceCatalog(analysis);
+  // Spelling as a teacher practises it (owner, 2026-10-24): findings
+  // grouped by the pattern the server named, the largest group first; each
+  // pattern brings its rule, its exercise and practice words from the
+  // catalogue, so the child practises the pattern, not one word.
+  const spellPatterns=(()=>{
+    const lib=(cat&&cat.spelling&&cat.spelling.patterns)||[];
+    const groups=[];
+    spelling.forEach(f=>{
+      const id=f.pattern||'other';
+      let g=groups.find(x=>x.id===id);
+      if(!g){ const entry=lib.find(p=>p.id===id)||lib.find(p=>p.id==='other')||null; g={id,entry,found:[]}; groups.push(g); }
+      g.found.push(f);
+    });
+    const local=g=>{const e=g.entry||{}, own=(e.i18n||{})[t.lang]||{};
+      return {name:own.name||e.name||'', rule:own.rule||e.rule||''};};
+    groups.forEach(g=>{
+      Object.assign(g,local(g));
+      const mine=g.found.map(f=>f.suggestion.toLowerCase());
+      g.words=[...new Set([...mine,...((g.entry&&g.entry.words)||[])])].slice(0,6);
+    });
+    return groups.sort((a,b)=>b.found.length-a.found.length);
+  })();
   const lim=practiceLimits(analysis, cat, tier);
   // Skill names: in another language the English name follows in brackets
   // on its first use on each page, so a teacher and a parent mean the same
@@ -462,9 +485,8 @@ function render(host, data){
   // left out, up to the tier's number. The first one is "Start here".
   const rowFactors=(maintenance?sorted:toGrow).slice(0,lim.areas_max);
   const first=rowFactors[0]||null;
-  const spellingStatus=!readable ? t('spelling.deferred')
-    : !hasText ? t('spelling.notext')
-    : spelling.length ? t('spelling.found')
+  const spellingStatus=!langSec ? t('spelling.notchecked')
+    : spelling.length ? t.n('spelling.found', spelling.length)
     : t('spelling.clear');
   const writer=String(intake.writerName||'').trim();
   // Brand row with the Vahini logo and the website; the patent numbers on
@@ -615,6 +637,19 @@ function render(host, data){
   };
   const line=(p,q,cls,sw,dash)=>`<line class="${cls}" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke-width="${sw.toFixed(2)}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
   const pad=(b,fx,fy)=>[b[0]-b[2]*fx,b[1]-b[3]*fy,b[0]+b[2]*(1+fx),b[1]+b[3]*(1+fy)];
+  // The child's own ink at a place, cut from the photo (spelling and
+  // grammar findings, #317): never our reading of the child's word.
+  // A place estimated from the share of the line's text (not from the
+  // letters) gets a wider cut, so the word is in it.
+  const inkCut=(b,cls,wide)=>{
+    if(!det||!size) return '';
+    const [W,H]=size, px=Math.max(4,b[2]*(wide?0.45:0.08)), py=Math.max(4,b[3]*0.12);
+    let x0=Math.max(0,b[0]-px), y0=Math.max(0,b[1]-py), x1=Math.min(W,b[0]+b[2]+px), y1=Math.min(H,b[1]+b[3]+py);
+    // A one-letter word (i) still gets a square cut, not a sliver.
+    const need=(y1-y0)-(x1-x0);
+    if(need>0){ x0=Math.max(0,x0-need/2); x1=Math.min(W,x1+need/2); }
+    return `<svg class="stu-ink${cls?' '+cls:''}" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${(x1-x0).toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('stu.lang.ink'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></svg>`;
+  };
   const mRows=[];
   // 1. Gaps between words: brackets in the gaps the analyser measured.
   const gaps=((crops[8]||{}).places||[]).filter(p=>p.role==='look'&&p.kind==='gap'&&Array.isArray(p.bbox));
@@ -746,17 +781,26 @@ function render(host, data){
         <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}">${turnHTML(lastKind)}</div></div></div>
     </article>`;
   };
+  // Page 2's spelling row: the largest pattern's exercise, with the
+  // child's words and the pattern's practice words (owner, 2026-10-24).
   const spellingRow=n=>{
-    const f=firstSpelling, area=cat&&cat.spelling;
-    const ex=area&&area.exercises&&area.exercises[0];
+    const top=spellPatterns[0], area=cat&&cat.spelling;
+    const exId=top&&top.entry&&top.entry.exercise;
+    const ex=area&&area.exercises&&(area.exercises.find(e=>e.id===exId)||area.exercises[0]);
     const tips=area?rotate(area.tips||[],(lastPractice.tips||{}).spelling,lim.tips_max):[];
     if(ex) printed.exercises.spelling=[ex.id];
     printed.tips.spelling=tips.map(e=>e.id);
     const d=dose('good');
-    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling">
-      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t('spell.badge'))}</span></div>
-        <p class="pr-saw">${t.html('spell.saw',{word:`<b>${esc(f.word)}</b>`,suggestion:`<b>${esc(f.suggestion)}</b>`})}</p></div>
-      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:f.suggestion}},{n:1,band:'strong'}):''}
+    const shown=(top?top.found:spelling).slice(0,2);
+    const placeOfWord=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
+    const others=spellPatterns.slice(1).filter(g=>g.name);
+    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling" data-pattern="${esc(top?top.id:'other')}">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(top&&top.name?t('spell.title.pattern',{pattern:top.name}):t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t.n('spell.badge',spelling.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${shown.map(f=>`<span class="pr-saw-one">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')(placeOfWord(f))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></span>`).join('')}</div>
+        <p class="pr-saw-why">${esc(top&&top.rule?top.rule:t('stu.sp.'+firstSpelling.kind))}</p>
+        ${top&&top.words.length?`<p class="pr-saw-words">${esc(t('spell.words'))} <span class="pr-saw-list">${esc(top.words.join(', '))}</span></p>`:''}
+        ${others.length?`<p class="pr-saw-also">${esc(t('spell.also',{list:others.map(g=>g.name).join(', ')}))}</p>`:''}</div>
+      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:top?top.words.slice(0,2).join(' '):firstSpelling.suggestion}},{n:1,band:'strong'}):''}
         <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.length?`<div class="pr-tips">${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}</div>`:''}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
     </article>`;
   };
@@ -859,30 +903,22 @@ function render(host, data){
     // found, or a page not checked, shows no card.
     const lgSec=data.language&&data.language.checked?data.language:null;
     const lgPlace=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
-    // A place estimated from the share of the line's text (not from the
-    // letters) gets a wider cut, so the word is in it.
-    const lgInk=(b,cls,wide)=>{
-      if(!det||!size) return '';
-      const [W,H]=size, px=Math.max(4,b[2]*(wide?0.45:0.08)), py=Math.max(4,b[3]*0.12);
-      let x0=Math.max(0,b[0]-px), y0=Math.max(0,b[1]-py), x1=Math.min(W,b[0]+b[2]+px), y1=Math.min(H,b[1]+b[3]+py);
-      // A one-letter word (i) still gets a square cut, not a sliver.
-      const need=(y1-y0)-(x1-x0);
-      if(need>0){ x0=Math.max(0,x0-need/2); x1=Math.min(W,x1+need/2); }
-      return `<svg class="stu-ink${cls?' '+cls:''}" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${(x1-x0).toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('stu.lang.ink'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></svg>`;
-    };
     const LG_ARROW='<svg class="stu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>';
     // One compact card: words beside sentences, each finding on one line
     // (the child's ink, an arrow, the word to write with its reason under
     // it), a one-line tip under each. The ink is the proof, so no strip.
     const lgFix=(f,why)=>{const p=lgPlace(f);
-      return `<li class="stu-fix">${p?lgInk(p.bbox,'',p.placed==='estimated'):''}${LG_ARROW}<span class="stu-fix-text"><span class="stu-right">${esc(f.suggestion)}</span><span class="stu-fix-why">${esc(why)}</span></span></li>`;};
+      return `<li class="stu-fix">${p?inkCut(p.bbox,'',p.placed==='estimated'):''}${LG_ARROW}<span class="stu-fix-text"><span class="stu-right">${esc(f.suggestion)}</span><span class="stu-fix-why">${esc(why)}</span></span></li>`;};
     const lgTip=key=>`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(t(key))}</span></p>`;
     let langCards='';
     if(lgSec){
       const words=(lgSec.spelling||[]).slice(0,3), sentences=(lgSec.grammar||[]).slice(0,3);
       const copied=words.some(f=>f.against==='sentence');
       const wordPart=words.length?`<div class="stu-lang-sec stu-words" data-lang="spelling"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.sp.pill'))}</span>${copied?`<span class="stu-lang-note">${esc(t('stu.sp.copied'))}</span>`:''}</div>
-        <ul class="stu-fixes">${words.map(f=>lgFix(f,t('stu.sp.'+f.kind))).join('')}</ul>${lgTip('stu.sp.tip')}</div>`:'';
+        <ul class="stu-fixes">${words.map(f=>{const g=spellPatterns.find(x=>x.found.includes(f));
+          return lgFix(f,g&&g.name?g.name:t('stu.sp.'+f.kind));}).join('')}</ul>
+        ${spellPatterns.some(g=>g.name)?`<div class="stu-patterns"><p class="stu-patterns-head">${esc(t('stu.sp.patterns'))}</p><ul>${spellPatterns.slice(0,2).filter(g=>g.name).map(g=>`<li data-pattern="${esc(g.id)}"><b>${esc(g.name)}:</b> <span class="stu-pattern-words">${esc(g.words.join(', '))}</span></li>`).join('')}</ul></div>`:''}
+        ${spellPatterns[0]&&spellPatterns[0].rule?`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(spellPatterns[0].rule)}</span></p>`:lgTip('stu.sp.tip')}</div>`:'';
       const sentencePart=sentences.length?`<div class="stu-lang-sec stu-sentences" data-lang="grammar"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.gr.pill'))}</span></div>
         <ul class="stu-fixes">${sentences.map(f=>lgFix(f,t('stu.gr.'+f.rule))).join('')}</ul>${lgTip('stu.gr.tip')}</div>`:'';
       if(wordPart||sentencePart) langCards=`<div class="stu-card stu-lang">${wordPart}${sentencePart}</div>`;
@@ -931,6 +967,9 @@ const FIT_SLACK_PX = 6;
    then the "why" sentence, then the win box, and mark the row with how far
    it went (data-trim). Only where the two columns sit side by side. */
 const TRIM_STEPS = ['more', 'why', 'win'];
+/* The spelling row (#317) follows the same rule: the other patterns go
+   first, then the practice words, then the pattern's rule. */
+const SPELL_TRIM_STEPS = ['also', 'words', 'rule'];
 function trimSkillColumns(host){
   // The student view folds the pages on screen (display:none), where no row
   // can be measured. Open them for the measurement only, in this same task,
@@ -942,10 +981,12 @@ function trimSkillColumns(host){
 }
 function trimRows(host){
   (host || document).querySelectorAll('.practice-row').forEach(row=>{
-    TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
+    const spell = row.classList.contains('spelling-row');
+    const steps = spell ? SPELL_TRIM_STEPS : TRIM_STEPS;
+    steps.forEach(s=>row.classList.remove('trim-' + s));
     row.removeAttribute('data-trim');
     const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
-    if (!left || !right || !left.querySelector('.pr-about')) return;
+    if (!left || !right || (!spell && !left.querySelector('.pr-about'))) return;
     if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
     const tall = ()=>{
       left.style.alignSelf = right.style.alignSelf = 'start';
@@ -953,7 +994,7 @@ function trimRows(host){
       left.style.alignSelf = right.style.alignSelf = '';
       return over;
     };
-    for (const step of TRIM_STEPS){
+    for (const step of steps){
       if (!tall()) break;
       row.classList.add('trim-' + step);
       row.setAttribute('data-trim', step);
