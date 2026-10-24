@@ -256,3 +256,17 @@ change, so it is the owner's decision.
 - No OCR model and no analyser container was run. GNHK was not rescored on
   current code: that needs the stage analyser, and another session's test
   analyser was running on the shared host. It is step 6 above.
+
+## After this note (24 October 2026)
+
+The tables above are from 23 October, before two later rules. The
+interim weighting (40/20/20/10/10) went into #305 with one addition: Size
+counts in the overall only when measured on 10 words or more. On the
+eight penmanship pages that leaves Size out of two (zaner-093 and
+zaner-095), so the replay gives median 70.5 (57 to 82), not the 67 in the
+"Interim, line 30" column; the page moves from main are -6, -5, 0, +8,
++7, +4, -1 and +5. The GNHK rows do not change with it (all-page median
+72, neat median 69, lowest 61, 3 at 75+); its rank correlation falls
+from 0.13 to 0.07, both within chance. The slope fix (#306) and the Size
+fix (#307) then raise the sample page to 62 and 65 and the penmanship
+median to 71 (59 to 88).
