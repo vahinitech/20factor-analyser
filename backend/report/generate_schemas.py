@@ -591,6 +591,17 @@ def common():
                     "yet (#216); never a birth date, never stored."
                 ),
             },
+            "pageTurn": {
+                "enum": [90, 180, 270],
+                "description": (
+                    "Degrees the analyser turned the photo clockwise to "
+                    "read it upright, when it was taken sideways or upside "
+                    "down with no EXIF turn (#297). Every box and mark in "
+                    "the report is on the turned photo, so a viewer turns "
+                    "its own copy the same way before drawing them. Absent "
+                    "when the photo was read as it is."
+                ),
+            },
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -1014,6 +1025,7 @@ def expanded():
             "comparability": ref("comparability"),
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
+            "turned": ref("pageTurn"),
             "evidence": {
                 "type": "object",
                 "required": ["image_width", "image_height", "factor_regions"],
@@ -1204,6 +1216,7 @@ def compact():
             "comparability": ref("comparability"),
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
+            "turned": ref("pageTurn"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,

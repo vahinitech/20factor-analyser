@@ -438,6 +438,9 @@
     "age_band": {
       "$ref": "common.schema.json#/definitions/ageBand"
     },
+    "turned": {
+      "$ref": "common.schema.json#/definitions/pageTurn"
+    },
     "evidence": {
       "type": "object",
       "required": [
