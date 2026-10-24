@@ -506,18 +506,24 @@ function startServicePolling(){
   serviceCheckTimer = setInterval(checkService, 10000);
 }
 
-/* Preview the uploaded photo in the process screen. Scoring runs server-side
-   now, so there is no in-browser detection overlay to draw; without this
-   the stage box would sit empty (and visibly black) for the whole pipeline. */
+/* Preview the uploaded photo in the process screen and sweep it line by
+   line until the report (owner, 2026-10-25; src/app/scan-sweep.js). The
+   scoring runs on the server; the sweep shows the photo's own lines. */
+let stopSweep = null;
 function showProcStagePreview(img){
   const host = $('#proc-stage');
   if (!host) return;
-  const old = host.querySelector('img.proc-preview'); if (old) old.remove();
+  if (stopSweep){ stopSweep(); stopSweep = null; }
+  host.classList.remove('is-scanning');
+  host.querySelectorAll('.scan-sweep, .scan-cap, .scan-bars, img.proc-preview').forEach(el=>el.remove());
   const el = document.createElement('img');
   el.className = 'proc-preview';
   el.alt = 'uploaded handwriting sample';
   el.src = img.src;
   host.appendChild(el);
+  if (!window.VahiniScanSweep) return;
+  const sweep = ()=>{ if (el.isConnected) stopSweep = VahiniScanSweep.start(host, el); };
+  if (el.complete && el.naturalWidth) sweep(); else el.addEventListener('load', sweep, { once: true });
 }
 
 /* ---------- expected passage ---------- */

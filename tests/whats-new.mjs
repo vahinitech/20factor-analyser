@@ -4,9 +4,11 @@
 // the page as the image build writes it (build_bundle.py's block):
 // - one line under the heading, above the upload, on a phone and a desktop,
 //   never wider than the screen;
-// - the newest change on a first visit, the next one on each reload, back
-//   to the newest after the last;
-// - the newest when storage is blocked;
+// - the newest change first, with "1 of 10", then the next every 5 seconds
+//   on the same line, back to the newest after the last (owner,
+//   2026-10-25);
+// - it waits while the pointer is on it or the list is open, and does not
+//   move for people who turn off motion;
 // - a tap opens all of them.
 import assert from 'node:assert/strict';
 import { execFileSync, spawn } from 'node:child_process';
@@ -21,9 +23,8 @@ let browser;
 try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch('http://127.0.0.1:4197/')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
   browser = await chromium.launch();
-  const open = async (viewport, init) => {
-    const context = await browser.newContext({ viewport });
-    if (init) await context.addInitScript(init);
+  const open = async (viewport, { motion = 'no-preference' } = {}) => {
+    const context = await browser.newContext({ viewport, reducedMotion: motion });
     await context.route('**/frontend/analyser.html', async (route) => {
       const res = await route.fetch();
       const body = (await res.text()).replace(/(<!-- whats-new:begin[^>]*-->)[\s\S]*?(<!-- whats-new:end -->)/, (_, a, b) => a + block + b);
@@ -32,10 +33,12 @@ try {
     await context.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
     await context.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
     const page = await context.newPage();
+    await page.clock.install();
     await page.goto(URL, { waitUntil: 'networkidle' });
     return page;
   };
   const shown = (page) => page.locator('#whats-new .wn-line span').innerText();
+  const count = (page) => page.locator('#whats-new .wn-count').innerText();
 
   for (const viewport of [{ width: 390, height: 844 }, { width: 1440, height: 900 }]) {
     const page = await open(viewport);
@@ -47,15 +50,24 @@ try {
     assert.ok(box.y > heading.y && box.y + box.height < upload.y, `${viewport.width}px: under the heading, above the upload`);
     assert.ok(upload.y < viewport.height * 0.6, `${viewport.width}px: the upload still starts on the first screen (${upload.y}px)`);
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, `${viewport.width}px: no sideways scroll`);
-    assert.equal(await shown(page), items[0].text, 'the newest change on a first visit');
+    assert.equal(await shown(page), items[0].text, 'the newest change first');
+    assert.equal(await count(page), `1 of ${items.length}`);
 
     const seen = [await shown(page)];
     for (let i = 1; i <= items.length; i++) {
-      await page.reload({ waitUntil: 'networkidle' });
+      await page.clock.runFor(5000);
       seen.push(await shown(page));
+      const h = (await page.locator('#whats-new summary').boundingBox()).height;
+      assert.ok(h <= 36, `${viewport.width}px: still one line on change ${i} (${h}px)`);
     }
-    assert.deepEqual(seen.slice(0, items.length), items.map((i) => i.text), 'the next change on each reload');
+    assert.deepEqual(seen.slice(0, items.length), items.map((i) => i.text), 'the next change every 5 seconds');
     assert.equal(seen[items.length], items[0].text, 'back to the newest after the last');
+    assert.equal(await count(page), `1 of ${items.length}`);
+
+    await page.hover('#whats-new summary');
+    await page.clock.runFor(15000);
+    assert.equal(await shown(page), items[0].text, 'it waits while the pointer is on it');
+    await page.mouse.move(0, viewport.height - 1);
 
     await page.click('#whats-new summary');
     const listed = await page.locator('#whats-new .wn-list li span').allInnerTexts();
@@ -64,13 +76,11 @@ try {
     await page.context().close();
   }
 
-  const blocked = await open({ width: 390, height: 844 }, () => {
-    Object.defineProperty(window, 'localStorage', { get() { throw new Error('blocked'); } });
-  });
-  assert.equal(await shown(blocked), items[0].text, 'the newest change when storage is blocked');
-  await blocked.reload({ waitUntil: 'networkidle' });
-  assert.equal(await shown(blocked), items[0].text, 'still the newest after a reload');
-  console.log(`whats-new: one line at 390 and 1440 px, ${items.length} changes in turn, newest without storage`);
+  const still = await open({ width: 390, height: 844 }, { motion: 'reduce' });
+  await still.clock.runFor(30000);
+  assert.equal(await shown(still), items[0].text, 'no movement for people who turn off motion');
+  assert.equal(await count(still), `1 of ${items.length}`);
+  console.log(`whats-new: one line at 390 and 1440 px, ${items.length} changes every 5 s, still without motion`);
 } finally {
   if (browser) await browser.close();
   server.kill();

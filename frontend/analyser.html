@@ -232,6 +232,20 @@
     <h1>Check your handwriting for&nbsp;free</h1>
     <p>One page. Five writing skills. A clear next step.</p>
     <!-- whats-new:begin (filled from whats-new.json by build_bundle.py --stamp) --><!-- whats-new:end -->
+    <!-- Who is checking, and the report's language (owner, 2026-10-25).
+         A student gets the student view; a parent or guardian (the
+         default), a teacher or someone checking their own writing gets the
+         parent report. Both stay in this browser and are never sent. -->
+    <div class="who-bar" id="who-bar">
+      <fieldset class="who-pick">
+        <legend>I am</legend>
+        <label class="who-opt"><input type="radio" name="check-who" value="parent" checked> Parent or guardian</label>
+        <label class="who-opt"><input type="radio" name="check-who" value="student"> Student</label>
+        <label class="who-opt"><input type="radio" name="check-who" value="teacher"> Teacher</label>
+        <label class="who-opt"><input type="radio" name="check-who" value="self"> Myself</label>
+      </fieldset>
+      <label class="who-lang" for="check-lang">Report in <select id="check-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
+    </div>
   </header>
 
   <div class="service-banner" id="service-banner" style="display:none;">
@@ -596,12 +610,13 @@
   <p class="keep-status" id="keep-status" role="status" aria-live="polite" hidden></p>
   <div class="report-layout">
     <div class="report-host" id="report-host"></div>
+    <!-- Under the report: the other view of the same check, never printed. -->
+    <p class="view-switch" id="view-switch-row" data-html2canvas-ignore="true"><button type="button" class="view-switch__btn" id="view-switch" data-i18n="side.view.student">Student view</button></p>
     <!-- Beside the report on a wide screen, under it on a narrow one; never
          printed and never in the shared PDF. -->
     <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
       <div class="side-card">
         <h2 data-i18n="side.title">Your report</h2>
-        <label class="report-lang" for="report-for"><span data-i18n="side.for">Report for</span> <select id="report-for"><option value="parent" data-i18n="side.for.parent">Parents and teachers</option><option value="student" data-i18n="side.for.student">Students</option></select></label>
         <label class="report-lang" for="report-lang"><span data-i18n="side.lang">Print in</span> <select id="report-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
         <button class="btn btn-share" id="share-pdf" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2-5.4A8.4 8.4 0 1 1 21 11.5z"/></svg><span data-i18n="side.share">Share PDF on WhatsApp</span></button>
         <button class="btn btn-dark" id="print-report" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg><span data-i18n="side.print">Print / Save as PDF</span></button>
