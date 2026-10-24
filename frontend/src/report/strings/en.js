@@ -249,10 +249,9 @@ S.en = {
   'sn.empty': 'We could not measure your writing on this photo. Try a clearer photo with a few lines of handwriting.',
   'note.printed': { other: 'We left out {n} printed lines. Only handwriting is checked.' },
 
-  'spelling.deferred': 'Spelling: not checked. The photo was not clear enough to read the words.',
-  'spelling.notext': 'Spelling: not checked. We could not read any words.',
-  'spelling.found': 'Spelling: one word to look at. The reader can misread words too.',
-  'spelling.clear': 'Spelling: no misspelled words found in our list of common English words.',
+  'spelling.notchecked': 'Spelling: not checked on this page.',
+  'spelling.found': { one: 'Spelling: 1 word to check, on page 2.', other: 'Spelling: {n} words to check, on page 2.' },
+  'spelling.clear': 'Spelling: no word we could be sure of. We read up to six rows closely.',
 
   /* Page heads and footers. */
   'head.page1': 'Your writing snapshot',
@@ -288,7 +287,6 @@ S.en = {
   'tip.label': "Pihu's tip:",
   'spell.title': 'Spelling',
   'spell.badge': '1 word to check',
-  'spell.saw': 'We read {word}. Did you mean {suggestion}? Check your page. The reader can misread words too.',
   'spell.plan': 'This week: {tries} tries a day, for {days} days.',
   'spell.line.aria': 'Space to try it once',
   'other.title': 'Other skills:',

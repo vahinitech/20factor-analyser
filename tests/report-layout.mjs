@@ -82,12 +82,13 @@ export const REPORT_ART = { teacher:'/frontend/assets/vahini-logo.png', tip:'/fr
 export async function renderLongest(page, pro){
   await page.evaluate(pro=>{
     const d=window.VAHINI_SAMPLE_REPORT;
-    window.VahiniCraft={...window.VahiniCraft,checkSpelling:t=>t?[{word:'recieve',suggestion:'receive',context:'I recieve it'}]:[]};
+    // One word from the server's spelling check (#317), on the sample's hardest row.
+    const language={version:1,checked:true,reason:null,grammar:[],spelling:[{written:'recieve',suggestion:'receive',kind:'letter_order',against:'list',places:[{line:'line_5',bbox:[153,820,120,70],placed:'letters'}]}]};
     const recognition={...(d.analysis.recognition||{}),level:'high'};
     const analysis=pro?{...d.analysis,recognition}:{...d.analysis,access:{tier:'free'},recognition,results:d.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
     const crops={};
     Object.entries(d.factor_regions||{}).forEach(([k,v])=>{crops[k]=v;});
-    VahiniReport.render(document.getElementById('report-host'),{analysis,intake:{},recognizedText:'I recieve it',crops,detURL:d.photo,history:null});
+    VahiniReport.render(document.getElementById('report-host'),{analysis,intake:{},recognizedText:'I recieve it',crops,detURL:d.photo,history:null,language});
   },pro);
   await page.evaluate(()=>document.fonts.ready);
 }

@@ -1307,6 +1307,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .stu-mk-now{ background:var(--v-warning-bg); color:var(--v-warning); }
 .stu-mk-later{ background:var(--v-bg-alt); color:var(--v-text-muted); }
 .stu-mk-grow{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+/* Page 2's spelling row (#317): the child's own ink, an arrow, the word to write. */
+.pr-saw-ink{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.pr-saw-ink .stu-ink{ height:34px; width:auto; max-width:120px; border:1px solid var(--v-border); border-radius:6px; background:var(--v-paper); }
+.pr-saw-arrow{ color:var(--v-text-muted); }
+.pr-saw-right{ font:600 22px/1 var(--handB); color:var(--v-success); }
+.pr-saw-why{ margin:2px 0 0; font-size:12.5px; color:var(--v-text-2); }
 /* Words and sentences to check (#317): one card, words beside sentences;
    each finding one line: the child's own ink, an arrow, the word to write. */
 .stu-lang{ grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:12px 28px; padding:14px 16px; }
