@@ -52,16 +52,19 @@ python backend/analyser-ocr-server.py
 
 ## What it measures
 
-| Section | Weight | Factors |
-|---|---|---|
-| Structure | 30% | Letter Formation, Stroke Order, Loop Closure, Line Quality, Size Consistency, Ascender/Descender |
-| Spatial | 30% | Baseline, Word Spacing, Letter Spacing, Margins, Line Straightness, Vertical Alignment |
-| Dynamics | 20% | Speed, Pressure, Stroke Continuity, Pen Lifts (needs the sensor pen) |
-| Style & Readability | 20% | Slant, Legibility, Character Distinction, Overall Neatness |
+| Section | Factors |
+|---|---|
+| Structure | Letter Formation, Stroke Order, Loop Closure, Line Quality, Size Consistency, Ascender/Descender |
+| Spatial | Baseline, Word Spacing, Letter Spacing, Margins, Line Straightness, Vertical Alignment |
+| Dynamics | Speed, Pressure, Stroke Continuity, Pen Lifts (needs the sensor pen) |
+| Style & Readability | Slant, Legibility, Character Distinction, Overall Neatness |
 
-The overall score is the weighted average of the section scores, 0 to 100.
-From a photo, the Dynamics factors are not scored; the headline uses only what
-was actually measured. The full report is two pages: the overall score,
+The overall score, 0 to 100, counts five factors: Letter Formation 40
+points, Baseline 20, Size Consistency 20, Line Straightness 10 and Slant 10
+(`_OVERALL_POINTS` in `backend/scoring.py`, [docs/03](docs/03-scoring-criteria.md)).
+The other fifteen are scored and shown as practice findings. A factor not
+measured on a page, such as the Dynamics factors from a photo, is left out
+and the rest are scaled back to 100. The full report is two pages: the overall score,
 handwriting-region coverage and up to three priorities with reference crops
 from the writer's own page; then illustrated coaching and ruled practice
 space. The hosted anonymous Free report is a five-factor summary served from

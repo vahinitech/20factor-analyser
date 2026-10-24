@@ -83,14 +83,29 @@ def _pdf_first_page(raw: bytes) -> Image.Image:
         pdf.close()
 
 
-def decode_image(raw: bytes) -> Image.Image:
+# A clockwise turn in degrees as Pillow's transpose (which turns
+# anticlockwise): page_turn.py says how far a page lies from upright.
+_TURNS = {
+    90: Image.Transpose.ROTATE_270,
+    180: Image.Transpose.ROTATE_180,
+    270: Image.Transpose.ROTATE_90,
+}
+
+
+def decode_image(raw: bytes, turn: int = 0) -> Image.Image:
     """Decode an upload to an RGB PIL image. Accepts normal images and PDFs;
-    for a PDF only the first page is used."""
+    for a PDF only the first page is used. turn: degrees clockwise to turn
+    the page after its EXIF rotation (page_turn.py), so every decode of
+    one scan, the working copy and the full-size crops alike, is upright."""
     if raw[:4] == b"%PDF":
-        return _pdf_first_page(raw)
-    with Image.open(io.BytesIO(raw), formats=IMAGE_FORMATS) as image:
-        _check_dimensions(*image.size)
-        return ImageOps.exif_transpose(image).convert("RGB")
+        image = _pdf_first_page(raw)
+    else:
+        with Image.open(io.BytesIO(raw), formats=IMAGE_FORMATS) as opened:
+            _check_dimensions(*opened.size)
+            image = ImageOps.exif_transpose(opened).convert("RGB")
+    if turn in _TURNS:
+        image = image.transpose(_TURNS[turn])
+    return image
 
 
 # EXIF orientations that turn the picture a quarter turn, so the shown
@@ -98,10 +113,18 @@ def decode_image(raw: bytes) -> Image.Image:
 _QUARTER_TURNS = (5, 6, 7, 8)
 
 
-def photo_size(raw: bytes):
+def photo_size(raw: bytes, turn: int = 0):
     """Width and height of the upload as a viewer shows it: after its EXIF
-    rotation, before the analyser's own downscale; a PDF's first page as
-    rendered at 150 dpi. Reads the header only. None when it cannot."""
+    rotation and the analyser's own turn (page_turn.py), before its
+    downscale; a PDF's first page as rendered at 150 dpi. Reads the
+    header only. None when it cannot."""
+    size = _shown_size(raw)
+    if size and turn in (90, 270):
+        return size[1], size[0]
+    return size
+
+
+def _shown_size(raw: bytes):
     try:
         if raw[:4] == b"%PDF":
             import pypdfium2 as pdfium
@@ -124,11 +147,13 @@ def photo_size(raw: bytes):
         return None
 
 
-def to_numpy(raw: bytes, max_side: int = 2200) -> np.ndarray:
+def to_numpy(raw: bytes, max_side: int = 2200, turn: int = 0) -> np.ndarray:
     """Decode an upload and downscale it so its longest side is at most
-    `max_side` (the caller passes the server's configured limit)."""
+    `max_side` (the caller passes the server's configured limit). The
+    turn comes before the downscale, so a turned photo gives exactly the
+    pixels its upright copy would."""
     with perf.stage("decode", bytes=len(raw)) as step:
-        img = decode_image(raw)
+        img = decode_image(raw, turn)
         w, h = img.size
         step.size(pixels=w * h)
         m = max(w, h)
