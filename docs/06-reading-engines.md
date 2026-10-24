@@ -52,6 +52,37 @@ recognised text is matched against the expected text directly. A close
 match replaces the raw OCR output with the known-correct text and yields
 a real per-line accuracy score. This works with any of the engines above.
 
+### The three models and their algorithms
+
+Checked against the model files on the deploy box
+(`official_models/<name>/inference.yml` and the layer names in
+`inference.json`) and PaddleX's `configs/pipelines/OCR.yaml`, 24 October
+2026. A page goes through them in this order: the detector finds the text
+lines on the whole page once, the recogniser reads each line, and the
+layout model marks pictures and seals. Everything finer than a line
+(letters, words, gaps, slope, size) is measured from the ink by our own
+OpenCV code, not by a model (`docs/05-computer-vision-algorithms.md`).
+
+| Job | Model | Algorithm | Backbone | Input | Settings |
+|---|---|---|---|---|---|
+| Find text lines | `PP-OCRv5_mobile_det` | **DB** (Differentiable Binarization, the DBNet family): the network draws a map of how likely each pixel is to be text, the map is thresholded, and each region becomes a four-corner box, grown so it covers the strokes | PP-LCNetV3 | the page with its short side raised to 2048 px (`VAHINI_OCR_DET_LIMIT_SIDE_LEN`, Paddle's `min` limit type), long side at most 4000 | pixel threshold 0.3, box score 0.6, box growth (`unclip_ratio`) 1.5 |
+| Read one line | `en_PP-OCRv5_mobile_rec` (stage); `te_PP-OCRv5_mobile_rec` for Telugu | **CTC** recogniser: a PP-LCNetV3 CNN for features, SVTR blocks (self-attention across the line) for context, and CTC decoding, best character per step with no dictionary or language model. It was trained with GTC: an NRTR attention decoder guides the training and is not run when reading | PP-LCNetV3 + SVTR | each line resized to 48 px tall | 6 lines per batch, no score cut-off (`text_rec_score_thresh` 0) |
+| Read one line, production English | `PP-OCRv5_server_rec` (the default from `backend/languages/stages.json`; production's compose sets no `VAHINI_OCR_REC_MODEL_MAP`, stage's sets the mobile model above) | the same **CTC** decoding and GTC training, with a larger CNN for features (PaddleOCR lists it as PP-HGNetV2; its layers have none of PP-LCNetV3's learnable-affine blocks) | PP-HGNetV2 + SVTR | each line resized to 48 px tall | as above |
+| Mark pictures, charts, seals | `PP-DocLayout-M` | object detector with a **GFL** head (Generalized Focal Loss, the PicoDet family) | PP-LCNet | the page resized to 640x640 | score 0.3, overlap suppression 0.5; one fixed model, never switched by speed (#112) |
+
+Not used: CTPN, EAST or CRAFT (other text detectors); CRNN's BiLSTM
+(SVTR blocks take its place) and attention decoders at reading time;
+word beam search or any language model over the CTC output
+(`docs/07-ambiguous-handwriting.md` says why none shipped). Optional
+engines (TrOCR, Surya, PP-OCRv6) are described in the sections below.
+
+**Line recovery** (`line_recovery.py`, `docs/02-how-a-scan-works.md`
+section 2) adds one more pass of the same detector and recogniser over
+up to 12 crops a round, two rounds, where our ink analysis finds writing
+outside every detected line. On a phone photo of a closely ruled page it
+is most of the scan's time: 44 of 50 seconds on stage on 23 October 2026
+(20factor-analyser#298 and #311 measure it and cut it).
+
 ## Why Chandra OCR is not in the deployed set
 
 Chandra OCR 2 (Datalab) was evaluated: a vision-language model with
@@ -247,24 +278,20 @@ This does not replace `classify.py`: PP-DocLayout's categories are
 document structure (title, text, table, formula, image, seal...), not a
 printed-vs-handwriting signal.
 
-Same speed-adaptive shape as hybrid mode, applied to picking a model
-size instead of an engine: tries the more accurate `PP-DocLayout-M` first,
-falls back to the cheaper `PP-DocLayout-S` if a real measured call is too
-slow, and disables filtering entirely (falls back to today's unfiltered
-behaviour) if even that is too slow: never a hard requirement. Building
-the model itself never blocks a request either: the first time it's
-needed, a background download starts and that request (and every one
-after it, until the download finishes) simply skips filtering for free.
-Run `python warmup_models.py` (or let the Docker image's startup warmup
-do it) so it's normally already built by the time real traffic arrives.
-Both model tiers are a few MB and download to the same model cache as
-PaddleOCR, so they persist across restarts the same way (see "Keep models
-on disk between deployments" below).
+One model, chosen by configuration (`VAHINI_LAYOUT_MODEL`, default
+`PP-DocLayout-M`; `PP-DocLayout-S` is the other choice), never by how fast
+the last call was. It used to drop to `-S`, or skip filtering, after one
+slow call, and to skip it while the model loaded; the two models and "no
+filter" keep different lines, so the same photo scored differently under
+load (#112). The model is preloaded in the image and warmed at start-up,
+and a scan that arrives first waits for it. Both models are a few MB and
+live in the same model cache as PaddleOCR (see "Keep models on disk
+between deployments" below).
 
 | Env var | Default | What it does |
 |---|---|---|
 | `VAHINI_LAYOUT_FILTER` | `1` | turn the layout pre-filter off with `0` |
-| `VAHINI_LAYOUT_MAX_MS` | `800` | above this measured latency, drop from `PP-DocLayout-M` to `-S`, then to no filtering |
+| `VAHINI_LAYOUT_MODEL` | `PP-DocLayout-M` | the one layout model used, `PP-DocLayout-M` or `PP-DocLayout-S` |
 
 Check `GET /health`'s `layout_filter` field for whether it's enabled and
 which model tier is actually built and ready on this machine.

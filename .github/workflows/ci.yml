@@ -91,6 +91,7 @@ jobs:
             backend/server/scan_slots.py backend/server/capacity.py \
             backend/reading/detector.py backend/reading/line_recovery.py \
             backend/vision/ink_geometry.py scripts/ink_geometry_eval.py \
+            backend/vision/page_turn.py \
             backend/reading/recognizer.py backend/reading/escalation.py \
             backend/tests/test_escalation.py \
             backend/config.py backend/server/cache.py \
@@ -458,12 +459,16 @@ jobs:
         run: npm run test:notice-art
       - name: A maths or science page asks for four lines of English, never a score
         run: npm run test:not-writing-page
+      - name: A photo read turned is drawn turned; one that cannot be set upright is refused
+        run: npm run test:turned-page
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)
         run: npm run test:practice
       - name: Print in Telugu and Share on WhatsApp
         run: npm run test:language
+      - name: Student view (one screen, proof for every sentence)
+        run: npm run test:student-view
       # Every language keeps the English report: elements, font sizes,
       # weights, line heights, font lists and places, two A4 pages, script
       # faces scaled to their English face (docs/12-report-rules.md).
@@ -471,7 +476,7 @@ jobs:
         run: npm run test:parity
       - name: The print popup's optional price question and the Request Pro card
         run: npm run test:print-popup
-      - name: "How was the report?" asks once, after ten seconds, and sends one fixed answer
+      - name: '"How was the report?" asks once, after ten seconds, and sends one fixed answer'
         run: npm run test:report-feedback
       - name: The shared PDF carries the receipt and the page photo, still two pages
         run: npm run test:share-embed

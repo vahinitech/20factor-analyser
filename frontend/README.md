@@ -62,6 +62,7 @@ the object every screen keeps its icon. The codes:
 | `no_handwriting` | the page is blank or fully printed |
 | `handwriting_not_read` | a page asked for as Telugu was not read (mostly Latin letters, or an unsure reading) |
 | `not_writing_page` | the page read is mostly numbers and sums (a maths or science page) |
+| `turned_page` | the lines run up and down and the server could not tell which way up the page is |
 | `server_down` | the server did not answer |
 | `too_large` | the server refused the file's size (413) |
 | `invalid_file` | the server could not open the file (422) |
