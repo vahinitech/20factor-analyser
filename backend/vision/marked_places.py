@@ -87,27 +87,22 @@ def _order(entries):
     return sorted(entries, key=lambda e: (-e[0], e[2][1], e[2][0]))
 
 
-def _word_size_places(lines, geo):
-    """Words whose small-letter height is far from the page's usual one
-    (letter_geometry.py), the measurement Letter size is scored from."""
-    words = [
-        (item, wd)
-        for item, g in zip(lines, geo)
-        if g
-        for wd in g["words"]
-        if wd["xheight"]
-    ]
+def _word_size_places(lines, geo, page_h):
+    """Words whose small-letter height is far from the size expected
+    where they sit (letter_geometry.size_words), the measurement Letter
+    size is scored from."""
+    words = letter_geometry.size_words(lines, geo, page_h)
     if len(words) < MIN_LINES:
-        return None
-    median = float(np.median([wd["xheight"] for _, wd in words]))
-    if median <= 0:
         return None
     rows = _order(
         [
-            (abs(wd["xheight"] - median) / median, item, wd["bbox"], wd)
-            for item, wd in words
+            (abs(wd["xheight"] - want) / want, item, wd["bbox"], wd, want)
+            for item, wd, want in words
+            if want > 0
         ]
     )
+    if not rows:
+        return None
     out = [
         _place(
             item,
@@ -116,14 +111,14 @@ def _word_size_places(lines, geo):
             "look",
             "word_xheight",
             wd["xheight"],
-            median,
+            want,
             dev,
-            "taller" if wd["xheight"] > median else "shorter",
+            "taller" if wd["xheight"] > want else "shorter",
         )
-        for dev, item, box, wd in rows
+        for dev, item, box, wd, want in rows
         if dev >= WORD_SIZE_LOOK_SHARE
     ][:MAX_LOOK]
-    dev, item, box, wd = rows[-1]
+    dev, item, box, wd, want = rows[-1]
     if dev <= KEEP_SHARE:
         out.append(
             _place(
@@ -133,7 +128,7 @@ def _word_size_places(lines, geo):
                 "keep",
                 "word_xheight",
                 wd["xheight"],
-                median,
+                want,
                 dev,
                 "even",
             )
@@ -179,7 +174,22 @@ def _size_places(lines):
     return out
 
 
-def _line_angle(item):
+def _camera_deg(lines):
+    """The camera's share of the page's tilt, which the line-angle scores
+    take out before measuring (features._camera_tilt, #306), so a mark
+    and its score agree on a turned photo."""
+    # The scorer imports vision; importing it back at load time would
+    # make a loop (computer_vision does the same).
+    # pylint: disable=import-outside-toplevel
+    from scoring_parts.features import _camera_tilt
+    from scoring_parts.page import _page_tilt_degrees
+
+    return _camera_tilt(_page_tilt_degrees(lines))
+
+
+def _line_angle(item, camera_deg=0.0):
+    """A line's angle in degrees from its outline's top edge, against
+    the page (camera_deg taken out), unsigned."""
     poly = item.get("poly") or []
     if len(poly) < 2:
         return None
@@ -188,12 +198,16 @@ def _line_angle(item):
         float(
             np.degrees(np.arctan2(float(poly[1][1]) - float(poly[0][1]), dx))
         )
+        - camera_deg
     )
     return angle if np.isfinite(angle) else None
 
 
 def _angle_places(lines):
-    angled = [(l, a) for l in lines if (a := _line_angle(l)) is not None]
+    camera = _camera_deg(lines)
+    angled = [
+        (l, a) for l in lines if (a := _line_angle(l, camera)) is not None
+    ]
     if len(angled) < 2:
         return []
     rows = _order(
@@ -335,7 +349,7 @@ def free_skill_places(arr, accepted, rows):
     nothing was read (the cv-fallback path)."""
     read = any(str(l.get("text") or "").strip() for l in accepted)
     geo = letter_geometry.measure_page(arr, accepted)
-    by_word = _word_size_places(accepted, geo)
+    by_word = _word_size_places(accepted, geo, arr.shape[0])
     places = {"5": by_word if by_word is not None else _size_places(accepted)}
     if read:
         places["1"] = _reading_places(accepted)
@@ -363,12 +377,14 @@ def page_measurements(arr, accepted, read_letters=None):
     out = {"lines": len(accepted)}
     # The slope drawn is the one Writing on the line is scored from: each
     # line's outline from the reader (its top edge gives the angle,
-    # scoring.py), drawn along the outline's bottom edge. A fitted
-    # baseline can catch a neighbouring line where outlines overlap.
+    # scoring.py), against the page as the score measures it (#306),
+    # drawn along the outline's bottom edge. A fitted baseline can catch
+    # a neighbouring line where outlines overlap.
+    camera = _camera_deg(accepted)
     angled = [
         (item, a)
         for item in accepted
-        if (a := _line_angle(item)) is not None
+        if (a := _line_angle(item, camera)) is not None
         and len(item.get("poly") or []) >= 4
     ]
     if angled:

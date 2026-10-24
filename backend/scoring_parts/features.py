@@ -129,6 +129,19 @@ def _letter_spacing(words):
     return float(np.median(devs)), odd / len(devs), off
 
 
+# Line angles (factors 7, 11, 12): a page tilted up to this many degrees
+# is taken as photographed straight, and only the tilt beyond it as the
+# camera's. On a page of four lines one line sinking moves their median,
+# so taking all of it out hid a planted sinking line on 3 of 20 pages;
+# within a degree nothing is taken out and those pages score as before.
+TILT_FREE = 1.0
+
+
+def _camera_tilt(tilt_deg):
+    """The part of the page's tilt that is the camera's, in degrees."""
+    return math.copysign(max(0.0, abs(tilt_deg) - TILT_FREE), tilt_deg)
+
+
 def _extract_features(arr: np.ndarray, lines, layout):
     h, w = arr.shape[:2]
     boxes = [l.get("box") or [0, 0, 0, 0] for l in lines]
@@ -168,6 +181,11 @@ def _extract_features(arr: np.ndarray, lines, layout):
         ys = sorted(y_centers)
         line_spacing = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
 
+    # Line angles are measured against the page, not the photo's edges:
+    # a phone turned 3 degrees cost level writing a median 11.5 points of
+    # 100 (#304). camera_deg is the page's tilt (its lines' median angle,
+    # as Margin Discipline uses) beyond TILT_FREE.
+    camera_deg = _camera_tilt(tilt_deg)
     slopes = []
     signed_slopes = []
     for l in lines:
@@ -177,7 +195,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
             x1, y1 = float(poly[1][0]), float(poly[1][1])
             dx = max(1e-6, x1 - x0)
             ang = math.degrees(math.atan2(y1 - y0, dx))
-            slopes.append(abs(ang))
+            slopes.append(abs(ang - camera_deg))
             signed_slopes.append(ang)
         # Lines without a usable poly are skipped entirely (not given a
         # fake 0.0) so they don't silently pull line_slope_abs toward
@@ -244,16 +262,16 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # its line's own baseline (letter_geometry.py). Line box heights grow
     # with a line's slope, so they counted tilt as size (#135); they remain
     # the fallback when fewer than three words can be measured.
+    # Each word is compared with the size expected where it sits
+    # (letter_geometry.size_words): scraps, impossible readings and
+    # numbers left out, the page's top-to-bottom trend taken out.
     geo = letter_geometry.measure_page(arr, lines)
-    word_xh = [
-        wd["xheight"] for g in geo if g for wd in g["words"] if wd["xheight"]
-    ]
+    sized = letter_geometry.size_words(lines, geo, h)
+    word_xh = [wd["xheight"] / expected for _, wd, expected in sized]
     size_by_words = len(word_xh) >= 3
-    xh_med = float(np.median(word_xh)) if word_xh else 0.0
     words_off_size = (
-        sum(1 for v in word_xh if abs(v / xh_med - 1.0) >= SIZE_OFF)
-        / len(word_xh)
-        if size_by_words and xh_med > 0
+        sum(1 for v in word_xh if abs(v - 1.0) >= SIZE_OFF) / len(word_xh)
+        if size_by_words
         else None
     )
 
@@ -313,9 +331,14 @@ def _ink_features(arr, lines):
     row's fitted baseline and sizes from its letters."""
     ink = ink_geometry.page_features(arr, lines)
     spread, odd = _word_spacing(ink["gaps"])
+    # Against the page's tilt, as for the reader's lines.
+    tilt = _camera_tilt(
+        float(np.median(ink["signed"])) if ink["signed"] else 0.0
+    )
+    angles = [abs(a - tilt) for a in ink["signed"]] or ink["angles"]
     out = {
-        "line_slope_abs": mean(ink["angles"]),
-        "line_slope_std": _std(ink["angles"]),
+        "line_slope_abs": mean(angles),
+        "line_slope_std": _std(angles),
         "line_slope_signed_med": (
             float(np.median(ink["signed"])) if ink["signed"] else 0.0
         ),
