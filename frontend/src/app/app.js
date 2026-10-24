@@ -250,7 +250,8 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   handwriting_not_read, not_writing_page, turned_page, server_down, too_large, invalid_file, key_problem,
+   handwriting_not_read, not_writing_page, turned_page, server_down,
+   server_restarting, server_back, check_failed_twice, too_large, invalid_file, key_problem,
    account_unavailable, too_big, heic, unreadable, pdf_unreadable,
    photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
