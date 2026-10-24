@@ -128,6 +128,7 @@ const PASSAGES = [
 /* ---------- screens / steps ---------- */
 const STEP_OF = { upload:0, imu:0, process:1, report:2 };
 function go(name){
+  if (window.VahiniGuide) VahiniGuide.close();   // Pihu's guide ends with its screen
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#screen-'+name).classList.add('on');
   const idx = STEP_OF[name] != null ? STEP_OF[name] : 0;
@@ -448,6 +449,7 @@ function reportOutcome(outcome){
    can say why reports are read but not printed. Never for a sample run;
    without the popup's script this does nothing. */
 function askAboutReport(){
+  if (window.VahiniGuide) VahiniGuide.report();   // Print and the other view, once per browser
   if (window.VAHINI_SAMPLE_RUN) return;
   try{ if (window.VahiniReportFeedback && typeof VahiniReportFeedback.arm === 'function') VahiniReportFeedback.arm(); }catch(_e){}
 }

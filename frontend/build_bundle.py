@@ -53,6 +53,7 @@ SOURCES = [
     "src/report/report-render.js",
     "src/report/report-share.js",
     "src/app/scan-sweep.js",
+    "src/app/guide.js",
     "src/app/app.js",
     "src/app/share.js",
 ]

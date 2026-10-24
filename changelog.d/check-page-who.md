@@ -11,3 +11,11 @@
   line marked without the sweep.
 - "What's new" shows the latest ten changes in turn on one line, one every
   five seconds, with "1 of 10" beside it.
+- Pihu shows the buttons that matter. On a first visit Pihu flies to four
+  stops in turn: "I am", the photo button, "Try a sample" and "Analyse";
+  after the first report, two more: Print and the other view's link. The
+  rest of the page dims and a short note says what the button does, with
+  Next and Skip. Once per browser; "Show me around" brings it back. Pihu
+  is the drawings library's own cut layers when the site maps them, so the
+  wings beat in flight; with motion turned off Pihu appears without
+  flying. "How was the report?" waits until the guide closes.

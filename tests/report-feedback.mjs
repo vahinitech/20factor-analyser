@@ -7,7 +7,8 @@
 // - one tap sends one fixed code through window.VahiniInsights.reportFeedback
 //   and nothing else; the card thanks and closes; the close button sends nothing;
 // - once a day in this browser; never for "Try a sample"; never after a print
-//   or a share; it waits while the print popup or the feedback form is open;
+//   or a share; it waits while the print popup, the feedback form or Pihu's
+//   guide is open;
 // - without the site script an answer does nothing and breaks nothing;
 // - never printed; Pihu comes only from the host and is cut to the drawing.
 // SHOT=<dir> also writes desktop and phone screenshots of the card without
@@ -37,7 +38,7 @@ const server = spawn('./node_modules/.bin/http-server', ['.', '-p', String(PORT)
 const ART = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="360" height="360"><rect x="100" y="200" width="120" height="60" fill="teal"/></svg>');
 
 let browser;
-async function openPage({ insights = true, art = ART, viewport = { width: 1280, height: 900 } } = {}) {
+async function openPage({ insights = true, art = ART, viewport = { width: 1280, height: 900 }, guide = false } = {}) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
   const errors = [];
@@ -49,14 +50,16 @@ async function openPage({ insights = true, art = ART, viewport = { width: 1280, 
   await page.route('**/api/v2/reports?**', (r) => r.fulfill({ json: REPORT }));
   await page.route('**/persist/**', (r) => r.fulfill({ json: { ok: true } }));
   await page.route('**/missing-art/**', (r) => r.fulfill({ status: 404, body: '' }));
-  await page.addInitScript(({ insights, art }) => {
+  await page.addInitScript(({ insights, art, guide }) => {
+    // Pihu's guide (src/app/guide.js) seen already, unless a check wants it.
+    if (!guide) try { localStorage.setItem('vahini_guide_check', '1'); localStorage.setItem('vahini_guide_report', '1'); } catch {}
     window.answers = [];
     if (art) window.VAHINI_REPORT_ART = { tip: art };
     if (insights) window.VahiniInsights = { check: () => {}, reportFeedback: (...args) => window.answers.push(args) };
     window.print = () => {};
     window.__vis = 'visible';
     Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => window.__vis });
-  }, { insights, art });
+  }, { insights, art, guide });
   await page.clock.install();
   await page.goto(BASE + '/frontend/analyser.html', { waitUntil: 'load' });
   return { context, page, errors };
@@ -150,6 +153,20 @@ try {
   await page.evaluate(() => document.getElementById('vfb-ov').classList.remove('on'));
   await page.clock.runFor(600);
   assert.equal(await shown(page), true, 'shown once the form closes');
+  await context.close();
+
+  // And while Pihu's guide shows the report's buttons, after the first
+  // report in this browser.
+  ({ context, page, errors } = await openPage({ guide: true }));
+  await page.evaluate(() => { try { localStorage.setItem('vahini_guide_check', '1'); } catch {} });
+  await check(page);
+  await page.clock.runFor(2000);
+  assert.equal(await page.locator('#pihu-guide.on').count(), 1, "Pihu's guide is on the report");
+  await page.clock.runFor(15000);
+  assert.equal(await shown(page), false, "not on top of Pihu's guide");
+  await page.keyboard.press('Escape');
+  await page.clock.runFor(600);
+  assert.equal(await shown(page), true, 'shown once the guide closes');
   await context.close();
 
   // Never for "Try a sample".

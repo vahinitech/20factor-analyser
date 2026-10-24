@@ -270,7 +270,7 @@
           <button type="button" class="btn btn-primary dz-phone" id="take-photo">Take a photo</button>
           <button type="button" class="btn btn-ghost" id="choose-photo">Choose a photo</button>
         </div>
-        <p class="dz-hint">JPG, PNG, WebP, iPhone HEIC or PDF, up to 10&nbsp;MB. No page handy? <a href="#" id="try-sample">Try a sample</a></p>
+        <p class="dz-hint">JPG, PNG, WebP, iPhone HEIC or PDF, up to 10&nbsp;MB. No page handy? <a href="#" id="try-sample">Try a sample</a> · <a href="#" id="guide-again">Show me around</a></p>
       </div>
       <p class="dz-status" id="dz-status" role="status" aria-live="polite"></p>
       <div class="dz-notice" id="dz-notice" role="alert" hidden></div>
@@ -611,7 +611,7 @@
   <div class="report-layout">
     <div class="report-host" id="report-host"></div>
     <!-- Under the report: the other view of the same check, never printed. -->
-    <p class="view-switch" id="view-switch-row" data-html2canvas-ignore="true"><button type="button" class="view-switch__btn" id="view-switch" data-i18n="side.view.student">Student view</button></p>
+    <p class="view-switch" id="view-switch-row" data-html2canvas-ignore="true"><button type="button" class="view-switch__btn" id="view-switch" data-i18n="side.view.student">Student view</button> · <button type="button" class="view-switch__btn" id="guide-again-report">Show me around</button></p>
     <!-- Beside the report on a wide screen, under it on a narrow one; never
          printed and never in the shared PDF. -->
     <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
@@ -1116,8 +1116,9 @@
     if (document.visibilityState === "hidden" || !isOn("screen-report", "on")) return;
     seen += TICK_MS;
     if (seen < WAIT_MS) return;
-    // The print popup or the feedback form is open: wait until it closes.
-    if (isOn("vgate", "on") || isOn("vfb-ov", "on")) return;
+    // The print popup, the feedback form or Pihu's guide is open: wait until
+    // it closes.
+    if (isOn("vgate", "on") || isOn("vfb-ov", "on") || isOn("pihu-guide", "on")) return;
     show();
   }
 
