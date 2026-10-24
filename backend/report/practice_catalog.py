@@ -319,17 +319,17 @@ SPELLING = {
         {
             "id": "double",
             "name": "Double letters",
-            "rule": "Some words have two of the same letter, like letters"
-            " and small.",
+            "rule": "Some words have two of the same letter, like little"
+            " and dinner.",
             "words": ("letter", "little", "small", "happy", "dinner"),
             "exercise": "spell.double-letters",
         },
         {
             "id": "sound_letters",
             "name": "Same sound, other letters",
-            "rule": "One sound can use other letters, like ck in quick and"
-            " s in draws.",
-            "words": ("quick", "back", "draws", "phone", "city"),
+            "rule": "One sound can use other letters, like ck in back and"
+            " ph in phone.",
+            "words": ("quick", "back", "kite", "phone", "city"),
             "exercise": "spell.sound-letters",
         },
         {
@@ -1971,13 +1971,13 @@ TELUGU_PATTERNS = {
     },
     "double": {
         "name": "రెండు ఒకే అక్షరాలు",
-        "rule": "కొన్ని పదాల్లో ఒకే అక్షరం రెండుసార్లు వస్తుంది, letters,"
-        " small లాగా.",
+        "rule": "కొన్ని పదాల్లో ఒకే అక్షరం రెండుసార్లు వస్తుంది, little,"
+        " dinner లాగా.",
     },
     "sound_letters": {
         "name": "ఒకే శబ్దం, వేరే అక్షరాలు",
-        "rule": "ఒక శబ్దానికి వేరే అక్షరాలు ఉండవచ్చు, quick లో ck, draws"
-        " లో s లాగా.",
+        "rule": "ఒక శబ్దానికి వేరే అక్షరాలు ఉండవచ్చు, back లో ck, phone"
+        " లో ph లాగా.",
     },
     "endings": {
         "name": "పదం చివర్లు",

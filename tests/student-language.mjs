@@ -26,6 +26,13 @@ for (const id of Object.keys(en).filter((k) => /^stu\.(sp|gr|lang)\./.test(k))) 
   // The two headings say "mistakes" (owner, 2026-10-24); nothing else may.
   if (!/\.pill$/.test(id)) assert.ok(!/\b(mistake|wrong|bad|poor)\b/i.test(en[id]), `${id}: words for children`);
 }
+// The page may be class notes, a copied sentence or anything else, and
+// whoever took the photo may not be its writer (owner, 2026-10-24): the
+// words never say how the page was written or whose it is.
+for (const id of Object.keys(en).filter((k) => /^(stu\.(sp|gr|lang)|spell|spelling)\./.test(k))) {
+  const s = typeof en[id] === 'string' ? en[id] : Object.values(en[id]).join(' ');
+  assert.ok(!/\b(cop(y|ied)|dictat\w*|you wrote|your (word|sentence|page)|homework|notes)\b/i.test(s), `${id}: no guess at how the page was written: ${s}`);
+}
 
 // Places on the sample photo's hardest row (its measured letters).
 const place = (bbox, placed = 'letters') => [{ line: 'line_5', bbox, placed }];

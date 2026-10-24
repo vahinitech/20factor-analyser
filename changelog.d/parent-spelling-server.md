@@ -8,6 +8,11 @@
   each misspelling's pattern (i and e together, silent letters, double
   letters, the same sound with other letters, word endings, sounds in
   order, vowel sounds), and the practice catalogue gives each a rule,
-  practice words and its own exercise (catalogue `6d667ae51c5f831dc8ec`).
+  practice words and its own exercise (catalogue `7a2b36006accff21317b`).
   The student card and page 2 practise the largest pattern with the
   child's words and more, instead of copying one word.
+- The spelling words no longer guess how a page was written or whose it
+  is: a page may be class notes, a copied sentence or anything else.
+  "In the sentence you copied" is now "Checked against the sentence given
+  with the page", and the ink's label is "The word as written on the
+  page". The pattern rules use general examples, not the test page's words.
