@@ -62,6 +62,7 @@ the object every screen keeps its icon. The codes:
 | `no_handwriting` | the page is blank or fully printed |
 | `handwriting_not_read` | a page asked for as Telugu was not read (mostly Latin letters, or an unsure reading) |
 | `not_writing_page` | the page read is mostly numbers and sums (a maths or science page) |
+| `turned_page` | the lines run up and down and the server could not tell which way up the page is |
 | `server_down` | the server did not answer, and its health check did not come back within 90 seconds |
 | `server_restarting` | a check got no answer (a dropped connection, a 502); the page waits for the health check |
 | `server_back` | the health check answered again; the page offers the same photo once more, on a tap |

@@ -439,6 +439,39 @@ def read_line_letters(crop, lang):
     return rec_text, seen[0]
 
 
+# How large line recovery's crops are when the detector looks at them.
+# The engine's page setting (VAHINI_OCR_DET_LIMIT_SIDE_LEN, 2048) raises the
+# SHORT side to 2048, which suits a page but blows a one-line crop up until
+# Paddle's own 4000-pixel cap stops it: a 1300x150 crop became 4000x460, a
+# short one 4000x1500. On a phone photo with 24 crops that was 42 of the
+# scan's 47 seconds, and each crop took the container from 1.1 GB to as
+# much as 2.1 GB, so one photo on 23 October 2026 ran stage out of its
+# 2500 MiB limit, twice. The enlargement itself helps: small handwriting
+# needs it to be found (capping the long side at 1600 lost words on four
+# UJI pages, 2 MP on six). So a crop keeps the page setting's scale but at
+# most REGION_DET_PIXELS pixels in all, and is never shrunk. At 3 MP the
+# UJI pages read as before (9.41% of letters wrong against 9.54%) and the
+# 23 October photo peaked at 1.5 GB instead of 2.2 GB.
+PAGE_DET_SIDE = 2048  # the engine's text_det_limit_side_len ("min")
+PADDLE_MAX_SIDE = 4000  # Paddle's own max_side_limit
+REGION_DET_PIXELS = 3_000_000
+
+
+def _region_det_options(crop):
+    """The detector size for one recovery crop: the page setting's scale,
+    within Paddle's cap and REGION_DET_PIXELS, never below the crop."""
+    h, w = crop.shape[:2]
+    ratio = min(
+        PAGE_DET_SIDE / max(1, min(h, w)),
+        PADDLE_MAX_SIDE / max(1, max(h, w)),
+        (REGION_DET_PIXELS / max(1, h * w)) ** 0.5,
+    )
+    return {
+        "text_det_limit_type": "resize_long",
+        "text_det_limit_side_len": int(max(h, w) * max(1.0, ratio)),
+    }
+
+
 def read_region(crop, lang):
     """One crop of the page read again by the scan's own engine: its lines
     (run()'s shape, in crop pixels), or None. Used for writing the
@@ -452,7 +485,7 @@ def read_region(crop, lang):
     except Exception:  # pylint: disable=broad-except
         return None
     try:
-        found = run(engine, crop, lang or "en")
+        found = run(engine, crop, lang or "en", _region_det_options(crop))
     except Exception:  # pylint: disable=broad-except
         found = []
     if any(
@@ -478,18 +511,20 @@ def read_region(crop, lang):
     return [line]
 
 
-def run(engine, arr: np.ndarray, lang: str):
-    """Return list[line] across PaddleOCR API variants."""
+def run(engine, arr: np.ndarray, lang: str, options=None):
+    """Return list[line] across PaddleOCR API variants. options: per-call
+    predict() settings (read_region's detector size); none for a page."""
     # Prefer the classic ocr() entrypoint on CPU builds to avoid PIR/oneDNN
     # runtime incompatibilities seen on some Paddle 3.x combinations.
     # Concurrent requests can share this exact engine object (see
     # _lock_for_engine); only the model call itself needs to be serialized.
+    options = options or {}
     with _lock_for_engine(engine):
         try:
-            results = engine.ocr(arr)
+            results = engine.ocr(arr, **options)
         except Exception:
             # Fallback to predict() for builds that only expose it.
-            results = engine.predict(arr)
+            results = engine.predict(arr, **options)
 
     lines = []
     for res in results or []:

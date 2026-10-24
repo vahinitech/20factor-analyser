@@ -91,6 +91,7 @@ jobs:
             backend/server/scan_slots.py backend/server/capacity.py \
             backend/reading/detector.py backend/reading/line_recovery.py \
             backend/vision/ink_geometry.py scripts/ink_geometry_eval.py \
+            backend/vision/page_turn.py \
             backend/reading/recognizer.py backend/reading/escalation.py \
             backend/tests/test_escalation.py \
             backend/config.py backend/server/cache.py \
@@ -460,6 +461,8 @@ jobs:
         run: npm run test:notice-art
       - name: A maths or science page asks for four lines of English, never a score
         run: npm run test:not-writing-page
+      - name: A photo read turned is drawn turned; one that cannot be set upright is refused
+        run: npm run test:turned-page
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
       - name: Practice report and saved progress (#122)
