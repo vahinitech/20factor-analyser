@@ -4,5 +4,5 @@
   panel lists checks by date. Skills are listed strongest first. The scores
   are still computed and kept for progress and the practice plan.
   Vidhya's note opens with a line in words and a two-column table, "You
-  are a master at" beside "To improve next", with praise only from the five
-  skills the overall counts.
+  are a master at" beside "To improve next", with praise only from five skills
+  at Mastering or Strong (1, 5, 7, 11, 17).

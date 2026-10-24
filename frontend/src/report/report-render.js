@@ -496,9 +496,10 @@ function render(host, data){
   const goalOf=f=>t.has('goal.'+f.n)?t('goal.'+f.n):nameOn(1,f)+'.';
   /* Vidhya's note in words, no scores (owner, 2026-10-23): what the writer
      is a master at beside what to improve next, as a two-column table.
-     Praise comes only from the five skills the overall counts
-     (scoring._OVERALL_POINTS) at Mastering or Strong, so a measurement
-     known to misread a page never praises it. */
+     Praise comes only from five skills at Mastering or Strong (1, 5, 7,
+     11, 17: the set #305 proposes for the overall, its
+     scoring._OVERALL_POINTS), so a measurement known to misread a page
+     never praises it. */
   const COUNTED=[1,5,7,11,17];
   const mastered=measured.filter(f=>COUNTED.includes(f.n)&&f.score>=7&&!rowFactors.includes(f))
     .sort((a,b)=>b.score-a.score||a.n-b.n).slice(0,3);
