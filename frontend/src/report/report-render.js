@@ -380,6 +380,37 @@ function qrSVG(text){
 /* The last render, so "Print in" can redraw the same report in another
    language: same scores, crops, photo, history and pictures. */
 let lastRender = null;
+/* Who the report is for (owner, 2026-10-23; issue #291): "parent" (today's
+   report, the default) or "student" (the student view above it). Chosen by
+   ?for=student on the check page's address or the "Report for" switch
+   beside the report, and kept in this tab only: never sent, never stored
+   with a photo. */
+const AUDIENCE_KEY = 'vahini_report_for';
+let view = null;
+function audience(){
+  if (view) return view;
+  let v = null;
+  try{ v = new URLSearchParams(location.search).get('for'); }catch(_e){ /* no address */ }
+  if (v !== 'student' && v !== 'parent'){ try{ v = sessionStorage.getItem(AUDIENCE_KEY); }catch(_e){ /* blocked */ } }
+  view = v === 'student' ? 'student' : 'parent';
+  return view;
+}
+function setAudience(v){
+  view = v === 'student' ? 'student' : 'parent';
+  try{ sessionStorage.setItem(AUDIENCE_KEY, view); }catch(_e){ /* this page only */ }
+  return view;
+}
+/* "Details for your teacher" opens and folds the two pages on screen. */
+function wireStudent(host){
+  const btn = host.querySelector('.stu-more');
+  if (!btn) return;
+  btn.addEventListener('click', ()=>{
+    const open = host.classList.toggle('stu-folded') === false;
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = btn.getAttribute(open ? 'data-open' : 'data-closed');
+  });
+}
+
 function rerender(){
   if (!lastRender || !lastRender.host.isConnected) return null;
   return render(lastRender.host, lastRender.data);
@@ -728,7 +759,87 @@ function render(host, data){
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
       ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${hardNote}${closing}`:empty}
       ${foot(2)}</section>`;
-  host.innerHTML=page1+page2;
+  /* ---- the student view (owner, 2026-10-23, option A) ------------------
+     One screen above the two pages, for a student reading alone: one
+     strength, one thing to practise and the five free skills, with no score
+     and no skill names. Every sentence sits beside its proof, drawn from
+     what the server measured on this page: the "keep" and "look" places of
+     each skill (vision/marked_places.py) and the page measurements. A skill
+     with no proof says so instead of making a claim. The pages stay as they
+     are, folded behind "Details for your teacher" on screen; print and the
+     shared PDF are unchanged. ---------------------------------------- */
+  const student=(data.audience||audience())==='student';
+  const studentCard=()=>{
+    const FIVE=[1,5,7,8,18];
+    const live5=measured.filter(f=>FIVE.includes(f.n));
+    const placesOf=(n,role)=>((crops[n]||{}).places||[]).filter(p=>p.role===role&&Array.isArray(p.bbox)&&p.bbox.length===4);
+    const S=ms.size&&ms.size.line, L=ms.slope&&ms.slope.line, R=ms.reading&&ms.reading.line;
+    const under=(b,cls,dash)=>vw=>line([b[0],b[1]+b[3]],[b[0]+b[2],b[1]+b[3]],cls,vw*0.008,dash);
+    const boxes=(list,cls)=>vw=>list.map(q=>{const [x,y,w,h]=q.bbox;
+      return `<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${(vw*0.004).toFixed(1)}" stroke-width="${(vw*0.008).toFixed(2)}"/>`;}).join('');
+    const gapRegion=g=>[g[0]-0.16*size[0],g[1]-g[3]*0.15,g[0]+g[2]+0.16*size[0],g[1]+g[3]*1.15];
+    const band=vw=>line(S.midline[0],S.midline[1],'sn-m-band',vw*0.007)+line(S.baseline[0],S.baseline[1],'sn-m-band',vw*0.007);
+    const rings=(list,vw)=>list.map(l=>{const b=l.bbox;
+      return `<ellipse class="sn-m-read sn-m-ring" cx="${b[0]+b[2]/2}" cy="${b[1]+b[3]/2}" rx="${(Math.max(b[2],b[3]*0.32)*0.85).toFixed(1)}" ry="${(b[3]*0.55).toFixed(1)}" stroke-width="${(vw*0.007).toFixed(2)}"/>`;}).join('');
+    const ok=(html,say,extra)=>html?{strip:html,say,...(extra||{})}:null;
+    // What this page shows well, skill by skill: the server's "keep" place.
+    const keepProof={
+      1:()=>{const q=placesOf(1,'keep')[0]; return q&&ok(strip(pad(q.bbox,0.03,0.3),under(q.bbox,'sn-m-band')),'stu.keep.1');},
+      5:()=>S&&placesOf(5,'keep').length?ok(strip(pad(S.bbox,0.02,0.3),band),'stu.keep.5'):null,
+      7:()=>{const q=placesOf(7,'keep')[0]; return q&&ok(strip(pad(q.bbox,0.04,0.35),under(q.bbox,'sn-m-band')),'stu.keep.7');},
+      8:()=>{const q=placesOf(8,'keep')[0]; return q&&size&&ok(strip(gapRegion(q.bbox),boxes([q],'sn-m-band')),'stu.keep.8');},
+    };
+    // What to look at: the server's "look" places and the page measurements.
+    const lookProof={
+      1:()=>{const hard=R&&Array.isArray(R.letters)?R.letters.filter(l=>Array.isArray(l.bbox)&&l.bbox.length===4).slice(0,2):[];
+        return hard.length?ok(strip(pad(R.bbox,0.03,0.3),vw=>rings(hard,vw)),'stu.see.1',{todo:'stu.do.1'}):null;},
+      5:()=>S?ok(strip(pad(S.bbox,0.02,0.3),band),'stu.do.5'):null,
+      7:()=>{if(!L||!Array.isArray(L.baseline)) return null; const [a,b]=L.baseline;
+        return ok(strip(pad(L.bbox,0.04,0.35),vw=>line(a,[b[0],a[1]],'sn-m-level',vw*0.006,'8 6')+line(a,b,'sn-m-slope',vw*0.01)),b[1]<a[1]?'stu.see.7.up':'stu.see.7.down',{todo:'stu.do.7'});},
+      8:()=>{const gaps=placesOf(8,'look').filter(q=>q.kind==='gap'); if(!gaps.length||!size) return null;
+        const reg=gapRegion(gaps[0].bbox), inside=gaps.filter(q=>q.bbox[1]<reg[3]&&q.bbox[1]+q.bbox[3]>reg[1]);
+        const say=inside.length>1?'stu.see.8.both':'stu.see.8.'+(inside[0].direction==='narrower'?'narrower':'wider');
+        return ok(strip(reg,boxes(inside,'sn-m-gap')),say,{todo:'stu.do.8'});},
+      18:()=>R?ok(strip(pad(R.bbox,0.03,0.3),under(R.bbox,'sn-m-read','7 5')),'stu.see.18'):null,
+    };
+    const proofOf=(f,role)=>{const fn=(role==='keep'?keepProof:lookProof)[f.n]; try{ return fn?fn():null; }catch(_e){ return null; }};
+    // One skill to practise: the lowest of the five below Strong, as on page 1.
+    const now=live5.filter(f=>f.n!==18&&f.score<8.5).sort((a,b)=>a.score-b.score||a.n-b.n)[0]||null;
+    const state=f=>f===now?'now':f.n===18?'grow':f.score>=7?'keep':'later';
+    const strong=live5.filter(f=>state(f)==='keep').sort((a,b)=>b.score-a.score||a.n-b.n);
+    const shown=strong.map(f=>[f,proofOf(f,'keep')]).find(([,pr])=>pr);
+    const ICON={keep:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>', now:PENCIL,
+      later:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/></svg>',
+      grow:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17l5-5 4 4 5-7"/><path d="M15 9h4v4"/></svg>'};
+    const mark=(st,label)=>`<span class="stu-mk stu-mk-${st}">${ICON[st]}${label?`<span>${esc(t('stu.tag.'+st))}</span>`:''}</span>`;
+    const proofBox=pr=>pr?`<div class="stu-proof">${pr.strip}</div>`:'';
+    const greet=writer?t('stu.greet.name',{name:writer}):t('stu.greet');
+    const greetCard=`<div class="stu-card stu-greet"><div class="stu-who">${artImg('teacher','stu-art')}<p class="stu-say">${esc(greet)}</p></div>
+      ${shown?`<p>${esc(t(shown[1].say))}</p>${proofBox(shown[1])}`:`<p>${esc(t(now?'stu.nostrength':'stu.allgood'))}</p>`}</div>`;
+    let workCard='';
+    if(now){
+      const pr=proofOf(now,'look'), d=dose(bandOf(now.score)), sheet=worksheetFor(now);
+      const plan=!d?'':d.per==='week'?t('stu.plan.week',{tries:d.tries}):d.days===7?t('stu.plan',{tries:d.tries}):t('stu.plan.days',{tries:d.tries,days:d.days});
+      const todo=pr?(pr.todo||''):'stu.do.'+now.n;
+      workCard=`<div class="stu-card stu-work" data-factor="${now.n}"><span class="stu-pill">${PENCIL}<span>${esc(t('stu.practise'))}</span></span>
+        ${proofBox(pr)}<p>${esc(t(pr?pr.say:'stu.noproof'))}${todo&&t.has(todo)?` ${esc(t(todo))}`:''}</p>
+        ${t.has('stu.why.'+now.n)?`<p class="stu-why">${esc(t('stu.why.'+now.n))}</p>`:''}
+        ${plan?`<div class="stu-plan">${artImg('practise','stu-plan-art')}<span>${esc(plan)}</span></div>`:''}
+        ${sheet?`<a class="stu-btn" href="${esc(sheetURL(sheet))}" target="_blank" rel="noopener">${esc(t('stu.sheet'))}</a>`:''}
+        <p class="stu-again">${esc(t('stu.again'))}</p></div>`;
+    }
+    const order={keep:0,now:1,later:2,grow:3};
+    const rowsOf=live5.slice().sort((a,b)=>order[state(a)]-order[state(b)]||(state(a)==='keep'?b.score-a.score:a.score-b.score)||a.n-b.n);
+    const fiveRows=rowsOf.map(f=>{const st=state(f), pr=proofOf(f,st==='keep'?'keep':'look');
+      return `<li class="stu-row stu-row-${st}" data-factor="${f.n}" data-state="${st}">${mark(st,false)}<div class="stu-row-body"><p>${esc(t(pr?pr.say:'stu.noproof'))} ${mark(st,true)}</p>${proofBox(pr)}</div></li>`;}).join('');
+    const fiveCard=`<div class="stu-card stu-five"><h2>${esc(t.n('stu.five',live5.length))}</h2><ul>${fiveRows}</ul></div>`;
+    const more=`<button type="button" class="stu-more" aria-expanded="false" data-open="${esc(t('stu.teacher.hide'))}" data-closed="${esc(t('stu.teacher'))}">${esc(t('stu.teacher'))}</button>`;
+    return `<section class="stu" aria-label="${esc(t('stu.label'))}" data-html2canvas-ignore="true"><div class="stu-grid">${greetCard}${workCard}</div>${fiveCard}${more}</section>`;
+  };
+  host.classList.toggle('stu-view',student);
+  host.classList.toggle('stu-folded',student);
+  host.innerHTML=(student?studentCard():'')+page1+page2;
+  if(student) wireStudent(host);
   // A PDF made for sharing showed the report as it was: make it again.
   if(window.VahiniReportShare) VahiniReportShare.invalidate();
   wirePrintFit(host);
@@ -787,6 +898,7 @@ function trimSkillColumns(host){
   });
 }
 function fitPrintPages(host){
+  host.classList.add('stu-printing');
   fillReportArt(host);
   trimSkillColumns(host);
   const pxPerMM = 96/25.4;
@@ -824,6 +936,7 @@ function fitPrintPages(host){
   });
 }
 function unfitPrintPages(host){
+  host.classList.remove('stu-printing');
   host.querySelectorAll('section.page').forEach(p=>{
     p.style.zoom=''; p.style.width=''; p.style.minHeight='';
   });
@@ -839,5 +952,5 @@ function wirePrintFit(host){
 }
 
 if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
-global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','ovals','push-pulls','page']) };
+global.VahiniReport = { render, rerender, audience, setAudience, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','ovals','push-pulls','page']) };
 })(window);

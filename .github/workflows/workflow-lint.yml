@@ -1,0 +1,31 @@
+# Every workflow file parses and passes actionlint. It is a workflow of its
+# own on purpose: when ci.yml does not parse, GitHub refuses the whole file
+# and no step inside it runs, so a check in ci.yml cannot catch ci.yml.
+# #295 broke ci.yml that way and the main suite did not run on five merges
+# (2026-10-23 to 24) before anyone noticed. Shellcheck and pyflakes are off:
+# this job is about the files GitHub has to load, not the scripts in them.
+name: Workflow lint
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/**'
+  pull_request:
+    paths:
+      - '.github/**'
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: actionlint (rhysd/actionlint 1.7.7, pinned by digest)
+        run: >-
+          docker run --rm -v "$PWD":/repo -w /repo
+          rhysd/actionlint@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
+          -color -shellcheck= -pyflakes=
