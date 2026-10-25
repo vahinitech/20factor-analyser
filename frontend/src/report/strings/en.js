@@ -365,7 +365,7 @@ S.en = {
   'stu.greet': 'Well done!',
   'stu.greet.name': 'Well done, {name}!',
   'stu.nostrength': 'Here is one thing to practise.',
-  'stu.keep.1': 'Your letters are easy to tell apart.',
+  'stu.keep.1': 'Other people can read your letters easily.',
   'stu.keep.5': 'Letters like a, e and n are the same height.',
   'stu.keep.7': 'Your words sit on the line.',
   'stu.keep.8': 'Your words have even spaces.',
