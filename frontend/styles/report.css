@@ -1238,6 +1238,19 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .practice-pro .pr-about .pr-win{ font-size:10.5px; }
 .practice-row.trim-more .pr-more, .practice-row.trim-why .pr-why, .practice-row.trim-win .pr-win{ display:none; }
 .practice-row.trim-also .pr-saw-also, .practice-row.trim-words .pr-saw-words, .practice-row.trim-rule .pr-saw-why{ display:none; }
+/* Grammar on page 2 (owner, 2026-10-25): one plain rule each, dropped
+   first when the row would be taller than its exercise. */
+.grammar-row .pr-gr-rules{ margin:6px 0 0; padding:0; list-style:none; font-size:12.5px; line-height:1.45; color:var(--v-text-2); }
+.practice-row.trim-rules .pr-gr-rules, .practice-row.trim-gram2 .pr-gr-one + .pr-gr-one{ display:none; }
+.spelling-row.with-grammar .pr-saw-why b{ color:var(--v-text); }
+/* Page 1's "Spelling and grammar" line, between the photo and the
+   measurements, in place of a sentence in the small print. */
+.sn-subrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 5px; }
+.free-report.compact-report .sn-subrow .sn-m-sub{ margin:0; flex:1 1 auto; min-width:0; }
+.sn-subrow .sn-lang{ flex:0 1 60%; }
+.sn-lang{ display:block; margin:0; padding:3px 10px; border-radius:8px; background:var(--v-accent-soft); color:var(--v-accent-text); font:12px/1.35 var(--sans); }
+.sn-lang b{ margin-right:6px; }
+.sn-lang b{ font-weight:700; }
 /* When writing feels hard: a calm note before the closing line. */
 .free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
 .free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }

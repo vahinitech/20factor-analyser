@@ -236,13 +236,28 @@
     add(factors('.practice-row')==='1,2,3,spelling', 'Spelling adds its own practice row after the skills');
     const srow=classifiedHost.querySelector('.spelling-row');
     add(/receive/.test(srow.textContent) && !/recieve/.test(srow.textContent) && !!srow.querySelector('.pr-saw-ink svg.stu-ink image'), "The spelling row shows the child's own ink and the word to write, never our reading of the word");
-    add(/1 word to check, on page 2/.test(classifiedHost.textContent), 'Page 1 says how many words to check');
+    add(/1 word to check, on page 2/.test(classifiedHost.querySelector('.sn-lang').textContent), 'Page 1 says how many words to check, on its own line');
+    add(!/1 word to check/.test(classifiedHost.querySelector('.pg-foot, footer, .sn-foot')?.textContent||''), 'and not in the small print');
+    // Grammar on the parent report too (owner, 2026-10-25).
+    const sentence=(rule,written,suggestion)=>({rule,written,suggestion,places:[{line:'line_1',bbox:[40,60,180,30],placed:'letters'}]});
+    spellingAnalysis.language={version:1,checked:true,reason:null,spelling:[word('recieve','receive')],grammar:[sentence('verb_s','she sing','she sings'),sentence('capital_name','tara','Tara')]};
+    renderReport(spellingAnalysis,'classification-host');
+    add(factors('.practice-row')==='1,2,3,spelling', 'With spelling and grammar, one row after the skills, so the report stays on two pages');
+    const grow=classifiedHost.querySelector('.spelling-row.with-grammar');
+    add(grow && /Spelling and grammar/.test(grow.querySelector('h3').textContent) && /she sings/.test(grow.textContent) && /Tara/.test(grow.textContent) && grow.querySelectorAll('.pr-gr-one svg.stu-ink image').length===2 && grow.querySelectorAll('.pr-gr-rules li').length===3 && /read each sentence aloud/i.test(grow.textContent), "The row shows each sentence's own ink, the fix, one rule each and reading it aloud");
+    add(/1 word and 2 sentences to check, on page 2/.test(classifiedHost.querySelector('.sn-lang').textContent), 'Page 1 counts the words and the sentences');
+    spellingAnalysis.language={version:1,checked:true,reason:null,spelling:[],grammar:[sentence('capital_i','i','I')]};
+    renderReport(spellingAnalysis,'classification-host');
+    add(factors('.practice-row')==='1,2,3,grammar' && /Read it aloud/.test(classifiedHost.querySelector('.grammar-row').textContent) && /1 sentence to check, on page 2/.test(classifiedHost.querySelector('.sn-lang').textContent), 'Grammar alone gets its own row, with Read it aloud, and its count');
+    spellingAnalysis.language={version:1,checked:true,reason:null,spelling:[],grammar:[sentence('verb_s','<img src=y>','<img src=y>')]};
+    renderReport(spellingAnalysis,'classification-host');
+    add(!classifiedHost.querySelector('[data-factor="grammar"] img, img[src="y"]'), 'Grammar text is escaped');
     spellingAnalysis.language={version:1,checked:false,reason:'not_english'};
     renderReport(spellingAnalysis,'classification-host');
-    add(!factors('.practice-row').includes('spelling') && /Spelling: not checked on this page/.test(classifiedHost.textContent), 'A page the server did not check gets no spelling row and says so');
+    add(!factors('.practice-row').includes('spelling') && !factors('.practice-row').includes('grammar') && /Not checked on this page/.test(classifiedHost.querySelector('.sn-lang').textContent), 'A page the server did not check gets no spelling or grammar row and says so');
     spellingAnalysis.language=checked([]);
     renderReport(spellingAnalysis,'classification-host');
-    add(!factors('.practice-row').includes('spelling') && /no word we could be sure of/.test(classifiedHost.textContent), 'Nothing found: no row, and no claim that the page has no mistakes');
+    add(!factors('.practice-row').includes('spelling') && /No word or sentence we could be sure of/.test(classifiedHost.querySelector('.sn-lang').textContent), 'Nothing found: no row, and no claim that the page has no mistakes');
     spellingAnalysis.language=checked([word('<img src=x>','<img src=x>')]);
     renderReport(spellingAnalysis,'classification-host');
     add(!classifiedHost.querySelector('[data-factor="spelling"] img, img[src="x"]'), 'Spelling text is escaped');
@@ -255,7 +270,7 @@
     add(!/weeks to fast/.test(host.textContent||'') && !host.querySelector('.projection-chart'), 'Projection does not claim validated gains or photo speed');
 
     const txt=host.textContent||'';
-    add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /Spelling: not checked on this page/.test(txt), 'A page without the server\'s check says spelling was not checked, never that it has no mistakes');
+    add(!/no spelling mistakes|no grammar mistakes|Document parsed fully/i.test(txt) && /Spelling and grammar\s*Not checked on this page/.test(txt), 'A page without the server\'s check says spelling and grammar were not checked, never that it has no mistakes');
     add(/We left out 3 printed lines/i.test(txt), 'Printed text exclusion remains visible');
     // Worksheets, each skill's page and the "when writing feels hard" page
     // (owner, 2026-10-11): free reading on vahinitech.com, never a sales page.

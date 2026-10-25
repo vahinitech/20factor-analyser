@@ -546,6 +546,10 @@ function setupPassages(){
     else state.expected = PASSAGES.find(p=>p.id===id).text;
   });
   list.addEventListener('input', e=>{ if(e.target.id==='custom-text') state.expected = e.target.value; });
+  // "Does this page copy a sentence?" (owner, 2026-10-25): optional; empty
+  // means free writing, notes or anything else.
+  const copied = $('#cs-text');
+  if (copied) copied.addEventListener('input', ()=>{ state.expected = copied.value.replace(/\s+/g,' ').trim().slice(0,300); });
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
@@ -868,7 +872,8 @@ async function runPipeline(){
   stepState('ocr','active', 'On Vahini\u2019s server. This usually takes 5 to 20 seconds.');
   let pyReport = null;
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
-    pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
+    // The sample page is not the sentence the visitor typed.
+    pyReport = await VahiniOCR.serverPythonReport(blob, window.VAHINI_SAMPLE_RUN ? '' : (state.expected || ''));
   }
   if (pyReport && pyReport.error_code === 'busy'){
     showReject({
