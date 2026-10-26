@@ -116,6 +116,7 @@ async function runHeadlessChecks() {
         qrWant:firstSheet?'https://vahinitech.com/assets/worksheets/'+firstSheet.id+'.pdf':'',
         cta:[...host.querySelectorAll('.sn-cta a')].map(a=>a.textContent.trim()),
         foot:host.querySelector('.snapshot-page .run-foot').textContent,
+        lang:(host.querySelector('.snapshot-page .sn-lang')||{}).textContent||'',
         practiceFactors:[...document.querySelectorAll('#report-host .coaching-card')].map(c=>c.dataset.factor).filter(f=>/^\d+$/.test(f)),
         // The strongest skill and the first to grow, from the sample's own
         // scores (the four skills page 1 ranks; 18 is a blend), so a
@@ -174,7 +175,7 @@ async function runHeadlessChecks() {
       // A step list of one to three steps (the catalogue's limit): the
       // letter-size exercise the regenerated sample starts with has two.
       {ok:freeReport.steps>=1 && freeReport.steps<=3 && freeReport.trace && freeReport.check && freeReport.qr===freeReport.qrWant && freeReport.qrWant!=='', name:'Page 1: the exercise\'s steps, a line to trace, a tick box and a QR code for the first skill\'s worksheet', detail:JSON.stringify({steps:freeReport.steps,qr:freeReport.qr,want:freeReport.qrWant})},
-      {ok:freeReport.cta.length===2 && /Indian Patents No\. 584433 and 604895/.test(freeReport.foot) && /vahinitech\.com/.test(freeReport.foot) && /not a school mark/.test(freeReport.foot) && /Spelling/.test(freeReport.foot), name:'Page 1: the two screen buttons and the footer with patents, vahinitech.com and the spelling note', detail:freeReport.foot},
+      {ok:freeReport.cta.length===2 && /Indian Patents No\. 584433 and 604895/.test(freeReport.foot) && /vahinitech\.com/.test(freeReport.foot) && /not a school mark/.test(freeReport.foot) && !/Spelling/.test(freeReport.foot) && /^Spelling and grammar/.test(freeReport.lang.trim()), name:'Page 1: the two screen buttons, the footer with patents and vahinitech.com, and spelling and grammar on their own line', detail:freeReport.foot+' | '+freeReport.lang},
       {ok:freeReport.practiceFactors.includes(freeReport.start) && freeReport.look.every(l=>freeReport.practiceFactors.includes(l.f)), name:'Free report pairs each skill to grow with practice space', detail:JSON.stringify({start:freeReport.start,practice:freeReport.practiceFactors})},
       {ok:/Pro checks 15 more skills/.test(freeReport.pro) && !/₹|price/i.test(freeReport.pro), name:'Free report explains what Pro adds, with no price'},
       {ok:sheets.cards>0 && sheets.linked===sheets.cards, name:'Each practice card links its skill worksheet', detail:JSON.stringify(sheets)},

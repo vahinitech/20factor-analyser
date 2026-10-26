@@ -478,6 +478,12 @@ jobs:
         run: npm run test:language
       - name: Student view (one screen, proof for every sentence)
         run: npm run test:student-view
+      - name: I am, Report in and the line-by-line sweep on the check page
+        run: npm run test:check-page-who
+      - name: Pihu's guide to the check page's buttons
+        run: npm run test:pihu-guide
+      - name: Words and sentences to check, on the child's own ink (#317)
+        run: npm run test:student-language
       # Every language keeps the English report: elements, font sizes,
       # weights, line heights, font lists and places, two A4 pages, script
       # faces scaled to their English face (docs/12-report-rules.md).

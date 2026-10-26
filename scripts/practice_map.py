@@ -186,6 +186,26 @@ def render():
     for t in sp["tips"]:
         out.append(f"| `{t['id']}` | {cell(t['text'])} | - |")
         out.append(telugu_tip(t))
+    out += [
+        "",
+        "### Spelling patterns (what a teacher practises, not one word)",
+        "",
+        "The server names each misspelling's pattern"
+        " (backend/reading/spelling.py, `pattern`); the report practises the"
+        " pattern with the child's words and these.",
+        "",
+        "| Pattern | Rule | Practice words | Exercise |",
+        "|---|---|---|---|",
+    ]
+    for p in sp["patterns"]:
+        out.append(
+            f"| **{cell(p['name'])}** `{p['id']}` | {cell(p['rule'])} |"
+            f" {', '.join(p['words']) or '-'} | `{p['exercise']}` |"
+        )
+        te = p["i18n"]["te"]
+        out.append(
+            f"| {TE_MARK} **{cell(te['name'])}** | {cell(te['rule'])} | | |"
+        )
     return "\n".join(out) + "\n"
 
 

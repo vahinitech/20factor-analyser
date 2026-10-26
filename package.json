@@ -32,13 +32,16 @@
     "test:words": "node tests/report-words.test.mjs",
     "test:language": "node tests/report-language.mjs",
     "test:student-view": "node tests/student-view.mjs",
+    "test:check-page-who": "node tests/check-page-who.mjs",
+    "test:pihu-guide": "node tests/pihu-guide.mjs",
     "test:parity": "node tests/report-parity.mjs",
     "test:strings": "node tests/report-strings.test.mjs",
     "test:print-popup": "node tests/print-popup.mjs",
     "test:report-feedback": "node tests/report-feedback.mjs",
     "test:share-embed": "node tests/report-share-embed.mjs",
     "test:unit": "for t in tests/*.test.mjs; do echo \"== $t\"; node \"$t\" || exit 1; done",
-    "coverage:frontend": "c8 npm run -s test:unit"
+    "coverage:frontend": "c8 npm run -s test:unit",
+    "test:student-language": "node tests/student-language.mjs"
   },
   "devDependencies": {
     "c8": "12.0.0",

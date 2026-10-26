@@ -1180,7 +1180,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .report-layout{ display:grid; grid-template-columns:minmax(0,210mm) 300px; gap:24px; justify-content:center; align-items:start; }
   .report-side{ position:sticky; top:140px; max-height:calc(100vh - 160px); overflow:auto; margin:24px 0 40px; padding:0; }
 }
-@media print{ .report-side, .report-layout > aside{ display:none !important; } }
+/* Under the report: the other view of the same check (screen only). */
+.view-switch{ margin:-44px 0 40px; text-align:center; font-family:var(--sans); }
+.view-switch__btn{ background:none; border:0; padding:6px 8px; font:inherit; font-size:14px; color:var(--v-accent-text); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.view-switch__btn:focus-visible{ outline:2px solid var(--v-accent); outline-offset:2px; border-radius:6px; }
+@media screen and (min-width:1200px){ .report-layout > .view-switch{ grid-column:1; grid-row:2; } .report-layout > .report-side{ grid-column:2; grid-row:1 / span 2; } }
+@media print{ .report-side, .report-layout > aside, .view-switch{ display:none !important; } }
 /* The shared PDF: html2canvas draws the page as on a wide screen. */
 .pdf-capture .page{ margin:0 !important; box-shadow:none !important; width:210mm !important; min-height:297mm !important; }
 .pdf-capture body{ background:var(--v-paper); }
@@ -1232,6 +1237,20 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .practice-pro .pr-about .pr-why{ font-size:11.5px; }
 .practice-pro .pr-about .pr-win{ font-size:10.5px; }
 .practice-row.trim-more .pr-more, .practice-row.trim-why .pr-why, .practice-row.trim-win .pr-win{ display:none; }
+.practice-row.trim-also .pr-saw-also, .practice-row.trim-words .pr-saw-words, .practice-row.trim-rule .pr-saw-why{ display:none; }
+/* Grammar on page 2 (owner, 2026-10-25): one plain rule each, dropped
+   first when the row would be taller than its exercise. */
+.grammar-row .pr-gr-rules{ margin:6px 0 0; padding:0; list-style:none; font-size:12.5px; line-height:1.45; color:var(--v-text-2); }
+.practice-row.trim-rules .pr-gr-rules, .practice-row.trim-gram2 .pr-gr-one + .pr-gr-one{ display:none; }
+.spelling-row.with-grammar .pr-saw-why b{ color:var(--v-text); }
+/* Page 1's "Spelling and grammar" line, between the photo and the
+   measurements, in place of a sentence in the small print. */
+.sn-subrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 5px; }
+.free-report.compact-report .sn-subrow .sn-m-sub{ margin:0; flex:1 1 auto; min-width:0; }
+.sn-subrow .sn-lang{ flex:0 1 60%; }
+.sn-lang{ display:block; margin:0; padding:3px 10px; border-radius:8px; background:var(--v-accent-soft); color:var(--v-accent-text); font:12px/1.35 var(--sans); }
+.sn-lang b{ margin-right:6px; }
+.sn-lang b{ font-weight:700; }
 /* When writing feels hard: a calm note before the closing line. */
 .free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
 .free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }
@@ -1280,11 +1299,10 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
    pages, screen only. Website tokens only; the proof strips reuse the
    "What your page shows" strip and its marks. ------------------------- */
 .stu{ display:grid; gap:14px; margin:0 auto 18px; max-width:980px; font-family:var(--sans); color:var(--v-text); }
-.stu-grid{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:14px; align-items:start; }
 .stu-card{ display:grid; gap:10px; background:var(--v-surface); border:1px solid var(--v-border); border-radius:16px; padding:16px; }
 .stu-card p{ margin:0; font-size:16px; line-height:1.45; }
 .stu-who{ display:flex; gap:12px; align-items:center; }
-.stu-art{ width:96px; height:96px; object-fit:contain; flex:none; }
+.stu-art{ width:72px; height:72px; object-fit:contain; flex:none; }
 .stu-say{ font:700 22px/1.25 var(--serif) !important; }
 .stu-pill{ display:inline-flex; align-items:center; gap:6px; width:fit-content; border-radius:999px; padding:4px 10px; font:700 13px var(--sans); background:var(--v-warning-bg); color:var(--v-warning); }
 .stu-pill svg{ width:16px; height:16px; }
@@ -1300,7 +1318,7 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .stu-row{ display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; align-items:start; padding:6px; border-radius:12px; }
 .stu-row-now{ background:var(--v-warning-bg); }
 .stu-row-body{ display:grid; gap:6px; min-width:0; }
-.stu-row-body .stu-proof{ max-width:300px; }
+.stu-row-body .stu-proof{ max-width:none; }
 .stu-mk{ display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px 2px 4px; font:700 12px var(--sans); vertical-align:1px; white-space:nowrap; }
 .stu-row > .stu-mk{ width:28px; height:28px; padding:0; justify-content:center; }
 .stu-mk svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
@@ -1308,8 +1326,52 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .stu-mk-now{ background:var(--v-warning-bg); color:var(--v-warning); }
 .stu-mk-later{ background:var(--v-bg-alt); color:var(--v-text-muted); }
 .stu-mk-grow{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+/* Page 2's spelling row (#317): the child's own ink, an arrow, the word to write. */
+.pr-saw-ink{ display:flex; align-items:center; gap:4px 14px; flex-wrap:wrap; }
+.pr-saw-one{ display:inline-flex; align-items:center; gap:6px; }
+.pr-saw-ink .stu-ink{ height:28px; width:auto; max-width:120px; border:1px solid var(--v-border); border-radius:6px; background:var(--v-paper); }
+.pr-saw-arrow{ color:var(--v-text-muted); }
+.pr-saw-right{ font:600 22px/1 var(--handB); color:var(--v-success); }
+.pr-saw-why{ margin:2px 0 0; font-size:12.5px; color:var(--v-text-2); }
+.pr-saw-words{ margin:4px 0 0; font-size:13px; color:var(--v-text-2); }
+.pr-saw-list{ font:600 18px/1.2 var(--handB); color:var(--v-success); }
+.pr-saw-also{ margin:2px 0 0; font-size:12.5px; color:var(--v-text-muted); }
+/* Words and sentences to check (#317): one card, words beside sentences;
+   each finding one line: the child's own ink, an arrow, the word to write. */
+.stu-lang{ grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:12px 28px; padding:14px 16px; }
+.stu-lang-sec{ display:grid; gap:8px; align-content:start; min-width:0; }
+.stu-lang-head{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.stu-pill-lang{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+.stu-lang-note{ color:var(--v-text-muted); font-size:14px; }
+.stu-fixes{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr)); gap:8px 18px; }
+.stu-fix{ display:grid; grid-template-columns:auto auto minmax(0,1fr); align-items:center; gap:8px; min-width:0; }
+.stu-ink{ height:40px; width:auto; max-width:130px; border:1px solid var(--v-border); border-radius:8px; background:var(--v-paper); }
+.stu-arrow{ width:18px; height:18px; fill:none; stroke:var(--v-text-muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.stu-fix-text{ display:grid; min-width:0; }
+.stu-right{ font:600 24px/1.05 var(--handB); color:var(--v-success); overflow-wrap:anywhere; }
+.stu-fix-why{ color:var(--v-text-2); font-size:13px; line-height:1.3; }
+.stu-patterns{ display:grid; gap:2px; font-size:14px; color:var(--v-text-2); }
+.stu-card p.stu-patterns-head{ font-size:13px; font-weight:700; color:var(--v-text-muted); }
+.stu-patterns ul{ margin:0; padding-left:18px; display:grid; gap:2px; }
+.stu-pattern-words{ font-family:var(--handB); font-size:18px; color:var(--v-success); }
+.stu-card p.stu-tip{ display:flex; gap:8px; align-items:center; color:var(--v-text-2); font-size:14px; line-height:1.35; }
+.stu-tip-art{ width:28px; height:28px; object-fit:contain; flex:none; }
 .stu-more{ justify-self:center; border:0; background:none; padding:6px; font:600 15px var(--sans); color:var(--v-text-muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
 /* Folded on screen only: print (stu-printing) and the shared PDF (pdf-busy) take the pages as they are. */
 @media screen{ html:not(.pdf-busy) .report-host.stu-folded:not(.stu-printing) > section.page{ display:none; } }
 @media print{ .stu{ display:none !important; } }
-@media (max-width: 720px){ .stu-grid{ grid-template-columns:1fr; } .stu-art{ width:72px; height:72px; } .stu-row-body .stu-proof{ max-width:none; } }
+/* No empty halves (owner, 2026-10-24). Wide screens: the greeting and
+   the five skills on the left, the practice card on the right; each
+   skill's strip beside its sentence. Phones: one column, the practice
+   card after the greeting. */
+.stu-main{ display:grid; gap:14px; grid-template-columns:1fr; grid-template-areas:"greet" "work" "five"; }
+.stu-main > .stu-greet{ grid-area:greet; } .stu-main > .stu-work{ grid-area:work; } .stu-main > .stu-five{ grid-area:five; }
+@media (min-width: 721px){
+  .stu-main{ grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); grid-template-areas:"greet work" "five work"; align-items:start; }
+  .stu-main.stu-main-one{ grid-template-columns:minmax(0,1fr) minmax(0,1.6fr); grid-template-areas:"greet five"; }
+  .stu-row-body{ grid-template-columns:minmax(0,1fr) minmax(0,200px); align-items:center; column-gap:12px; }
+  .stu-row-body .stu-proof{ grid-column:2; grid-row:1; }
+  .stu-row-body .stu-mk{ white-space:normal; }
+  .stu-greet .stu-proof{ max-width:420px; }
+}
+@media (max-width: 720px){ .stu-art{ width:72px; height:72px; } .stu-row-body .stu-proof{ max-width:none; } }

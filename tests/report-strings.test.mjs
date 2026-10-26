@@ -15,12 +15,48 @@ import assert from 'node:assert/strict';
 
 const window = {};
 const context = vm.createContext({ window, localStorage: undefined });
-for (const file of ['frontend/src/report/strings/en.js', 'frontend/src/report/strings/te.js', 'frontend/src/report/i18n.js']) {
+for (const file of ['frontend/src/report/strings/en.js', 'frontend/src/report/strings/en-us.js', 'frontend/src/report/strings/te.js', 'frontend/src/report/i18n.js']) {
   runSource(file, context);
 }
 const { en, te } = window.VahiniReportStrings;
 const i18n = window.VahiniI18n;
 const LANGS = { te };
+
+// American English only replaces English sentences, with the same
+// placeholders, and changes the spelling of practise (owner, 2026-10-24).
+const us = window.VahiniReportStrings['en-US'];
+for (const [id, value] of Object.entries(us)) {
+  assert.ok(id in en, `en-us.js: ${id} is an English id`);
+  assert.deepEqual(String(value).match(/\{\w+\}/g) || [], String(en[id]).match(/\{\w+\}/g) || [], `en-us.js: ${id} keeps the placeholders`);
+}
+assert.ok(!Object.values(us).some(v => /practis/i.test(v)), 'American English says practice');
+
+// Which English a reader gets: Indian by default, American when set or
+// for a reader in the Americas with an en-US browser; other languages
+// never change. Read on the device only.
+{
+  const store = {};
+  window.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
+  window.navigator = { language: 'en-US' };
+  const word = () => i18n.translator('en')('stu.practise');
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  assert.equal(i18n.english(), /^America\//.test(zone) ? 'us' : 'in', 'no setting: the time zone and the browser decide');
+  store.vahini_report_english = 'us';
+  assert.equal(i18n.english(), 'us');
+  assert.equal(word(), 'Practice this week', 'American English: practice');
+  assert.equal(i18n.translator('en').locale, 'en-US', 'American dates and numbers');
+  assert.equal(i18n.translator('te')('stu.practise'), te['stu.practise'], 'Telugu is not changed');
+  assert.equal(i18n.translator('en')('stu.sp.pill'), en['stu.sp.pill'], 'a sentence American English does not change comes from en.js');
+  store.vahini_report_english = 'in';
+  assert.equal(word(), 'Practise this week', 'Indian English: practise');
+  store.vahini_report_english = 'something else';
+  window.navigator = { language: 'en-IN' };
+  assert.equal(i18n.english(), 'in', 'an en-IN browser reads Indian English anywhere');
+  window.localStorage = { getItem: () => { throw new Error('blocked'); } };
+  assert.equal(i18n.english(), 'in', 'blocked storage and an en-IN browser: Indian English');
+  delete window.localStorage;
+  delete window.navigator;
+}
 
 // Completeness: list what is missing per language, then fail on it.
 let failed = false;
@@ -62,7 +98,6 @@ assert.equal(t.n('pp.file.loaded', 1), 'సేవ్ అయిన 1 చెక్
 assert.equal(i18n.translator('en').n('sn.since.better', 1), '1 skill got better.', 'a count of one uses the one form');
 assert.equal(i18n.translator('en').n('sn.since.better', 3), '3 skills got better.');
 assert.equal(i18n.translator('xx')('p2.title'), en['p2.title'], 'an unknown language is English');
-assert.equal(t.html('spell.saw', { word: '<b>recieve</b>', suggestion: '<b>receive</b>' }).includes('<b>recieve</b>'), true);
 assert.ok(i18n.translator('en').html('pp.keep').includes('&quot;Keep my pages&quot;'), 'html() escapes the table text');
 runSource('frontend/src/report/strings/te.js', context);
 
@@ -71,8 +106,11 @@ assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => window.VahiniReport
   ['నేర్చుకుంటోంది', 'మెరుగవుతోంది', 'పట్టు సాధిస్తోంది', 'బలంగా ఉంది']);
 assert.deepEqual(['focus', 'dev', 'good', 'strong'].map(b => en['stage.' + b]), ['Learning', 'Improving', 'Mastering', 'Strong']);
 // The Telugu says the spelling check covered English words only.
-for (const id of ['spelling.deferred', 'spelling.notext', 'spelling.found', 'spelling.clear', 'spell.saw', 'sn.spell.saw']) {
-  assert.match(window.VahiniReportStrings.te[id], /ఇంగ్లీష్/, `te ${id} says the check covered English words`);
+for (const id of ['lang.title', 'lang.notchecked', 'lang.clear', 'sn.spell.saw']) {
+  const value = window.VahiniReportStrings.te[id];
+  for (const text of typeof value === 'object' ? Object.values(value) : [value]) {
+    assert.match(text, /ఇంగ్లీష్/, `te ${id} says the check covered English words`);
+  }
 }
 
 // Words for children, both languages; no em dash anywhere.
@@ -83,7 +121,10 @@ const teBlock = python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/);
 assert.ok(teBlock, 'practice_catalog.AVOID_WORDS_TE exists');
 const AVOID_TE = [...teBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 assert.ok(AVOID_TE.length >= AVOID.length, 'a Telugu word for every avoided English word');
-const texts = table => Object.values(table).flatMap(v => (v && typeof v === 'object') ? Object.values(v) : [v]);
+// The owner's exception (2026-10-24): the student view's two headings,
+// "Spelling mistakes" and "Grammar mistakes", in every language.
+const HEADINGS = new Set(['stu.sp.pill', 'stu.gr.pill']);
+const texts = table => Object.entries(table).filter(([id]) => !HEADINGS.has(id)).flatMap(([, v]) => (v && typeof v === 'object') ? Object.values(v) : [v]);
 for (const [lang, table] of Object.entries(window.VahiniReportStrings)) {
   for (const text of texts(table)) {
     assert.ok(!banned.test(text), `${lang}: avoid ${String(text.match(banned)?.[0])} in ${text}`);

@@ -34,9 +34,24 @@ function setLanguage(lang){
   try{ global.localStorage.setItem(KEY, current); }catch(_e){ /* this page only */ }
   return current;
 }
+/* Which English: Indian English (en.js, British spelling: practise,
+   colour) everywhere, American (en-us.js: practice) for a reader in the
+   Americas whose browser is set to en-US (owner, 2026-10-24: the wording
+   follows the place). The time zone decides as well as the language,
+   because many phones in India are set to en-US. Read on this device
+   only; nothing is sent. "vahini_report_english" (in or us) overrides. */
+const ENGLISH_KEY = 'vahini_report_english';
+function english(){
+  try{ const v = global.localStorage.getItem(ENGLISH_KEY); if (v === 'us' || v === 'in') return v; }catch(_e){ /* blocked */ }
+  let zone = '';
+  try{ zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; }catch(_e){ /* old browser */ }
+  const nav = String((global.navigator && global.navigator.language) || '');
+  return /^America\//.test(zone) && /^en-US$/i.test(nav) ? 'us' : 'in';
+}
 /* The raw entry for an id: the language's own, else English's. */
 function lookup(id, lang){
   const all = tables();
+  if (lang === 'en' && english() === 'us' && has(all['en-US'], id)) return all['en-US'][id];
   if (has(all[lang], id)) return all[lang][id];
   return has(all.en, id) ? all.en[id] : undefined;
 }
@@ -73,5 +88,5 @@ function missing(lang){
   return Object.keys(all.en || {}).filter(id=>!has(all[lang], id));
 }
 
-global.VahiniI18n = { LANGS, language, setLanguage, translator, missing, script, caseless };
+global.VahiniI18n = { LANGS, language, setLanguage, translator, missing, script, caseless, english };
 })(window);

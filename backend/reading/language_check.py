@@ -592,6 +592,7 @@ def check(arr, hand_lines, langs, read_scores, expected_text="", detail=False):
             "written": t["raw"],
             "suggestion": t["suggestion"],
             "kind": spelling.kind(t["raw"], t["suggestion"]),
+            "pattern": spelling.pattern(t["raw"], t["suggestion"]),
             "against": t.get("against", "list"),
             "places": _place([t]),
             **(

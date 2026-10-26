@@ -48,9 +48,10 @@ const RENDER = `window.__render = (opts) => {
   if (o.free) analysis.access = { tier: 'free' };
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
-  window.VahiniCraft = { ...window.__craft, checkSpelling: t => (o.spelling && t) ? [{ word: 'recieve', suggestion: 'receive', context: 'I recieve it' }] : [] };
+  window.VahiniCraft = { ...window.__craft };
+  const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', pattern: 'ie_ei', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
   const host = document.getElementById('report-host');
-  const out = VahiniReport.render(host, { analysis, intake: {}, recognizedText: o.text || 'I recieve it', crops: d.factor_regions || {}, detURL: d.photo, history: o.history || null });
+  const out = VahiniReport.render(host, { analysis, intake: {}, recognizedText: o.text || 'I recieve it', crops: d.factor_regions || {}, detURL: d.photo, history: o.history || null, language });
   const rows = [...host.querySelectorAll('.practice-row')].map(r => ({
     factor: r.dataset.factor,
     badge: r.querySelector('.pr-badge') ? r.querySelector('.pr-badge').textContent : '',
@@ -177,11 +178,12 @@ try {
   add(free.rows.every(r => r.exercises.every((id, i) => r.models[i] === modelOf[id])), 'Each exercise shows the drawing the catalogue names for it', free.rows.map(r => [r.exercises, r.models]));
   add(await page.evaluate(() => [...document.querySelectorAll('.practice-row')].every(r => r.querySelector('.pr-turn-row .yt'))), 'Each skill has lines to try it, matching its drawing');
 
-  // Spelling row only when the limited check found a word; extra to the skills.
+  // Spelling row only when the server's check found a word (#317); extra
+  // to the skills. It shows the word to write, never our reading.
   const spelled = await page.evaluate(() => window.__render({ free: true, spelling: true }));
-  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /We read recieve\. Did you mean receive\?/.test(spelled.text)
-    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.look-cover-write',
-    'A spelling finding adds its own row after the skills', spelled.rows.map(r => r.factor));
+  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /receive/.test(spelled.text) && !/We read recieve/.test(spelled.text)
+    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.ie-ei' && /i and e together/.test(spelled.text) && /receive friend/.test(spelled.text) && /receive, friend, field, piece/.test(spelled.text),
+    'A spelling finding adds its own row after the skills, practising its pattern (i and e) with more words than the one', spelled.rows.map(r => r.factor));
 
   // Pro: band decides (up to 2), tier caps; a Mastering skill gets one.
   const pro = await page.evaluate(() => window.__render({ scores: { 3: 3.0, 6: 7.6 } }));

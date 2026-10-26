@@ -75,19 +75,29 @@ export async function checkReportLayout(page){
 
 /* Practice report (owner approval 2026-10-11, #122): Free and Pro both
    print on exactly two A4 sheets in the longest case (three skills, a
-   spelling row, Pro's two exercises and two tips each, the other-skills box
+   spelling and grammar row (owner, 2026-10-25), Pro's two exercises and two tips each, the other-skills box
    and all four pictures), with and without the host's picture map, and
    when the sheets run as long as a real photo makes them. */
 export const REPORT_ART = { teacher:'/frontend/assets/vahini-logo.png', tip:'/frontend/assets/vahini-logo.png', encourage:'/frontend/assets/vahini-logo.png' };
 export async function renderLongest(page, pro){
   await page.evaluate(pro=>{
     const d=window.VAHINI_SAMPLE_REPORT;
-    window.VahiniCraft={...window.VahiniCraft,checkSpelling:t=>t?[{word:'recieve',suggestion:'receive',context:'I recieve it'}]:[]};
+    // One word from the server's spelling check (#317), on the sample's hardest row.
+    // The longest spelling row: four words over three patterns (#317).
+    const at=x=>[{line:'line_5',bbox:[x,820,120,70],placed:'letters'}];
+    // The longest grammar row: three sentences under three rules.
+    const sentence=(rule,written,suggestion,x)=>({rule,written,suggestion,places:[{line:'line_2',bbox:[x,300,160,70],placed:'letters'}]});
+    const grammar=[sentence('verb_s','she sing','she sings',153),sentence('capital_i','i','I',360),sentence('capital_name','tara','Tara',480)];
+    const language={version:1,checked:true,reason:null,grammar,spelling:[
+      {written:'recieve',suggestion:'receive',kind:'letter_order',pattern:'ie_ei',against:'list',places:at(153)},
+      {written:'leters',suggestion:'letters',kind:'missing_letter',pattern:'double',against:'list',places:at(290)},
+      {written:'smal',suggestion:'small',kind:'missing_letter',pattern:'double',against:'list',places:at(430)},
+      {written:'rite',suggestion:'write',kind:'missing_letter',pattern:'silent',against:'list',places:at(560)}]};
     const recognition={...(d.analysis.recognition||{}),level:'high'};
     const analysis=pro?{...d.analysis,recognition}:{...d.analysis,access:{tier:'free'},recognition,results:d.analysis.results.filter(f=>[1,5,7,8,18].includes(f.n))};
     const crops={};
     Object.entries(d.factor_regions||{}).forEach(([k,v])=>{crops[k]=v;});
-    VahiniReport.render(document.getElementById('report-host'),{analysis,intake:{},recognizedText:'I recieve it',crops,detURL:d.photo,history:null});
+    VahiniReport.render(document.getElementById('report-host'),{analysis,intake:{},recognizedText:'I recieve it',crops,detURL:d.photo,history:null,language});
   },pro);
   await page.evaluate(()=>document.fonts.ready);
 }
@@ -107,13 +117,14 @@ export async function checkPracticePrint(browser, baseUrl){
       const shape=await page.evaluate(()=>({
         rows:document.querySelectorAll('.practice-row').length,
         spelling:!!document.querySelector('.practice-row.spelling-row'),
+        grammar:document.querySelectorAll('.spelling-row.with-grammar .pr-gr-one').length,
         others:!!document.querySelector('.other-skills'),
         art:[...new Set([...document.querySelectorAll('#report-host img.rp-art')].map(i=>i.dataset.art))].sort().join(','),
         alt:[...document.querySelectorAll('#report-host img.rp-art')].every(i=>i.getAttribute('alt')===''),
         maxEx:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('[data-exercise]').length)),
         maxTips:Math.max(...[...document.querySelectorAll('.practice-row')].map(r=>r.querySelectorAll('.pr-tip').length)),
       }));
-      add(shape.rows===4&&shape.spelling&&shape.others&&shape.maxEx===(pro?2:1)&&shape.maxTips===(pro?2:1),label+': longest case has three skills, spelling and the other skills',JSON.stringify(shape));
+      add(shape.rows===4&&shape.spelling&&shape.grammar===2&&shape.others&&shape.maxEx===(pro?2:1)&&shape.maxTips===(pro?2:1),label+': longest case has three skills, spelling, grammar and the other skills',JSON.stringify(shape));
       add(art?shape.art==='encourage,teacher,tip'&&shape.alt:shape.art==='',label+': pictures come only from the host map',JSON.stringify(shape));
       await page.emulateMedia({media:'print'});
       add(await pdfPages(page)===2,label+': prints on exactly two A4 pages');
@@ -121,7 +132,7 @@ export async function checkPracticePrint(browser, baseUrl){
       // its practice: printed, every row's skill side fits beside it.
       const cols=await page.evaluate(()=>{
         VahiniReport.fitPrintPages(document.getElementById('report-host'));
-        return [...document.querySelectorAll('.practice-row:not(.spelling-row)')].map(r=>{
+        return [...document.querySelectorAll('.practice-row:not(.spelling-row):not(.grammar-row)')].map(r=>{
           const l=r.querySelector('.pr-skill'), p=r.querySelector('.pr-practice');
           l.style.alignSelf=p.style.alignSelf='start';
           const out={n:r.dataset.factor,left:Math.round(l.getBoundingClientRect().height),right:Math.round(p.getBoundingClientRect().height),trim:r.dataset.trim||'',about:!!r.querySelector('.pr-about'),sheet:!!r.querySelector('.practice-sheet')};
@@ -132,7 +143,7 @@ export async function checkPracticePrint(browser, baseUrl){
       add(cols.length===3&&cols.every(c=>c.about&&c.sheet&&c.left<=c.right+1),label+': printed, each skill\'s why, win and practice sheet fit beside its practice',JSON.stringify(cols));
       // Too much to fit: "More" goes first, then the "why" line.
       const order=await page.evaluate(()=>{
-        const r=document.querySelector('.practice-row:not(.spelling-row)');
+        const r=document.querySelector('.practice-row:not(.spelling-row):not(.grammar-row)');
         const why=r.querySelector('.pr-why');
         const keep=why.lastChild.textContent;
         why.lastChild.textContent=keep.repeat(12);

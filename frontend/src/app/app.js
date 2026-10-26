@@ -128,6 +128,7 @@ const PASSAGES = [
 /* ---------- screens / steps ---------- */
 const STEP_OF = { upload:0, imu:0, process:1, report:2 };
 function go(name){
+  if (window.VahiniGuide) VahiniGuide.close();   // Pihu's guide ends with its screen
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#screen-'+name).classList.add('on');
   const idx = STEP_OF[name] != null ? STEP_OF[name] : 0;
@@ -448,6 +449,7 @@ function reportOutcome(outcome){
    can say why reports are read but not printed. Never for a sample run;
    without the popup's script this does nothing. */
 function askAboutReport(){
+  if (window.VahiniGuide) VahiniGuide.report();   // Print and the other view, once per browser
   if (window.VAHINI_SAMPLE_RUN) return;
   try{ if (window.VahiniReportFeedback && typeof VahiniReportFeedback.arm === 'function') VahiniReportFeedback.arm(); }catch(_e){}
 }
@@ -506,18 +508,24 @@ function startServicePolling(){
   serviceCheckTimer = setInterval(checkService, 10000);
 }
 
-/* Preview the uploaded photo in the process screen. Scoring runs server-side
-   now, so there is no in-browser detection overlay to draw; without this
-   the stage box would sit empty (and visibly black) for the whole pipeline. */
+/* Preview the uploaded photo in the process screen and sweep it line by
+   line until the report (owner, 2026-10-25; src/app/scan-sweep.js). The
+   scoring runs on the server; the sweep shows the photo's own lines. */
+let stopSweep = null;
 function showProcStagePreview(img){
   const host = $('#proc-stage');
   if (!host) return;
-  const old = host.querySelector('img.proc-preview'); if (old) old.remove();
+  if (stopSweep){ stopSweep(); stopSweep = null; }
+  host.classList.remove('is-scanning');
+  host.querySelectorAll('.scan-sweep, .scan-cap, .scan-bars, img.proc-preview').forEach(el=>el.remove());
   const el = document.createElement('img');
   el.className = 'proc-preview';
   el.alt = 'uploaded handwriting sample';
   el.src = img.src;
   host.appendChild(el);
+  if (!window.VahiniScanSweep) return;
+  const sweep = ()=>{ if (el.isConnected) stopSweep = VahiniScanSweep.start(host, el); };
+  if (el.complete && el.naturalWidth) sweep(); else el.addEventListener('load', sweep, { once: true });
 }
 
 /* ---------- expected passage ---------- */
@@ -538,6 +546,10 @@ function setupPassages(){
     else state.expected = PASSAGES.find(p=>p.id===id).text;
   });
   list.addEventListener('input', e=>{ if(e.target.id==='custom-text') state.expected = e.target.value; });
+  // "Does this page copy a sentence?" (owner, 2026-10-25): optional; empty
+  // means free writing, notes or anything else.
+  const copied = $('#cs-text');
+  if (copied) copied.addEventListener('input', ()=>{ state.expected = copied.value.replace(/\s+/g,' ').trim().slice(0,300); });
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
@@ -860,7 +872,8 @@ async function runPipeline(){
   stepState('ocr','active', 'On Vahini\u2019s server. This usually takes 5 to 20 seconds.');
   let pyReport = null;
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
-    pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
+    // The sample page is not the sentence the visitor typed.
+    pyReport = await VahiniOCR.serverPythonReport(blob, window.VAHINI_SAMPLE_RUN ? '' : (state.expected || ''));
   }
   if (pyReport && pyReport.error_code === 'busy'){
     showReject({
@@ -1052,7 +1065,7 @@ async function runPipeline(){
   const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, letterFindings:null, history });
+  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, language:pyReport.language||null, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
   // The shared PDF carries this check's receipt and the page photo for the
   // Pro comparison (report-share.js); a sample run is not the visitor's page.
@@ -1382,6 +1395,7 @@ function renderSampleReport(){
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
     crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
     measurements: data.measurements || {},
+    language: data.language || null,
     letterFindings: null,
     history: null,
   });

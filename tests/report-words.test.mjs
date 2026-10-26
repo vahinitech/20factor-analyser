@@ -26,8 +26,12 @@ const REPORT_FILES = ['frontend/src/report/report-render.js', 'frontend/src/repo
 const teBlock = python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/);
 const AVOID_TE = teBlock ? [...teBlock[1].matchAll(/"([^"]+)"/g)].map(m => m[1]) : [];
 assert.ok(AVOID_TE.length >= AVOID.length, 'practice_catalog.AVOID_WORDS_TE lists the Telugu words');
+// The owner's exception (2026-10-24): the student view's two headings say
+// "Spelling mistakes" and "Grammar mistakes", in plain words a child
+// knows. Every other string keeps the rule.
+const ALLOWED = /^\s*'stu\.(sp|gr)\.pill': .*$/gm;
 for (const file of REPORT_FILES) {
-  for (const text of strings(fs.readFileSync(file, 'utf8'))) {
+  for (const text of strings(fs.readFileSync(file, 'utf8').replace(ALLOWED, ''))) {
     checked++;
     assert.ok(!banned.test(text), `${file}: avoid ${text.match(banned)?.[0]} in ${text.slice(0, 120)}`);
     assert.ok(!claims.test(text), `${file}: no claim word ${text.match(claims)?.[0]} in ${text.slice(0, 120)}`);
@@ -45,7 +49,9 @@ assert.ok(!/simpleDrills/.test(render), 'drills live in the catalogue, not the r
 // The "when writing feels hard" note: encouragement, a teacher or an
 // occupational therapist, and the website's page; in every language.
 const tables = {};
-for (const f of fs.readdirSync('frontend/src/report/strings')) {
+// en-us.js only replaces the few sentences American English spells
+// differently; the rest come from en.js.
+for (const f of fs.readdirSync('frontend/src/report/strings').filter(f => f !== 'en-us.js')) {
   const lang = f.replace('.js', ''), src = fs.readFileSync('frontend/src/report/strings/' + f, 'utf8');
   tables[lang] = ['hard.title', 'hard.text', 'hard.more', 'row.why', 'row.win', 'row.more'].every(id => src.includes(`'${id}':`));
 }

@@ -1075,6 +1075,7 @@
               "written",
               "suggestion",
               "kind",
+              "pattern",
               "against",
               "places"
             ],
@@ -1095,6 +1096,19 @@
                   "other_letter",
                   "letters"
                 ]
+              },
+              "pattern": {
+                "enum": [
+                  "ie_ei",
+                  "silent",
+                  "double",
+                  "sound_letters",
+                  "endings",
+                  "order",
+                  "vowels",
+                  "other"
+                ],
+                "description": "The spelling pattern a teacher would practise (reading/spelling.py PATTERNS); the catalogue's practice.spelling.patterns gives its rule, words and exercise."
               },
               "against": {
                 "enum": [

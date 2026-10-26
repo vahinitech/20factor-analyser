@@ -45,12 +45,15 @@ SOURCES = [
     "src/report/worksheet-catalog.js",
     "src/report/worksheets.js",
     "src/report/strings/en.js",
+    "src/report/strings/en-us.js",
     "src/report/strings/te.js",
     "src/report/i18n.js",
     "src/report/progress.js",
     "src/report/practice-select.js",
     "src/report/report-render.js",
     "src/report/report-share.js",
+    "src/app/scan-sweep.js",
+    "src/app/guide.js",
     "src/app/app.js",
     "src/app/share.js",
 ]
@@ -71,7 +74,7 @@ ASSET_REF = re.compile(
 
 
 # "What's new" on the check page (owner, 2026-10-24): one line at the top
-# showing one of the latest changes, a different one on each visit
+# showing the latest changes in turn, the newest first, one every 5 s
 # (scripts/core/whats-new.js), over the full list. The lines are written
 # for parents and teachers in whats-new.json, each naming the changelog
 # fragments it comes from; tests/whats-new.test.mjs holds the rules. Like
@@ -111,6 +114,7 @@ def whats_new_html():
         '\n    <details class="whats-new" id="whats-new">'
         '\n      <summary><span class="wn-dot" aria-hidden="true"></span>'
         f'<span class="wn-line">{_whats_new_item(items[0])}</span>'
+        f'<span class="wn-count">1 of {len(items)}</span>'
         '<span class="wn-all">What\'s new</span></summary>'
         f'\n      <div class="wn-panel"><p class="wn-head">Updated {day}'
         f" {year}. The latest changes to the free check, newest first.</p>"
