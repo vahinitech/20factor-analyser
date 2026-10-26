@@ -30,11 +30,18 @@ async function waitUp() {
   throw new Error('static server did not start');
 }
 
+/* The sample's twenty scores when these checks were written. The practice
+   logic is tested against them, so regenerating the sample photo's report
+   (#316: the overall moved from 74 to 59) does not move every expectation
+   below; the photo, crops and regions are still the sample's own. */
+const PINNED = {"1": 7.0, "2": 9.0, "3": 10.0, "4": 6.7, "5": 6.1, "6": 6.1, "7": 7.4, "8": 5.7, "9": 8.5, "10": 6.2, "11": 7.9, "12": 8.3, "13": 0.0, "14": 0.0, "15": 0.0, "16": 0.0, "17": 8.6, "18": 6.6, "19": 7.6, "20": 6.7};
+
 /* Render the sample's real run with the given changes, in the page. */
 const RENDER = `window.__render = (opts) => {
   const d = window.VAHINI_SAMPLE_REPORT;
   const o = opts || {};
-  let results = d.analysis.results.map(f => ({ ...f }));
+  const pinned = ${JSON.stringify(PINNED)};
+  let results = d.analysis.results.map(f => ({ ...f, score: pinned[f.n] != null ? pinned[f.n] : f.score }));
   if (o.free) results = results.filter(f => [1, 5, 7, 8, 18].includes(f.n));
   if (o.scores) results.forEach(f => { if (o.scores[f.n] != null) { f.score = o.scores[f.n]; } });
   const analysis = { ...d.analysis, results, recognition: { ...(d.analysis.recognition || {}), level: o.spelling ? 'high' : 'low' } };

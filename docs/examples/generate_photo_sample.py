@@ -40,6 +40,11 @@ sys.path.insert(0, os.path.join(ROOT, "backend"))
 
 
 def load_server():
+    # The analyser image sets VAHINI_SCAN_WORKER=1, which hands each scan to
+    # a child process that imports the server by module name (#300). This
+    # script loads app.py under its own name and runs the scan itself, so
+    # the worker stays off here.
+    os.environ["VAHINI_SCAN_WORKER"] = "0"
     spec = importlib.util.spec_from_file_location(
         "sample_server", os.path.join(ROOT, "backend", "server/app.py")
     )
