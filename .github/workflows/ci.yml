@@ -75,7 +75,7 @@ jobs:
       - name: Syntax-check server modules
         run: python -m py_compile backend/server/app.py backend/reading/ocr_backends.py backend/reading/classify.py backend/reading/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/tools/benchmark_ocr.py backend/vision/geometry.py backend/reading/model_map.py backend/reading/gpu_detect.py backend/vision/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/scoring_parts/needs.py backend/server/age_band.py backend/reading/detector.py backend/reading/line_recovery.py backend/vision/ink_geometry.py backend/reading/recognizer.py backend/reading/escalation.py backend/config.py backend/server/cache.py backend/languages/tags.py backend/server/scan_slots.py backend/server/capacity.py backend/report/practice_catalog.py backend/server/debug_store.py backend/server/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/server/perf.py backend/reading/telugu_reader.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py
+        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py scripts/therapist_agreement.py
       - name: Lint (pylint, min score 9.0)
         run: |
           pylint --fail-under=9.0 frontend/build_bundle.py \
@@ -147,7 +147,8 @@ jobs:
             scripts/perf_budgets.py backend/tests/test_work_counts.py \
             scripts/paired_timing.py backend/tests/test_paired_timing.py \
             scripts/bench_history.py backend/tests/test_bench_history.py \
-            backend/server/report_store.py backend/tests/test_report_store.py
+            backend/server/report_store.py backend/tests/test_report_store.py \
+            scripts/therapist_agreement.py backend/tests/test_therapist_agreement.py
       - name: Verify immutable report dictionary
         run: python backend/report/compact_reports.py --check
       - name: Practice map is current (docs/11-practice-map.md)
