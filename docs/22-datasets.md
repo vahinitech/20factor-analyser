@@ -23,6 +23,7 @@ Audited on 22 October 2026 against each dataset's own page. "Unverified" means t
 | Palmer (1915) and Zaner (Manual 144) penmanship manuals | Public domain | Neat reference set for calibration | 8 crops (`benchmarks/neat-penmanship/pages`) | No |
 | The sample photo `handwriting-sample.jpg` | **Source not recorded** | Sample report, fixtures, `sample-page` benchmark | Yes | Yes (`frontend/assets/samples/`, `sample-report-data.js`) |
 | `tests/fixtures/samples/` pages | **Source not recorded** | Printed-text refusal tests; real test lines for the print-or-handwriting reader | Yes (8 images, 544 KB) | No |
+| Therapist agreement pages (planned) | Written consent from the school and each family, for this test only | Evaluation against therapists' marks ([23](23-therapist-agreement.md)) | No | No |
 | IAM Handwriting Database | Non-commercial research only | None directly; the optional TrOCR tier's weights are fine-tuned on it | No | No (tier off) |
 
 Considered and not used: EMNIST (terms unclear), IAM directly and through Roboflow Universe copies (non-commercial), CEDAR (no licence stated), other Roboflow sets (web-scraped or single letters). See [history/real-photos-gnhk-2026-10-19.md](history/real-photos-gnhk-2026-10-19.md).
