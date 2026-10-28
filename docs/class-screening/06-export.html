@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 6: export as CSV or print</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+<script src="mock-data.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 6 of 6 &middot; export</span>
+  <h1 class="page-title">Save Class 3B's table</h1>
+  <p class="lead">Both are made in this browser. Nothing is sent to us.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Print: landscape A4</h2>
+      <p class="muted small" style="margin:0 0 12px">For the class file or a meeting with the school therapist. Pages worth a look first.</p>
+      <div class="sheet">
+        <h3>Class 3B handwriting check</h3>
+        <div class="meta"><span>Checked 28 October 2026 &middot; 25 pages &middot; English &middot; ages 7 to 8</span><span>vahinitech.com</span></div>
+        <table id="sheet"></table>
+        <div class="foot">A flag means two or more of five skills are at the first stage on this one page. It describes the page, not the child, and is not a diagnosis. Pupil codes only; no names or photos are kept by Vahini.</div>
+      </div>
+      <div class="actions"><span class="btn btn--main">Print</span><span class="muted small">Preview of the first sheet. A class of 25 takes one or two sheets.</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Download CSV</h2>
+      <p class="muted small" style="margin:0">Opens in Excel, Numbers or Google Sheets. One row per page, stage words rather than numbers.</p>
+      <pre class="csv" id="csv"></pre>
+      <div class="actions"><span class="btn btn--main">Download class-3b-2026-10-28.csv</span></div>
+      <div class="note note--keep">The file holds pupil codes, not names. Keep it with your other class records, where your school keeps the list that matches codes to children.</div>
+    </section>
+  </div>
+</main>
+<script>
+var csv = MOCK.csv().split("\n");
+document.getElementById("csv").textContent = csv.slice(0, 9).join("\n") + "\n...";
+var el = document.getElementById("sheet");
+el.innerHTML = MOCK.head(false) + "<tbody>" + MOCK.rows({ order: "flag", limit: 14 }) + "</tbody>";
+</script>
+</body>
+</html>

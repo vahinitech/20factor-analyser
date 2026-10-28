@@ -52,6 +52,8 @@ to the ones it builds on.
   Schemas: [backend/schemas/README.md](../backend/schemas/README.md).
 - Server set-up and what is where: [backend/README.md](../backend/README.md); engines and settings: [06](06-reading-engines.md#engine-settings-and-modes).
 - Practice framework details: [practice-framework/](practice-framework/).
+- Class screening, a proposal not yet built (mock-ups, capacity arithmetic,
+  open decisions): [class-screening/](class-screening/README.md).
 - Worked examples and the sample report generator: [examples/](examples/).
 - Superseded notes on earlier report layouts, and dated notes such as the
   real-photo evaluation of 19 October 2026, kept for the record:
