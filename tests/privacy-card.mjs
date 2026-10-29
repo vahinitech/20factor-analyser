@@ -2,7 +2,7 @@
    (c) 2026 Vahini Technologies. */
 // The check page's "Privacy and security" card (owner, 2026-10-29), in a
 // browser:
-// - its four lines and the link to the full statement are in the page's
+// - its title, four short lines and the link to the full statement are in the page's
 //   HTML, so they are there without a script and for crawlers;
 // - on a computer it opens on hover and closes when the pointer leaves, a
 //   click keeps it open, and Escape closes it with focus back on the link;
@@ -14,17 +14,13 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const LINES = [
-  'We check your photo. We don’t save it.',
-  'Nothing we keep from your check has your name on it.',
-  'Pages are saved only if you tick “Keep my pages”. Only you can open them.',
-  'We never sell your data.',
-];
+const LINES = ['Photo not saved', 'No names', 'Saved if you ask', 'Never sold'];
 const html = fs.readFileSync('frontend/analyser.html', 'utf8');
 const card = html.match(/<details class="prv" id="prv">[\s\S]*?<\/details>/)?.[0] || '';
-for (const line of LINES) assert.ok(card.includes(line), `the card says: ${line}`);
+assert.ok(card.includes('<p class="prv__title">Your check is private</p>'), 'the title scopes the lines to the check');
+for (const line of LINES) assert.ok(card.includes(`${line}</li>`), `the card says: ${line}`);
 assert.match(card, /<summary>[\s\S]*Privacy and security<\/summary>/, 'the card opens from "Privacy and security"');
-assert.match(card, /We follow India’s DPDP Act, 2023\. <a href="\/privacy\.html">Full privacy statement<\/a>/, 'the card ends with the full statement');
+assert.match(card, /DPDP Act, 2023 · <a href="\/privacy\.html">Details<\/a>/, 'the card ends with the full statement');
 
 const server = spawn('./node_modules/.bin/http-server', ['.', '-p', '4198', '-c-1', '--silent']);
 const URL = 'http://127.0.0.1:4198/frontend/analyser.html';
