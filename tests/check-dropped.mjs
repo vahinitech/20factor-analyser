@@ -35,7 +35,7 @@ try {
     await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
     await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
     await page.waitForFunction(() => !document.querySelector('#go-process').disabled);
-    await page.click('#go-process');
+    await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   };
 
   await upload();

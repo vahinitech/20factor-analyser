@@ -67,7 +67,7 @@ async function run(answer){
   const page = await openPage(answer);
   await page.setInputFiles('#file-input', await markedPhoto(page));
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   return page;
 }
 
