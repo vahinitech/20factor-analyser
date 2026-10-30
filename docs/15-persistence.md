@@ -2,7 +2,7 @@
 
 `analyser.html` will optionally post three kinds of record to a
 `/persist` service, if one is deployed in front of it: the uploaded image,
-the generated report, and lead-capture feedback. None of this lives in this
+the generated report, and the optional answers asked after a report PDF. None of this lives in this
 repo. `server/app.py` does not implement `/persist/*`, and
 `docker-compose.yml` runs a single `analyser` service with no persistence
 service alongside it. If nothing answers at `/persist`, every call below
@@ -50,13 +50,38 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
   somewhere.
 
 - `POST /persist/feedback`
+
+  The report PDF never waits for this (owner, 2026-10-30, India's DPDP
+  Act). Print / Save as PDF prints at once; a card then opens, at most once
+  a day, with two optional questions and an unticked "Email me practice
+  tips" box (see the `vgate` script in `analyser.html`). Pressing Send posts
+  up to two records:
+
   ```json
-  { "kind": "report_pdf_lead", "ts": "2026-07-05T12:00:00.000Z", "data": { "name": "...", "email": "..." } }
+  { "kind": "report_pdf_answer", "page": "/analyser/analyser.html",
+    "data": { "purpose": "child", "price": "100", "currency": "INR" } }
   ```
-  Fires once, right after the lead-capture form in the PDF download dialog
-  is submitted (see the `vgate` script in `analyser.html`). This call
-  is hard-coded to `/persist/feedback`, not `VAHINI_PERSIST_ENDPOINT`, so a
-  deployment that moves the base path needs to update both.
+  Only when a question was answered, and only the answers given. It holds
+  no name or email: an anonymous event, counted by the price section of
+  vahini-web's Friday report. `purpose` is one of `own`, `child`,
+  `teaching`, `therapy`, `research`, `business`, `other`; `price` is a key
+  from `PRICES` in the same script.
+
+  ```json
+  { "type": "report_pdf_lead", "email": "...", "tips": true,
+    "consent": "pdf-tips-2026-10-30", "purpose": "child",
+    "page": "/analyser/analyser.html", "lang": "en-IN" }
+  ```
+  Only when the box is ticked and the address is valid. No `kind`, so the
+  service files it as feedback a person sent. It never carries a name, an
+  organisation, a price or the browser string; `consent` names the line the
+  person agreed to, and changes when that line does.
+
+  Both calls are hard-coded to `/persist/feedback`, not
+  `VAHINI_PERSIST_ENDPOINT`, so a deployment that moves the base path needs
+  to update both. Earlier versions of the page required a name and email
+  before the PDF opened and kept them in `localStorage` (`vahini_leads`,
+  `vahini_report_lead`); the page now deletes those keys on load.
 
 ## What is NOT part of this repo
 

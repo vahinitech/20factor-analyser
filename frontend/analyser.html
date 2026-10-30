@@ -853,96 +853,102 @@
 })();
 </script>
 
-<!-- ============ REPORT PDF LEAD-GATE ============ -->
+<!-- ============ AFTER THE REPORT PDF: OPTIONAL QUESTIONS ============
+     The PDF never waits for this (owner, 2026-10-30, India's DPDP Act):
+     Print / Save as PDF prints at once, and this card opens after it, at
+     most once a day. Two optional answers carry no name and go as one
+     anonymous "report_pdf_answer" event. An email is sent only when its
+     own box is ticked, as a "report_pdf_lead" with the address and nothing
+     else that names the person. -->
 <style>
   .vgate{position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:18px;
     background:rgba(20,23,28,.55); backdrop-filter:blur(4px); color-scheme:only light;}
   .vgate.on{display:flex;}
-  .vgate__card{width:min(460px,96vw); max-height:92vh; overflow:auto; background:#fff; border-radius:18px;
-    box-shadow:0 30px 80px rgba(0,0,0,.45); padding:28px 28px 24px;
-    font-family:"Hanken Grotesk",system-ui,sans-serif; color:#393E46; animation:vgIn .24s cubic-bezier(.22,.61,.36,1);}
+  .vgate__card{width:min(460px,96vw); max-height:92vh; overflow:auto; background:var(--v-surface); border-radius:var(--v-radius-xl);
+    box-shadow:0 30px 80px rgba(0,0,0,.45); padding:26px 26px 22px; outline:none;
+    font-family:var(--v-font-sans); color:var(--v-text-2); animation:vgIn .24s cubic-bezier(.22,.61,.36,1);}
   @keyframes vgIn{from{opacity:0; transform:translateY(12px) scale(.98);} to{opacity:1; transform:none;}}
-  .vgate__eye{font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:#048A91; margin:0 0 8px;}
-  .vgate h2{font-family:"Spectral",Georgia,serif; font-weight:700; color:#222831; font-size:24px; line-height:1.15; margin:0 0 8px; letter-spacing:-.01em;}
-  .vgate__sub{font-size:14px; color:#565D66; line-height:1.55; margin:0 0 18px;}
-  .vgate label{display:block; font-size:12.5px; font-weight:700; color:#222831; margin:0 0 6px;}
-  .vgate label .req{color:#C0080B;}
+  .vgate__eye{font-size:11px; font-weight:800; letter-spacing:.14em; text-transform:uppercase; color:var(--v-accent); margin:0 0 8px;}
+  .vgate h2{font-family:var(--v-font-serif); font-weight:700; color:var(--v-text); font-size:24px; line-height:1.15; margin:0 0 8px; letter-spacing:-.01em;}
+  .vgate__sub{font-size:14px; color:var(--v-text-2); line-height:1.55; margin:0 0 6px;}
+  .vgate__again{font-size:13px; color:var(--v-text-muted); margin:0 0 18px;}
+  .vgate__link{appearance:none; background:none; border:0; padding:0; font:inherit; color:var(--v-accent); text-decoration:underline; cursor:pointer;}
+  .vgate__q{border-top:1px solid var(--v-border); padding-top:16px; margin:0 0 12px; font-size:14px; font-weight:700; color:var(--v-text);}
+  .vgate__q span{font-weight:600; color:var(--v-text-muted);}
+  .vgate label{display:block; font-size:12.5px; font-weight:700; color:var(--v-text); margin:0 0 6px;}
   .vgate .fld{margin-bottom:14px;}
-  .vgate input, .vgate select{width:100%; font-family:inherit; font-size:15px; color:#222831; background:#fff;
-    border:1.5px solid rgba(34,40,49,.22); border-radius:11px; padding:11px 13px; outline:none; transition:border-color .15s;}
-  .vgate input:focus, .vgate select:focus{border-color:#048A91;}
-  .vgate input.bad, .vgate select.bad{border-color:#C0080B; background:#FDF2F1;}
-  .vgate__err{color:#C0080B; font-size:12px; font-weight:600; margin:5px 0 0; display:none;}
+  .vgate input[type=email], .vgate select{width:100%; font-family:inherit; font-size:15px; color:var(--v-text); background:var(--v-surface);
+    border:1.5px solid var(--v-border-strong); border-radius:var(--v-radius-md); padding:11px 13px; outline:none; transition:border-color .15s;}
+  .vgate input[type=email]:focus, .vgate select:focus{border-color:var(--v-accent);}
+  .vgate input.bad{border-color:var(--v-danger); background:var(--v-danger-bg);}
+  .vgate__err{color:var(--v-danger); font-size:12px; font-weight:600; margin:5px 0 0; display:none;}
   .vgate__err.on{display:block;}
-  .vgate__consent{font-size:11.5px; color:#828A93; line-height:1.5; margin:4px 0 18px;}
+  .vgate__tips{border:1.5px solid var(--v-border); border-radius:var(--v-radius-lg); background:var(--v-bg-alt); padding:14px; margin:4px 0 14px;}
+  .vgate__tick{display:flex !important; gap:10px; align-items:flex-start; margin:0 !important; font-size:14.5px !important; cursor:pointer;}
+  .vgate__tick input{width:20px; height:20px; margin:0; flex:none; accent-color:var(--v-accent);}
+  .vgate__tips p{font-size:12.5px; color:var(--v-text-2); line-height:1.5; margin:6px 0 0 30px;}
+  .vgate__mail{margin:12px 0 0 30px;}
+  .vgate__mail[hidden]{display:none;}
+  .vgate__small{font-size:11.5px; color:var(--v-text-muted); line-height:1.5; margin:0 0 16px;}
+  .vgate__small a{color:var(--v-accent);}
   .vgate__row{display:flex; gap:10px; align-items:center;}
   .vgate__btn{appearance:none; border:0; cursor:pointer; font-family:inherit; font-weight:700; font-size:14.5px;
-    border-radius:11px; padding:12px 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:.15s;}
-  .vgate__btn svg{width:17px; height:17px;}
-  .vgate__btn--go{background:#048A91; color:#fff; flex:1;}
-  .vgate__btn--go:hover{background:#075E63;}
-  .vgate__btn--ghost{background:transparent; color:#222831; border:1.5px solid rgba(34,40,49,.22);}
-  .vgate__btn--ghost:hover{border-color:#222831;}
-  .vgate__x{position:absolute;}
+    border-radius:var(--v-radius-md); padding:12px 18px; display:inline-flex; align-items:center; justify-content:center; gap:8px; transition:.15s;}
+  .vgate__btn--go{background:var(--v-accent); color:var(--v-on-accent); flex:1;}
+  .vgate__btn--go:hover{background:var(--v-accent-strong);}
+  .vgate__btn--ghost{background:transparent; color:var(--v-text); border:1.5px solid var(--v-border-strong);}
+  .vgate__btn--ghost:hover{border-color:var(--v-text);}
   .vgate__thanks{text-align:center; padding:8px 4px 4px;}
-  .vgate__check{width:58px; height:58px; border-radius:50%; background:#DCF1E8; color:#0F6E56; display:grid; place-items:center; margin:0 auto 16px;}
+  .vgate__check{width:58px; height:58px; border-radius:50%; background:var(--v-success-bg); color:var(--v-success); display:grid; place-items:center; margin:0 auto 16px;}
   .vgate__check svg{width:30px; height:30px;}
-  /* window.print() fires 850ms after submit() while this modal is still
-     showing its "Thank you!" panel (see the setTimeout below) so the
-     browser can paint it before print. That means it's still in the DOM
-     when the print snapshot is taken. Without this, every printed/PDF
-     page shows the modal on top of the report. */
+  /* On a phone the print sheet can open after this card does: never let
+     the card into the printed or saved pages. */
   @media print{ .vgate{ display:none !important; } }
 </style>
 <div class="vgate" id="vgate" role="dialog" aria-modal="true" aria-labelledby="vgate-title">
-  <div class="vgate__card">
+  <div class="vgate__card" tabindex="-1">
     <div id="vgate-form">
       <p class="vgate__eye">Vahini · Your report</p>
-      <h2 id="vgate-title">Get your report PDF</h2>
-      <p class="vgate__sub">Tell us a little about you and we'll open your downloadable 20-factor report. We use this to send improvements that help your handwriting.</p>
+      <h2 id="vgate-title">Your report is ready to save</h2>
+      <p class="vgate__sub">Choose <b>Save as PDF</b> in the print window to keep a copy.</p>
+      <p class="vgate__again">No print window? <button class="vgate__link" id="vg-again" type="button">Open it again</button></p>
+      <p class="vgate__q">Two quick questions <span>(optional, no name needed)</span></p>
       <div class="fld">
-        <label for="vg-name">Full name <span class="req">*</span></label>
-        <input id="vg-name" type="text" autocomplete="name" placeholder="Your name">
-        <p class="vgate__err" id="vg-name-err">Please enter your name.</p>
-      </div>
-      <div class="fld">
-        <label for="vg-email">Email <span class="req">*</span></label>
-        <input id="vg-email" type="email" autocomplete="email" placeholder="you@example.com">
-        <p class="vgate__err" id="vg-email-err">Please enter a valid email address.</p>
-      </div>
-      <div class="fld">
-        <label for="vg-org">Organization / school <span style="color:#828A93;font-weight:600;">(optional)</span></label>
-        <input id="vg-org" type="text" autocomplete="organization" placeholder="Where you teach, learn or work">
-      </div>
-      <div class="fld">
-        <label for="vg-purpose">What will you use it for? <span class="req">*</span></label>
+        <label for="vg-purpose">What will you use it for?</label>
         <select id="vg-purpose">
           <option value="">Choose one…</option>
-          <option>Improving my own handwriting</option>
-          <option>Helping my child improve</option>
-          <option>Teaching / classroom use</option>
-          <option>Clinical / therapy use</option>
-          <option>Research</option>
-          <option>Business / evaluation</option>
-          <option>Other</option>
+          <option value="own">Improving my own handwriting</option>
+          <option value="child">Helping my child improve</option>
+          <option value="teaching">Teaching / classroom use</option>
+          <option value="therapy">Clinical / therapy use</option>
+          <option value="research">Research</option>
+          <option value="business">Business / evaluation</option>
+          <option value="other">Other</option>
         </select>
-        <p class="vgate__err" id="vg-purpose-err">Please pick an option.</p>
       </div>
       <div class="fld">
-        <label for="vg-price">A report with all 20 skills and a practice plan for each: what would it be worth to you? <span style="color:#828A93;font-weight:600;">(optional)</span></label>
+        <label for="vg-price">A report with all 20 skills and a practice plan for each: what would it be worth to you?</label>
         <select id="vg-price"><option value="">Choose one…</option></select>
       </div>
-      <p class="vgate__consent">By continuing you agree we may contact you about Vahini. We never sell your data. See our <a href="../site/faq.html" style="color:#048A91;">FAQ</a>.</p>
+      <div class="vgate__tips">
+        <label class="vgate__tick" for="vg-tips"><input id="vg-tips" type="checkbox"> Email me practice tips</label>
+        <p id="vg-tips-what">Practice ideas for the skills in this report. Optional: your PDF does not depend on it, and you can ask us to stop at any time.</p>
+        <div class="vgate__mail" id="vg-mail" hidden>
+          <label for="vg-email">Email</label>
+          <input id="vg-email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="vg-tips-what">
+          <p class="vgate__err" id="vg-email-err">Please enter a valid email address.</p>
+        </div>
+      </div>
+      <p class="vgate__small">We never sell your data. <a href="/privacy.html">What we keep</a></p>
       <div class="vgate__row">
-        <button class="vgate__btn vgate__btn--ghost" id="vg-cancel" type="button">Cancel</button>
-        <button class="vgate__btn vgate__btn--go" id="vg-go" type="button">Generate my PDF
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2V11a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg></button>
+        <button class="vgate__btn vgate__btn--ghost" id="vg-cancel" type="button">No thanks</button>
+        <button class="vgate__btn vgate__btn--go" id="vg-go" type="button">Send</button>
       </div>
     </div>
     <div class="vgate__thanks" id="vgate-thanks" style="display:none;">
       <div class="vgate__check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L20 7"/></svg></div>
-      <h2>Thank you!</h2>
-      <p class="vgate__sub" style="margin-bottom:18px;">Your report is opening in the print dialog. Choose <b>"Save as PDF"</b> to download it. We'll be in touch with ways to keep improving.</p>
+      <h2>Thank you</h2>
+      <p class="vgate__sub" id="vg-thanks-text" style="margin-bottom:18px;">That helps us decide what to build next.</p>
       <button class="vgate__btn vgate__btn--ghost" id="vg-close2" type="button" style="width:100%;">Done</button>
     </div>
   </div>
@@ -950,23 +956,36 @@
 <script>
 (function(){
   "use strict";
-  var LEAD_KEY = "vahini_report_lead", LEADS = "vahini_leads";
+  var DAY_KEY = "vahini_pdf_questions_day", CONSENT = "pdf-tips-2026-10-30";
   var gate = document.getElementById("vgate");
+  var card = gate.querySelector(".vgate__card");
   var formWrap = document.getElementById("vgate-form");
   var thanks = document.getElementById("vgate-thanks");
-  var pending = null; // callback to run after success
+  var tips = document.getElementById("vg-tips");
+  var mail = document.getElementById("vg-mail");
+  var email = document.getElementById("vg-email");
+  var purposeSel = document.getElementById("vg-purpose");
+
+  // The old form kept every name and email typed into it in this browser.
+  // Nothing here keeps one now; clear what it left.
+  try{ localStorage.removeItem("vahini_leads"); localStorage.removeItem("vahini_report_lead"); }catch(e){}
 
   function emailOk(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  function today(){
+    var d = new Date();
+    return d.getFullYear() + "-" + ("0" + (d.getMonth() + 1)).slice(-2) + "-" + ("0" + d.getDate()).slice(-2);
+  }
+  function askedToday(){ try{ return localStorage.getItem(DAY_KEY) === today(); }catch(e){ return false; } }
 
-  // What a full report is worth (owner, 2026-10-16): asked here, with the
-  // report just seen, so Pro prices follow real answers. Rupees for a
-  // browser in India, dollars elsewhere, from the time zone. Optional.
-  // vahini-web's Friday report counts these values; keep them in step.
+  // What a full report is worth (owner, 2026-10-16): asked with the report
+  // just seen, so Pro prices follow real answers. Rupees for a browser in
+  // India, dollars elsewhere, from the time zone. vahini-web's Friday
+  // report counts these values; keep them in step.
   var zone = "";
   try{ zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; }catch(e){}
   var currency = /^Asia\/(Kolkata|Calcutta)$/.test(zone) ? "INR" : "USD";
   var PRICES = {
-    INR: [["nothing","Nothing, the free report is enough"],["up_to_50","Up to \u20B950"],["100","\u20B9100"],["200","\u20B9200"],["more","More than \u20B9200"]],
+    INR: [["nothing","Nothing, the free report is enough"],["up_to_50","Up to ₹50"],["100","₹100"],["200","₹200"],["more","More than ₹200"]],
     USD: [["nothing","Nothing, the free report is enough"],["up_to_3","Up to $3"],["5","$5"],["10","$10"],["more","More than $10"]]
   };
   var priceSel = document.getElementById("vg-price");
@@ -974,78 +993,68 @@
     var o = document.createElement("option"); o.value = p[0]; o.textContent = p[1]; priceSel.appendChild(o);
   });
 
-  function saveLead(lead){
-    try{ var a = JSON.parse(localStorage.getItem(LEADS) || "[]"); a.push(lead); localStorage.setItem(LEADS, JSON.stringify(a.slice(-300))); }catch(e){}
-    var ep = (window.VAHINI_INSIGHTS && window.VAHINI_INSIGHTS.endpoint) || "";
-    if (ep){
-      try{ fetch(ep, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"text/plain;charset=utf-8" }, body: JSON.stringify(lead) }); }catch(e){}
-    }
+  function post(body){
     try{
-      fetch('/persist/feedback', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify({ kind:'report_pdf_lead', ts:new Date().toISOString(), data:lead })
-      });
-    }catch(err){}
+      fetch("/persist/feedback", { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body), keepalive:true });
+    }catch(e){}
   }
 
-  function open(cb){
-    pending = cb;
+  function open(){
+    try{ localStorage.setItem(DAY_KEY, today()); }catch(e){}
     formWrap.style.display = ""; thanks.style.display = "none";
     gate.classList.add("on");
-    setTimeout(function(){ var n=document.getElementById("vg-name"); if(n) n.focus(); }, 60);
+    setTimeout(function(){ card.focus(); }, 60);
   }
   function close(){ gate.classList.remove("on"); }
 
-  function clearErr(){
-    ["vg-name","vg-email","vg-purpose"].forEach(function(id){
-      document.getElementById(id).classList.remove("bad");
-      var e=document.getElementById(id+"-err"); if(e) e.classList.remove("on");
-    });
-  }
-  function showErr(id){
-    document.getElementById(id).classList.add("bad");
-    var e=document.getElementById(id+"-err"); if(e) e.classList.add("on");
+  function showMail(){
+    mail.hidden = !tips.checked;
+    if (!tips.checked){ email.classList.remove("bad"); document.getElementById("vg-email-err").classList.remove("on"); }
+    else setTimeout(function(){ email.focus(); }, 0);
   }
 
   function submit(){
-    clearErr();
-    var name = document.getElementById("vg-name").value.trim();
-    var email = document.getElementById("vg-email").value.trim();
-    var org = document.getElementById("vg-org").value.trim();
-    var purpose = document.getElementById("vg-purpose").value;
-    var ok = true;
-    if(!name){ showErr("vg-name"); ok=false; }
-    if(!emailOk(email)){ showErr("vg-email"); ok=false; }
-    if(!purpose){ showErr("vg-purpose"); ok=false; }
-    if(!ok) return;
-
-    var price = priceSel.value;
-    saveLead({ type:"report_pdf_lead", name:name, email:email, org:org, purpose:purpose,
-               price: price || undefined, currency: price ? currency : undefined,
-               ts:new Date().toISOString(), url:location.href.split("#")[0],
-               ua:navigator.userAgent, lang:navigator.language });
-    try{ localStorage.setItem(LEAD_KEY, JSON.stringify({ name:name, email:email, ts:Date.now() })); }catch(e){}
-
+    var purpose = purposeSel.value, price = priceSel.value;
+    var address = tips.checked ? email.value.trim() : "";
+    if (tips.checked && !emailOk(address)){
+      email.classList.add("bad"); document.getElementById("vg-email-err").classList.add("on"); email.focus();
+      return;
+    }
+    if (!purpose && !price && !address){ close(); return; }
+    // The answers, with nothing that names anyone: the server keeps the day only.
+    if (purpose || price){
+      var data = {};
+      if (purpose) data.purpose = purpose;
+      if (price){ data.price = price; data.currency = currency; }
+      post({ kind:"report_pdf_answer", page: location.pathname, data: data });
+    }
+    // The email, only because its own box was ticked, with the line it agreed to.
+    if (address){
+      post({ type:"report_pdf_lead", email: address, tips: true, consent: CONSENT,
+             purpose: purpose || undefined, page: location.pathname, lang: navigator.language });
+    }
+    document.getElementById("vg-thanks-text").textContent = address
+      ? "We will email practice tips to " + address + "."
+      : "That helps us decide what to build next.";
     formWrap.style.display = "none"; thanks.style.display = "";
-    var cb = pending; pending = null;
-    setTimeout(function(){ if(cb) cb(); }, 850);
   }
 
+  tips.addEventListener("change", showMail);
   document.getElementById("vg-go").addEventListener("click", submit);
   document.getElementById("vg-cancel").addEventListener("click", close);
   document.getElementById("vg-close2").addEventListener("click", close);
+  document.getElementById("vg-again").addEventListener("click", function(){ try{ window.print(); }catch(err){} });
   gate.addEventListener("click", function(e){ if(e.target===gate) close(); });
   document.addEventListener("keydown", function(e){ if(e.key==="Escape" && gate.classList.contains("on")) close(); });
-  document.getElementById("vg-email").addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
+  email.addEventListener("keydown", function(e){ if(e.key==="Enter") submit(); });
 
-  // Intercept the report PDF download in capture phase, before the app's own handler.
+  // The app prints on this click as it always has. The card opens once the
+  // click is done: after the print window closes where print() waits for
+  // it, straight away where it does not.
   document.addEventListener("click", function(e){
     var btn = e.target.closest && e.target.closest("#print-report, #share-save");
-    if(!btn) return;
-    if(localStorage.getItem(LEAD_KEY)) return;        // already captured -> let it print
-    e.preventDefault(); e.stopImmediatePropagation();  // block app's window.print()
-    open(function(){ try{ window.print(); }catch(err){} });
+    if (!btn || gate.classList.contains("on") || askedToday()) return;
+    setTimeout(open, 0);
   }, true);
 })();
 </script>
