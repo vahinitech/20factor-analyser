@@ -39,7 +39,7 @@ try {
   mode = 'unreadable';
   await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   await page.waitForSelector('text=We could not read your photo just now', { timeout: 20000 });
   const panel = await page.locator('#screen-process .panel').innerText();
   assert.match(panel, /did not use up one of your free checks/);

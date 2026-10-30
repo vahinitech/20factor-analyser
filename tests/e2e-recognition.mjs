@@ -84,7 +84,7 @@ async function main() {
       (r) => r.url().includes('/api/v2/reports') && r.request().method() === 'POST',
       { timeout: 180000 } // first request can include model load; allow generous time
     );
-    await page.click('#go-process');
+    await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
     const resp = await respPromise;
     const json = await resp.json();
 

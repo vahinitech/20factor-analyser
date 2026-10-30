@@ -19,6 +19,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from server.age_band import BAND_PATTERN
 from server.age_band import ERROR_CODE as AGE_BAND_CODE
 from server.age_band import PATTERN as AGE_BAND_PATTERN
+from server.who_checks import ERROR_CODE as WHO_CODE
+from server.who_checks import VALUES as WHO_VALUES
 from server.entitlements import FREE_FACTORS, STATUSES, TIERS
 from languages.profile import CODES as PROFILE_CODES
 from languages.profile import MAX_BYTES as PROFILE_BYTES
@@ -1676,6 +1678,21 @@ def error():
                     {
                         "type": "object",
                         "description": (
+                            "422: a free check did not say who is checking "
+                            "(backend/server/who_checks.py, DPDP Rules "
+                            "rule 10), where the server requires it."
+                        ),
+                        "required": ["error_code", "error", "field"],
+                        "additionalProperties": False,
+                        "properties": {
+                            "error_code": {"const": WHO_CODE},
+                            "error": {"type": "string", "minLength": 1},
+                            "field": {"const": "who"},
+                        },
+                    },
+                    {
+                        "type": "object",
+                        "description": (
                             "404 from POST /api/v2/compare: the receipt "
                             "for this side opens no record (unknown, "
                             "expired, deleted or a wrong token)."
@@ -1871,6 +1888,21 @@ def request():
                             "the report as age_band and not stored; no "
                             "score uses it yet (#216). A refused band is "
                             "HTTP 422 before the photo is read."
+                        ),
+                    },
+                    "who": {
+                        "type": "string",
+                        "default": "",
+                        "enum": ["", *WHO_VALUES],
+                        "description": (
+                            "Who is checking the page (DPDP Rules, rule "
+                            "10): parent, teacher, self (18 or over), "
+                            "student (with an adult's yes) or sample. "
+                            "Required for a free check where the server "
+                            "sets VAHINI_REQUIRE_WHO=1, never asked of a "
+                            "Pro key; missing or anything else is HTTP "
+                            "422 before the photo is read. Not stored or "
+                            "echoed."
                         ),
                     },
                 },

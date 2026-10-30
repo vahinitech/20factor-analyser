@@ -104,6 +104,13 @@
 .who-opt input { margin:0; accent-color:var(--v-accent); }
 .who-lang { display:inline-flex; align-items:center; gap:8px; margin-left:auto; font-weight:700; font-size:15px; color:var(--v-text); }
 .who-lang select { font:inherit; font-weight:400; padding:5px 10px; border:1px solid var(--v-border); border-radius:var(--v-radius-sm); background:var(--v-bg); color:var(--v-text); }
+/* A student's tick that an adult says yes, and the "choose who is checking"
+   note; both take a whole row of the bar. */
+.who-adult { flex-basis:100%; display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; color:var(--v-text); cursor:pointer; }
+.who-adult[hidden], .who-error[hidden] { display:none; }
+.who-adult input { margin:0; width:18px; height:18px; accent-color:var(--v-accent); }
+.check-heading .who-error { flex-basis:100%; margin:0; font-size:14px; font-weight:600; color:var(--v-danger, var(--v-accent-text)); }
+.who-bar.is-missing { border-color:var(--v-accent); box-shadow:0 0 0 2px var(--v-accent-soft); }
 @media (max-width:720px) {
   .who-bar { gap:6px 10px; margin-top:10px; padding:8px 10px; }
   .who-pick { gap:6px; }

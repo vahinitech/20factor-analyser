@@ -33,7 +33,7 @@ try {
 
   await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   await page.waitForSelector('text=We could not read the writing on this page', { timeout: 20000 });
   const panel = await page.locator('#screen-process .panel').innerText();
   assert.match(panel, /cannot read handwritten Telugu yet/);
