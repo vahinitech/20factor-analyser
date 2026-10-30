@@ -53,6 +53,7 @@ from reading import (
     ocr_backends,
 )  # pluggable engine adapters (paddle/trocr/surya)
 from reading import classify  # printed-vs-handwriting classifier
+from reading import identifiers  # names and numbers blanked (section 6(1))
 from PIL import UnidentifiedImageError
 from pypdfium2 import PdfiumError
 
@@ -777,6 +778,7 @@ async def ocr(
         arr = await _decode_upload(raw)
         payload = await scan_slots.run(_ocr_process, arr, raw, lang)
     _raise_if_ocr_unavailable(payload)
+    payload = identifiers.blank_payload(payload)
     if "error" in payload:
         return JSONResponse(status_code=200, content=payload)
 
@@ -968,6 +970,7 @@ async def analyze_vl(
             arr = await _decode_upload(raw)
             payload = await scan_slots.run(_analyze_vl_process, arr, raw, lang)
         _raise_if_ocr_unavailable(payload)
+        payload = identifiers.blank_payload(payload)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -1429,6 +1432,8 @@ async def _report_payload(
         )
     payload["ruleset"] = ruleset.hash
     _raise_if_ocr_unavailable(payload)
+    # Names, phone numbers and schools never reach the cache or a report.
+    payload = identifiers.blank_payload(payload)
     if not payload.get("ok"):
         return payload
 

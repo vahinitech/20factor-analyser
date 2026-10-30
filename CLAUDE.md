@@ -149,6 +149,11 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **Text read from a page keeps no name or number (DPDP Act, section 6(1)).**
+  It passes `backend/reading/identifiers.py` before it is cached or
+  returned: names after "My name is" and the like, emails, phone numbers,
+  roll numbers and school names become `[name]`, `[email]` and so on. A new
+  text field in a payload goes in its `TEXT_KEYS`.
 - **Pro access is granted on the server, never in code.** Operators follow
   [docs/17-access-and-trials.md](docs/17-access-and-trials.md); `deployment/grant-pro.sh`
   does a grant in one command and leaves the key in a private file. Every
