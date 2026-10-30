@@ -1507,9 +1507,9 @@ function init(){
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
   setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
-  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (!keepEmailMissing()) runPipeline(); });
+  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (window.VahiniWho && window.VahiniWho.missing()) return; if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead
-  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; collectIntake(); startIMU(); });
+  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; if (window.VahiniWho && window.VahiniWho.missing()) return; collectIntake(); startIMU(); });
   const serviceRetry = $('#service-retry'); if(serviceRetry) serviceRetry.addEventListener('click', checkService);
   // imu screen
   const bm3 = $('#back-mode3'); if(bm3) bm3.addEventListener('click', cancelIMU);

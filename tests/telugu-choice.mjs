@@ -46,7 +46,7 @@ try {
   await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
   if (process.env.SHOT) await page.screenshot({ path: process.env.SHOT, fullPage: false });
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   await page.waitForSelector('text=We could not read the writing on this page', { timeout: 20000 });
   assert.deepEqual(langs, ['te'], 'the request sends lang=te');
   const panel = await page.locator('#screen-process .panel').innerText();

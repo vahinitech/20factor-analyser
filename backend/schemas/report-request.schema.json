@@ -71,6 +71,19 @@
           "default": "",
           "pattern": "^(([3-9]|1[0-8])-([3-9]|1[0-8]))?$",
           "description": "Optional writer's age as two whole-year ages from 3 to 18, the first below the second, such as 6-7. Never a birth date. Echoed in the report as age_band and not stored; no score uses it yet (#216). A refused band is HTTP 422 before the photo is read."
+        },
+        "who": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "parent",
+            "teacher",
+            "self",
+            "student",
+            "sample"
+          ],
+          "description": "Who is checking the page (DPDP Rules, rule 10): parent, teacher, self (18 or over), student (with an adult's yes) or sample. Required for a free check where the server sets VAHINI_REQUIRE_WHO=1, never asked of a Pro key; missing or anything else is HTTP 422 before the photo is read. Not stored or echoed."
         }
       }
     },

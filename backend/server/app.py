@@ -101,6 +101,7 @@ from languages import profile as profiles  # school/class/child rules (#220)
 from server import (
     age_band as age_bands,
 )  # optional age band, echoed only (#212)
+from server import who_checks  # who is checking, asked first (rule 10)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -755,9 +756,12 @@ async def ocr(
     lang: str = Form("auto"),
     det: str = Form("true"),
     rec: str = Form("true"),
+    who: str = Form(""),
     authorization: str = Header(default=None),
 ):
-    charge = DAILY.check(request, exempt=await _is_pro(authorization))
+    pro = await _is_pro(authorization)
+    _who(who, pro)
+    charge = DAILY.check(request, exempt=pro)
     t0 = time.perf_counter()
     # te-Telu-IN reads, caches and answers as te (lang_tags.py).
     lang = lang_tags.engine_langs(lang)
@@ -942,8 +946,10 @@ async def analyze_vl(
     request: Request,
     image: UploadFile = File(...),
     lang: str = Form("auto"),
+    who: str = Form(""),
     authorization: str = Header(default=None),
 ):
+    _who(who, await _is_pro(authorization))
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -1388,6 +1394,22 @@ def _age_band(text):
         ) from None
 
 
+def _who(text, pro):
+    """Who is checking (who_checks.py), or HTTP 422 before the upload is
+    read or a free check is counted. Checked and forgotten."""
+    try:
+        return who_checks.check(text, pro=pro)
+    except ValueError as exc:
+        raise HTTPException(
+            422,
+            {
+                "error_code": who_checks.ERROR_CODE,
+                "error": str(exc),
+                "field": who_checks.FIELD,
+            },
+        ) from None
+
+
 def _with_age_band(payload, band):
     """The payload with the band echoed, on a copy: a cached payload is
     shared by every request for the same photo, whatever its band."""
@@ -1464,8 +1486,10 @@ async def report_python(
     expected_text: str = Form(""),
     profile: str = Form(""),
     age_band: str = Form(""),
+    who: str = Form(""),
     authorization: str = Header(default=None),
 ):
+    _who(who, await _is_pro(authorization))
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
@@ -1511,11 +1535,13 @@ async def api_report(
     expected_text: str = Form(""),
     profile: str = Form(""),
     age_band: str = Form(""),
+    who: str = Form(""),
     authorization: str = Header(default=None),
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
 ):
     access = await run_in_threadpool(entitlements.access_for, authorization)
+    _who(who, access["tier"] == "pro")
     fields = set(filter(None, include.split(",")))
     if fields - compact_reports.OPTIONAL_FIELDS:
         raise HTTPException(422, "Unsupported include field")

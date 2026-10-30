@@ -282,11 +282,51 @@ async function sharePDF(){
    the student view. Never sent with a check. */
 const WHO_KEY = 'vahini_check_who';
 const WHO = ['parent', 'student', 'teacher', 'self'];
+/* Who is checking (DPDP Rules, rule 10). Nothing is chosen until the
+   visitor chooses. A grown-up's earlier answer in this browser comes back;
+   "Student" never does, so a child on a family device answers again, and
+   ?for=student only starts on Student, with the adult's tick still to do. */
+const ADULT = ['parent', 'teacher', 'self'];
 function savedWho(){
+  try{ if (new URLSearchParams(global.location.search).get('for') === 'student') return 'student'; }catch(_e){ /* no address */ }
   let v = null;
-  try{ v = new URLSearchParams(global.location.search).get('for') === 'student' ? 'student' : null; }catch(_e){ /* no address */ }
-  if (!v){ try{ v = global.localStorage.getItem(WHO_KEY); }catch(_e){ /* blocked */ } }
-  return WHO.includes(v) ? v : 'parent';
+  try{ v = global.localStorage.getItem(WHO_KEY); }catch(_e){ /* blocked */ }
+  return ADULT.includes(v) ? v : null;
+}
+function chosenWho(){
+  const r = doc.querySelector('input[name="check-who"]:checked');
+  return r && WHO.includes(r.value) ? r.value : null;
+}
+function adultSaysYes(){ const t = doc.getElementById('who-adult'); return !!(t && t.checked); }
+function whoError(text){
+  const e = doc.getElementById('who-error'), bar = doc.getElementById('who-bar');
+  if (e){ e.textContent = text || ''; e.hidden = !text; }
+  if (bar) bar.classList.toggle('is-missing', !!text);
+}
+/* The one word sent with the photo, or null while the answer is missing. */
+function whoForCheck(){
+  if (global.VAHINI_SAMPLE_RUN) return 'sample';
+  const who = chosenWho();
+  if (!who || (who === 'student' && !adultSaysYes())) return null;
+  return who;
+}
+/* Before a check: true when the answer is missing, after saying what to do. */
+function whoMissing(){
+  if (whoForCheck()) { whoError(''); return false; }
+  const who = chosenWho();
+  whoError(who === 'student'
+    ? 'Ask a parent, guardian or teacher to say yes, then tick the box.'
+    : 'Choose who is checking this page first.');
+  const focus = who === 'student' ? doc.getElementById('who-adult') : doc.querySelector('input[name="check-who"]');
+  const bar = doc.getElementById('who-bar');
+  if (bar && bar.scrollIntoView) bar.scrollIntoView({ block:'center' });
+  if (focus) focus.focus();
+  return true;
+}
+function showAdultTick(who){
+  const row = doc.getElementById('who-adult-row');
+  if (row) row.hidden = who !== 'student';
+  if (who !== 'student'){ const t = doc.getElementById('who-adult'); if (t) t.checked = false; }
 }
 function viewFor(who){ return who === 'student' ? 'student' : 'parent'; }
 function switchLabel(){
@@ -306,12 +346,20 @@ function wireWho(){
     r.checked = r.value === who;
     r.addEventListener('change', ()=>{
       if (!r.checked) return;
-      try{ global.localStorage.setItem(WHO_KEY, r.value); }catch(_e){ /* this visit only */ }
+      try{
+        if (ADULT.includes(r.value)) global.localStorage.setItem(WHO_KEY, r.value);
+        else global.localStorage.removeItem(WHO_KEY);
+      }catch(_e){ /* this visit only */ }
+      showAdultTick(r.value);
+      whoError('');
       R.setAudience(viewFor(r.value));
       switchLabel();
     });
   });
-  if (radios.length) R.setAudience(viewFor(who));
+  showAdultTick(who);
+  const tick = doc.getElementById('who-adult');
+  if (tick) tick.addEventListener('change', ()=>{ if (tick.checked) whoError(''); });
+  if (radios.length) R.setAudience(viewFor(who || 'parent'));
   const btn = doc.getElementById('view-switch');
   if (btn) btn.addEventListener('click', ()=>{
     R.setAudience(R.audience() === 'student' ? 'parent' : 'student');
@@ -342,5 +390,6 @@ function init(){
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);
 else init();
 
+global.VahiniWho = { forCheck: whoForCheck, missing: whoMissing };
 global.VahiniReportShare = { applyLanguage, sharePDF, makePDF, loadLibs, waLink, fileName, setCheck, PDF_META, SUBJECT, EMBED, invalidate: ()=>{ ready = null; } };
 })(window);
