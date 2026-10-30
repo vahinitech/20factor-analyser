@@ -26,6 +26,7 @@
     "test:not-writing-page": "node tests/not-writing-page.mjs",
     "test:turned-page": "node tests/turned-page.mjs",
     "test:whats-new": "node tests/whats-new.mjs",
+    "test:privacy-card": "node tests/privacy-card.mjs",
     "sbom:update": "python backend/tools/update_sbom.py",
     "sbom:check": "python backend/tools/update_sbom.py --check",
     "test:practice": "node tests/practice-report.mjs",
