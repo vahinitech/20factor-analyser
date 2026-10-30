@@ -90,6 +90,28 @@
         },
         {
           "type": "object",
+          "description": "422: a free check did not say who is checking (backend/server/who_checks.py, DPDP Rules rule 10), where the server requires it.",
+          "required": [
+            "error_code",
+            "error",
+            "field"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "error_code": {
+              "const": "who_required"
+            },
+            "error": {
+              "type": "string",
+              "minLength": 1
+            },
+            "field": {
+              "const": "who"
+            }
+          }
+        },
+        {
+          "type": "object",
           "description": "404 from POST /api/v2/compare: the receipt for this side opens no record (unknown, expired, deleted or a wrong token).",
           "required": [
             "error_code",

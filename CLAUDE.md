@@ -138,6 +138,14 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   reader in the Americas. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.
+- **Who is checking is asked before a page is read (DPDP Rules 2025, rule 10).**
+  The check page's "Who is checking?" starts empty; Student needs an
+  adult's tick and is never remembered; the answer goes as `who` and the
+  server refuses a free check without it where `VAHINI_REQUIRE_WHO=1`
+  (`backend/server/who_checks.py`). Never pre-select an answer, never add
+  a value meaning a child alone, never store or echo it. Text read from a
+  page passes `backend/reading/identifiers.py` before it is cached or
+  returned; a new text field in a payload goes in its `TEXT_KEYS`.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new

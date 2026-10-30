@@ -591,7 +591,11 @@ class EndpointTests(unittest.TestCase):
         res = self.check()
         self.assertEqual(res.status_code, 200)
         body = res.json()
-        self.assertIn("Bheema", body["text"])  # the family still sees it
+        # The page's words come back, with what identifies the writer
+        # blanked (reading/identifiers.py, DPDP Rules rule 10).
+        self.assertIn("draws big round letters", body["text"])
+        self.assertIn("[school]", body["text"])
+        self.assertNotIn("Bheema", body["text"])
         self.assertRegex(body["receipt"]["id"], r"^[0-9a-f]{32}$")
         contract_schemas.validate("report-compact", body)
 
