@@ -75,7 +75,12 @@ class TestSamplePage(unittest.TestCase):
     def test_the_line_above_a_sloping_line_is_kept(self):
         texts = [l["text"] for l in self.hand]
         self.assertIn("wik cave:", texts)
-        self.assertEqual(len(texts), 16)
+        # The page writes "any one can change hand writing" twice, in
+        # capitals and then small letters. The neat second copy reads
+        # confidently and used to be set aside as print; with no second
+        # sign of print it is kept (#202).
+        self.assertIn("any one can change hand writing", texts)
+        self.assertEqual(len(texts), 17)
 
     def test_letter_sizes_are_the_lines_own(self):
         fx = self.features(5)

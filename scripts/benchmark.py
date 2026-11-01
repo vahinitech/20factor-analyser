@@ -230,6 +230,15 @@ def _pairs(lines, sentences):
             for s in sentences
         ]
         best = int(max(range(len(sims)), key=sims.__getitem__))
+        # A sentence the page holds twice may be found twice.
+        best = next(
+            (
+                i
+                for i, s in enumerate(sentences)
+                if i not in found and _norm(s) == _norm(sentences[best])
+            ),
+            best,
+        )
         if sims[best] < 0.4:
             out.append((text, None))
         elif best in found:
