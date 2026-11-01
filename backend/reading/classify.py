@@ -18,6 +18,9 @@
 #   * OCR confidence                         (printed ≈ very high, > ~0.97)
 #   * text cues                              (form keywords / all-caps / digits)
 # Each signal votes; the weighted vote becomes a printed-probability in [0,1].
+# Neat handwriting can pass all of these, so a line they call printed is
+# set aside only when a second sign agrees (#202): the line reader sees
+# print, or the ink repeats like a font (font_evidence).
 # We bias toward KEEPING handwriting when uncertain so genuine pen strokes are
 # never silently dropped.
 
@@ -57,6 +60,12 @@ PRINTED_THRESHOLD = _env_f("VAHINI_PRINTED_THRESHOLD", 0.58)
 # any page.
 PAGE_PRINT_MIN_LINES = 2
 PAGE_PRINT_SHARE = 0.15
+# Signs of a font in the ink (font_evidence): repeated letters overlap
+# this well, or the small letters keep one bottom line and one height
+# to within these shares of the letter height.
+FONT_REPEAT_MATCH = 0.80
+FONT_BASE_DEV = 0.03
+FONT_HEIGHT_DEV = 0.04
 
 # Words that mark a printed form, letters and capitals: the language
 # pack (backend/languages, #206).
@@ -174,6 +183,138 @@ def _edge_straightness(gray, mask):
     if ink <= 0:
         return 0.0
     return float((edges > 0).sum()) / ink
+
+
+def _letter_boxes(mask):
+    """Connected components big enough to be letters (or joined words):
+    (x, y, w, h) for each, left to right."""
+    if cv2 is None or mask.sum() < 20:
+        return [], None
+    num, labels, stats, _c = cv2.connectedComponentsWithStats(
+        mask.astype(np.uint8), connectivity=8
+    )
+    floor = max(4, int(0.2 * mask.shape[0]))
+    boxes = []
+    for i in range(1, num):
+        x, y, w, h, area = (int(v) for v in stats[i])
+        if area >= 8 and h >= floor and w >= 2:
+            boxes.append((x, y, w, h, i))
+    boxes.sort()
+    return boxes, labels
+
+
+def _shape_match(labels, a, b):
+    """Overlap of two letters' ink (intersection over union) at the best
+    shift of up to one pixel. A font prints the same letter from one
+    outline, so two copies overlap almost exactly; a pen never writes
+    the same letter twice."""
+    ax, ay, aw, ah, ai = a
+    bx, by, bw, bh, bi = b
+    w, h = max(aw, bw) + 2, max(ah, bh) + 2
+    pa = np.zeros((h, w), bool)
+    pa[1 : 1 + ah, 1 : 1 + aw] = labels[ay : ay + ah, ax : ax + aw] == ai
+    glyph = labels[by : by + bh, bx : bx + bw] == bi
+    best = 0.0
+    for dy in (0, 1, 2):
+        for dx in (0, 1, 2):
+            if dy + bh > h or dx + bw > w:
+                continue
+            pb = np.zeros((h, w), bool)
+            pb[dy : dy + bh, dx : dx + bw] = glyph
+            union = np.logical_or(pa, pb).sum()
+            if union:
+                best = max(best, np.logical_and(pa, pb).sum() / union)
+    return float(best)
+
+
+def _repeat_match(boxes, labels):
+    """How closely the line's repeated letters match: the median, over
+    letters that have a same-size partner, of the best overlap with it.
+    None when fewer than three letters have a partner (one pair
+    of look-alike letters proves nothing)."""
+    best = {}
+    for i, a in enumerate(boxes):
+        for j in range(i + 1, len(boxes)):
+            b = boxes[j]
+            if abs(a[2] - b[2]) > 1 or abs(a[3] - b[3]) > 1:
+                continue
+            if a[2] * a[3] < 30:
+                continue
+            m = _shape_match(labels, a, b)
+            best[i] = max(best.get(i, 0.0), m)
+            best[j] = max(best.get(j, 0.0), m)
+    if len(best) < 3:
+        return None
+    return float(np.median(list(best.values())))
+
+
+def _row_exactness(boxes):
+    """How exactly the letters keep one bottom line and one height,
+    relative to the letter height (0 = to the pixel). Letters whose
+    bottom is near the line's (not descenders) and whose height is near
+    the small-letter height count. None when fewer than four do.
+
+    Print is cast from one size on one line, so in a straight crop its
+    small letters share their bottom and height to a pixel or so; a pen
+    wanders a few pixels however neat the writer."""
+    if len(boxes) < 4:
+        return None
+    xs = np.array([x + w / 2.0 for x, _y, w, _h, _i in boxes])
+    bottoms = np.array([y + h for _x, y, _w, h, _i in boxes], float)
+    heights = np.array([h for _x, _y, _w, h, _i in boxes], float)
+    unit = float(np.median(heights))
+    if unit < 6:
+        return None
+    # Straighten a slanted line: fit the bottoms, then keep letters that
+    # sit on the fit (descenders hang below it).
+    slope, icpt = np.polyfit(xs, bottoms, 1) if len(set(xs)) > 1 else (0, 0)
+    resid = bottoms - (slope * xs + icpt)
+    on_line = np.abs(resid - np.median(resid)) <= 0.25 * unit
+    small = np.abs(heights - np.median(heights[on_line])) <= 0.2 * unit
+    keep = on_line & small
+    if keep.sum() < 4:
+        return None
+    slope, icpt = np.polyfit(xs[keep], bottoms[keep], 1)
+    resid = bottoms[keep] - (slope * xs[keep] + icpt)
+    base = float(np.std(resid)) / unit
+    height = float(np.std(heights[keep])) / unit
+    return {"base": base, "height": height, "letters": int(keep.sum())}
+
+
+def font_evidence(crop_rgb):
+    """Ink signs that only a font leaves, measured on a line crop.
+
+    Neat handwriting can have even strokes, even letters and read with
+    high confidence, which is all the older signals look at. A font also
+    repeats itself exactly: the same letter has the same shape to the
+    pixel, and the small letters sit on one line at one height. Returns
+    {"verdict": "font" | "hand" | "unsure", "repeat", "base", "height",
+    "letters"}: "font" when either sign is there, "hand" when both were
+    measurable and neither is, "unsure" when the line has too few
+    separate letters to tell (short labels, joined writing)."""
+    out = {"verdict": "unsure", "repeat": None, "base": None}
+    if crop_rgb is None or not crop_rgb.size:
+        return out
+    mask = _ink_mask(_gray(crop_rgb))
+    boxes, labels = _letter_boxes(mask)
+    if not boxes:
+        return out
+    repeat = _repeat_match(boxes, labels)
+    row = _row_exactness(boxes)
+    out["repeat"] = None if repeat is None else round(repeat, 3)
+    if row:
+        out["base"] = round(row["base"], 3)
+        out["height"] = round(row["height"], 3)
+        out["letters"] = row["letters"]
+    exact_row = row is not None and (
+        row["base"] <= FONT_BASE_DEV and row["height"] <= FONT_HEIGHT_DEV
+    )
+    exact_repeat = repeat is not None and repeat >= FONT_REPEAT_MATCH
+    if exact_row or exact_repeat:
+        out["verdict"] = "font"
+    elif repeat is not None and row is not None:
+        out["verdict"] = "hand"
+    return out
 
 
 def region_features(crop_rgb):
@@ -317,8 +458,18 @@ def _crop(arr, box):
     return arr[y0:y1, x0:x1]
 
 
-# The line reader's answer counts as "handwriting" below this.
+# The line reader's answer counts as "handwriting" below this, and as
+# "print" from READER_PRINT_FROM up.
 READER_HAND_BELOW = 0.1
+READER_PRINT_FROM = 0.5
+# A page where this share of the reader's lines show a second sign of
+# print is a printed page: there the rules alone set a line aside.
+PAGE_SECOND_SIGN_SHARE = 2 / 3
+# Up to this many letters and digits, a line is too short for either
+# second sign; on a page where this share of the lines show one (a
+# form), the rules alone set it aside.
+SHORT_LABEL_CHARS = 4
+SHORT_LABEL_PAGE_SHARE = 0.25
 
 
 def _reader_says_print(crop):
@@ -329,18 +480,39 @@ def _reader_says_print(crop):
     return print_hand.print_probability(gray)
 
 
-def _reader_hand(ln):
-    """True when the line reader calls the line handwriting. The reader
-    learned from Latin print and handwriting only, and gives printed
-    Telugu 0.001 to 0.01 (#171), so on a line whose letters are mostly
-    outside the pack's Latin letter class it has no say."""
-    p = ln.get("_model")
-    if p is None or p >= READER_HAND_BELOW:
+def _reader_has_say(ln):
+    """Whether the line reader can judge the line. It learned from Latin
+    print and handwriting only, and gives printed Telugu 0.001 to 0.01
+    (#171), so on a line whose letters are mostly outside the pack's
+    Latin letter class it has no say."""
+    if ln.get("_model") is None:
         return False
     text = str(ln.get("text") or "")
-    if any(c.isalpha() for c in text) and _PACK.share(text) < 0.5:
-        return False
-    return True
+    return not (any(c.isalpha() for c in text) and _PACK.share(text) < 0.5)
+
+
+def _reader_hand(ln):
+    """True when the line reader calls the line handwriting."""
+    return _reader_has_say(ln) and ln["_model"] < READER_HAND_BELOW
+
+
+def _second_sign(arr, ln):
+    """The sign of print that does not come from the rules (#202): the
+    line reader sees print ("reader") or the ink repeats like a font
+    ("font_ink"); "rules" where the reader has no say (no OpenCV, a
+    script it never learned), so the rules decide alone as before;
+    None when neither sees print. Kept on the line while classifying."""
+    if "_sign" not in ln:
+        if not _reader_has_say(ln):
+            sign = "rules"
+        elif ln["_model"] >= READER_PRINT_FROM:
+            sign = "reader"
+        elif font_evidence(_crop(arr, ln.get("box")))["verdict"] == "font":
+            sign = "font_ink"
+        else:
+            sign = None
+        ln["_sign"] = sign
+    return ln["_sign"]
 
 
 def _clean_share(text):
@@ -413,6 +585,18 @@ def classify_lines(arr, lines, threshold=None):
     content_y0 = min(tops) if tops else 0.0
     content_span = max(1.0, (max(bots) if bots else 1.0) - content_y0)
 
+    signs = sum(
+        1
+        for ln, _p in found
+        if _second_sign(arr, ln) in ("reader", "font_ink")
+    )
+    printed_page = signs >= max(
+        PAGE_PRINT_MIN_LINES, PAGE_SECOND_SIGN_SHARE * len(found)
+    )
+    form_page = signs >= max(
+        PAGE_PRINT_MIN_LINES, SHORT_LABEL_PAGE_SHARE * len(found)
+    )
+
     for ln in lines:
         prob = ln.get("printed_prob", 0.0)
         feat = ln.get("_feat", {}) or {}
@@ -457,7 +641,28 @@ def classify_lines(arr, lines, threshold=None):
 
         ln["printed_prob"] = round(prob, 3)
         ln["printed_hint"] = bool(prob >= threshold)
+        if ln["printed_hint"]:
+            # The rules lean on what neat handwriting shares with print:
+            # even strokes, even letters, a confident reading. On 173
+            # GNHK phone photos (CC BY 4.0) they set aside 12.6% of the
+            # handwritten words, 277 of 448 lost lines through the
+            # confident-reading override above. So outside a printed
+            # page a line is set aside only when a second sign agrees;
+            # when none does it stays handwriting, since excluding a
+            # child's own writing is the worse mistake.
+            # A label of a few characters is too short for either sign
+            # (the reader and font_evidence need several letters), so
+            # on a page that holds print the rules decide it alone.
+            short = len(re.findall(r"\w", text)) <= SHORT_LABEL_CHARS
+            sign = (
+                _second_sign(arr, ln)
+                or ("printed_page" if printed_page else None)
+                or ("short_on_form" if short and form_page else None)
+            )
+            ln["printed_hint"] = sign is not None
+            ln["print_check"] = sign or "kept_no_second_sign"
         ln.pop("_feat", None)
+        ln.pop("_sign", None)
         ln.pop("_model", None)
     return lines
 
@@ -496,6 +701,11 @@ def classification_summary(lines, hand_lines=None):
                 "granularity": granularity,
                 "classification": kind,
                 "printed_score": float(score) if classified else None,
+                # Set when the rules called the line printed: the sign
+                # that agreed ("reader", "font_ink", "printed_page",
+                # "short_on_form", "rules"), or "kept_no_second_sign"
+                # when none did (#202).
+                "print_check": line.get("print_check"),
                 "included_in_scoring": id(line) in included,
             }
         )
