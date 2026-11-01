@@ -287,7 +287,7 @@ def _score_factor_map(fx):
 _INPUT_FEATURES = {
     1: ("avg_score", "height_cv"),
     2: ("char_w_cv", "avg_score"),
-    3: ("bowl_share", "loop_ratio"),
+    3: ("bowl_share", "bowl_letters"),
     4: ("width_cv",),
     5: ("size_cv", "words_off_size"),
     6: ("tall_ratio",),
@@ -378,7 +378,7 @@ def _based_on(fx):
     return {
         1: f"{fx['n_chars']} letters",
         2: f"{fx['n_words']} words",
-        3: f"{fx['n_chars']} letters",
+        3: f"{fx.get('bowl_letters', 0)} letters with a bowl",
         4: f"{fx['n_lines']} lines",
         5: (
             f"{fx['size_count']} {fx['size_basis']}"
@@ -420,13 +420,19 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
+        if n == 3:
+            evidence = (
+                f"{fx['bowl_closed']} of {fx['bowl_letters']} letters "
+                "with a bowl (a, b, d, e, g, o, p, q) have it closed in "
+                "the ink."
+            )
     else:
         score = 0.0
         value = "Not measured"
-        evidence = availability.unmeasured_evidence(missing_kind)
+        evidence = availability.unmeasured_evidence(n, missing_kind)
     evidence = advisory.factor_evidence(n, evidence, checks, zone_based)
     if missing_kind is not None:
-        scoring_inputs = availability.unmeasured_inputs(missing_kind, fx)
+        scoring_inputs = availability.unmeasured_inputs(missing_kind, fx, n)
     elif n == 6 and zone_based:
         scoring_inputs = {
             "method": "zone_geometry",
@@ -459,7 +465,7 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
         based_on=None if missing_kind else basis.get(n),
         conf=missing_kind or "measured",
         unmeasured=missing_kind is not None,
-        unmeasured_reason=_UNMEASURED_REASONS.get(missing_kind),
+        unmeasured_reason=availability.unmeasured_reason(n, missing_kind),
         unmeasured_kind=missing_kind,
         scoring_inputs=scoring_inputs,
     )

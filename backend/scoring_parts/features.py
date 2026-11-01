@@ -21,6 +21,7 @@ from scoring_parts.page import (
     _page_tilt_degrees,
 )
 from scoring_parts.stats import _cv, _std, mean
+from scoring_parts.availability import MIN_BOWLS
 
 try:
     import cv2
@@ -32,7 +33,6 @@ except Exception:
 # rise above the small letters or drop below the line.
 _PACK = languages.language()
 _LETTER_RE = re.compile(_PACK.char_class("letter"))
-_LOOP_RE = re.compile(_PACK.char_class("loop"))
 _TALL_RE = re.compile(
     _PACK.char_class("ascender") + "|" + _PACK.char_class("descender")
 )
@@ -208,18 +208,16 @@ def _extract_features(arr: np.ndarray, lines, layout):
     digits_ratio = (
         len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
     )
-    # Loop, tall and letter totals come from what the reader saw in the
-    # ink. With a copied passage the line's text is the passage, and
-    # counting its letters gave loops and tall letters the ink never
-    # showed (#209, #200's fallback). The expected bowl count below
+    # Tall and letter totals come from what the reader saw in the ink.
+    # With a copied passage the line's text is the passage, and counting
+    # its letters gave loops and tall letters the ink never showed (#209,
+    # #200's fallback, now gone). The expected bowl count below
     # (_stroke_features) stays on the passage: it says what should be
     # there, the ink says what is.
     seen = " ".join(
         str(l.get("text_as_read", l.get("text", "")) or "") for l in lines
     )
-    loop_chars = len(_LOOP_RE.findall(seen))
     alpha_chars = len(_LETTER_RE.findall(seen))
-    loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
     tall_chars = len(_TALL_RE.findall(seen))
     tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
 
@@ -295,7 +293,6 @@ def _extract_features(arr: np.ndarray, lines, layout):
         # as Telugu, has none to measure.
         "latin_letters": alpha_chars,
         "digits_ratio": digits_ratio,
-        "loop_ratio": loop_ratio,
         "tall_ratio": tall_ratio,
         "ink_cv": ink_cv,
         "layout_complexity": float(
@@ -342,19 +339,24 @@ def _ink_features(arr, lines):
 # (marked_places.py marks the same words).
 SIZE_OFF = 0.30
 BOWL_LETTERS = _PACK.letter_set("bowl")
-MIN_BOWLS = 3
 
 
 def _stroke_features(geo, texts):
     """What the ink inside the lines shows (letter_geometry.py) for the
-    factors whose names it measures: closed bowls against the letters
-    read that have one (a, b, d, e, g, o, p, q) (3), how jagged the strokes are (4), how even the gaps
-    between letters are (9), how far words wander off their line's
-    baseline (11), and how much the words' lean varies (17). None where
-    the page gives too little to measure."""
+    factors whose names it measures: the share of the letters read that
+    have a bowl (a, b, d, e, g, o, p, q) whose bowl is closed in the ink,
+    counted word by word (3), how even the gaps between letters are (9),
+    how far words wander off their line's baseline (11), and how much the
+    words' lean varies (17). None where the page gives too little to
+    measure."""
     lines = [g for g in geo if g]
-    expected = sum(1 for t in texts for ch in t.lower() if ch in BOWL_LETTERS)
-    bowls = sum(g["bowls"] for g in lines)
+    loops = [
+        letter_geometry.count_loops(g, t, BOWL_LETTERS)
+        for g, t in zip(geo, texts)
+        if g
+    ]
+    expected = sum(e for e, _c in loops)
+    closed = sum(c for _e, c in loops)
     gaps = [x for g in lines for x in g["letter_gaps"]]
     spread, odd, spaced_off = _letter_spacing(
         [wd["letter_gaps"] for g in lines for wd in g["words"]]
@@ -368,7 +370,9 @@ def _stroke_features(geo, texts):
         if wd.get("slant") is not None
     ]
     return {
-        "bowl_share": (bowls / expected if expected >= MIN_BOWLS else None),
+        "bowl_share": (closed / expected if expected >= MIN_BOWLS else None),
+        "bowl_letters": expected,
+        "bowl_closed": closed,
         "letter_gap_cv": _cv(gaps) if len(gaps) >= 5 else None,
         "letter_gap_spread": spread,
         "letter_gaps_odd": odd,

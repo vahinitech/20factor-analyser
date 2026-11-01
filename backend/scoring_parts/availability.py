@@ -4,11 +4,16 @@
 # availability.py - which factors this page cannot measure, and the
 # "Not measured" wording, reason and scoring_inputs each one reports.
 # What each factor needs lives in factor_needs.py (#207); this adds the
-# one rule it does not hold, Word Spacing's three gaps.
+# two rules it does not hold: Word Spacing's three gaps and Loop
+# Closure's five letters with a bowl.
 
 from scoring_parts import needs as factor_needs
 
 _MIN_WORD_GAPS = 3
+# Loop Closure needs this many letters with a bowl on lines measured in
+# the ink (features._stroke_features); with fewer, one open bowl moves
+# the score by a fifth or more.
+MIN_BOWLS = 5
 # Why a factor is not measured, by the kind its missing need gives
 # (factor_needs.py).
 _UNMEASURED_REASONS = {
@@ -20,6 +25,16 @@ _UNMEASURED_REASONS = {
     # method, letters_joined. Words for families wait for the owner's
     # approval (docs/12-report-rules.md), so none are given yet.
     "joined": None,
+}
+# Factors whose "insufficient" has its own reason and evidence.
+_FACTOR_REASONS = {
+    3: f"Needs at least {MIN_BOWLS} letters with a bowl on measured lines.",
+}
+_FACTOR_EVIDENCE = {
+    3: (
+        f"Fewer than {MIN_BOWLS} letters with a bowl (a, b, d, e, g, o, "
+        "p, q) were found on lines measured in the ink."
+    ),
 }
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
@@ -67,14 +82,24 @@ def missing_kind(n, fx, supplied):
         return lacking
     if n == 8 and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS:
         return "insufficient"
+    if n == 3 and fx.get("bowl_share") is None:
+        return "insufficient"
     return None
 
 
-def unmeasured_evidence(kind):
+def unmeasured_reason(n, kind):
+    if kind == "insufficient" and n in _FACTOR_REASONS:
+        return _FACTOR_REASONS[n]
+    return _UNMEASURED_REASONS.get(kind)
+
+
+def unmeasured_evidence(n, kind):
+    if kind == "insufficient" and n in _FACTOR_EVIDENCE:
+        return _FACTOR_EVIDENCE[n]
     return _UNMEASURED_EVIDENCE.get(kind) or ""
 
 
-def unmeasured_inputs(kind, fx):
+def unmeasured_inputs(kind, fx, n=None):
     """The scoring_inputs an unmeasured factor reports."""
     if kind == "imu":
         return {"method": "sensor_required", "features": {}}
@@ -87,6 +112,11 @@ def unmeasured_inputs(kind, fx):
         }
     if kind == "joined":
         return {"method": "letters_joined", "features": {"style": "cursive"}}
+    if n == 3:
+        return {
+            "method": "insufficient_data",
+            "features": {"bowl_letters": fx.get("bowl_letters", 0)},
+        }
     return {
         "method": "insufficient_data",
         "features": {"word_gap_count": fx.get("word_gap_count", 0)},

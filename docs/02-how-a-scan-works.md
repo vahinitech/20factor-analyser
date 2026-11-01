@@ -326,7 +326,7 @@ Each `factor_regions` entry keeps `url` and `caption` and adds:
 
 Size evidence selects the largest height deviation from the median. Baseline and straightness evidence select the largest absolute polygon angle. Margin evidence selects the largest corrected-left-edge deviation, using the scorer's camera-tilt correction. Word-spacing evidence uses the scorer's row grouping and selects the largest normalized-gap deviation, showing both adjacent regions.
 
-A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop-letter frequency or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
+A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop closure (measured per word, not per letter) or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
 
 Aggregate images and page maps retain accepted handwriting rectangles and blank the rest. This prevents excluded headers and labels from returning through whole-page previews. It does not correct a printed region that the upstream classifier mistakenly accepts, or separate printed and handwritten pixels inside one accepted box.
 
@@ -846,7 +846,7 @@ to the measuring and weekly (`.github/workflows/factor-tests.yml`).
 | One line's letters riding a wave | 11 Line Straightness | 20% | **100%** |
 | One line's letters leaning 25 degrees | 17 Slant Consistency | 0% | **100%** |
 | One word's letters three times as far apart | 9 Letter Spacing | 25% | **100%** |
-| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **85%** |
+| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **100%** |
 | One word 1.5 times the size | 5 Size Consistency | 75% | 75% (falls 0.61, was 0.25) |
 | One line's tall letters and tails 1.5 times | 6 Ascender/Descender | 75% | 75% |
 | One small letter 1.7 times taller | 5 Size Consistency | 15% | 10% |
@@ -861,7 +861,13 @@ What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/feature
 - **Loop Closure (3)** counted the share of loop letters in the text, so
   an open loop could not move it. It now counts the closed bowls in each
   line's ink (holes of letter-bowl size) against the letters read that
-  have one (a, b, d, e, g, o, p, q); full marks at 90%.
+  have one (a, b, d, e, g, o, p, q); full marks at 90%. Since #200 a hole
+  counts only inside the small-letter band (or, for a bowl written tall,
+  starting on the baseline), so the loops of l, h, k and of the tails of
+  g, j, y are not taken for bowls; each word counts at most as many
+  closed bowls as it has bowl letters; and a page with fewer than five
+  bowl letters on measured lines is not measured, where it used to fall
+  back to the share of loop letters in the text. Caught rose to 100%.
 - **Letter Spacing (9)** was the spread of line width per character. It
   is now the spread of the gaps between the letters (or joined pieces)
   inside words. Since #197 each gap is compared with its own word's

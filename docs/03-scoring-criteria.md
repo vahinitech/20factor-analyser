@@ -77,7 +77,7 @@ score falls linearly and hits zero at the stated limit.
 |---|---|---|---|---|
 | 1 | Letter Formation Accuracy | shape regularity proxy: recognizer confidence + letter-height consistency | `7.2·conf + 2.8·(1 − height CV)` | shape dist ≤0.10 |
 | 2 | Stroke Order Consistency | stroke order proxy: char-width consistency + confidence | `5.4 + 2.6·(1 − char-width CV) + 2.0·conf` | edit dist ≤2 |
-| 3 | Loop Closure | share of loop-bearing letters (a o d p e g q) among letters read | `10 · min(1, loop share / 0.28)` | ≥95% closed |
+| 3 | Loop Closure | share of the letters read that have a bowl (a b d e g o p q) whose bowl is closed in the ink: a hole of bowl size in the small-letter band, counted word by word and never more than the word's bowl letters. Not measured below five bowl letters on measured lines | `10 · min(1, closed share / 0.9)` | ≥95% closed |
 | 4 | Line Quality (Smoothness) | stroke smoothness proxy: line-width consistency | `10 · (1 − min(1, width CV / 0.8))` | jitter ≤0.5 px |
 | 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
@@ -143,12 +143,15 @@ paper does not count as reach; reach =
   proxy formulas above remain only as documentation of what the pen path
   replaces. The dual-IMU sensor pen measures them directly, and the
   report marks pen-measured factors (`imuMeasured`).
-- **Some factors lean on OCR text**: loop closure (#3), the factor-6
-  proxy path and character distinction's confidence term. The rest is
+- **Some factors lean on OCR text**: loop closure (#3) takes how many
+  bowl letters each word has from the words read (the closing itself is
+  measured in the ink), the factor-6 proxy path and character
+  distinction's confidence term. The rest is
   pure geometry and survives OCR being wrong or unavailable.
 - **Slant (#17) is page-level tilt variability**, not a per-letter
-  cursive-lean angle; loop closure is letter-share, not per-letter
-  contour tracing. Both simplifications are stated in
+  cursive-lean angle; loop closure counts closed bowls per word, not per
+  letter, because the reader gives no letter boxes. Both simplifications
+  are stated in
   [`05-computer-vision-algorithms.md`](05-computer-vision-algorithms.md).
 - **Fragmented detection hurts spatial scores.** Word Spacing reads the
   gaps between detected segments on one row, so a line detected whole
