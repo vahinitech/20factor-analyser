@@ -5,6 +5,7 @@
 # boxes, word gaps, letter sizes, ink variance and what the ink inside
 # the lines shows (letter_geometry.py, ink_geometry.py).
 
+import bisect
 import math
 import re
 
@@ -15,6 +16,7 @@ from vision import letter_geometry
 from vision import computer_vision
 from vision import ink_geometry
 import languages
+from reading import detector
 from scoring_parts.page import (
     _detilted_left_x,
     _group_lines_by_rows,
@@ -42,22 +44,54 @@ _TALL_RE = re.compile(
 # of the page width right of the other rows' median start is a centred
 # title, a date or a signature, not a line that missed the margin (#201).
 MARGIN_OUTLIER = 0.15
+# A paragraph's first line set in at least PARA_INDENT of the page width
+# (and no further than MARGIN_OUTLIER) is an indent, not a missed margin:
+# the first row, or a row after one that ends PARA_SHORT of the block's
+# width short of the longest row.
+PARA_INDENT = 0.02
+PARA_SHORT = 0.25
+# Fewer counted rows than this and the margin is not measured: two
+# starts always sit the same distance from their median.
+MIN_MARGIN_ROWS = 3
 
 
-def _margin_spread(lefts):
+def _margin_rows(lefts, rights=None):
+    """The rows' starts Margin Discipline counts, top to bottom: not one
+    far right of the median start (MARGIN_OUTLIER), and, when the rows'
+    right ends are given, not a paragraph's indented first line
+    (PARA_INDENT, PARA_SHORT)."""
+    if not lefts:
+        return []
+    mid = float(np.median(lefts))
+    rows = [
+        (x, r)
+        for x, r in zip(lefts, rights or [None] * len(lefts))
+        if x - mid <= MARGIN_OUTLIER
+    ]
+    if rights is None:
+        return [x for x, _ in rows]
+    end = max(r for _, r in rows)
+    short = end - PARA_SHORT * max(1e-6, end - mid)
+    return [
+        x
+        for i, (x, _) in enumerate(rows)
+        if not ((i == 0 or rows[i - 1][1] < short) and x - mid >= PARA_INDENT)
+    ]
+
+
+def _margin_spread(lefts, rights=None):
     """How far the rows' starts stray from the margin: the mean distance
-    from the median start, as a share of the page width, leaving out
-    starts far right of the median (MARGIN_OUTLIER).
+    from the median start, as a share of the page width, over the rows
+    _margin_rows counts. None below MIN_MARGIN_ROWS counted rows.
 
     The coefficient of variation it replaces divides by the mean start,
     so the same spread scored worse the nearer the writing sat to the
     page's edge, and one date at the right took a page to 0 (#201). The
     median of the distances would ignore one indented line among four,
     so their mean is taken around the median instead."""
-    if not lefts:
-        return 0.0
-    mid = float(np.median(lefts))
-    kept = [x for x in lefts if x - mid <= MARGIN_OUTLIER]
+    kept = _margin_rows(lefts, rights)
+    if len(kept) < MIN_MARGIN_ROWS:
+        return None
     mid = float(np.median(kept))
     return mean([abs(x - mid) for x in kept])
 
@@ -129,6 +163,34 @@ def _letter_spacing(words):
     return float(np.median(devs)), odd / len(devs), off
 
 
+def _row_rights(starts, lines, tilt_deg, w, h):
+    """The detilted right end of each start's row, as a share of the
+    page width. Only lines whose tops lie within a line's height of the
+    start's can share its row (detector.on_same_row needs them to
+    overlap), so each start looks at those alone."""
+    ordered = sorted(lines, key=lambda l: float(l["box"][1]))
+    tops = [float(l["box"][1]) for l in ordered]
+    tallest = max((float(l["box"][3]) for l in lines), default=0.0)
+    out = []
+    for s in starts:
+        y, bh = float(s["box"][1]), float(s["box"][3])
+        near = ordered[
+            bisect.bisect_left(tops, y - tallest) : bisect.bisect_right(
+                tops, y + bh
+            )
+        ]
+        right = max(
+            float(l["box"][0]) + float(l["box"][2])
+            for l in near + [s]
+            if l is s or detector.on_same_row(s, l)
+        )
+        out.append(
+            _detilted_left_x([right, y, 0, bh], tilt_deg, w, h)
+            / max(1.0, float(w))
+        )
+    return out
+
+
 def _extract_features(arr: np.ndarray, lines, layout):
     h, w = arr.shape[:2]
     boxes = [l.get("box") or [0, 0, 0, 0] for l in lines]
@@ -142,11 +204,18 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # right (words the reader never found between) is not a line start,
     # and counting its edge as one scored Margin Discipline 0 on two UJI
     # test pages.
+    starts = sorted(
+        computer_vision.line_starts(arr, lines),
+        key=lambda l: float(l["box"][1]) + float(l["box"][3]) * 0.5,
+    )
     lefts = [
         _detilted_left_x(l.get("box") or [0, 0, 0, 0], tilt_deg, w, h)
         / max(1.0, float(w))
-        for l in computer_vision.line_starts(arr, lines)
+        for l in starts
     ]
+    # Where each row ends: the right edge of its last line, for telling
+    # a paragraph's indented first line from a missed margin.
+    rights = _row_rights(starts, lines, tilt_deg, w, h)
     scores = [float(l.get("score", 0.0)) for l in lines]
     texts = [str(l.get("text", "") or "") for l in lines]
     n_lines = len(lines)
@@ -271,7 +340,8 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "width_cv": _cv(widths),
         "char_w_cv": _cv(char_w),
         "left_cv": _cv(lefts),
-        "left_spread": _margin_spread(lefts),
+        "left_spread": _margin_spread(lefts, rights),
+        "margin_rows": len(_margin_rows(lefts, rights)),
         "line_slope_abs": mean(slopes),
         "line_slope_std": _std(slopes),
         # median SIGNED line angle: >0 means lines descend left-to-right

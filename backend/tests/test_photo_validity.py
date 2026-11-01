@@ -133,7 +133,11 @@ class TestPhotoValidity(unittest.TestCase):
         spacing = result["results"][7]
         self.assertTrue(spacing["unmeasured"])
         self.assertEqual(spacing["unmeasuredKind"], "insufficient")
-        self.assertEqual(result["measuredCount"], 15)
+        # One line has no margin to measure either (#201).
+        margin = result["results"][9]
+        self.assertTrue(margin["unmeasured"])
+        self.assertEqual(margin["unmeasuredKind"], "insufficient")
+        self.assertEqual(result["measuredCount"], 14)
         for factor in result["results"][12:16]:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")

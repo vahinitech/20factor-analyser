@@ -4,7 +4,8 @@
 # availability.py - which factors this page cannot measure, and the
 # "Not measured" wording, reason and scoring_inputs each one reports.
 # What each factor needs lives in factor_needs.py (#207); this adds the
-# one rule it does not hold, Word Spacing's three gaps.
+# two rules it does not hold: Word Spacing's three gaps and Margin
+# Discipline's three line starts.
 
 from scoring_parts import needs as factor_needs
 
@@ -21,6 +22,11 @@ _UNMEASURED_REASONS = {
     # approval (docs/12-report-rules.md), so none are given yet.
     "joined": None,
 }
+# Margin Discipline's own wording for "insufficient" (#201).
+_FEW_STARTS_REASON = "Needs at least three lines starting at the margin."
+_FEW_STARTS_EVIDENCE = (
+    "Fewer than three lines start at the left margin on this page."
+)
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
     "imu": "A still photo cannot measure pen motion or pressure.",
@@ -67,14 +73,24 @@ def missing_kind(n, fx, supplied):
         return lacking
     if n == 8 and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS:
         return "insufficient"
+    if n == 10 and fx.get("left_spread", 0.0) is None:
+        return "insufficient"
     return None
 
 
-def unmeasured_evidence(kind):
+def unmeasured_reason(kind, n=None):
+    if kind == "insufficient" and n == 10:
+        return _FEW_STARTS_REASON
+    return _UNMEASURED_REASONS.get(kind)
+
+
+def unmeasured_evidence(kind, n=None):
+    if kind == "insufficient" and n == 10:
+        return _FEW_STARTS_EVIDENCE
     return _UNMEASURED_EVIDENCE.get(kind) or ""
 
 
-def unmeasured_inputs(kind, fx):
+def unmeasured_inputs(kind, fx, n=None):
     """The scoring_inputs an unmeasured factor reports."""
     if kind == "imu":
         return {"method": "sensor_required", "features": {}}
@@ -87,6 +103,11 @@ def unmeasured_inputs(kind, fx):
         }
     if kind == "joined":
         return {"method": "letters_joined", "features": {"style": "cursive"}}
+    if n == 10:
+        return {
+            "method": "insufficient_data",
+            "features": {"margin_rows": fx.get("margin_rows", 0)},
+        }
     return {
         "method": "insufficient_data",
         "features": {"word_gap_count": fx.get("word_gap_count", 0)},
