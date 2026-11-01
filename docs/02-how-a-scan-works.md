@@ -272,7 +272,7 @@ There is **no calibrated probability** anywhere in a report. The API field
 |---|---|---|
 | OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 2, 19; the printed check; dropping fragments |
 | Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`server/app.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
-| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
+| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps, Margin Discipline with fewer than 3 rows starting at the margin) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
 | Printed probability | Section 2, step 4 | Which lines are scored. The code says it is "a heuristic, not a calibrated confidence" (`classify.py:439-444`) |
 | Photo quality | Sharpness (Laplacian variance) and size, measured in the browser only (`app.js:629-658`) | A warning; the visitor may still go on |
 

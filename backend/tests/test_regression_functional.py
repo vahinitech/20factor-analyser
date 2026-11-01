@@ -234,7 +234,9 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertGreaterEqual(int(a.get("overall", 0)), 0)
         self.assertLessEqual(int(a.get("overall", 100)), 100)
         self.assertEqual(a.get("source"), "python")
-        self.assertEqual(int(a.get("measuredCount", 0)), 16)
+        # The fixture holds fewer than three lines, so Margin Discipline
+        # is not measured (#201).
+        self.assertEqual(int(a.get("measuredCount", 0)), 15)
 
         # Renderer-completeness: the browser is render-only now, so every factor
         # must arrive with the rendering extras (drill group, target band, tip)
