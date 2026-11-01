@@ -22,6 +22,7 @@ from scoring_parts.page import (
     _group_lines_by_rows,
     _page_tilt_degrees,
 )
+from scoring_parts.reading import _reading_features
 from scoring_parts.stats import _cv, _std, mean
 from scoring_parts.availability import MIN_BOWLS
 
@@ -326,6 +327,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
 
     fx = {
         **_stroke_features(geo, texts),
+        **_reading_features(lines, geo),
         "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
         "size_basis": "words" if size_by_words else "lines",
         "words_off_size": words_off_size,

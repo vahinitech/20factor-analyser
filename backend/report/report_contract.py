@@ -38,6 +38,7 @@ FACTOR_IDS = (
 
 SENSOR_LIMITATIONS = {
     2: "A still image does not record the order of pen strokes.",
+    4: "At photo size a shaky stroke cannot be told from a curve.",
     13: "A still image does not record writing speed or timing.",
     14: "Ink darkness is not a direct measurement of pen pressure.",
     16: "A still image does not record pen lifts over time.",

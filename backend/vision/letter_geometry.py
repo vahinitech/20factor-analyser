@@ -298,6 +298,69 @@ def _wave(spans, slope, icpt, xh):
     return float(np.median(np.abs(offs)))
 
 
+# The band a word's crossings are counted in: from a little above its
+# small letters' tops to a little below its baseline, in small-letter
+# heights. Tails and stems, and the tails of the lines above and below
+# that reach into the word (the f of a "fox" under an "each"), stay out;
+# on the real benchmark pages they made the most "tangled" words. The
+# outline's turning is followed over the whole word: cutting the ink at
+# the band's edges would add corners no pen made.
+BAND_UP = 1.2
+BAND_DOWN = 0.2
+
+
+def _small_band(word_mask, wd, y0, slope, icpt, xh):
+    """The rows of a word's ink inside its small-letter band."""
+    cx = wd["bbox"][0] + wd["bbox"][2] / 2.0
+    base = slope * cx + icpt + wd["drop"] - y0
+    top = max(0, int(round(base - BAND_UP * xh)))
+    bottom = max(top, int(round(base + BAND_DOWN * xh)))
+    return word_mask[top:bottom]
+
+
+def _crossings(mask):
+    """How many strokes a word's ink columns cross, on average: the
+    number of separate runs of ink down each column that has any. An l
+    is one, an e three; a scribbled word, its strokes looping over each
+    other, more than the writer's other words. None for a blank word."""
+    m = mask.astype(np.int8)
+    starts = (np.diff(np.pad(m, ((1, 0), (0, 0))), axis=0) == 1).sum(0)
+    inked = starts[starts > 0]
+    return float(inked.mean()) if inked.size else None
+
+
+# The outline is followed in steps of this share of the small-letter
+# height, so the pixel stairs of the outline do not count as turns.
+TURN_STEP = 1.0 / 8
+TURN_MIN_POINTS = 12
+
+
+def _turning(mask, xh):
+    """How much a word's outline turns, in radians per small-letter height
+    of outline: smooth letters turn at their curves, a scribble's outline
+    turns all the time. None for a word too small to follow."""
+    if cv2 is None:
+        return None
+    contours, _ = cv2.findContours(
+        mask.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
+    )
+    step = max(2, int(round(xh * TURN_STEP)))
+    total, length = 0.0, 0.0
+    for c in contours:
+        if len(c) < TURN_MIN_POINTS:
+            continue
+        pts = c[::step, 0, :].astype(np.float64)
+        d = np.diff(np.vstack([pts, pts[:1]]), axis=0)
+        ang = np.arctan2(d[:, 1], d[:, 0])
+        turn = np.diff(np.concatenate([ang, ang[:1]]))
+        turn = (turn + np.pi) % (2 * np.pi) - np.pi
+        total += float(np.abs(turn).sum())
+        length += float(np.hypot(d[:, 0], d[:, 1]).sum())
+    if length <= 0:
+        return None
+    return total / length * xh
+
+
 def _bowl_holes(mask, x0, y0, slope, icpt, xh):
     """The middles (x, page pixels) of the closed bowls in a line's ink:
     holes of letter-bowl size in the small-letter band."""
@@ -465,9 +528,13 @@ def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
             for a, b in zip(wd["spans"], wd["spans"][1:])
         ]
         letter_gaps.extend(wd["letter_gaps"])
-        wd["slant"] = _slant(
-            mask[:, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0]
-        )
+        word_mask = mask[
+            :, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0
+        ]
+        wd["slant"] = _slant(word_mask)
+        band = _small_band(word_mask, wd, y0, slope, icpt, line_xh)
+        wd["crossings"] = _crossings(band)
+        wd["turning"] = _turning(word_mask, line_xh)
         wd["off"] = wd["drop"] / line_xh
         del wd["spans"]
     gaps_out = []

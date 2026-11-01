@@ -9,6 +9,7 @@
 
 from scoring_parts.availability import _MIN_WORD_GAPS
 from scoring_parts.stats import _clamp10
+from scoring_parts.structure import _reading
 
 # Slant Consistency: the spread of the words' lean, in degrees, that
 # loses all marks.
@@ -37,11 +38,16 @@ def add_scores(fx, s):
 
     spacing_ok = fx.get("word_gap_count", 3) >= _MIN_WORD_GAPS
     margin_ok = fx.get("left_spread", 0.0) is not None
-    s[18] = _clamp10(_blend(((1, 0.35), (5, 0.25), (8, 0.20), (7, 0.20))))
-    s[19] = _clamp10(
-        (fx["avg_score"] * 7.5)
-        + ((1.0 - min(1.0, fx["digits_ratio"] / 0.5)) * 2.5)
+    # Legibility reads the page directly (how surely its words were
+    # read) besides the shapes, size, spacing and line that make it easy
+    # to read (#193). Character Distinction is how surely the reader told
+    # the letters apart, word by word. It no longer loses marks for
+    # digits: a number written clearly is as distinct as a letter.
+    s["reading"] = _clamp10(_reading(fx) * 10.0)
+    s[18] = _clamp10(
+        _blend((("reading", 0.30), (1, 0.30), (5, 0.15), (8, 0.15), (7, 0.10)))
     )
+    s[19] = s["reading"]
     s[20] = _clamp10(
         _blend(((5, 0.30), (8, 0.20), (10, 0.20), (11, 0.15), (17, 0.15)))
     )

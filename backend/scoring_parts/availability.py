@@ -93,6 +93,16 @@ def missing_kind(n, fx, supplied):
     return None
 
 
+# What a photo cannot show, for the Structure factors only the sensor
+# pen measures (needs.py, #192); the Dynamics keep the line above.
+_PEN_EVIDENCE = {
+    2: "A still photo shows the finished letter, not the order its "
+    "strokes were made in.",
+    4: "At photo size a shaky stroke looks like the letters' own curves, "
+    "so smoothness is measured by the sensor pen.",
+}
+
+
 def unmeasured_reason(kind, n=None):
     if kind == "insufficient" and n in _FACTOR_REASONS:
         return _FACTOR_REASONS[n]
@@ -100,6 +110,8 @@ def unmeasured_reason(kind, n=None):
 
 
 def unmeasured_evidence(kind, n=None):
+    if kind == "imu" and n in _PEN_EVIDENCE:
+        return _PEN_EVIDENCE[n]
     if kind == "insufficient" and n in _FACTOR_EVIDENCE:
         return _FACTOR_EVIDENCE[n]
     return _UNMEASURED_EVIDENCE.get(kind) or ""

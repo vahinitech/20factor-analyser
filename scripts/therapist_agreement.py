@@ -48,7 +48,7 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BACKEND = os.path.join(ROOT, "backend")
 SHEET_DIR = os.path.join(ROOT, "docs", "therapist-agreement")
 FACTORS = tuple(range(1, 21))
-PEN = (13, 14, 15, 16)  # a photo cannot measure these (benchmark.SCORED)
+PEN = (2, 4, 13, 14, 15, 16)  # the sensor pen's (benchmark.SCORED)
 COLUMNS = ["page", "therapist"] + [f"f{n}" for n in FACTORS] + ["ot_look"]
 
 # Bands in the order the report ranks them, with the stage the report
@@ -767,8 +767,8 @@ def report(scores, marks, problems, flag_below=45, meta=None):
     if all(not factor_pairs(scores, marks, n) for n in PEN):
         lines += [
             "",
-            "Factors 13 to 16 need the pen; a photo does not measure "
-            "them, so they are not compared.",
+            "Factors 2, 4 and 13 to 16 need the pen; a photo does not "
+            "measure them, so they are not compared.",
         ]
 
     lines += [

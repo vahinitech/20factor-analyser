@@ -25,10 +25,12 @@ reviewer who was not a therapist
   sheet diagnoses anything, and no result of this test may be described
   as one. The yes or no question on the sheet is a therapist's judgement
   from one page, not a referral decision about a child.
-- It compares the 16 factors a photo can measure. Factors 13 to 16
+- It compares the 14 factors a photo can measure. Factors 13 to 16
   (speed, pressure, continuity, pen lifts) need the pen; the sheet asks
   for them only from a therapist who watched the child write, and the
-  report leaves them out until the analyser measures them.
+  report leaves them out until the analyser measures them. Stroke order
+  (2) and smoothness (4) are also the pen's (#192): a therapist may still
+  mark them, but the analyser gives no photo score to compare.
 
 ## The rules for the pages
 

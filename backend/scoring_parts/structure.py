@@ -12,10 +12,22 @@ from scoring_parts.stats import _clamp10
 BOWL_FULL = 0.9
 
 
+def _reading(fx):
+    """How surely the words were read, 0 to 1; the mean line confidence
+    when no word could be weighed (reading.py)."""
+    reading = fx.get("reading")
+    return fx["avg_score"] if reading is None else reading
+
+
 def add_scores(fx, s):
     """Adds factors 1 to 6 to s, the page's scores by factor number."""
+    # Letter Formation: how surely the words were read (reading.py, the
+    # least sure quarter counted twice), how even the line heights are,
+    # less up to TANGLE_POINTS for the most tangled word (#193).
     s[1] = _clamp10(
-        (fx["avg_score"] * 7.2) + ((1.0 - min(1.0, fx["height_cv"])) * 2.8)
+        (_reading(fx) * 7.2)
+        + ((1.0 - min(1.0, fx["height_cv"])) * 2.8)
+        - fx.get("tangle_points", 0.0)
     )
     s[2] = _clamp10(
         5.4 + (1.0 - min(1.0, fx["char_w_cv"])) * 2.6 + (fx["avg_score"] * 2.0)
