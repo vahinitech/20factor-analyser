@@ -9,12 +9,15 @@ import os
 import sys
 import unittest
 
+import numpy as np
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import scoring  # noqa: E402
 from scoring_parts.features import (  # noqa: E402
     _letter_spacing,
+    _margin_rows,
     _margin_spread,
     _word_spacing,
 )
@@ -147,7 +150,6 @@ class TestMarginSpread(unittest.TestCase):
 
     def test_a_date_or_title_far_right_is_left_out(self):
         self.assertEqual(_margin_spread([0.1, 0.1, 0.1, 0.7]), 0.0)
-        self.assertEqual(_margin_spread([0.1, 0.5]), 0.0)
 
     def test_a_line_starting_left_of_the_margin_is_counted(self):
         self.assertAlmostEqual(_margin_spread([0.1, 0.1, 0.1, 0.0]), 0.025)
@@ -157,9 +159,55 @@ class TestMarginSpread(unittest.TestCase):
         far = _margin_spread([0.32, 0.33, 0.32, 0.34])
         self.assertAlmostEqual(near, far)
 
-    def test_no_rows_is_no_spread(self):
-        self.assertEqual(_margin_spread([]), 0.0)
-        self.assertEqual(_margin_spread([0.3]), 0.0)
+    def test_under_three_rows_is_not_measured(self):
+        self.assertIsNone(_margin_spread([]))
+        self.assertIsNone(_margin_spread([0.3]))
+        self.assertIsNone(_margin_spread([0.1, 0.1]))
+        # A date far right does not make the third row.
+        self.assertIsNone(_margin_spread([0.1, 0.1, 0.7]))
+        self.assertEqual(score(10, left_spread=None), 0.0)
+
+    def test_neatness_leaves_an_unmeasured_margin_out(self):
+        with_margin = score(20, left_spread=0.0)
+        without = score(20, left_spread=None)
+        # Not counted as 0: the other four parts carry the blend.
+        self.assertGreater(without, 8.0)
+        self.assertLess(abs(with_margin - without), 1.0)
+
+    def test_indented_paragraph_starts_are_not_marked_down(self):
+        # Two paragraphs, each first line set in; the row before the
+        # second ends well short of the others.
+        lefts = [0.13, 0.1, 0.1, 0.13, 0.1, 0.1]
+        rights = [0.9, 0.9, 0.5, 0.9, 0.9, 0.9]
+        self.assertEqual(_margin_rows(lefts, rights), [0.1] * 4)
+        self.assertEqual(_margin_spread(lefts, rights), 0.0)
+
+    def test_a_line_set_in_mid_paragraph_is_counted(self):
+        lefts = [0.1, 0.1, 0.13, 0.1, 0.1]
+        rights = [0.9] * 5
+        self.assertEqual(len(_margin_rows(lefts, rights)), 5)
+        self.assertLess(
+            score(10, left_spread=_margin_spread(lefts, rights)), 9.0
+        )
+
+    def test_a_small_wobble_after_a_short_row_is_counted(self):
+        # Under PARA_INDENT in, it is a margin to keep, not an indent.
+        lefts = [0.1, 0.1, 0.11, 0.1]
+        rights = [0.9, 0.5, 0.9, 0.9]
+        self.assertEqual(len(_margin_rows(lefts, rights)), 4)
+
+    def test_a_two_line_page_reports_margin_as_not_measured(self):
+        arr = np.full((400, 1000, 3), 255, np.uint8)
+        lines = [
+            {"box": [100, y, 700, 50], "text": "word", "score": 0.9}
+            for y in (100, 180)
+        ]
+        result = scoring.build_analysis(arr, lines, {}).to_dict()
+        f10 = next(r for r in result["results"] if r["n"] == 10)
+        self.assertTrue(f10["unmeasured"])
+        self.assertEqual(f10["unmeasuredKind"], "insufficient")
+        self.assertIn("margin", f10["unmeasuredReason"])
+        self.assertEqual(f10["scoringInputs"]["features"], {"margin_rows": 2})
 
     def test_the_score_falls_with_the_spread(self):
         self.assertEqual(score(10, left_spread=0.025), 5.0)

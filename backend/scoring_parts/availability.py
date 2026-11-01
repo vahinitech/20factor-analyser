@@ -4,8 +4,9 @@
 # availability.py - which factors this page cannot measure, and the
 # "Not measured" wording, reason and scoring_inputs each one reports.
 # What each factor needs lives in factor_needs.py (#207); this adds the
-# two rules it does not hold: Word Spacing's three gaps and Loop
-# Closure's five letters with a bowl.
+# two rules it does not hold: Word Spacing's three gaps, Loop
+# Closure's five letters with a bowl and Margin Discipline's three
+# line starts.
 
 from scoring_parts import needs as factor_needs
 
@@ -26,15 +27,18 @@ _UNMEASURED_REASONS = {
     # approval (docs/12-report-rules.md), so none are given yet.
     "joined": None,
 }
-# Factors whose "insufficient" has its own reason and evidence.
+# Factors whose "insufficient" has its own reason and evidence:
+# Loop Closure (#200) and Margin Discipline (#201).
 _FACTOR_REASONS = {
     3: f"Needs at least {MIN_BOWLS} letters with a bowl on measured lines.",
+    10: "Needs at least three lines starting at the margin.",
 }
 _FACTOR_EVIDENCE = {
     3: (
         f"Fewer than {MIN_BOWLS} letters with a bowl (a, b, d, e, g, o, "
         "p, q) were found on lines measured in the ink."
     ),
+    10: "Fewer than three lines start at the left margin on this page.",
 }
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
@@ -84,16 +88,18 @@ def missing_kind(n, fx, supplied):
         return "insufficient"
     if n == 3 and fx.get("bowl_share") is None:
         return "insufficient"
+    if n == 10 and fx.get("left_spread", 0.0) is None:
+        return "insufficient"
     return None
 
 
-def unmeasured_reason(n, kind):
+def unmeasured_reason(kind, n=None):
     if kind == "insufficient" and n in _FACTOR_REASONS:
         return _FACTOR_REASONS[n]
     return _UNMEASURED_REASONS.get(kind)
 
 
-def unmeasured_evidence(n, kind):
+def unmeasured_evidence(kind, n=None):
     if kind == "insufficient" and n in _FACTOR_EVIDENCE:
         return _FACTOR_EVIDENCE[n]
     return _UNMEASURED_EVIDENCE.get(kind) or ""
@@ -116,6 +122,11 @@ def unmeasured_inputs(kind, fx, n=None):
         return {
             "method": "insufficient_data",
             "features": {"bowl_letters": fx.get("bowl_letters", 0)},
+        }
+    if n == 10:
+        return {
+            "method": "insufficient_data",
+            "features": {"margin_rows": fx.get("margin_rows", 0)},
         }
     return {
         "method": "insufficient_data",

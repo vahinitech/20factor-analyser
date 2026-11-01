@@ -132,13 +132,14 @@ class TestPhotoValidity(unittest.TestCase):
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         self.assertEqual(len(result["results"]), 20)
         # The blank synthetic page has no ink between words, so Word
-        # Spacing is unmeasured rather than a perfect score, and there is
-        # no ink to find a closed bowl in, so Loop Closure is unmeasured.
-        for n in (3, 8):
+        # Spacing is unmeasured rather than a perfect score, there is no
+        # ink to find a closed bowl in, and one line has no margin to
+        # measure (#200, #201).
+        for n in (3, 8, 10):
             factor = result["results"][n - 1]
             self.assertTrue(factor["unmeasured"], n)
             self.assertEqual(factor["unmeasuredKind"], "insufficient")
-        self.assertEqual(result["measuredCount"], 14)
+        self.assertEqual(result["measuredCount"], 13)
         for factor in result["results"][12:16]:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")

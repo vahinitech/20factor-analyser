@@ -104,7 +104,16 @@ class TestPoorPages(unittest.TestCase):
         at = planted.mistake_lines(kinds, 1, 4)
         self.assertEqual(at["narrow_gap"], 1)
         self.assertEqual(at["tilted_line"], 3)
-        self.assertEqual([at[k] for k in SPREAD], [0, 2, 3, 0])
+        # The indent would have gone on line 0, a paragraph's first
+        # line, so it moves to line 1.
+        self.assertEqual([at[k] for k in SPREAD], [0, 2, 3, 1])
+
+    def test_an_indent_is_never_planted_on_the_first_line(self):
+        # A first line set in opens a paragraph, which Margin Discipline
+        # leaves out (#201); a planted indent must be a margin fault.
+        for li in range(4):
+            at = planted.mistake_lines(("indented_line",), li, 4)
+            self.assertEqual(at["indented_line"], max(li, 1))
 
     def test_a_poor_page_is_built_with_no_single_box(self):
         img, lines, truth = planted.build_page(
