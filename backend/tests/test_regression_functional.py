@@ -234,7 +234,8 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertGreaterEqual(int(a.get("overall", 0)), 0)
         self.assertLessEqual(int(a.get("overall", 100)), 100)
         self.assertEqual(a.get("source"), "python")
-        self.assertEqual(int(a.get("measuredCount", 0)), 16)
+        # 2, 4 and 13 to 16 need the sensor pen.
+        self.assertEqual(int(a.get("measuredCount", 0)), 14)
 
         # Renderer-completeness: the browser is render-only now, so every factor
         # must arrive with the rendering extras (drill group, target band, tip)
@@ -640,7 +641,7 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertEqual(len(fmap), 20)
         for n in range(1, 21):
             entry = fmap.get(str(n)) or {}
-            if 13 <= n <= 16:
+            if n in (2, 4, 13, 14, 15, 16):
                 self.assertEqual(entry["status"], "unavailable")
                 self.assertFalse(entry["url"])
                 continue

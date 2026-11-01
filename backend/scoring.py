@@ -40,6 +40,12 @@ from scoring_parts.features import (
     _stroke_features,
     cv2,
 )
+from scoring_parts.reading import (
+    TANGLE_FULL,
+    TANGLE_POINTS,
+    TANGLE_START,
+    _reading_features,
+)
 from scoring_parts.page import (
     _detilted_left_x,
     _group_lines_by_rows,
@@ -65,6 +71,9 @@ __all__ = [
     "SIZE_OFF",
     "SLANT_SCALE",
     "SectionScore",
+    "TANGLE_FULL",
+    "TANGLE_POINTS",
+    "TANGLE_START",
     "WAVE_SCALE",
     "WORD_GAP_SCALE",
     "WORD_LETTERS",
@@ -78,6 +87,7 @@ __all__ = [
     "_group_lines_by_rows",
     "_ink_features",
     "_page_tilt_degrees",
+    "_reading_features",
     "_score_factor_map",
     "_std",
     "_stroke_features",
@@ -127,10 +137,22 @@ _OVERALL_POINTS = {1: 40, 7: 20, 5: 20, 11: 10, 17: 10}
 _OVERALL_MIN_SIZE_WORDS = 10
 
 _FACTOR_META = {
-    1: ("structure", "Letter Formation Accuracy", "shape regularity proxy"),
-    2: ("structure", "Stroke Order Consistency", "stroke order proxy"),
+    1: (
+        "structure",
+        "Letter Formation Accuracy",
+        "word-by-word reading confidence and tangled-word ink check",
+    ),
+    2: (
+        "structure",
+        "Stroke Order Consistency",
+        "stroke order, recorded by the sensor pen",
+    ),
     3: ("structure", "Loop Closure", "loop-bearing character consistency"),
-    4: ("structure", "Line Quality (Smoothness)", "stroke smoothness proxy"),
+    4: (
+        "structure",
+        "Line Quality (Smoothness)",
+        "stroke smoothness, recorded by the sensor pen",
+    ),
     5: ("structure", "Size Consistency", "letter-height consistency"),
     6: ("structure", "Ascender / Descender Control", "zone balance"),
     7: ("spatial", "Baseline Alignment", "baseline drift"),
@@ -156,8 +178,16 @@ _FACTOR_META = {
     ),
     16: ("dynamics", "Pen Lift Frequency", "pen-lift proxy from segmentation"),
     17: ("style", "Slant Consistency", "slant variation"),
-    18: ("style", "Legibility Score", "composite readability"),
-    19: ("style", "Character Distinction", "character separability proxy"),
+    18: (
+        "style",
+        "Legibility Score",
+        "reading confidence blended with shape, size, spacing and line",
+    ),
+    19: (
+        "style",
+        "Character Distinction",
+        "word-by-word reading confidence",
+    ),
     20: ("style", "Overall Neatness", "layout neatness composite"),
 }
 
@@ -285,7 +315,15 @@ def _score_factor_map(fx):
 
 # The features each formula reads, reported in its scoring_inputs.
 _INPUT_FEATURES = {
-    1: ("avg_score", "height_cv"),
+    1: (
+        "reading",
+        "conf_low",
+        "words_read",
+        "avg_score",
+        "height_cv",
+        "tangle_worst",
+        "tangle_points",
+    ),
     2: ("char_w_cv", "avg_score"),
     3: ("bowl_share", "loop_ratio"),
     4: ("width_cv",),
@@ -307,8 +345,8 @@ _INPUT_FEATURES = {
     15: ("n_chars", "n_words"),
     16: ("char_w_cv",),
     17: ("slant_std", "line_slope_std"),
-    18: (),
-    19: ("avg_score", "digits_ratio"),
+    18: ("reading",),
+    19: ("reading", "conf_low", "words_read"),
     20: (),
 }
 
@@ -376,7 +414,7 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
 def _based_on(fx):
     """What each factor's measurement counted, for its basedOn line."""
     return {
-        1: f"{fx['n_chars']} letters",
+        1: f"{fx['n_words']} words",
         2: f"{fx['n_words']} words",
         3: f"{fx['n_chars']} letters",
         4: f"{fx['n_lines']} lines",
@@ -398,7 +436,7 @@ def _based_on(fx):
         16: f"{fx['n_words']} words",
         17: f"{fx['n_lines']} lines",
         18: f"{fx['n_lines']} lines",
-        19: f"{fx['n_chars']} letters",
+        19: f"{fx['n_words']} words",
         20: f"{fx['n_lines']} lines",
     }
 
@@ -423,8 +461,14 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
     else:
         score = 0.0
         value = "Not measured"
-        evidence = availability.unmeasured_evidence(missing_kind)
+        evidence = availability.unmeasured_evidence(missing_kind, n)
     evidence = advisory.factor_evidence(n, evidence, checks, zone_based)
+    if missing_kind is None and n in (1, 18, 19) and fx.get("tangle_points"):
+        evidence += (
+            " The most tangled word's strokes cross and turn "
+            f"{fx['tangle_worst']:.1f} times as much as the usual word "
+            "on this page, so it counts as hard to read."
+        )
     if missing_kind is not None:
         scoring_inputs = availability.unmeasured_inputs(missing_kind, fx)
     elif n == 6 and zone_based:
@@ -439,7 +483,7 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
             "component_scores": {
                 str(key): scores[key]
                 for key in {
-                    18: (1, 5, 8, 7),
+                    18: ("reading", 1, 5, 8, 7),
                     20: (5, 8, 10, 11, 17),
                 }.get(n, ())
             },

@@ -33,7 +33,7 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertTrue(lines)
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         by_n = {f["n"]: f for f in result["results"]}
-        for n in (1, 2, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
+        for n in (1, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
             if (
                 n == 6
                 and by_n[n]["scoringInputs"]["method"] == "zone_geometry"
@@ -42,8 +42,10 @@ class TestPhotoValidity(unittest.TestCase):
             self.assertTrue(by_n[n]["unmeasured"], n)
             self.assertEqual(by_n[n]["unmeasuredKind"], "ocr")
             self.assertEqual(by_n[n]["value"], "Not measured")
-        for n in (4, 5, 10):
+        for n in (5, 10):
             self.assertFalse(by_n[n]["unmeasured"], n)
+        for n in (2, 4):
+            self.assertEqual(by_n[n]["unmeasuredKind"], "imu", n)
         self.assertTrue(
             all(
                 not r["unmeasured"]
@@ -133,8 +135,9 @@ class TestPhotoValidity(unittest.TestCase):
         spacing = result["results"][7]
         self.assertTrue(spacing["unmeasured"])
         self.assertEqual(spacing["unmeasuredKind"], "insufficient")
-        self.assertEqual(result["measuredCount"], 15)
-        for factor in result["results"][12:16]:
+        self.assertEqual(result["measuredCount"], 13)
+        pen_only = [result["results"][i] for i in (1, 3, 12, 13, 14, 15)]
+        for factor in pen_only:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")
             self.assertFalse(factor["imuMeasured"])
@@ -173,7 +176,9 @@ class TestPhotoValidity(unittest.TestCase):
             )
         )
         pen = next(g for g in result["plainGroups"] if g["id"] == "pen")
-        self.assertEqual(pen["measuredCount"], 1)
+        # Smoothness (4) and the Dynamics all need the sensor pen.
+        self.assertEqual(pen["measuredCount"], 0)
+        self.assertIsNone(pen["score"])
 
     def test_blank_page_refused_with_or_without_ocr_error(self):
         # Without an OCR error a blank page is "no handwriting". With one,

@@ -70,7 +70,19 @@ def missing_kind(n, fx, supplied):
     return None
 
 
-def unmeasured_evidence(kind):
+# What a photo cannot show, for the Structure factors only the sensor
+# pen measures (needs.py, #192); the Dynamics keep the line above.
+_PEN_EVIDENCE = {
+    2: "A still photo shows the finished letter, not the order its "
+    "strokes were made in.",
+    4: "At photo size a shaky stroke looks like the letters' own curves, "
+    "so smoothness is measured by the sensor pen.",
+}
+
+
+def unmeasured_evidence(kind, n=None):
+    if kind == "imu" and n in _PEN_EVIDENCE:
+        return _PEN_EVIDENCE[n]
     return _UNMEASURED_EVIDENCE.get(kind) or ""
 
 

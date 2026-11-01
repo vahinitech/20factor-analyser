@@ -26,8 +26,7 @@ print marks vs paper). Two measurements come straight from that mask:
   the stroke's width at that point. Printed type holds this width nearly
   constant end to end, low variance. A pen's width wanders with speed and
   pressure, higher variance: that variance, not the width itself, is the
-  signal, and it is the main structural cue behind Letter Formation and the
-  printed-vs-handwriting split.
+  signal, and it is the main cue behind the printed-vs-handwriting split.
 - *Edge crispness.* Canny edges divided by ink area. Print has sharp,
   mostly straight contours; a drawn line has soft, curved ones.
 - *Loop closure* (Structure factor 3, for letters like a/o/d/p/e/g/q) is
@@ -39,8 +38,12 @@ print marks vs paper). Two measurements come straight from that mask:
 **One word.** A word's own bounding box, and its neighbours on the same
 line, give two more measurements: the gaps between adjacent letters (their
 consistency is Letter Spacing, factor 9) and the word's width divided by
-its own letter count, an average character width feeding Stroke Order and
-Size Consistency. None of this needs the word read correctly. It only
+its own letter count, an average character width. Inside the word's
+small-letter band, the strokes each column of ink crosses are counted, and
+the word's outline is followed to see how much it turns: a scribbled word
+crosses and turns far more than the writer's other words, and Letter
+Formation, Legibility and Character Distinction count it as hard to read
+(#193). None of this needs the word read correctly. It only
 needs the boxes OCR detection already draws around each cluster of ink,
 the same orange boxes shown on the page in the report.
 
@@ -53,8 +56,9 @@ instead: a page where one line suddenly veers scores worse here than a
 page that leans the same modest amount throughout. Slant here is that
 page-level tilt-variability signal, not a per-letter cursive-lean angle, a
 simplification, like loop closure above. The line's own bounding-box
-height and width, compared against every other line's, give Size
-Consistency and Line Quality. Each line's left edge, collected down the
+height, compared against every other line's, feeds Letter Formation and,
+on pages too small to measure word by word, Size Consistency. Line
+Quality (smoothness) and Stroke Order are left to the sensor pen (#192). Each line's left edge, collected down the
 whole page, gives Margins: an edge that steps in and out scores lower than
 one that holds steady. The vertical gap between consecutive lines'
 centres feeds line-spacing rhythm.
@@ -62,11 +66,10 @@ centres feeds line-spacing rhythm.
 **The whole page.** A few factors are not measured directly. They are
 weighted blends of the ones above. Overall Neatness, for example, is 30%
 Size Consistency, 20% Word Spacing, 20% Margins, 15% Line Straightness and
-15% Slant. Legibility leans similarly on Letter Formation, Size
-Consistency, Word Spacing and Baseline. Character Distinction is the one
-factor that uses OCR's own confidence directly, a confident, easy read
-implies clearly distinct letterforms, alongside how digit-heavy the text
-is.
+15% Slant. Legibility blends how surely the words were read with Letter
+Formation, Size Consistency, Word Spacing and Baseline. Character
+Distinction is how surely the words were read, word by word: a confident,
+easy read implies clearly distinct letterforms.
 
 **What never depends on reading the words correctly:** stroke width, glyph
 height, edge crispness, letter and word spacing, baseline tilt, line

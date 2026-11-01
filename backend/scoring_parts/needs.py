@@ -32,9 +32,13 @@ VOCABULARY = (
 # scored page has (height, width and left edge of each line).
 NEEDS = {
     1: (("rows", "confidence"),),
-    2: (("graphemes", "confidence"),),
+    # Stroke order (2) and smoothness (4) are the sensor pen's (#192): a
+    # finished letter does not show its stroke order, and at phone-photo
+    # size a tremor wobbles on the scale of the letters' own curves (an
+    # edge-roughness measure caught a planted shaky line on 8 of 20).
+    2: (("sensor",),),
     3: (("graphemes", "classes"),),
-    4: ((),),
+    4: (("sensor",),),
     5: ((),),
     # Zone bands when zone_analysis.py fitted them, else the share of the
     # pack's tall letters among the letters read.

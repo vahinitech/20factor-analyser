@@ -297,7 +297,7 @@ class Report(unittest.TestCase):
             "## The overall score as a flag",
             "| 1 Letter Formation Accuracy | 59 |",
             "| 45 (chosen) |",
-            "Factors 13 to 16 need the pen",
+            "Factors 2, 4 and 13 to 16 need the pen",
         ):
             self.assertIn(part, self.out)
         self.assertNotIn("\u2014", self.out)
