@@ -13,6 +13,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
+sys.path.insert(0, HERE)
 import scoring  # noqa: E402
 from scoring_parts.features import (  # noqa: E402
     _letter_spacing,
@@ -25,7 +26,6 @@ BASE = {
     "avg_score": 0.9,
     "height_cv": 0.1,
     "char_w_cv": 0.2,
-    "loop_ratio": 0.3,
     "width_cv": 0.1,
     "size_cv": 0.1,
     "size_basis": "words",
@@ -91,7 +91,6 @@ class TestFactorScores(unittest.TestCase):
 
     def test_stand_ins_when_too_little_to_measure(self):
         for key, n in (
-            ("bowl_share", 3),
             ("letter_gap_spread", 9),
             ("slant_std", 17),
         ):
@@ -101,8 +100,40 @@ class TestFactorScores(unittest.TestCase):
                     {**BASE, key: None}
                 )[n],
             )
-        # Loop closure falls back to the share of loop letters read.
-        self.assertEqual(score(3, bowl_share=None, loop_ratio=0.14), 5.0)
+
+    def test_loop_closure_has_no_stand_in_from_the_spelling(self):
+        # The page is reported not measured (availability.missing_kind);
+        # the map never guesses from how many loop letters were read.
+        self.assertEqual(score(3, bowl_share=None), 0.0)
+
+
+def loop_closure(sentences):
+    # pylint: disable=import-outside-toplevel
+    from test_letter_geometry import joined_page
+
+    arr, lines = joined_page(sentences)
+    result = scoring.build_analysis(arr, lines, {})
+    return next(r for r in result.results if r.n == 3)
+
+
+class TestLoopClosurePage(unittest.TestCase):
+    def test_closed_bowls_on_a_page_are_measured(self):
+        f3 = loop_closure(
+            [
+                "seetha and rama practise slowly with care",
+                "vahini and bheema write letters every day",
+            ]
+        )
+        self.assertFalse(f3.unmeasured)
+        self.assertEqual(f3.score, 10.0)
+        self.assertIn("letters with a bowl", f3.evidence)
+
+    def test_too_few_loop_letters_is_not_measured(self):
+        f3 = loop_closure(["hilly hills; thin silk", "slim kitty, tiny mill"])
+        self.assertTrue(f3.unmeasured)
+        self.assertEqual(f3.unmeasured_kind, "insufficient")
+        self.assertIn("bowl", f3.unmeasured_reason)
+        self.assertEqual(f3.value, "Not measured")
 
 
 class TestMarginSpread(unittest.TestCase):

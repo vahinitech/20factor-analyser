@@ -4,12 +4,17 @@
 # availability.py - which factors this page cannot measure, and the
 # "Not measured" wording, reason and scoring_inputs each one reports.
 # What each factor needs lives in factor_needs.py (#207); this adds the
-# two rules it does not hold: Word Spacing's three gaps and Margin
-# Discipline's three line starts.
+# two rules it does not hold: Word Spacing's three gaps, Loop
+# Closure's five letters with a bowl and Margin Discipline's three
+# line starts.
 
 from scoring_parts import needs as factor_needs
 
 _MIN_WORD_GAPS = 3
+# Loop Closure needs this many letters with a bowl on lines measured in
+# the ink (features._stroke_features); with fewer, one open bowl moves
+# the score by a fifth or more.
+MIN_BOWLS = 5
 # Why a factor is not measured, by the kind its missing need gives
 # (factor_needs.py).
 _UNMEASURED_REASONS = {
@@ -22,11 +27,19 @@ _UNMEASURED_REASONS = {
     # approval (docs/12-report-rules.md), so none are given yet.
     "joined": None,
 }
-# Margin Discipline's own wording for "insufficient" (#201).
-_FEW_STARTS_REASON = "Needs at least three lines starting at the margin."
-_FEW_STARTS_EVIDENCE = (
-    "Fewer than three lines start at the left margin on this page."
-)
+# Factors whose "insufficient" has its own reason and evidence:
+# Loop Closure (#200) and Margin Discipline (#201).
+_FACTOR_REASONS = {
+    3: f"Needs at least {MIN_BOWLS} letters with a bowl on measured lines.",
+    10: "Needs at least three lines starting at the margin.",
+}
+_FACTOR_EVIDENCE = {
+    3: (
+        f"Fewer than {MIN_BOWLS} letters with a bowl (a, b, d, e, g, o, "
+        "p, q) were found on lines measured in the ink."
+    ),
+    10: "Fewer than three lines start at the left margin on this page.",
+}
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
     "imu": "A still photo cannot measure pen motion or pressure.",
@@ -73,20 +86,22 @@ def missing_kind(n, fx, supplied):
         return lacking
     if n == 8 and fx.get("word_gap_count", 0) < _MIN_WORD_GAPS:
         return "insufficient"
+    if n == 3 and fx.get("bowl_share") is None:
+        return "insufficient"
     if n == 10 and fx.get("left_spread", 0.0) is None:
         return "insufficient"
     return None
 
 
 def unmeasured_reason(kind, n=None):
-    if kind == "insufficient" and n == 10:
-        return _FEW_STARTS_REASON
+    if kind == "insufficient" and n in _FACTOR_REASONS:
+        return _FACTOR_REASONS[n]
     return _UNMEASURED_REASONS.get(kind)
 
 
 def unmeasured_evidence(kind, n=None):
-    if kind == "insufficient" and n == 10:
-        return _FEW_STARTS_EVIDENCE
+    if kind == "insufficient" and n in _FACTOR_EVIDENCE:
+        return _FACTOR_EVIDENCE[n]
     return _UNMEASURED_EVIDENCE.get(kind) or ""
 
 
@@ -103,6 +118,11 @@ def unmeasured_inputs(kind, fx, n=None):
         }
     if kind == "joined":
         return {"method": "letters_joined", "features": {"style": "cursive"}}
+    if n == 3:
+        return {
+            "method": "insufficient_data",
+            "features": {"bowl_letters": fx.get("bowl_letters", 0)},
+        }
     if n == 10:
         return {
             "method": "insufficient_data",
