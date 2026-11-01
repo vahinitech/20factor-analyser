@@ -283,7 +283,7 @@ There is **no calibrated probability** anywhere in a report. The API field
 |---|---|---|
 | OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 18, 19; the printed check; dropping fragments |
 | Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`server/app.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
-| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
+| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps, Margin Discipline with fewer than 3 rows starting at the margin) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
 | Printed probability | Section 2, step 4 | Which lines are scored. The code says it is "a heuristic, not a calibrated confidence" (`classify.py:439-444`) |
 | Photo quality | Sharpness (Laplacian variance) and size, measured in the browser only (`app.js:629-658`) | A warning; the visitor may still go on |
 
@@ -337,7 +337,7 @@ Each `factor_regions` entry keeps `url` and `caption` and adds:
 
 Size evidence selects the largest height deviation from the median. Baseline and straightness evidence select the largest absolute polygon angle. Margin evidence selects the largest corrected-left-edge deviation, using the scorer's camera-tilt correction. Word-spacing evidence uses the scorer's row grouping and selects the largest normalized-gap deviation, showing both adjacent regions.
 
-A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop-letter frequency or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
+A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop closure (measured per word, not per letter) or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
 
 Aggregate images and page maps retain accepted handwriting rectangles and blank the rest. This prevents excluded headers and labels from returning through whole-page previews. It does not correct a printed region that the upstream classifier mistakenly accepts, or separate printed and handwritten pixels inside one accepted box.
 
@@ -911,7 +911,7 @@ to the measuring and weekly (`.github/workflows/factor-tests.yml`).
 | One line's letters riding a wave | 11 Line Straightness | 20% | **100%** |
 | One line's letters leaning 25 degrees | 17 Slant Consistency | 0% | **100%** |
 | One word's letters three times as far apart | 9 Letter Spacing | 25% | **100%** |
-| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **85%** |
+| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **100%** |
 | One word 1.5 times the size | 5 Size Consistency | 75% | 75% (falls 0.61, was 0.25) |
 | One line's tall letters and tails 1.5 times | 6 Ascender/Descender | 75% | 75% |
 | One small letter 1.7 times taller | 5 Size Consistency | 15% | 10% |
@@ -927,7 +927,13 @@ What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/feature
 - **Loop Closure (3)** counted the share of loop letters in the text, so
   an open loop could not move it. It now counts the closed bowls in each
   line's ink (holes of letter-bowl size) against the letters read that
-  have one (a, b, d, e, g, o, p, q); full marks at 90%.
+  have one (a, b, d, e, g, o, p, q); full marks at 90%. Since #200 a hole
+  counts only inside the small-letter band (or, for a bowl written tall,
+  starting on the baseline), so the loops of l, h, k and of the tails of
+  g, j, y are not taken for bowls; each word counts at most as many
+  closed bowls as it has bowl letters; and a page with fewer than five
+  bowl letters on measured lines is not measured, where it used to fall
+  back to the share of loop letters in the text. Caught rose to 100%.
 - **Letter Spacing (9)** was the spread of line width per character. It
   is now the spread of the gaps between the letters (or joined pieces)
   inside words. Since #197 each gap is compared with its own word's

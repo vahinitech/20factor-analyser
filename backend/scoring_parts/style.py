@@ -25,13 +25,19 @@ def add_scores(fx, s):
     else:
         s[17] = _clamp10((1.0 - min(1.0, fx["line_slope_std"] / 12.0)) * 10.0)
 
-    # Composites leave Word Spacing out, and reweight the rest, when too
-    # few word gaps were measured for it to mean anything.
+    # Composites leave Word Spacing or Margin Discipline out, and reweight
+    # the rest, when too few word gaps or line starts were measured for it
+    # to mean anything.
     def _blend(parts):
-        live = [(w, s[k]) for k, w in parts if k != 8 or spacing_ok]
+        live = [
+            (w, s[k])
+            for k, w in parts
+            if (k != 8 or spacing_ok) and (k != 10 or margin_ok)
+        ]
         return sum(w * v for w, v in live) / sum(w for w, _ in live)
 
     spacing_ok = fx.get("word_gap_count", 3) >= _MIN_WORD_GAPS
+    margin_ok = fx.get("left_spread", 0.0) is not None
     # Legibility reads the page directly (how surely its words were
     # read) besides the shapes, size, spacing and line that make it easy
     # to read (#193). Character Distinction is how surely the reader told

@@ -227,7 +227,7 @@ S.en = {
   'm.t.edges': 'The left edge of each line',
   'm.t.confidence': 'How sure the reading engine was, word by word, and how tangled each word looks',
   'm.t.widths': 'Line width for each letter read',
-  'm.t.loops': 'Round letters among the words read',
+  'm.t.loops': 'Closed round letters in the ink of the words read',
   'm.t.blends': 'A blend of the scores above',
   'm.t.pen': 'Stroke order, smoothness, speed, pressure and pen lifts while writing',
   'm.shown.yes': 'Yes, drawn above',

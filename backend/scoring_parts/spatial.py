@@ -48,7 +48,13 @@ def add_scores(fx, s):
         )
     else:
         s[9] = _clamp10((1.0 - min(1.0, fx["char_w_cv"] / 1.2)) * 10.0)
-    s[10] = _clamp10((1.0 - min(1.0, fx["left_spread"] / MARGIN_SCALE)) * 10.0)
+    # 0.0 stands in when too few rows start at the margin; the factor is
+    # then not measured (availability.py) and the blends leave it out.
+    s[10] = (
+        _clamp10((1.0 - min(1.0, fx["left_spread"] / MARGIN_SCALE)) * 10.0)
+        if fx.get("left_spread") is not None
+        else 0.0
+    )
     # A straight line is level and does not wave: the slope, less up to 5
     # points as the most wandering line's letters drift a quarter of a
     # small letter off their baseline.

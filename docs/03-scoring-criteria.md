@@ -77,14 +77,14 @@ score falls linearly and hits zero at the stated limit.
 |---|---|---|---|---|
 | 1 | Letter Formation Accuracy | how surely each word was read (see "Reading word by word" below), line-height consistency, and the most tangled word | `7.2·reading + 2.8·(1 − height CV) − 2.5·tangle` | shape dist ≤0.10 |
 | 2 | Stroke Order Consistency | sensor pen only: not measured from a photo | — | edit dist ≤2 |
-| 3 | Loop Closure | share of loop-bearing letters (a o d p e g q) among letters read | `10 · min(1, loop share / 0.28)` | ≥95% closed |
+| 3 | Loop Closure | share of the letters read that have a bowl (a b d e g o p q) whose bowl is closed in the ink: a hole of bowl size in the small-letter band, counted word by word and never more than the word's bowl letters. Not measured below five bowl letters on measured lines | `10 · min(1, closed share / 0.9)` | ≥95% closed |
 | 4 | Line Quality (Smoothness) | sensor pen only: not measured from a photo | — | jitter ≤0.5 px |
 | 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
 | 8 | Word Spacing | word gaps inside each line, in line heights (where every letter stands apart, placed from the text; otherwise the widest words − 1 ink gaps): their mean distance from the median gap, as a share of it, and the share of gaps under half or over twice the median (#197). Not measured below three gaps | `10 · (1 − min(1, spread / 1.0)) − 2 · min(1, odd share / 0.10)` | ≈1.0 x-h, CV ≤0.25 |
 | 9 | Letter Spacing | gaps between the letters inside each word, in small letters: their median distance from their own word's median gap, as a share of it (at least 0.1 of a small letter); the share of gaps over twice their word's; and the share of words whose median gap is over twice the page's (#197). Below five gaps: char-width consistency | `10 · (1 − min(1, spread / 0.5)) − 1 · min(1, odd share / 0.20) − 3 · min(1, words apart / 0.10)` (stand-in: `10 · (1 − min(1, char-width CV / 1.2))`) | gap CV ≤0.30 |
-| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
+| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out, and so is a paragraph's first line set in 0.02 to 0.15 (the first row, or a row after one that ends a quarter of the block's width short). Not measured below three counted rows, and Overall Neatness then leaves it out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
 | 12 | Vertical Alignment | line-to-line tilt spread | `10 · (1 − min(1, angle std / 10))` | tilt CV ≤0.20 |
 | 13 | Speed Consistency | speed proxy from stroke/line-width regularity | `10 · (1 − min(1, width CV / 0.85))` | velocity CV ≤0.20 |
@@ -180,13 +180,16 @@ paper does not count as reach; reach =
   proxy formulas for 13-16 remain only as documentation of what the pen
   path replaces. The dual-IMU sensor pen measures 13-16 directly, and the
   report marks pen-measured factors (`imuMeasured`).
-- **Some factors lean on OCR text**: loop closure (#3), the factor-6
-  proxy path, and the reading term of letter formation, legibility and
-  character distinction (#1, #18, #19). The rest is
+- **Some factors lean on OCR text**: loop closure (#3) takes how many
+  bowl letters each word has from the words read (the closing itself is
+  measured in the ink), the factor-6 proxy path, and the reading term of
+  letter formation, legibility and character distinction (#1, #18, #19).
+  The rest is
   pure geometry and survives OCR being wrong or unavailable.
 - **Slant (#17) is page-level tilt variability**, not a per-letter
-  cursive-lean angle; loop closure is letter-share, not per-letter
-  contour tracing. Both simplifications are stated in
+  cursive-lean angle; loop closure counts closed bowls per word, not per
+  letter, because the reader gives no letter boxes. Both simplifications
+  are stated in
   [`05-computer-vision-algorithms.md`](05-computer-vision-algorithms.md).
 - **Fragmented detection hurts spatial scores.** Word Spacing reads the
   gaps between detected segments on one row, so a line detected whole

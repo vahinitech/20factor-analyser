@@ -29,11 +29,10 @@ print marks vs paper). Two measurements come straight from that mask:
   signal, and it is the main cue behind the printed-vs-handwriting split.
 - *Edge crispness.* Canny edges divided by ink area. Print has sharp,
   mostly straight contours; a drawn line has soft, curved ones.
-- *Loop closure* (Structure factor 3, for letters like a/o/d/p/e/g/q) is
-  currently a proxy, not per-letter contour tracing: it is the share of
-  loop-shaped letters among everything the OCR engine actually read on the
-  page. This is the one factor here that leans on reading the words rather
-  than pure pixels.
+- *Loop closure* (Structure factor 3, for a/b/d/e/g/o/p/q) counts the
+  closed bowls in each word's ink (section 11) against the bowl letters in
+  the word read. The closing is measured in the pixels; only how many
+  bowls a word should have comes from reading the words.
 
 **One word.** A word's own bounding box, and its neighbours on the same
 line, give two more measurements: the gaps between adjacent letters (their
@@ -76,12 +75,12 @@ height, edge crispness, letter and word spacing, baseline tilt, line
 straightness, margins, line spacing. Every one of these comes from pixel
 geometry and detected boxes, not from what the OCR engine thought the
 letters said. **What does lean on it, as a secondary signal only:** loop
-closure and the ascender/descender proxy (factor 6, the share of
-tall/descending letters like b/d/f/h/k/l/t/g/j/p/q/y in the recognised
+closure (how many bowls each word should have; whether they close is
+measured in the ink) and the ascender/descender proxy (factor 6, the share
+of tall/descending letters like b/d/f/h/k/l/t/g/j/p/q/y in the recognised
 text), plus Character Distinction's confidence term. When OCR cannot read
-a page at all, those specific sub-signals fall back to a neutral default
-rather than failing the scan. The geometry-only factors are unaffected
-either way.
+a page at all, those factors are reported as not measured rather than
+failing the scan. The geometry-only factors are unaffected either way.
 
 ---
 
@@ -265,16 +264,26 @@ pre-processing.
 
 ## 11. Loop-closure topology (flood fill from the border)
 
-**What:** checks whether round letters (a, o, e, g) are properly **closed**.
-**How:** flood-fill the *background* inward from the image border. Any background pocket that the
-flood could **not** reach must be fully enclosed by ink: i.e. a closed loop:
+**What:** checks whether letters with a bowl (a, b, d, e, g, o, p, q) close it.
+**How:** `letter_geometry.py` binarises each line and asks OpenCV for its contours with
+`RETR_CCOMP`, which returns the ink's outer edges and, one level down, its holes. A hole is
+background fully enclosed by ink: a closed bowl. A bowl left open, like a c, has no hole.
 
 ```
-flood background from all four borders
-for each loop-bearing letter:
-    closed if its box contains background pixels the flood never reached
-loopRatio = closed letters ÷ eligible letters        # F3
+for each hole in the line's ink:
+    keep it if it is 0.15 to 1.6 small letters across,
+       reaches no lower than 0.3 small letters below the baseline,
+       and either stays below 1.3 small letters up,
+       or starts within 0.3 of the baseline (a bowl written tall)
+for each word (or the whole line, when the words found do not match the words read):
+    closed += min(holes kept in the word, bowl letters in the word)
+closed share = closed ÷ bowl letters                  # F3, not measured below 5
 ```
+
+The loops of tall letters (l, h, k) start half a small letter or more up their stem and rise
+past the band; the loops of tails (g, j, y) hang below the baseline; neither is kept. A hole
+that is not a bowl (a joined r, two letters touching) can only count up to its own word's bowl
+letters, so it cannot make up for a bowl left open in another word.
 
 ---
 
