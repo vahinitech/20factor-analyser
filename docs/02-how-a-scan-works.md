@@ -119,9 +119,16 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
    - text: a very confident OCR reading, form words ("Name", "Date"), capitals
      and digits (`classify.py:193-229`).
    A line at 0.58 or above is printed (`PRINTED_THRESHOLD`, `classify.py:46`).
-   Note one rule here: a line read with OCR confidence 0.93 or more, six or
-   more characters and even strokes is treated as printed on any page
-   (`classify.py:388-394`). Very neat handwriting can be removed by it.
+   One rule calls a line printed on any page: OCR confidence 0.93 or
+   more, six or more characters and even strokes. Neat handwriting meets
+   it, so these rules alone no longer set a line aside. A second sign
+   has to agree (#202, section 10): the line reader sees print
+   (0.5 or more), or the ink repeats like a font
+   (`classify.font_evidence`). The exceptions are a page where two
+   thirds of the lines show a second sign (a printed page), and a label
+   of four characters or fewer on a page where a quarter do (a form):
+   there the rules decide alone. Otherwise the line stays handwriting,
+   and `print_check` in the text classification says why.
 5. Lines shorter than two characters, or with no letters or digits, dropped.
 6. The pieces of each written line joined into one line
    (`detector.join_row_pieces`). Rows are anchored on the widest pieces; a
@@ -619,6 +626,60 @@ keeps most lines twice, which changes scores (#145).
 
 These are lower than with the ink outlines in section 9 because the
 reader's line boxes are looser and sometimes join or split lines.
+
+**A second sign before a line is set aside (#202, 1 November 2026).**
+On real phone photos the rules of section 2, step 4 set aside neat
+handwriting: even strokes, even letters and a confident reading are all
+they look at, and neat handwriting has all three. Replayed on 173 GNHK
+pages (CC BY 4.0, the stage reader's kept output, labelled words), they
+set aside 12.6% of the handwritten words, and 44 pages lost a fifth or
+more. 277 of the 448 lost lines went through the confidence override.
+
+A font leaves two marks a pen does not: the same letter has the same
+shape to the pixel, and the small letters sit on one line at one height.
+`classify.font_evidence` measures both on the line's ink. Letters of the
+same size (within a pixel) are overlaid at the best shift of up to a
+pixel; a median overlap of 0.80 or more is a font. The bottoms of the
+small letters are fitted with a straight line; a spread under 3% of the
+letter height, with heights within 4%, is a font. It needs three
+letters with a same-size partner, or four letters on the line, and
+says "unsure" otherwise. On GNHK it calls 26 of about 2,950
+handwriting lines a font and 132 of 223 printed lines.
+
+A line the rules call print is now set aside only when the reader says
+print (0.5 or more) or the ink shows a font. On a page where two thirds
+of the lines show one of those signs, the page is printed and the rules
+decide alone. That keeps a typed letter refused when one line reads
+unclearly. A label of four characters or fewer is too short for either
+sign, so it follows the rules on a page where a quarter of the lines
+show one (the "No.", "For" and "By" of the receipt form). Where the
+reader has no say (Telugu, or no OpenCV) nothing changed.
+
+| GNHK, 173 pages | Before | After |
+|---|---|---|
+| Handwritten words set aside | 12.6% (903) | 4.4% (315) |
+| Pages losing a fifth or more of their handwriting | 44 | 20 |
+| Median share of a page's handwriting kept | 95% | 100% |
+| Printed words kept as handwriting | 23.8% (149) | 28.4% (178) |
+
+So 29 more printed words of 627 now reach the score, against 588
+handwritten words that come back. Excluding a child's own writing is the
+worse mistake. eng_EU_213, the neat card in #202, keeps 22 of its 24
+handwritten words (9 before). The thresholds hardly matter: a repeat
+overlap of 0.70 to 0.85 and row limits from 2% to 4% move the loss
+between 3.9% and 4.0% on the rule without page context. On the UJI
+pages "bheema", "day" and "every" on UPV_W51, W54 and W60 are scored
+again, and the sample page keeps its second "any one can change hand
+writing". `test_print_second_sign.py` checks a rendered font line stays
+print with the reader unsure, and neat handwriting-like lines drawn
+with natural variation stay handwriting when read confidently.
+
+The UJI pages show the limit of the ink signs: they are built from each
+writer's letter samples on a drawn line, so repeated letters and the
+baseline are as exact as a font's, and most of their lines read as a
+font. That costs nothing there, since a font sign only lets the rules
+decide as before, but it means the signs separate fonts from pens, not
+from pages assembled by a program.
 
 What it still gets wrong: script fonts that imitate handwriting, and some
 lines of a heavily scaled-down typed page. `test_print_hand.py` checks both
