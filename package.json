@@ -47,5 +47,9 @@
     "c8": "12.0.0",
     "http-server": "^14.1.1",
     "playwright": "^1.63.0"
+  },
+  "overrides": {
+    "glob": "^14.0.2",
+    "minimatch": "^11.0.1"
   }
 }

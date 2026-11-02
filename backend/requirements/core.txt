@@ -11,7 +11,7 @@ pypdfium2==5.13.0
 # Pinned exactly: Pillow parses visitors' files, so a version change is a
 # security change. Raise it deliberately, with the image tests
 # (tests/test_image_formats.py), when a release fixes a decoder.
-pillow==12.3.0
+pillow==13.0.0
 numpy>=1.24
 opencv-python-headless>=4.9.0
 # Used by starlette/fastapi TestClient in the regression suite.
@@ -21,8 +21,8 @@ jsonschema>=4.18
 # Dev/lint tooling (not runtime deps): pinned exactly, since black's own
 # policy is that formatting output can change between versions, and a
 # pylint bump can add new checks that shift the score CI enforces.
-black==26.5.1
-pylint==4.0.6
+black==26.10.1
+pylint==4.0.9
 # Measures the backend tests in CI (.coveragerc, #232).
 coverage==7.16.2
 # Finds server and script code nothing calls (backend/tests/test_unused_code.py).

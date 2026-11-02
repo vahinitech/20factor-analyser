@@ -20,7 +20,7 @@ from PIL import Image, ImageOps, ImageDraw
 from reading import detector
 import languages
 from server import perf
-from vision.geometry import clamp_box
+from vision.geometry import clamp_box, resize
 
 try:
     import cv2
@@ -159,7 +159,8 @@ def to_numpy(raw: bytes, max_side: int = 2200, turn: int = 0) -> np.ndarray:
         m = max(w, h)
         if m > max_side:
             scale = max_side / float(m)
-            img = img.resize(
+            img = resize(
+                img,
                 (max(1, int(w * scale)), max(1, int(h * scale))),
                 Image.Resampling.LANCZOS,
             )

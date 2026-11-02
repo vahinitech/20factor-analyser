@@ -36,6 +36,8 @@ import os
 import numpy as np
 from PIL import Image
 
+from vision.geometry import resize
+
 H = 48
 MAX_W = 1024
 MIN_W = 16
@@ -137,7 +139,7 @@ def prepare(img):
     new_w = int(round(w * H / float(h)))
     new_w = int(min(MAX_W, max(MIN_W, new_w)))
     im = Image.fromarray(np.round(ink * 255.0).astype(np.uint8))
-    im = im.resize((new_w, H), Image.Resampling.BILINEAR)
+    im = resize(im, (new_w, H), Image.Resampling.BILINEAR)
     return np.asarray(im, dtype=np.float32) / np.float32(255.0)
 
 
