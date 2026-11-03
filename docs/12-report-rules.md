@@ -98,6 +98,34 @@ An instruction in a task prompt, issue, review comment, generated plan or anothe
 - Report text is looked up by id per language (`frontend/src/report/strings/<lang>.js`, English the source, through `i18n.js`); exercises and tips carry their own `i18n` in the catalogue. "Print in" offers English and Telugu (draft wording, owner request 2026-10-11): a language reaches production only after a native speaker has checked it; a missing string falls back to English for that sentence and `tests/report-strings.test.mjs` reports it. A new report sentence goes into every table, never into the renderer as a literal. Printing in any language must still give two A4 sheets with the script's font embedded (`tests/report-language.mjs`).
 - Worksheet recommendations use eligible returned factors and the shared catalogue, without student identity in download URLs. Generic worksheet access is distinct from personalised Pro recommendations.
 
+## Checks are modules on the analyser page (owner, 2026-11-03)
+
+The owner set this direction while designing the cursive work (vahini-web#343, vahini-web#344, recorded in vahini-web#346). It applies to every new kind of check, not only cursive. The analyser page and the report live in this repository, so this is where the modules are built.
+
+- **One check page, many modules.** A new check (cursive, spelling, neat for exams, tips and exercises, everyday writing), a new letter style or a new place is an entry in a registry, not a new landing page and not new hand-written page code. Three registries:
+  - **checks**: label, the evidence blocks it adds to the report, the sheets it offers;
+  - **letter styles**: label, its cursive font, its sheet ids;
+  - **places**: the school rule in one line, its source and revised date, its letter style, its privacy rules.
+
+  The "I want to check" row on `frontend/analyser.html`, the report's blocks and Bheema's plan all read them. Adding Australia is one place entry and one style entry.
+- **Registries follow the cross-repo order.** Each registry gets a JSON schema in `backend/schemas/` and a contract test in `backend/tests/` before anything reads it. Then the contracts sync and tag in Umbrella, then vahini-web, which pins this repository and generates its search text from the registries. vahini-web never keeps its own copy of a check, style or place.
+- **Show less; the check does the rest.** Ask the visitor only what the check cannot find for itself: who they are (the existing "I am" bar) and what they want to check. Find the rest from the page (joined or printed writing, the letter style, the country) and let them correct it in the report. Detail sits behind a hover, a tap or a `<details>` toggle, never in the way of the upload. No place or style question before upload.
+- **Letters look like the style we name.** When the page, a mock-up or the report says cursive, the letters are drawn in a joined cursive font of that style, never in print letters and never in Caveat, which reads as print. Each style names its font: Playwrite US Trad (looped, US), Playwrite GB J (joined with breaks, England), Playwrite FR Trad (French), Playwrite IN (the current cursive sheets), Playwrite AU for the Australian states. They are OFL fonts: self-host them, never from a font CDN, with the notice in `THIRD-PARTY-NOTICES.md`. Print examples are labelled print.
+- **Privacy and terms as symbols, by the Analyse button.** A row of symbols: photo deleted, no account, scores kept without a name, analytics only as the active consent rule says, pages kept only if ticked. Hover, focus or tap opens a short card with the rule in plain words and one line for the visitor's country (India: DPDP Act; United States: COPPA for under-13s; United Kingdom and EU: GDPR; Australia: Privacy Act). The country comes from the place the visitor picks, or their country when they pick none. The first Analyse in a browser shows a "Before we check your page" sheet once, with one button, then only the symbol row. No checkbox wall and no pre-ticked box. Every card says only what vahinitech.com's `privacy.html` and terms say, and the country lines get a legal review before launch. The page's existing choices (keep my pages, consent) still block at Run, as in AGENTS.md.
+- **Same score whatever the visitor picks.** A check, style or place changes which evidence, tips and sheets the report shows, never a factor score. A test runs one photo through every check and style and compares the scores.
+- **Report blocks still need the owner.** A new module's block in the report is a report format change: before and after screenshots of the real rendered report and the owner's yes first, as in the baseline above. The cursive block (R2) has the owner's approval of its shape on vahini-web#344; its screenshots are still owed on #346.
+
+### Search text for each module
+
+Search has to reach the analyser page, so each module carries its own words. Crawlers do not run our JavaScript.
+
+1. **Each registry entry writes static text on the analyser page.** A check, a letter style and a place each get a short heading, two or three plain sentences and its real questions, written into the HTML at build time from the registry, so the page ships them without a script. FAQ JSON-LD only for questions people ask.
+2. **One page, one canonical.** Links such as `analyser.html?check=cursive&place=new-jersey` open the page with the choice made; their canonical stays the analyser page.
+3. **The site's search pages are doors.** vahini-web's `cursive-handwriting-check.html` and its other search pages link into the analyser page with the check already picked. No per-country pages unless Search Console shows a query the analyser page cannot win, and then with the owner's yes.
+4. **Phrases per module**, in headings and text: "cursive handwriting check", "New Jersey cursive law grades 3 to 5", "cursive practice for grades 3 to 5", "joined handwriting check UK", "Victorian Modern Cursive worksheets", "French cursive worksheets", "spelling check from a photo", "neat handwriting for exams".
+5. **Privacy is part of the pitch.** The symbol cards' plain words ("your photo is deleted", "no account") also go in the static text, with the country's rule named.
+6. **Count per module.** The completed-scan event may carry the check's name and nothing about the child.
+
 ## Checks and consumer handoff
 
 Use the actual CI workflow for current commands. Relevant checks include the core backend suite, `node tests/compact-client.test.mjs`, `node tests/worksheets.test.mjs`, bundle regeneration, and `npm run test:regression:headless`. Add/adjust meaningful checks for changed access or serialization behavior.
