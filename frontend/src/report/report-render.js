@@ -856,10 +856,19 @@ function render(host, data){
   // diagnosis or a promise (owner, 2026-10-11).
   const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
   const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help</a></p></div>`;
+  // Cursive sheets (owner, 2026-11-03): on a page written joined, or
+  // joined in places, the free cursive sheets. The links go to their shop
+  // pages, where the family downloads them (owner: the shop gets the
+  // visit), never straight to the PDFs.
+  const style=analysis.styleProfile;
+  const joinedPage=latin&&style&&style.available&&(style.verdict==='cursive'||style.verdict==='mixed');
+  const SHOP='shop.vahinitech.com';
+  const shopLink=(slug,key)=>`<a href="${esc(`https://${SHOP}/products/${slug}/`)}" target="_blank" rel="noopener">${esc(t(key))}</a>`;
+  const cursiveNote=joinedPage?`<div class="p2-cursive" data-cursive-sheets><p><b>${esc(t('cursive.title'))}</b> ${shopLink('cursive-lesson-1-basic-strokes','cursive.lesson1')} · ${shopLink('cursive-handwriting-worksheets','cursive.letters')} · ${shopLink('cursive-connecting-letters-worksheets','cursive.joins')}. ${esc(t('cursive.where'))} ${SHOP}</p></div>`:'';
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
   const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
-      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${hardNote}${closing}`:empty}
+      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${cursiveNote}${hardNote}${closing}`:empty}
       ${foot(2)}</section>`;
   /* ---- the student view (owner, 2026-10-23, option A) ------------------
      One screen above the two pages, for a student reading alone: one
