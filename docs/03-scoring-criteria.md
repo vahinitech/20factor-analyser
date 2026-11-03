@@ -79,7 +79,7 @@ score falls linearly and hits zero at the stated limit.
 | 2 | Stroke Order Consistency | sensor pen only: not measured from a photo | — | edit dist ≤2 |
 | 3 | Loop Closure | share of the letters read that have a bowl (a b d e g o p q) whose bowl is closed in the ink: a hole of bowl size in the small-letter band, counted word by word and never more than the word's bowl letters. Not measured below five bowl letters on measured lines | `10 · min(1, closed share / 0.9)` | ≥95% closed |
 | 4 | Line Quality (Smoothness) | sensor pen only: not measured from a photo | — | jitter ≤0.5 px |
-| 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
+| 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline, each word against the size expected where it sits on the page (scraps, impossible readings and words with digits left out; `letter_geometry.size_words`); line box heights when fewer than three words can be measured | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
 | 8 | Word Spacing | word gaps inside each line, in line heights (where every letter stands apart, placed from the text; otherwise the widest words − 1 ink gaps): their mean distance from the median gap, as a share of it, and the share of gaps under half or over twice the median (#197). Not measured below three gaps | `10 · (1 − min(1, spread / 1.0)) − 2 · min(1, odd share / 0.10)` | ≈1.0 x-h, CV ≤0.25 |
@@ -95,6 +95,15 @@ score falls linearly and hits zero at the stated limit.
 | 18 | Legibility Score | how surely the words were read, blended with other factors | `0.30·(10·reading) + 0.30·F1 + 0.15·F5 + 0.15·F8 + 0.10·F7` | even & clear |
 | 19 | Character Distinction | how surely the reader told the letters apart, word by word | `10·reading` | clear letter pairs |
 | 20 | Overall Neatness | layout composite | `0.30·F5 + 0.20·F8 + 0.20·F10 + 0.15·F11 + 0.15·F17` | weighted variance |
+
+Line angles for 7, 11 and 12 are measured against the page, not the
+photo's edges: the page's tilt is its lines' median angle, and the part
+of it beyond one degree (`TILT_FREE` in `scoring_parts/features.py`) is
+taken as the camera's and taken out first (#304). Within a degree nothing
+is taken out, so a page of four lines with one sinking still shows it. The report's
+slope row and its line marks (`marked_places.py`) measure the same way,
+so a turned photo of level lines is not called sloping beside a high
+score.
 
 Every factor's report card also carries a `basedOn` count (how many
 letters/words/lines fed it) and an evidence sentence naming the
