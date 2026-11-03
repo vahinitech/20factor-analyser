@@ -3,8 +3,6 @@ name: dpdp-check
 description: Check a change against India's Digital Personal Data Protection Act 2023 and the DPDP Rules 2025 before committing it, and stop for the owner's decision when it may break one. Use for any change that collects, stores, logs, sends, shows or deletes data about a person (parent, teacher, child, visitor, customer), changes consent, cookies or analytics, adds an outside service, changes how long data is kept or what the privacy notice says, or touches the children's flow.
 ---
 
-cd "$(git rev-parse --show-toplevel)"
-
 Owner rules: DPDP work goes as one PR per rule (2026-10-30). Every change is checked against the Act and the Rules, and a change that may break one goes to the owner before it is committed (2026-10-31). The Rules bind us in full from May 2027; we meet them now, so a change that breaks one is a regression today, not a 2027 problem.
 
 ## 1. Is the law still what this skill says?
