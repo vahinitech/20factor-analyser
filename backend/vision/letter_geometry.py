@@ -249,10 +249,19 @@ def _line_ink(gray, line, others=()):
 # the fewest columns: the sum of squared column counts is largest).
 SLANT_MAX = 45
 SLANT_STEP = 3
-# A closed bowl (a, b, d, g, o, p, q) is a hole in the ink at least
-# BOWL_MIN and at most BOWL_MAX small-letter heights across.
+# A closed bowl (a, b, d, e, g, o, p, q) is a hole in the ink at least
+# BOWL_MIN and at most BOWL_MAX small-letter heights across, reaching no
+# lower than BOWL_LOW below the baseline and either no higher than
+# BOWL_HIGH small letters above it, or, for a bowl written tall, starting
+# within BOWL_SEAT of the baseline. The loops of tails (g, j, y) hang
+# below the baseline, and the loops of tall letters (l, h, k, the top of
+# a joined b or d) rise above BOWL_HIGH from half a small letter or more
+# up their stem, so neither can count for a bowl that was left open.
 BOWL_MIN = 0.15
 BOWL_MAX = 1.6
+BOWL_LOW = 0.3
+BOWL_HIGH = 1.3
+BOWL_SEAT = 0.3
 WAVE_MIN = 6
 
 
@@ -289,24 +298,127 @@ def _wave(spans, slope, icpt, xh):
     return float(np.median(np.abs(offs)))
 
 
-def _bowls(mask, xh):
-    """Closed bowls in a line's ink: holes of letter-bowl size."""
+# The band a word's crossings are counted in: from a little above its
+# small letters' tops to a little below its baseline, in small-letter
+# heights. Tails and stems, and the tails of the lines above and below
+# that reach into the word (the f of a "fox" under an "each"), stay out;
+# on the real benchmark pages they made the most "tangled" words. The
+# outline's turning is followed over the whole word: cutting the ink at
+# the band's edges would add corners no pen made.
+BAND_UP = 1.2
+BAND_DOWN = 0.2
+
+
+def _small_band(word_mask, wd, y0, slope, icpt, xh):
+    """The rows of a word's ink inside its small-letter band."""
+    cx = wd["bbox"][0] + wd["bbox"][2] / 2.0
+    base = slope * cx + icpt + wd["drop"] - y0
+    top = max(0, int(round(base - BAND_UP * xh)))
+    bottom = max(top, int(round(base + BAND_DOWN * xh)))
+    return word_mask[top:bottom]
+
+
+def _crossings(mask):
+    """How many strokes a word's ink columns cross, on average: the
+    number of separate runs of ink down each column that has any. An l
+    is one, an e three; a scribbled word, its strokes looping over each
+    other, more than the writer's other words. None for a blank word."""
+    m = mask.astype(np.int8)
+    starts = (np.diff(np.pad(m, ((1, 0), (0, 0))), axis=0) == 1).sum(0)
+    inked = starts[starts > 0]
+    return float(inked.mean()) if inked.size else None
+
+
+# The outline is followed in steps of this share of the small-letter
+# height, so the pixel stairs of the outline do not count as turns.
+TURN_STEP = 1.0 / 8
+TURN_MIN_POINTS = 12
+
+
+def _turning(mask, xh):
+    """How much a word's outline turns, in radians per small-letter height
+    of outline: smooth letters turn at their curves, a scribble's outline
+    turns all the time. None for a word too small to follow."""
     if cv2 is None:
-        return 0
+        return None
+    contours, _ = cv2.findContours(
+        mask.astype(np.uint8), cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE
+    )
+    step = max(2, int(round(xh * TURN_STEP)))
+    total, length = 0.0, 0.0
+    for c in contours:
+        if len(c) < TURN_MIN_POINTS:
+            continue
+        pts = c[::step, 0, :].astype(np.float64)
+        d = np.diff(np.vstack([pts, pts[:1]]), axis=0)
+        ang = np.arctan2(d[:, 1], d[:, 0])
+        turn = np.diff(np.concatenate([ang, ang[:1]]))
+        turn = (turn + np.pi) % (2 * np.pi) - np.pi
+        total += float(np.abs(turn).sum())
+        length += float(np.hypot(d[:, 0], d[:, 1]).sum())
+    if length <= 0:
+        return None
+    return total / length * xh
+
+
+def _bowl_holes(mask, x0, y0, slope, icpt, xh):
+    """The middles (x, page pixels) of the closed bowls in a line's ink:
+    holes of letter-bowl size in the small-letter band."""
     contours, hierarchy = cv2.findContours(
         mask.astype(np.uint8), cv2.RETR_CCOMP, cv2.CHAIN_APPROX_SIMPLE
     )
     if hierarchy is None:
-        return 0
-    n = 0
+        return []
+    out = []
     for c, hrow in zip(contours, hierarchy[0]):
         if hrow[3] < 0:  # an outer edge, not a hole
             continue
-        _x, _y, w, h = cv2.boundingRect(c)
-        size = max(w, h)
-        if BOWL_MIN * xh <= size <= BOWL_MAX * xh:
-            n += 1
-    return n
+        x, y, w, h = cv2.boundingRect(c)
+        if not BOWL_MIN * xh <= max(w, h) <= BOWL_MAX * xh:
+            continue
+        cx = x0 + x + w / 2.0
+        base = slope * cx + icpt
+        top, bottom = (base - y0 - y) / xh, (base - y0 - y - h) / xh
+        if bottom >= -BOWL_LOW and (top <= BOWL_HIGH or bottom <= BOWL_SEAT):
+            out.append(cx)
+    return out
+
+
+def count_loops(line_geo, text, letters):
+    """Letters with a bowl in the line's text (letters: the set of them),
+    and how many of them have a closed bowl in the ink (measure_line's
+    bowl_holes). When the words found in the ink match the words read,
+    each word is counted on its own, so a word with more holes than
+    bowl letters (a joined r, a loop where two letters touch) cannot
+    make up for an open bowl in another word; otherwise the line is one
+    word. A word's closed bowls are its holes, at most its bowl
+    letters."""
+    words = line_geo["words"]
+    text_words = [t for t in re.split(r"\s+", str(text).strip()) if t]
+    if words and len(text_words) == len(words):
+        units = [
+            (
+                wd["bbox"][0],
+                wd["bbox"][0] + wd["bbox"][2],
+                sum(1 for ch in word.lower() if ch in letters),
+            )
+            for wd, word in zip(words, text_words)
+        ]
+    else:
+        units = [
+            (
+                float("-inf"),
+                float("inf"),
+                sum(1 for ch in str(text).lower() if ch in letters),
+            )
+        ]
+    expected = closed = 0
+    for left, right, n in units:
+        expected += n
+        closed += min(
+            n, sum(1 for cx in line_geo["bowl_holes"] if left <= cx <= right)
+        )
+    return expected, closed
 
 
 def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
@@ -416,9 +528,13 @@ def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
             for a, b in zip(wd["spans"], wd["spans"][1:])
         ]
         letter_gaps.extend(wd["letter_gaps"])
-        wd["slant"] = _slant(
-            mask[:, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0]
-        )
+        word_mask = mask[
+            :, wd["bbox"][0] - x0 : wd["bbox"][0] + wd["bbox"][2] - x0
+        ]
+        wd["slant"] = _slant(word_mask)
+        band = _small_band(word_mask, wd, y0, slope, icpt, line_xh)
+        wd["crossings"] = _crossings(band)
+        wd["turning"] = _turning(word_mask, line_xh)
         wd["off"] = wd["drop"] / line_xh
         del wd["spans"]
     gaps_out = []
@@ -454,7 +570,7 @@ def measure_line(gray, line, others=()):  # pylint: disable=too-many-locals
         "letters": letters,
         "letter_gaps": letter_gaps,
         "wave": _wave(spans, slope, icpt, line_xh),
-        "bowls": _bowls(mask, line_xh),
+        "bowl_holes": _bowl_holes(mask, x0, y0, slope, icpt, line_xh),
     }
 
 

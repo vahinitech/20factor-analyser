@@ -53,7 +53,18 @@ async function printWith(browser, timezoneId, price) {
   await page.fill('#vg-email', 'vahini.parent@example.com');
   await page.selectOption('#vg-purpose', 'Helping my child improve');
   if (price) await page.selectOption('#vg-price', price);
+  // The card slides in (vgIn, 0.24 s); click once it has stopped, and check
+  // the click was taken (the thank-you panel) before waiting for the print,
+  // so a missed click says so instead of timing out on the print.
+  await page.waitForFunction(() => document.querySelector('.vgate__card').getAnimations().every((a) => a.playState === 'finished'));
   await page.click('#vg-go');
+  await page.waitForSelector('#vgate-thanks', { state: 'visible', timeout: 3000 }).catch(async () => {
+    const why = await page.evaluate(() => ({
+      fieldsMarked: [...document.querySelectorAll('#vgate .bad')].map((e) => e.id),
+      gate: document.getElementById('vgate').className,
+    }));
+    throw new Error('Generate my PDF was not taken: ' + JSON.stringify(why));
+  });
   await page.waitForFunction(() => window.__printed > 0, null, { timeout: 5000 });
   const lead = leads.find((l) => l.kind === 'report_pdf_lead');
   const card = await page.evaluate(() => {

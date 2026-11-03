@@ -33,7 +33,7 @@ class TestPhotoValidity(unittest.TestCase):
         self.assertTrue(lines)
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         by_n = {f["n"]: f for f in result["results"]}
-        for n in (1, 2, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
+        for n in (1, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
             if (
                 n == 6
                 and by_n[n]["scoringInputs"]["method"] == "zone_geometry"
@@ -42,8 +42,10 @@ class TestPhotoValidity(unittest.TestCase):
             self.assertTrue(by_n[n]["unmeasured"], n)
             self.assertEqual(by_n[n]["unmeasuredKind"], "ocr")
             self.assertEqual(by_n[n]["value"], "Not measured")
-        for n in (4, 5, 10):
+        for n in (5, 10):
             self.assertFalse(by_n[n]["unmeasured"], n)
+        for n in (2, 4):
+            self.assertEqual(by_n[n]["unmeasuredKind"], "imu", n)
         self.assertTrue(
             all(
                 not r["unmeasured"]
@@ -112,9 +114,12 @@ class TestPhotoValidity(unittest.TestCase):
 
     def test_english_page_still_scores_latin_letter_factors(self):
         by_n, _ = self._one_line("hello world")
-        for n in (3, 6):
-            self.assertFalse(by_n[n]["unmeasured"], n)
-            self.assertIsNone(by_n[n]["unmeasuredKind"])
+        self.assertFalse(by_n[6]["unmeasured"])
+        self.assertIsNone(by_n[6]["unmeasuredKind"])
+        # Loop Closure reads the script, but this blank page has no ink to
+        # find a bowl in: too little to measure, not the wrong script.
+        self.assertTrue(by_n[3]["unmeasured"])
+        self.assertEqual(by_n[3]["unmeasuredKind"], "insufficient")
 
     def test_photo_excludes_motion_from_scores_and_rankings(self):
         arr = np.full((160, 300, 3), 255, dtype=np.uint8)
@@ -129,12 +134,16 @@ class TestPhotoValidity(unittest.TestCase):
         result = scoring.build_analysis(arr, lines, {}).to_dict()
         self.assertEqual(len(result["results"]), 20)
         # The blank synthetic page has no ink between words, so Word
-        # Spacing is unmeasured rather than a perfect score.
-        spacing = result["results"][7]
-        self.assertTrue(spacing["unmeasured"])
-        self.assertEqual(spacing["unmeasuredKind"], "insufficient")
-        self.assertEqual(result["measuredCount"], 15)
-        for factor in result["results"][12:16]:
+        # Spacing is unmeasured rather than a perfect score, there is no
+        # ink to find a closed bowl in, and one line has no margin to
+        # measure (#200, #201).
+        for n in (3, 8, 10):
+            factor = result["results"][n - 1]
+            self.assertTrue(factor["unmeasured"], n)
+            self.assertEqual(factor["unmeasuredKind"], "insufficient")
+        self.assertEqual(result["measuredCount"], 11)
+        pen_only = [result["results"][i] for i in (1, 3, 12, 13, 14, 15)]
+        for factor in pen_only:
             self.assertTrue(factor["unmeasured"])
             self.assertEqual(factor["conf"], "imu")
             self.assertFalse(factor["imuMeasured"])
@@ -173,7 +182,9 @@ class TestPhotoValidity(unittest.TestCase):
             )
         )
         pen = next(g for g in result["plainGroups"] if g["id"] == "pen")
-        self.assertEqual(pen["measuredCount"], 1)
+        # Smoothness (4) and the Dynamics all need the sensor pen.
+        self.assertEqual(pen["measuredCount"], 0)
+        self.assertIsNone(pen["score"])
 
     def test_blank_page_refused_with_or_without_ocr_error(self):
         # Without an OCR error a blank page is "no handwriting". With one,

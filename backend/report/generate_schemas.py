@@ -1054,7 +1054,7 @@ def expanded():
         },
         {
             "description": (
-                "Factors 2, 13, 14 and 16 cannot be 'estimated' from a "
+                "Factors 2, 4, 13, 14 and 16 cannot be 'estimated' from a "
                 "still image; they are proxy, measured or unavailable."
             ),
             "if": {
