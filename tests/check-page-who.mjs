@@ -20,6 +20,7 @@
 //   the screen changes.
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs';
 import { chromium } from 'playwright';
 
 const server = spawn('./node_modules/.bin/http-server', ['.', '-p', '4219', '-c-1', '--silent']);
@@ -145,6 +146,47 @@ try {
     await page.click('#go-process');
     for (let i = 0; i < 50 && bodies.length <= n; i++) await page.waitForTimeout(100);
     assert.equal(whoSent(bodies[n] || ''), 'sample', 'the sample page: who=sample');
+    // The server takes who=sample only for the sample file's own bytes
+    // (backend/server/who_checks.py), so the page sends the file unchanged.
+    const sampleBytes = fs.readFileSync('frontend/assets/samples/handwriting-sample.jpg').toString('latin1');
+    assert.ok((bodies[n] || '').includes(sampleBytes), 'the sample page goes as the file itself');
+    await ctx.close();
+  }
+
+  // The server's own "say who is checking" (422 who_required) goes back to
+  // the "Who is checking?" row, not to "This file could not be opened"; any
+  // other 422 is still a file it could not open. The demo helper asks too.
+  {
+    const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+    await ctx.addInitScript(() => { try { localStorage.setItem('vahini_guide_check', '1'); } catch {} });
+    const page = await ctx.newPage();
+    let reply = 'who';
+    const bodies = [];
+    await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
+    await page.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
+    await page.route('**/api/v2/reports?**', (r) => {
+      bodies.push(r.request().url());
+      r.fulfill({ status: 422, json: { detail: reply === 'who' ? { error_code: 'who_required', error: 'Say who is checking this page.', field: 'who' } : 'Unreadable image' } });
+    });
+    await page.goto(URL, { waitUntil: 'networkidle' });
+    assert.equal(await page.evaluate(() => window.runDemo()), 0, 'runDemo with no answer does not run');
+    assert.equal(await page.locator('#who-error').isVisible(), true, 'and asks who is checking');
+    assert.equal(bodies.length, 0, 'and sends nothing');
+
+    await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
+    await page.waitForFunction(() => !document.querySelector('#go-process').disabled);
+    await page.check('input[name="check-who"][value="parent"]');
+    assert.equal(await page.locator('#who-error').isVisible(), false);
+    await page.click('#go-process');
+    await page.waitForSelector('#screen-upload.on #who-error:not([hidden])', { timeout: 20000 });
+    assert.match(await page.locator('#who-error').innerText(), /Choose who is checking/, 'who_required: the who row asks again');
+    assert.equal(await page.locator('#screen-process .reject-card').count(), 0, 'and no file screen');
+    assert.equal(await page.locator('#dz-preview').isVisible(), true, 'the photo is still there');
+
+    reply = 'file';
+    await page.click('#go-process');
+    await page.waitForSelector('#screen-process .reject-card', { timeout: 20000 });
+    assert.match(await page.locator('#screen-process .reject-card').innerText(), /could not be opened/, 'any other 422: the file screen');
     await ctx.close();
   }
 

@@ -310,9 +310,11 @@ function whoForCheck(){
   if (!who || (who === 'student' && !adultSaysYes())) return null;
   return who;
 }
-/* Before a check: true when the answer is missing, after saying what to do. */
-function whoMissing(){
-  if (whoForCheck()) { whoError(''); return false; }
+/* Before a check: true when the answer is missing, after saying what to do.
+   force: the server refused the answer sent (422 who_required), so ask
+   again whatever the page holds. */
+function whoMissing(force){
+  if (!force && whoForCheck()) { whoError(''); return false; }
   const who = chosenWho();
   whoError(who === 'student'
     ? 'Ask a parent, guardian or teacher to say yes, then tick the box.'

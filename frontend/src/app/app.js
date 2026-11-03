@@ -323,6 +323,7 @@ function setupUploadDrop(){
 /* "Try a sample": our own photo, loaded straight into the preview. It never
    passes through #file-input, so it is not stored as a visitor's upload, and
    VAHINI_SAMPLE_RUN stops a printed sample report from being stored too. */
+let sampleBlob = null;      // the sample file as fetched, sent unchanged
 async function loadBundledSample(){
   if (serviceUp === false) return;
   setDzStatus('Loading the sample page…');
@@ -332,6 +333,7 @@ async function loadBundledSample(){
     const blob = await res.blob();
     readImageFile(new File([blob], 'handwriting-sample.jpg', { type:'image/jpeg' }), (img, url)=>{
       window.VAHINI_SAMPLE_RUN = true;
+      sampleBlob = blob;
       keepForSample(true);
       showSample(img, url);
       setDzStatus('Sample page loaded. Press Analyse my handwriting to see its report.');
@@ -711,7 +713,7 @@ async function showDropped(img){
         title: 'The checker is ready',
         detail: 'Try this photo once more. This does not use up a free check.',
         actions: [
-          { label: 'Check this photo again', primary: true, run: ()=>{ dropWait++; runPipeline(); } },
+          { label: 'Check this photo again', primary: true, run: ()=>{ if (whoAsked()) return; dropWait++; runPipeline(); } },
           { label: 'Choose another photo', run: chooseAnotherPhoto },
         ],
       });
@@ -826,6 +828,19 @@ function sampleCounts(pyReport){
 /* Server-only pipeline: the recognition server computes every report (OCR +
    the 20-factor analysis). The browser sends the image and renders the result;
    there is no in-browser scorer or offline fallback. */
+/* Who is checking (report-share.js, DPDP Rules 2025 rule 10): true when
+   the answer is missing, after showing the "Who is checking?" row with
+   what to do. Every way into a check asks it first. force: the server
+   refused the answer sent (422 who_required). */
+function whoAsked(force){
+  const W = window.VahiniWho;
+  if (!W || (!force && W.forCheck())) return false;
+  const up = $('#screen-upload');
+  if (up && !up.classList.contains('on')) go('upload');
+  W.missing(force);
+  return true;
+}
+
 async function runPipeline(){
   window.VAHINI_CHECK_FACTS = null;   // facts belong to one report; a new run starts with none
   keepStatus('');
@@ -858,7 +873,9 @@ async function runPipeline(){
 
   // 1 load: rasterise the upload and show it as the sample
   stepState('load','active');
-  const blob = await imageToBlob(img);
+  // The sample page goes as the file itself: the server takes who=sample
+  // only for those exact bytes (backend/server/who_checks.py).
+  const blob = (window.VAHINI_SAMPLE_RUN && sampleBlob) ? sampleBlob : await imageToBlob(img);
   let detURL = await compressImageURL(img.src, 1100, 0.72);
   showProcStagePreview(img);
   stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> photo, sent as ${Math.max(1, Math.round((blob && blob.size || 0)/1024))} KB`);
@@ -875,6 +892,7 @@ async function runPipeline(){
     // The sample page is not the sentence the visitor typed.
     pyReport = await VahiniOCR.serverPythonReport(blob, window.VAHINI_SAMPLE_RUN ? '' : (state.expected || ''));
   }
+  if (pyReport && pyReport.error_code === 'who_required'){ whoAsked(true); return; }
   if (pyReport && pyReport.error_code === 'busy'){
     showReject({
       outcome: 'busy',
@@ -1507,9 +1525,9 @@ function init(){
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
   setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
-  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (window.VahiniWho && window.VahiniWho.missing()) return; if (!keepEmailMissing()) runPipeline(); });
+  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (whoAsked()) return; if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead
-  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; if (window.VahiniWho && window.VahiniWho.missing()) return; collectIntake(); startIMU(); });
+  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; if (whoAsked()) return; collectIntake(); startIMU(); });
   const serviceRetry = $('#service-retry'); if(serviceRetry) serviceRetry.addEventListener('click', checkService);
   // imu screen
   const bm3 = $('#back-mode3'); if(bm3) bm3.addEventListener('click', cancelIMU);
@@ -1531,6 +1549,7 @@ function init(){
 
   // demo helper (testing / "try sample"): always runs the server pipeline.
   window.runDemo = async function(_role, _instant){
+    if (whoAsked()) return 0;
     const img = new Image();
     await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='uploads/test-handwriting.png'; });
     state.imageEl = img;

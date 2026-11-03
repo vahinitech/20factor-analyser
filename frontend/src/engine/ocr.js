@@ -252,7 +252,15 @@ async function serverPythonReport(blob, expectedText){
       // Answers about the file or the key, from a server that is up: each
       // has its own screen instead of "server not reachable".
       if (res.status === 413){ lastServerError = 'too large'; return { ok:false, error_code:'too_large' }; }
-      if (res.status === 422){ lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' }; }
+      // 422 is a file the server could not open, or (who_checks.py,
+      // detail.error_code "who_required") a check that did not say who is
+      // checking: that one goes back to the "Who is checking?" row.
+      if (res.status === 422){
+        let detail = null;
+        try { detail = (JSON.parse(raw) || {}).detail; } catch(_e){ /* not JSON */ }
+        if (detail && detail.error_code === 'who_required'){ lastServerError = 'who required'; return { ok:false, error_code:'who_required' }; }
+        lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' };
+      }
       if (res.status === 401 || res.status === 403){ lastServerError = 'key'; return { ok:false, error_code:'key_problem' }; }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
