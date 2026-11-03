@@ -44,7 +44,7 @@ try {
   mode = 'daily';
   await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   await page.waitForSelector("text=Today’s free checks are used", { timeout: 20000 });
   const panel = await page.locator('#screen-process .panel').innerText();
   assert.match(panel, /allows 3 pages a day from each internet connection/);

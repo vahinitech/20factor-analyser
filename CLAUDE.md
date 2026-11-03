@@ -140,6 +140,12 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   reader in the Americas. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.
+- **Who is checking is asked before a page is read (DPDP Rules 2025, rule 10).**
+  The check page's "Who is checking?" starts empty; Student needs an
+  adult's tick and is never remembered; the answer goes as `who` and the
+  server refuses a free check without it where `VAHINI_REQUIRE_WHO=1`
+  (`backend/server/who_checks.py`). Never pre-select an answer, never add
+  a value meaning a child alone, never store or echo it.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
@@ -151,6 +157,13 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **Text read from a page has the names and numbers the text check
+  recognises blanked (DPDP Act, section 6(1)).** It passes
+  `backend/reading/identifiers.py` before it is cached or returned: names
+  after "My name is" and the like, emails, phone numbers, roll numbers and
+  school names become `[name]`, `[email]` and so on. It is a safety net: a
+  name written alone on a line is not recognised, and the photo itself is
+  unchanged. A new text field in a payload goes in its `TEXT_KEYS`.
 - **Pro access is granted on the server, never in code.** Operators follow
   [docs/17-access-and-trials.md](docs/17-access-and-trials.md); `deployment/grant-pro.sh`
   does a grant in one command and leaves the key in a private file. Every
