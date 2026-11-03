@@ -5,6 +5,7 @@ required, every scan route answers 422 before reading the photo or
 counting a free check; a Pro key is not asked; the answer is never
 echoed; and where it is not required, nothing changes."""
 
+import hashlib
 import importlib.util
 import json
 import os
@@ -16,6 +17,9 @@ from unittest.mock import AsyncMock, patch
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+ROOT = Path(__file__).resolve().parents[2]
+# The page "Try a sample" sends as it is (frontend/src/app/app.js).
+SAMPLE = (ROOT / "frontend/assets/samples/handwriting-sample.jpg").read_bytes()
 from server import who_checks  # noqa: E402
 from report import contract_schemas  # noqa: E402
 from backend.tests.test_comparison_data import read_payload  # noqa: E402
@@ -41,8 +45,29 @@ class Check(unittest.TestCase):
     def test_each_answer_is_taken(self):
         with patch.dict(os.environ, {"VAHINI_REQUIRE_WHO": "1"}):
             for value in who_checks.VALUES:
-                self.assertEqual(who_checks.check(value), value)
-                self.assertEqual(who_checks.check(f" {value.upper()} "), value)
+                for text in (value, f" {value.upper()} "):
+                    self.assertEqual(
+                        who_checks.check(text, image=SAMPLE), value
+                    )
+
+    def test_the_sample_hash_is_the_bundled_sample(self):
+        self.assertTrue(who_checks.is_sample(SAMPLE))
+        self.assertEqual(
+            hashlib.sha256(SAMPLE).hexdigest(), who_checks.SAMPLE_SHA256
+        )
+
+    def test_sample_with_any_other_photo_counts_as_missing(self):
+        # "sample" must not stand in for a real answer on a child's page.
+        others = (None, b"", b"synthetic", SAMPLE[:-1], SAMPLE + b"\0")
+        with patch.dict(os.environ, {"VAHINI_REQUIRE_WHO": "1"}):
+            for image in others:
+                with self.assertRaises(ValueError):
+                    who_checks.check("sample", image=image)
+                self.assertIsNone(
+                    who_checks.check("sample", pro=True, image=image)
+                )
+        with patch.dict(os.environ, {"VAHINI_REQUIRE_WHO": "0"}):
+            self.assertIsNone(who_checks.check("sample", image=b"x"))
 
     def test_missing_is_refused_only_where_required_and_without_pro(self):
         with patch.dict(os.environ, {"VAHINI_REQUIRE_WHO": "1"}):
@@ -91,12 +116,12 @@ class Routes(unittest.TestCase):
         env.start()
         self.addCleanup(env.stop)
 
-    def post(self, route, who=None, headers=None):
+    def post(self, route, who=None, headers=None, photo=b"synthetic"):
         data = {} if who is None else {"who": who}
         with TestClient(self.server.app) as client:
             return client.post(
                 route,
-                files={"image": ("test.png", b"synthetic")},
+                files={"image": ("test.png", photo)},
                 data=data,
                 headers=headers or {},
             )
@@ -118,11 +143,34 @@ class Routes(unittest.TestCase):
     def test_an_answer_lets_the_report_routes_run_and_is_not_echoed(self):
         for route in ROUTES[:3]:
             for who in who_checks.VALUES:
-                answer = self.post(route, who)
+                photo = SAMPLE if who == "sample" else b"synthetic"
+                answer = self.post(route, who, photo=photo)
                 self.assertEqual(answer.status_code, 200, (route, who))
                 body = json.dumps(answer.json())
                 self.assertNotIn('"who"', body)
         self.assertTrue(self.fake.called)
+
+    def test_sample_is_refused_for_any_photo_but_the_sample(self):
+        for route in ROUTES:
+            answer = self.post(route, "sample")
+            self.assertEqual(answer.status_code, 422, route)
+            detail = answer.json()["detail"]
+            self.assertEqual(detail["error_code"], who_checks.ERROR_CODE)
+        self.fake.assert_not_called()
+        self.read.assert_not_called()
+
+    def test_the_sample_photo_reaches_the_scan_whole(self):
+        # Hashing the upload must leave it rewound for the scan.
+        seen = []
+
+        async def payload(image, *_args, **_kwargs):
+            seen.append(await image.read())
+            return read_payload("a cat")
+
+        with patch.object(self.server, "_report_payload", new=payload):
+            answer = self.post("/report-python", "sample", photo=SAMPLE)
+        self.assertEqual(answer.status_code, 200)
+        self.assertEqual(seen, [SAMPLE])
 
     def test_a_pro_key_is_not_asked(self):
         pro = AsyncMock(return_value=True)

@@ -760,7 +760,7 @@ async def ocr(
     authorization: str = Header(default=None),
 ):
     pro = await _is_pro(authorization)
-    _who(who, pro)
+    await _who(who, pro, image)
     charge = DAILY.check(request, exempt=pro)
     t0 = time.perf_counter()
     # te-Telu-IN reads, caches and answers as te (lang_tags.py).
@@ -949,7 +949,7 @@ async def analyze_vl(
     who: str = Form(""),
     authorization: str = Header(default=None),
 ):
-    _who(who, await _is_pro(authorization))
+    await _who(who, await _is_pro(authorization), image)
     if os.environ.get("VAHINI_ENFORCE_TIERS") == "1":
         if (await run_in_threadpool(entitlements.access_for, authorization))[
             "tier"
@@ -1394,11 +1394,17 @@ def _age_band(text):
         ) from None
 
 
-def _who(text, pro):
+async def _who(text, pro, image):
     """Who is checking (who_checks.py), or HTTP 422 before the upload is
-    read or a free check is counted. Checked and forgotten."""
+    decoded or a free check is counted. Checked and forgotten. "sample"
+    hashes the upload's bytes to see that it is the bundled sample page,
+    then rewinds it for the scan."""
+    raw = None
+    if (text or "").strip().lower() == "sample":
+        raw = await image.read(MAX_UPLOAD_BYTES + 1)
+        await image.seek(0)
     try:
-        return who_checks.check(text, pro=pro)
+        return who_checks.check(text, pro=pro, image=raw)
     except ValueError as exc:
         raise HTTPException(
             422,
@@ -1489,7 +1495,7 @@ async def report_python(
     who: str = Form(""),
     authorization: str = Header(default=None),
 ):
-    _who(who, await _is_pro(authorization))
+    await _who(who, await _is_pro(authorization), image)
     enforce = os.environ.get("VAHINI_ENFORCE_TIERS") == "1"
     if enforce:
         await run_in_threadpool(entitlements.access_for, authorization)
@@ -1541,7 +1547,7 @@ async def api_report(
     include: str = Query(default=""),
 ):
     access = await run_in_threadpool(entitlements.access_for, authorization)
-    _who(who, access["tier"] == "pro")
+    await _who(who, access["tier"] == "pro", image)
     fields = set(filter(None, include.split(",")))
     if fields - compact_reports.OPTIONAL_FIELDS:
         raise HTTPException(422, "Unsupported include field")

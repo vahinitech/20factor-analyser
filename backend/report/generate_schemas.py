@@ -1897,7 +1897,9 @@ def request():
                         "description": (
                             "Who is checking the page (DPDP Rules, rule "
                             "10): parent, teacher, self (18 or over), "
-                            "student (with an adult's yes) or sample. "
+                            "student (with an adult's yes) or sample "
+                            "(the bundled sample photo only; with any "
+                            "other photo it counts as missing). "
                             "Required for a free check where the server "
                             "sets VAHINI_REQUIRE_WHO=1, never asked of a "
                             "Pro key; missing or anything else is HTTP "
