@@ -8,7 +8,7 @@
     "expected_factor_count": 20,
     "returned_factor_count": 20,
     "scored_factor_count": 20,
-    "proxy_factor_count": 4,
+    "proxy_factor_count": 5,
     "score_basis": "Existing weighted section score, including image proxies."
   },
   "factors": [
@@ -121,7 +121,7 @@
       "number": 4,
       "name": "Line Quality (Smoothness)",
       "section_id": "structure",
-      "status": "estimated",
+      "status": "proxy",
       "score": {
         "value": 6.0,
         "minimum": 0,
@@ -142,7 +142,9 @@
         "source_label": "measured",
         "confidence_probability": null,
         "display_value": null,
-        "limitations": []
+        "limitations": [
+          "At photo size a shaky stroke cannot be told from a curve."
+        ]
       },
       "practice": {
         "target_description": "jitter ≤0.5 px",

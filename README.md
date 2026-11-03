@@ -54,7 +54,7 @@ python backend/analyser-ocr-server.py
 
 | Section | Factors |
 |---|---|
-| Structure | Letter Formation, Stroke Order, Loop Closure, Line Quality, Size Consistency, Ascender/Descender |
+| Structure | Letter Formation, Stroke Order and Line Quality (both need the sensor pen), Loop Closure, Size Consistency, Ascender/Descender |
 | Spatial | Baseline, Word Spacing, Letter Spacing, Margins, Line Straightness, Vertical Alignment |
 | Dynamics | Speed, Pressure, Stroke Continuity, Pen Lifts (needs the sensor pen) |
 | Style & Readability | Slant, Legibility, Character Distinction, Overall Neatness |
@@ -119,8 +119,9 @@ traces to a real measurement: character-level stroke width and edge
 shape, word-level letter spacing, line-level tilt and height, and a few
 page-level blends of the factors below it. Most of this never depends on
 reading the words correctly; only loop closure, the ascender/descender
-proxy and Character Distinction's confidence term lean on OCR text as a
-secondary signal. The full walkthrough, from one stroke up to the whole
+proxy and the reading confidence in Letter Formation, Legibility and
+Character Distinction lean on OCR text as a secondary signal. The full
+walkthrough, from one stroke up to the whole
 page, is in `docs/05-computer-vision-algorithms.md`.
 
 ## Repository layout

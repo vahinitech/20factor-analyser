@@ -119,9 +119,16 @@ re-read is kept when it agrees with Paddle by 0.70 or its own confidence is
    - text: a very confident OCR reading, form words ("Name", "Date"), capitals
      and digits (`classify.py:193-229`).
    A line at 0.58 or above is printed (`PRINTED_THRESHOLD`, `classify.py:46`).
-   Note one rule here: a line read with OCR confidence 0.93 or more, six or
-   more characters and even strokes is treated as printed on any page
-   (`classify.py:388-394`). Very neat handwriting can be removed by it.
+   One rule calls a line printed on any page: OCR confidence 0.93 or
+   more, six or more characters and even strokes. Neat handwriting meets
+   it, so these rules alone no longer set a line aside. A second sign
+   has to agree (#202, section 10): the line reader sees print
+   (0.5 or more), or the ink repeats like a font
+   (`classify.font_evidence`). The exceptions are a page where two
+   thirds of the lines show a second sign (a printed page), and a label
+   of four characters or fewer on a page where a quarter do (a form):
+   there the rules decide alone. Otherwise the line stays handwriting,
+   and `print_check` in the text classification says why.
 5. Lines shorter than two characters, or with no letters or digits, dropped.
 6. The pieces of each written line joined into one line
    (`detector.join_row_pieces`). Rows are anchored on the widest pieces; a
@@ -234,11 +241,11 @@ overall score are in [03-scoring-criteria.md](03-scoring-criteria.md).
 
 | Skill | Measured from | Score | Needs reading? |
 |---|---|---|---|
-| **1 Letter Formation** | `avg_score`: the mean OCR confidence of the handwriting lines; `height_cv`: how much line heights vary | `avg_score x 7.2 + (1 - height_cv) x 2.8` | Yes |
+| **1 Letter Formation** | `reading`: how surely each word was read, the least sure quarter counted twice (each word takes its line's OCR confidence, less its share of tangle; with a copied passage, a word not read as written counts 0); `height_cv`: how much line heights vary; `tangle_points`: up to 2.5 for the most tangled word (since #193, [03-scoring-criteria.md](03-scoring-criteria.md#reading-word-by-word-factors-1-18-19)) | `reading x 7.2 + (1 - height_cv) x 2.8 - tangle_points` | Yes |
 | **5 Size Consistency** | `size_cv`: standard deviation / mean of each **word's small-letter height**, measured along its line's own baseline (`letter_geometry.py`; since 2026-10-13, #135), as the median height of the word's columns (section 9). Fewer than three words measured: line box heights, as before | `(1 - size_cv / 0.60) x 10` (line boxes: `/ 0.65`) | No |
 | **7 Baseline Alignment** | `line_slope_abs`: mean of each line's angle, from the first two corners of its polygon (the top edge) | `(1 - angle / 8 degrees) x 10` | Yes |
 | **8 Word Spacing** | `word_gap_spread`: every word gap, each divided by its line's height, and their mean distance from the median gap, as a share of it; `word_gaps_odd`: the share of gaps under half or over twice the median (#197). Gaps come from the ink inside each line (section 3). The space between two boxes left on one row is not a gap: after step 6 of section 2 those are further apart than any word gap (a column, or words never read), and one such space scored Word Spacing 0 on four UJI pages. Fewer than three gaps: "Not measured" | `(1 - word_gap_spread / 1.0) x 10 - 2 x min(1, word_gaps_odd / 0.10)` | Yes |
-| **18 Legibility** | A blend of the four above | `0.35 x F1 + 0.25 x F5 + 0.20 x F8 + 0.20 x F7` | Yes |
+| **18 Legibility** | How surely the words were read, blended with the four above | `0.30 x (10 x reading) + 0.30 x F1 + 0.15 x F5 + 0.15 x F8 + 0.10 x F7` | Yes |
 
 Code: features at `scoring_parts/features.py:41-203`, formulas in
 `scoring_parts/structure.py` (1, 5), `spatial.py` (7, 8) and `style.py`
@@ -252,11 +259,15 @@ Three things a reader of a report should know:
   degrees gained about 51 pixels and tilt counted as size. Measured along
   each line's own baseline, a sloping line no longer changes it (sections
   8 and 9). On the sample page Size moved from 4.9 to 6.1.
-- **Letter Formation leans on how sure the OCR is.** Clear letters are read
-  with high confidence, so a low average means letters were hard to read. It
-  cannot point at one letter. The recognition note in every report says the
-  20 factors "do not depend on reading the words"; for factors 1, 2 and 19
-  that is not quite true, because OCR confidence is part of their score.
+- **Letter Formation leans on how sure the OCR is, word by word.** Clear
+  letters are read with high confidence, so low confidence means letters
+  were hard to read. The reader gives one confidence per line, so the
+  score counts the least sure quarter of the words twice, and checks the
+  ink of each word for a scribble: strokes that cross and turn far more
+  than the writer's other words (#193). It cannot point at one letter.
+  The recognition note in every report says the 20 factors "do not depend
+  on reading the words"; for factors 1, 18 and 19 that is not quite true,
+  because OCR confidence is part of their score.
 - **A Kalman baseline tracker exists** (`baseline_track.py`) but runs only on
   rows with three or more boxes, which Paddle's one-box-per-line output
   rarely gives, and it feeds only the "sinking" or "climbing" sentence, not
@@ -270,9 +281,9 @@ There is **no calibrated probability** anywhere in a report. The API field
 
 | Signal | Where it comes from | What uses it |
 |---|---|---|
-| OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 2, 19; the printed check; dropping fragments |
+| OCR line confidence, 0 to 1 | Paddle's `rec_scores`, one number per line (`ocr_backends.py:407-432`). TrOCR averages its per-token scores into one (`ocr_backends.py:664-691`). Ink-only lines get 0 | Skills 1, 18, 19; the printed check; dropping fragments |
 | Recognition level | Mean line confidence: `passage-verified` when the typed passage matched, `high` at 0.85, `moderate` at 0.70, else `low`; `unavailable` when nothing was read (`server/app.py:741-799`) | The report shows it; the spelling check runs only at `high` or `passage-verified` (`report-render.js:554-563`) |
-| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
+| Per-skill `conf` | `measured`, or why not: `imu` (needs the pen), `ocr` (needs reading), `insufficient` (Word Spacing with fewer than 3 gaps, Margin Discipline with fewer than 3 rows starting at the margin) (`scoring_parts/availability.py:50-60`) | The report says "Not measured" and leaves the skill out of every average |
 | Printed probability | Section 2, step 4 | Which lines are scored. The code says it is "a heuristic, not a calibrated confidence" (`classify.py:439-444`) |
 | Photo quality | Sharpness (Laplacian variance) and size, measured in the browser only (`app.js:629-658`) | A warning; the visitor may still go on |
 
@@ -281,7 +292,7 @@ confidence lowers skills 1 and 19 and sets the level to `low`. Refusals happen
 only for the cases in the table at the end of section 2. A skill with too
 little evidence is marked "Not measured" instead of being given a guess:
 Word Spacing below 3 gaps, the reading skills when nothing was read, and the
-four pen skills (13-16) on every photo.
+six pen skills (2, 4 and 13-16) on every photo.
 
 ## 6. The marked places on the report today
 
@@ -326,7 +337,7 @@ Each `factor_regions` entry keeps `url` and `caption` and adds:
 
 Size evidence selects the largest height deviation from the median. Baseline and straightness evidence select the largest absolute polygon angle. Margin evidence selects the largest corrected-left-edge deviation, using the scorer's camera-tilt correction. Word-spacing evidence uses the scorer's row grouping and selects the largest normalized-gap deviation, showing both adjacent regions.
 
-A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop-letter frequency or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
+A selected measurement is a contributing region, not a claim that it is the only problem. Factors based on OCR confidence, character-width proxies, loop closure (measured per word, not per letter) or composite scores are explicitly labeled as context. They cannot identify an exact faulty character from their current scoring inputs. Factors 13-16 require sensor data and return an empty URL with unavailable status.
 
 Aggregate images and page maps retain accepted handwriting rectangles and blank the rest. This prevents excluded headers and labels from returning through whole-page previews. It does not correct a printed region that the upstream classifier mistakenly accepts, or separate printed and handwritten pixels inside one accepted box.
 
@@ -620,6 +631,60 @@ keeps most lines twice, which changes scores (#145).
 These are lower than with the ink outlines in section 9 because the
 reader's line boxes are looser and sometimes join or split lines.
 
+**A second sign before a line is set aside (#202, 1 November 2026).**
+On real phone photos the rules of section 2, step 4 set aside neat
+handwriting: even strokes, even letters and a confident reading are all
+they look at, and neat handwriting has all three. Replayed on 173 GNHK
+pages (CC BY 4.0, the stage reader's kept output, labelled words), they
+set aside 12.6% of the handwritten words, and 44 pages lost a fifth or
+more. 277 of the 448 lost lines went through the confidence override.
+
+A font leaves two marks a pen does not: the same letter has the same
+shape to the pixel, and the small letters sit on one line at one height.
+`classify.font_evidence` measures both on the line's ink. Letters of the
+same size (within a pixel) are overlaid at the best shift of up to a
+pixel; a median overlap of 0.80 or more is a font. The bottoms of the
+small letters are fitted with a straight line; a spread under 3% of the
+letter height, with heights within 4%, is a font. It needs three
+letters with a same-size partner, or four letters on the line, and
+says "unsure" otherwise. On GNHK it calls 26 of about 2,950
+handwriting lines a font and 132 of 223 printed lines.
+
+A line the rules call print is now set aside only when the reader says
+print (0.5 or more) or the ink shows a font. On a page where two thirds
+of the lines show one of those signs, the page is printed and the rules
+decide alone. That keeps a typed letter refused when one line reads
+unclearly. A label of four characters or fewer is too short for either
+sign, so it follows the rules on a page where a quarter of the lines
+show one (the "No.", "For" and "By" of the receipt form). Where the
+reader has no say (Telugu, or no OpenCV) nothing changed.
+
+| GNHK, 173 pages | Before | After |
+|---|---|---|
+| Handwritten words set aside | 12.6% (903) | 4.4% (315) |
+| Pages losing a fifth or more of their handwriting | 44 | 20 |
+| Median share of a page's handwriting kept | 95% | 100% |
+| Printed words kept as handwriting | 23.8% (149) | 28.4% (178) |
+
+So 29 more printed words of 627 now reach the score, against 588
+handwritten words that come back. Excluding a child's own writing is the
+worse mistake. eng_EU_213, the neat card in #202, keeps 22 of its 24
+handwritten words (9 before). The thresholds hardly matter: a repeat
+overlap of 0.70 to 0.85 and row limits from 2% to 4% move the loss
+between 3.9% and 4.0% on the rule without page context. On the UJI
+pages "bheema", "day" and "every" on UPV_W51, W54 and W60 are scored
+again, and the sample page keeps its second "any one can change hand
+writing". `test_print_second_sign.py` checks a rendered font line stays
+print with the reader unsure, and neat handwriting-like lines drawn
+with natural variation stay handwriting when read confidently.
+
+The UJI pages show the limit of the ink signs: they are built from each
+writer's letter samples on a drawn line, so repeated letters and the
+baseline are as exact as a font's, and most of their lines read as a
+font. That costs nothing there, since a font sign only lets the rules
+decide as before, but it means the signs separate fonts from pens, not
+from pages assembled by a program.
+
 What it still gets wrong: script fonts that imitate handwriting, and some
 lines of a heavily scaled-down typed page. `test_print_hand.py` checks both
 directions on real crops: neat handwriting from the sample page stays
@@ -846,22 +911,29 @@ to the measuring and weekly (`.github/workflows/factor-tests.yml`).
 | One line's letters riding a wave | 11 Line Straightness | 20% | **100%** |
 | One line's letters leaning 25 degrees | 17 Slant Consistency | 0% | **100%** |
 | One word's letters three times as far apart | 9 Letter Spacing | 25% | **100%** |
-| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **85%** |
+| Every a, d, g, o, p, q left open | 3 Loop Closure | 0% | **100%** |
 | One word 1.5 times the size | 5 Size Consistency | 75% | 75% (falls 0.61, was 0.25) |
 | One line's tall letters and tails 1.5 times | 6 Ascender/Descender | 75% | 75% |
 | One small letter 1.7 times taller | 5 Size Consistency | 15% | 10% |
-| One line written with a tremor | 4 Line Quality | 0% | 0% |
-| One word scribbled, read by the real reader | 1 Letter Formation | 9 of 19 | unchanged |
-| | 18 Legibility | 2 of 19 | unchanged |
-| | 19 Character Distinction | 8 of 19 | unchanged |
-| | 2 Stroke Order | 9 of 19 | unchanged |
+| One line written with a tremor | 4 Line Quality | 0% | not scored from a photo (#192) |
+| One word scribbled, ink only (no reader) | 1 Letter Formation | 0% | **60%** |
+| | 18 Legibility | 25% | **50%** |
+| | 19 Character Distinction | 0% | **45%** |
+| | 2 Stroke Order | 0% | not scored from a photo (#192) |
+| One word scribbled, read by the real reader | 1, 18, 19 | 9, 2 and 8 of 19 | not run again yet (needs the analyser image) |
 
 What changed (`letter_geometry.py`, `_stroke_features` in `scoring_parts/features.py`):
 
 - **Loop Closure (3)** counted the share of loop letters in the text, so
   an open loop could not move it. It now counts the closed bowls in each
   line's ink (holes of letter-bowl size) against the letters read that
-  have one (a, b, d, e, g, o, p, q); full marks at 90%.
+  have one (a, b, d, e, g, o, p, q); full marks at 90%. Since #200 a hole
+  counts only inside the small-letter band (or, for a bowl written tall,
+  starting on the baseline), so the loops of l, h, k and of the tails of
+  g, j, y are not taken for bowls; each word counts at most as many
+  closed bowls as it has bowl letters; and a page with fewer than five
+  bowl letters on measured lines is not measured, where it used to fall
+  back to the share of loop letters in the text. Caught rose to 100%.
 - **Letter Spacing (9)** was the spread of line width per character. It
   is now the spread of the gaps between the letters (or joined pieces)
   inside words. Since #197 each gap is compared with its own word's
@@ -899,20 +971,25 @@ What is not solved, and why:
   made tall looks like a tall letter, and a big word's V-shaped letters
   (w, v) or a word split in the wrong place hide its size. Section 11 has
   the letter-position measurements; they are not reliable enough yet.
-- **Line Quality (4)** measures how much line lengths vary, not the
-  stroke. A tremor at phone-photo resolution wobbles on the same scale as
+- **Line Quality (4) and Stroke Order (2) are left to the sensor pen
+  (#192).** Line Quality measured how much line lengths vary, not the
+  stroke: a tremor at phone-photo resolution wobbles on the same scale as
   the curves of the letters themselves, and an edge-roughness measure
-  caught it on 8 of 20 pages; it was not shipped. Smoothness belongs to
-  the sensor pen, like speed and pressure (13 to 16).
-- **Stroke Order (2)** cannot be seen in a finished letter; its score is
-  a blend of letter widths and reading confidence. Also a pen skill.
+  caught it on 8 of 20 pages. Stroke order cannot be seen in a finished
+  letter; its score was a blend of letter widths and reading confidence.
+  Both now report "Not measured" on a photo, like speed and pressure (13
+  to 16), and Structure averages the other four.
 - **Letter Formation (1), Legibility (18), Character Distinction (19)**
-  average the reader's confidence over whole lines, so one scribbled word
-  in 30 hardly moves them. Reading every line again letter by letter and
-  scoring the share of letters the reader was unsure of would fix this,
-  but in testing the extra readings took a scan past the analyser's 2.5 GB
-  memory limit, so it needs a load test on stage first (CLAUDE.md, scan
-  capacity) and is not in this change.
+  averaged the reader's confidence over whole lines, so one scribbled
+  word in 30 hardly moved them. Since #193 they count the least sure
+  quarter of the words twice and check each word's ink for a scribble
+  ([03-scoring-criteria.md](03-scoring-criteria.md#reading-word-by-word-factors-1-18-19)).
+  The ink check alone now catches the planted scribble on 12 of 20
+  writers for Letter Formation; the rest scribble a word whose ink still
+  looks like the writer's other words. Reading every line again letter by
+  letter, for per-letter confidence, would go further, but in testing the
+  extra readings took a scan past the analyser's 2.5 GB memory limit, so
+  it needs a load test on stage first (CLAUDE.md, scan capacity).
 - **Ascender/Descender Control (6)** moves a little with every other
   mistake (0.3 to 0.9 points): its zone bands are measured per line and
   shift with whatever else changes in the line.
