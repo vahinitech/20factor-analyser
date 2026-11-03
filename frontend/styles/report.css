@@ -1252,6 +1252,10 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-lang b{ margin-right:6px; }
 .sn-lang b{ font-weight:700; }
 /* When writing feels hard: a calm note before the closing line. */
+.free-report.compact-report .p2-cursive{ margin:4px 0 0; padding:6px 10px; border:1px dashed var(--v-border); border-radius:10px; }
+.free-report.compact-report .p2-cursive p{ margin:0; font:500 11.5px/1.45 var(--sans); }
+.free-report.compact-report .p2-cursive b{ font:700 13px/1.3 var(--serif); }
+.free-report.compact-report .p2-cursive a{ color:var(--v-accent-text); font-weight:600; }
 .free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
 .free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }
 .free-report.compact-report .p2-hard b{ font:700 13px/1.3 var(--serif); }

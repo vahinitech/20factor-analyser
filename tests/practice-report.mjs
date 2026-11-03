@@ -48,6 +48,7 @@ const RENDER = `window.__render = (opts) => {
   if (o.free) analysis.access = { tier: 'free' };
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
+  if (o.style) analysis.styleProfile = { available: true, wordsUsed: 27, shares: {}, verdict: o.style };
   window.VahiniCraft = { ...window.__craft };
   const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', pattern: 'ie_ei', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
   const host = document.getElementById('report-host');
@@ -87,6 +88,9 @@ const RENDER = `window.__render = (opts) => {
     hardLink: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').getAttribute('href') : '',
     hardText: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').textContent : '',
     hardBeforeClose: !!host.querySelector('.p2-hard + .p2-close'),
+    cursive: [...host.querySelectorAll('[data-cursive-sheets] a')].map(a => [a.getAttribute('href'), a.textContent]),
+    cursiveText: host.querySelector('[data-cursive-sheets]') ? host.querySelector('[data-cursive-sheets]').textContent : '',
+    cursiveBeforeHard: !!host.querySelector('[data-cursive-sheets] + .p2-hard'),
     art: [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('src')),
     text: host.textContent,
   };
@@ -204,6 +208,33 @@ try {
     'Latin-only exercises are skipped when the page is in another script');
 
   // Rotation: the next check starts after last time's exercises and wraps.
+  // Cursive sheets (owner, 2026-11-03): a page written joined, or joined
+  // in places, links the three free cursive sheets on their shop pages,
+  // never the PDFs; a printed page or a page in another script gets none.
+  const SHOP_CURSIVE = [
+    'https://shop.vahinitech.com/products/cursive-lesson-1-basic-strokes/',
+    'https://shop.vahinitech.com/products/cursive-handwriting-worksheets/',
+    'https://shop.vahinitech.com/products/cursive-connecting-letters-worksheets/',
+  ];
+  for (const tier of ['free', 'pro']) {
+    const joined = await page.evaluate(o => window.__render(o), { free: tier === 'free', style: 'cursive' });
+    add(JSON.stringify(joined.cursive.map(l => l[0])) === JSON.stringify(SHOP_CURSIVE) && joined.cursiveBeforeHard
+      && /Free sheets for joined writing:/.test(joined.cursiveText) && /shop\.vahinitech\.com$/.test(joined.cursiveText.trim()) && !/\.pdf/.test(joined.cursiveText),
+      tier + ': a joined page links the three cursive sheets on the shop, before the "writing feels hard" note', joined.cursive);
+    await page.emulateMedia({ media: 'print' });
+    const heights = await page.evaluate(() => { const host = document.getElementById('report-host'); VahiniReport.fitPrintPages(host);
+      return [...host.querySelectorAll('.free-report')].map(p => Math.round(p.getBoundingClientRect().height)); });
+    await page.evaluate(() => VahiniReport.unfitPrintPages(document.getElementById('report-host')));
+    await page.emulateMedia({ media: 'screen' });
+    add(heights.length === 2 && heights.every(h => h <= 1120), tier + ': with the cursive sheets the report still prints on two A4 pages', heights);
+  }
+  const mixed = await page.evaluate(() => window.__render({ free: true, style: 'mixed' }));
+  add(mixed.cursive.length === 3, 'A page joined in places gets the cursive sheets too', mixed.cursive);
+  const printedPage = await page.evaluate(() => window.__render({ free: true, style: 'print' }));
+  const noStyle = await page.evaluate(() => window.__render({ free: true }));
+  const teluguJoined = await page.evaluate(() => window.__render({ style: 'cursive', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' }));
+  add(!printedPage.cursive.length && !teluguJoined.cursive.length && !/joined writing/i.test(printedPage.text),
+    'A printed page and a page in another script get no cursive sheets', { printed: printedPage.cursive, telugu: teluguJoined.cursive, sample: noStyle.cursive });
   const first = await page.evaluate(() => window.__render({ free: true }));
   const second = await page.evaluate(p => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: p } }), first.out.practice);
   const list5 = catalogue.factors.find(f => f.n === 5).exercises.map(e => e.id);
