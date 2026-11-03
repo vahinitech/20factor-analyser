@@ -25,7 +25,10 @@ from scoring_parts import advisory  # noqa: E402
 from backend.tests.test_ink_geometry import SENTENCE, draw_page  # noqa: E402
 
 # Measured from the line bands alone, on any page.
-LINE_BANDS = {4, 5, 10}
+LINE_BANDS = {5, 10}
+# Only the sensor pen measures these: the Dynamics, stroke order (2) and
+# smoothness (4) (#192).
+PEN = {2, 4, 13, 14, 15, 16}
 FALLBACK = [{"text": "", "score": 0.0, "cv_fallback": True}]
 INK_ROWS = [{"text": "", "score": 0.0, "cv_fallback": True, "ink_row": True}]
 READ = [{"text": "hello world", "score": 0.9}]
@@ -61,31 +64,31 @@ class TestNeedsTable(unittest.TestCase):
             needs_sensor = any(
                 "sensor" in alt for alt in factor_needs.NEEDS[n]
             )
-            self.assertEqual(needs_sensor, sec == "dynamics", n)
+            self.assertEqual(needs_sensor, n in PEN, n)
+            if sec == "dynamics":
+                self.assertTrue(needs_sensor, n)
 
     def test_a_photo_never_supplies_pen_data(self):
         for lines in (READ, FALLBACK, INK_ROWS):
             supplied = factor_needs.page_supplies(lines, 10, True)
             self.assertNotIn("sensor", supplied)
-            for n in (13, 14, 15, 16):
+            for n in PEN:
                 self.assertEqual(factor_needs.missing_kind(n, supplied), "imu")
 
     def test_a_read_page_measures_everything_but_the_pen(self):
         supplied = factor_needs.page_supplies(READ, 10, False)
-        self.assertEqual(
-            measured(supplied), set(range(1, 21)) - {13, 14, 15, 16}
-        )
+        self.assertEqual(measured(supplied), set(range(1, 21)) - PEN)
 
     def test_fallback_boxes_measure_only_the_line_bands(self):
         supplied = factor_needs.page_supplies(FALLBACK, 0, False)
         self.assertEqual(measured(supplied), LINE_BANDS)
-        for n in (1, 2, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
+        for n in (1, 3, 6, 7, 8, 9, 11, 12, 17, 18, 19, 20):
             self.assertEqual(factor_needs.missing_kind(n, supplied), "ocr")
 
     def test_ink_rows_measure_exactly_7_8_11_12_and_20(self):
         supplied = factor_needs.page_supplies(INK_ROWS, 0, False)
         self.assertEqual(measured(supplied) - LINE_BANDS, {7, 8, 11, 12, 20})
-        for n in (1, 2, 3, 6, 9, 17, 18, 19):
+        for n in (1, 3, 6, 9, 17, 18, 19):
             self.assertEqual(factor_needs.missing_kind(n, supplied), "ocr")
 
     def test_one_read_line_counts_the_page_as_read(self):
@@ -96,9 +99,7 @@ class TestNeedsTable(unittest.TestCase):
 
     def test_no_latin_letters_leaves_loops_and_zones_unmeasured(self):
         supplied = factor_needs.page_supplies(READ, 0, False)
-        self.assertEqual(
-            measured(supplied), set(range(1, 21)) - {3, 6, 13, 14, 15, 16}
-        )
+        self.assertEqual(measured(supplied), set(range(1, 21)) - {3, 6} - PEN)
         for n in (3, 6):
             self.assertEqual(factor_needs.missing_kind(n, supplied), "script")
 
@@ -140,7 +141,7 @@ class TestNeedsOnPages(unittest.TestCase):
         if by_n[6]["scoringInputs"]["method"] == "zone_geometry":
             got.discard(6)
         self.assertEqual(got - LINE_BANDS, {7, 8, 11, 12, 20})
-        for n in (1, 2, 3, 9, 17, 18, 19):
+        for n in (1, 3, 9, 17, 18, 19):
             self.assertEqual(by_n[n]["unmeasuredKind"], "ocr", n)
             self.assertEqual(
                 by_n[n]["scoringInputs"],
@@ -158,7 +159,7 @@ class TestNeedsOnPages(unittest.TestCase):
                 ),
                 n,
             )
-        for n in (13, 14, 15, 16):
+        for n in PEN:
             self.assertEqual(
                 by_n[n]["scoringInputs"],
                 {"method": "sensor_required", "features": {}},
