@@ -25,6 +25,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows the Free report.
   Details in the report format baseline.
 
+- **Checks are modules on the analyser page (owner, 2026-11-03).** A new check, letter style or place is a registry entry that the analyser page, the report and Bheema's plan read, not a new landing page. The registries (checks, letter styles, places) live here first, with a JSON schema in `backend/schemas/` and a contract test, then the Umbrella contracts tag, then vahini-web. Ask the visitor only who they are and what to check; the check finds the rest from the page and the visitor corrects it in the report. When we say cursive, the letters are in that style's joined cursive font (Playwrite US Trad, GB J, FR Trad, IN, AU, self-hosted), never print or Caveat. Privacy and terms show as symbols by the Analyse button, with a card per symbol and the visitor's country rule (DPDP, COPPA, GDPR, Australian Privacy Act), and a one-time "Before we check your page" sheet. A choice never changes a score. Each module writes its own static text into the page for search. A module's report block is still a report format change and needs the owner's yes. Details: [report rules, "Checks are modules on the analyser page"](docs/12-report-rules.md#checks-are-modules-on-the-analyser-page-owner-2026-11-03).
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through
   `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
   the slot cap and its one-thread-per-slot pool are what stopped
