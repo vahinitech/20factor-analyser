@@ -71,6 +71,49 @@ class Blank(unittest.TestCase):
         for text, gone in cases.items():
             self.assertNotIn(gone, identifiers.blank(text), text)
 
+    def test_a_counting_line_is_not_a_phone_number(self):
+        for text in (
+            "1 2 3 4 5 6 7 8 9 10",
+            "11 12 13 14 15 16 17 18 19 20",
+            "10 20 30 40 50 60 70 80 90 100",
+            "12345678910",
+            "Pihu counted 2 4 6 8 10 12 14 16 18 20 berries.",
+        ):
+            self.assertEqual(identifiers.blank(text), text)
+
+    def test_an_indian_mobile_number_is_blanked(self):
+        for text in (
+            "9848012345",
+            "98480 12345",
+            "98480-12345",
+            "98480.12345",
+            "+91 98480 12345",
+            "+91-9848012345",
+            "09848012345",
+            "040-2345-6789",
+        ):
+            self.assertEqual(
+                identifiers.blank(f"Call {text} today"),
+                "Call [phone] today",
+                text,
+            )
+
+    def test_number_words_and_school_words_are_not_names(self):
+        for text in (
+            "I am Seven years old.",
+            "I am SEVEN years old.",
+            "I am Ten.",
+            "I am The best writer.",
+            "I am Studying in Class Four.",
+            "Name: Class Three",
+        ):
+            self.assertEqual(identifiers.blank(text), text)
+        # A name after them is still a name.
+        self.assertEqual(
+            identifiers.blank("My name is Tara. I am Seven."),
+            "My name is [name]. I am Seven.",
+        )
+
     def test_a_name_found_once_is_blanked_wherever_it_appears(self):
         found = identifiers.find(PAGE)
         self.assertEqual(identifiers.blank("Bheema", found), "[name]")
@@ -107,6 +150,37 @@ class Payload(unittest.TestCase):
         self.assertEqual(
             out["language"]["lines"][0]["tokens"][3]["text"], "[name]"
         )
+
+    def test_spelling_and_grammar_lists_are_blanked_alike(self):
+        # The shape reading/language_check.py returns: each finding holds
+        # what was written and what was meant.
+        p = self.payload()
+        p["language"].update(
+            {
+                "spelling": [
+                    {"written": "Bheema", "suggestion": "Bheema", "kind": "x"}
+                ],
+                "grammar": [
+                    {
+                        "rule": "agreement",
+                        "written": "Rao go",
+                        "suggestion": "Rao goes",
+                    }
+                ],
+            }
+        )
+        out = identifiers.blank_payload(p)["language"]
+        self.assertEqual(
+            out["grammar"][0],
+            {
+                "rule": "agreement",
+                "written": "[name] go",
+                "suggestion": "[name] goes",
+            },
+        )
+        self.assertEqual(out["spelling"][0]["written"], "[name]")
+        self.assertEqual(out["spelling"][0]["suggestion"], "[name]")
+        self.assertEqual(out["spelling"][0]["kind"], "x")
 
     def test_scores_boxes_and_counts_do_not_change(self):
         before = self.payload()

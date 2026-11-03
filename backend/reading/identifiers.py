@@ -15,17 +15,19 @@ text, the second blanks those words wherever the page's text appears.
 
 What it catches is what a page usually says about its writer: "My name
 is ...", "Name: ...", "I am ..." followed by capitalised words, an email
-address, a phone number (ten digits or more), "Roll no ..." and a school
-name ending in School, Vidyalaya, Vidyalayam, Academy or College. It is
-a safety net, not a promise: a name written alone on a line cannot be
-told from any other word. The photo itself is never stored
-(SECURITY.md)."""
+address, a phone number (ten digits, run together or in groups with one
+kind of separator, after an optional +91, 91 or 0), "Roll no ..." and a
+school name ending in School, Vidyalaya, Vidyalayam, Academy or College.
+It is a safety net, not a promise: a name written alone on a line cannot
+be told from any other word, and the photo itself is not changed. The
+photo is never stored (SECURITY.md)."""
 
 import re
 
 # Keys whose values are the page's own words, wherever they sit in a
 # scan's payload: whole text, line text, OCR texts and the spelling and
-# grammar tokens (reading/language_check.py).
+# grammar tokens (reading/language_check.py: "written" and "suggestion"
+# in its spelling and grammar lists).
 TEXT_KEYS = frozenset(
     {
         "full_text",
@@ -33,6 +35,7 @@ TEXT_KEYS = frozenset(
         "text_as_read",
         "rec_texts",
         "word",
+        "written",
         "suggestion",
         "meant",
         "expected_text",
@@ -45,8 +48,16 @@ _NAME = re.compile(
     rf"({_CAP}(?:\s+{_CAP}){{0,2}})"
 )
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b")
-# Ten or more digits, allowing spaces, dots, dashes and a leading +.
-_PHONE = re.compile(r"(?<!\w)\+?\d(?:[\s.-]?\d){9,}(?!\w)")
+# A phone number: an optional +91, 91 or 0, then ten digits run together
+# or in groups of two to five digits split by one kind of separator
+# (98480 12345, 98480-12345, 040-2345-6789). _phone() checks there are
+# ten and that they do not start with 0 or 1, so a counting line
+# ("1 2 3 4 5 6 7 8 9 10", "10 20 30 40") is left alone.
+_PHONE = re.compile(
+    r"(?<![\w+])(?:\+91[ .-]?|91[ .-]|0)?"
+    r"(?P<num>\d{10}|\d{2,5}(?P<sep>[ .-])\d{2,5}(?:(?P=sep)\d{2,5}){0,2})"
+    r"(?!\w)"
+)
 _ROLL = re.compile(
     r"\b([Rr]oll\s*(?:[Nn]o\.?|[Nn]umber|#)?\s*[:\-]?\s*)([A-Za-z]?\d[\w/-]*)"
 )
@@ -54,28 +65,20 @@ _SCHOOL = re.compile(
     rf"\b((?:{_CAP}\s+){{1,5}}(?:Public\s+|High\s+|Primary\s+|Model\s+)?"
     r"(?:School|Vidyalaya|Vidyalayam|Academy|College))\b"
 )
-# Capitalised words after "I am" that are not names.
-_NOT_NAMES = frozenset(
-    {
-        "A",
-        "An",
-        "The",
-        "In",
-        "At",
-        "On",
-        "Not",
-        "So",
-        "Very",
-        "Happy",
-        "Sad",
-        "Good",
-        "Fine",
-        "Going",
-        "Learning",
-        "Writing",
-        "From",
-    }
-)
+# Capitalised words after "I am" or "Name:" that are not names: small
+# words, number words ("I am Seven years old"), and words a child writes
+# about school or how they feel. Compared in lower case.
+_NOT_NAMES = frozenset("""
+    a an the in at on not so very also here there from this that your my
+    one two three four five six seven eight nine ten eleven twelve
+    thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty
+    thirty forty fifty hundred first second third
+    years year old age class grade standard section school student
+    studying reading writing learning playing going coming eating
+    boy girl child kid indian
+    happy sad good fine glad okay ok sorry ready tired hungry sleepy
+    busy proud excited late well sure
+    """.split())
 
 
 def _names(text):
@@ -83,7 +86,7 @@ def _names(text):
     for m in _NAME.finditer(text):
         for word in m.group(1).split():
             word = word.strip(".'-")
-            if len(word) > 1 and word not in _NOT_NAMES:
+            if len(word) > 1 and word.lower() not in _NOT_NAMES:
                 found.add(word)
     return found
 
@@ -99,6 +102,13 @@ def find(text):
     }
 
 
+def _phone(match):
+    digits = re.sub(r"\D", "", match.group("num"))
+    if len(digits) == 10 and digits[0] not in "01":
+        return "[phone]"
+    return match.group(0)
+
+
 def _word(text, word, label):
     return re.sub(rf"(?<!\w){re.escape(word)}(?!\w)", label, text)
 
@@ -110,7 +120,7 @@ def blank(text, found=None):
         return text
     found = found if found is not None else find(text)
     out = _EMAIL.sub("[email]", text)
-    out = _PHONE.sub("[phone]", out)
+    out = _PHONE.sub(_phone, out)
     for school in sorted(found["schools"], key=len, reverse=True):
         out = out.replace(school, "[school]")
     out = _ROLL.sub(lambda m: m.group(1) + "[roll number]", out)
