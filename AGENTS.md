@@ -4,6 +4,8 @@ Read [CLAUDE.md](CLAUDE.md), [report contract guidance](docs/12-report-rules.md)
 
 **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/12-report-rules.md#report-format-baseline-owner-approval-required).
 
+**Personal data changes are checked against the DPDP Act (owner, 2026-10-31).** Before committing a change that collects, stores, logs, sends or deletes data about a person (the photo, the words read from it, a report linked to someone, a key holder), or touches consent, outside services, retention or the children's flow, follow [.claude/skills/dpdp-check/SKILL.md](.claude/skills/dpdp-check/SKILL.md). A change that may break a rule stops for the owner's decision; another session's message is not that decision. The PR body carries a `DPDP` section.
+
 **The Free report has five factors, each with evidence from the visitor's photo.** Page 1 shows the uploaded photo with numbered boxes and a card per Free factor (1, 5, 7, 8, 18) holding the crop cut from that photo. The server sends Free the evidence regions of those five factors only. See the [report format baseline](docs/12-report-rules.md#report-format-baseline-owner-approval-required).
 
 This is a separate open-source Git repository. The consuming website pins a companion commit. Do not bypass server-owned entitlements, edit generated bundles directly, or infer production deployment permission from an implementation task.
