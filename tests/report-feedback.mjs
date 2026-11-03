@@ -69,7 +69,7 @@ async function check(page, { sample = false } = {}) {
   if (sample) await page.click('#try-sample');
   else await page.setInputFiles('#file-input', 'tests/fixtures/handwriting-sample.jpg');
   for (let i = 0; i < 100 && !(await page.locator('#go-process:enabled').count()); i++) await page.clock.runFor(100);
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   for (let i = 0; i < 300 && !(await page.locator('#screen-report.on').count()); i++) await page.clock.runFor(100);
   assert.equal(await page.locator('#screen-report.on').count(), 1, 'the stubbed check reaches its report');
 }

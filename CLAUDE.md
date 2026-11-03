@@ -7,6 +7,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 ## Working rules (apply to every change)
 
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/12-report-rules.md#report-format-baseline-owner-approval-required).
+- **Check every change against the DPDP Act; a possible breach waits for the owner (owner, 2026-10-31).** Before committing a change to uploads and the check (`backend/server/app.py`, `upload_limits.py`, `daily_limit.py`), the report store (`backend/server/report_store.py`), the debug store (`debug_store.py`), access and subscriptions (`access_api.py`, `entitlements.py`, `subscription_admin.py`), the age band (`age_band.py`), the words read from a page and anything in the report text that could name a person, and the check page, print popup and share in `frontend/src/app/`, follow `.claude/skills/dpdp-check/SKILL.md`: check the law has not changed since the date the skill records, find the rules the change touches, and stop and ask the owner (@vkosuri) before committing anything that may break one, adds an identifier or an outside service, keeps data longer, changes consent or the parent or guardian step, or weakens a privacy test (`test_report_store.py`, `test_debug_store.py`, `test_daily_limit.py`, `test_access_api.py`). The PR body carries a `DPDP` section. DPDP compliance work itself goes one PR per rule into `dpdp_2027` while that branch is open. The skill's source is Umbrella's `skills/dpdp-check/`; change it there and copy it here.
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
   whole, then "What your page shows" (owner, 2026-10-13; teacher's voice
@@ -25,6 +26,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows the Free report.
   Details in the report format baseline.
 
+- **Checks are modules on the analyser page (owner, 2026-11-03).** A new check, letter style or place is a registry entry that the analyser page, the report and Bheema's plan read, not a new landing page. The registries (checks, letter styles, places) live here first, with a JSON schema in `backend/schemas/` and a contract test, then the Umbrella contracts tag, then vahini-web. Ask the visitor only who they are and what to check; the check finds the rest from the page and the visitor corrects it in the report. When we say cursive, the letters are in that style's joined cursive font (Playwrite US Trad, GB J, FR Trad, IN, AU, self-hosted), never print or Caveat. Privacy and terms show as symbols by the Analyse button, with a card per symbol and the visitor's country rule (DPDP, COPPA, GDPR, Australian Privacy Act), and a one-time "Before we check your page" sheet. A choice never changes a score. Each module writes its own static text into the page for search. A module's report block is still a report format change and needs the owner's yes. Details: [report rules, "Checks are modules on the analyser page"](docs/12-report-rules.md#checks-are-modules-on-the-analyser-page-owner-2026-11-03).
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through
   `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
   the slot cap and its one-thread-per-slot pool are what stopped
@@ -138,6 +140,12 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   reader in the Americas. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.
+- **Who is checking is asked before a page is read (DPDP Rules 2025, rule 10).**
+  The check page's "Who is checking?" starts empty; Student needs an
+  adult's tick and is never remembered; the answer goes as `who` and the
+  server refuses a free check without it where `VAHINI_REQUIRE_WHO=1`
+  (`backend/server/who_checks.py`). Never pre-select an answer, never add
+  a value meaning a child alone, never store or echo it.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
@@ -149,6 +157,13 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **Text read from a page has the names and numbers the text check
+  recognises blanked (DPDP Act, section 6(1)).** It passes
+  `backend/reading/identifiers.py` before it is cached or returned: names
+  after "My name is" and the like, emails, phone numbers, roll numbers and
+  school names become `[name]`, `[email]` and so on. It is a safety net: a
+  name written alone on a line is not recognised, and the photo itself is
+  unchanged. A new text field in a payload goes in its `TEXT_KEYS`.
 - **Pro access is granted on the server, never in code.** Operators follow
   [docs/17-access-and-trials.md](docs/17-access-and-trials.md); `deployment/grant-pro.sh`
   does a grant in one command and leaves the key in a private file. Every
