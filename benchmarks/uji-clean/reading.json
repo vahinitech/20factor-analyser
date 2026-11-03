@@ -1,6 +1,6 @@
 {
- "cer": 9.41,
- "edits": 286,
+ "cer": 8.72,
+ "edits": 265,
  "graphemes": 3040,
  "pages": {
   "UJI_W12": {
@@ -84,13 +84,13 @@
    "graphemes": 156
   },
   "UPV_W51": {
-   "cer": 14.47,
-   "edits": 23,
+   "cer": 10.06,
+   "edits": 16,
    "graphemes": 159
   },
   "UPV_W54": {
-   "cer": 9.52,
-   "edits": 12,
+   "cer": 6.35,
+   "edits": 8,
    "graphemes": 126
   },
   "UPV_W57": {
@@ -99,15 +99,15 @@
    "graphemes": 163
   },
   "UPV_W60": {
-   "cer": 21.74,
-   "edits": 35,
+   "cer": 15.53,
+   "edits": 25,
    "graphemes": 161
   }
  },
  "scripts": {
   "Latin": {
-   "cer": 9.41,
-   "edits": 286,
+   "cer": 8.72,
+   "edits": 265,
    "graphemes": 3040
   }
  }

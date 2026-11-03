@@ -71,6 +71,8 @@ async function answer(browser, timezoneId, { purpose = '', price = '', email = '
   if (price) await page.selectOption('#vg-price', price);
   if (tick) await page.check('#vg-tips');
   if (email) await page.fill('#vg-email', email);
+  // The card slides in (vgIn, 0.24 s); click once it has stopped.
+  await page.waitForFunction(() => document.querySelector('.vgate__card').getAnimations().every((a) => a.playState === 'finished'));
   await page.click('#vg-go');
   await delay(300);
   const thanks = await page.isVisible('#vgate-thanks');

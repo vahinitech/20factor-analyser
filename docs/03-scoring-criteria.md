@@ -75,16 +75,16 @@ score falls linearly and hits zero at the stated limit.
 
 | # | Factor | What is measured | Score (0-10) | Report target |
 |---|---|---|---|---|
-| 1 | Letter Formation Accuracy | shape regularity proxy: recognizer confidence + letter-height consistency | `7.2·conf + 2.8·(1 − height CV)` | shape dist ≤0.10 |
-| 2 | Stroke Order Consistency | stroke order proxy: char-width consistency + confidence | `5.4 + 2.6·(1 − char-width CV) + 2.0·conf` | edit dist ≤2 |
-| 3 | Loop Closure | share of loop-bearing letters (a o d p e g q) among letters read | `10 · min(1, loop share / 0.28)` | ≥95% closed |
-| 4 | Line Quality (Smoothness) | stroke smoothness proxy: line-width consistency | `10 · (1 − min(1, width CV / 0.8))` | jitter ≤0.5 px |
+| 1 | Letter Formation Accuracy | how surely each word was read (see "Reading word by word" below), line-height consistency, and the most tangled word | `7.2·reading + 2.8·(1 − height CV) − 2.5·tangle` | shape dist ≤0.10 |
+| 2 | Stroke Order Consistency | sensor pen only: not measured from a photo | — | edit dist ≤2 |
+| 3 | Loop Closure | share of the letters read that have a bowl (a b d e g o p q) whose bowl is closed in the ink: a hole of bowl size in the small-letter band, counted word by word and never more than the word's bowl letters. Not measured below five bowl letters on measured lines | `10 · min(1, closed share / 0.9)` | ≥95% closed |
+| 4 | Line Quality (Smoothness) | sensor pen only: not measured from a photo | — | jitter ≤0.5 px |
 | 5 | Size Consistency | small-letter height consistency across words, measured along each line's baseline (line box heights when fewer than three words can be measured) | `10 · (1 − min(1, size CV / 0.60))` (line boxes: `/ 0.65`) | size CV ≤0.12 |
 | 6 | Ascender / Descender Control | **measured** three-zone reach when the page supports it, else tall-letter-share proxy | see "The three-zone rule" below | ratio err ≤0.15 |
 | 7 | Baseline Alignment | mean absolute line angle | `10 · (1 − min(1, mean °/ 8))` | RMS ≤0.08 x-h |
 | 8 | Word Spacing | word gaps inside each line, in line heights (where every letter stands apart, placed from the text; otherwise the widest words − 1 ink gaps): their mean distance from the median gap, as a share of it, and the share of gaps under half or over twice the median (#197). Not measured below three gaps | `10 · (1 − min(1, spread / 1.0)) − 2 · min(1, odd share / 0.10)` | ≈1.0 x-h, CV ≤0.25 |
 | 9 | Letter Spacing | gaps between the letters inside each word, in small letters: their median distance from their own word's median gap, as a share of it (at least 0.1 of a small letter); the share of gaps over twice their word's; and the share of words whose median gap is over twice the page's (#197). Below five gaps: char-width consistency | `10 · (1 − min(1, spread / 0.5)) − 1 · min(1, odd share / 0.20) − 3 · min(1, words apart / 0.10)` (stand-in: `10 · (1 − min(1, char-width CV / 1.2))`) | gap CV ≤0.30 |
-| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
+| 10 | Margin Discipline | how far the rows' starts stray from their median start, after page-tilt correction, in shares of the page width; a start more than 0.15 right of the median (a title, a date) is left out, and so is a paragraph's first line set in 0.02 to 0.15 (the first row, or a row after one that ends a quarter of the block's width short). Not measured below three counted rows, and Overall Neatness then leaves it out (#201) | `10 · (1 − min(1, left spread / 0.05))` | left CV ≤0.05 (the catalogue's wording; see #201) |
 | 11 | Line Straightness | mean absolute line angle (looser limit than #7) | `10 · (1 − min(1, mean °/ 10))` | drift ≤1° |
 | 12 | Vertical Alignment | line-to-line tilt spread | `10 · (1 − min(1, angle std / 10))` | tilt CV ≤0.20 |
 | 13 | Speed Consistency | speed proxy from stroke/line-width regularity | `10 · (1 − min(1, width CV / 0.85))` | velocity CV ≤0.20 |
@@ -92,13 +92,45 @@ score falls linearly and hits zero at the stated limit.
 | 15 | Stroke Continuity | continuity proxy from word morphology (letters per word vs 5) | `10 · (1 − min(1, |chars/word − 5| / 5))` | 0 unintended breaks |
 | 16 | Pen Lift Frequency | pen-lift proxy from segmentation (char-width consistency) | `10 · (1 − min(1, char-width CV / 1.4))` | ≤0.3 lifts/char |
 | 17 | Slant Consistency | page-level tilt variability line to line | `10 · (1 − min(1, angle std / 12))` | angle CV low |
-| 18 | Legibility Score | composite of other factors | `0.35·F1 + 0.25·F5 + 0.20·F8 + 0.20·F7` | even & clear |
-| 19 | Character Distinction | separability proxy: confidence + non-digit share | `7.5·conf + 2.5·(1 − min(1, digit share / 0.5))` | clear letter pairs |
+| 18 | Legibility Score | how surely the words were read, blended with other factors | `0.30·(10·reading) + 0.30·F1 + 0.15·F5 + 0.15·F8 + 0.10·F7` | even & clear |
+| 19 | Character Distinction | how surely the reader told the letters apart, word by word | `10·reading` | clear letter pairs |
 | 20 | Overall Neatness | layout composite | `0.30·F5 + 0.20·F8 + 0.20·F10 + 0.15·F11 + 0.15·F17` | weighted variance |
 
 Every factor's report card also carries a `basedOn` count (how many
 letters/words/lines fed it) and an evidence sentence naming the
 measurement.
+
+### Reading word by word (factors 1, 18, 19)
+
+A scribbled word among 30 moved the old line-confidence average by about
+0.03 (#193), so these three factors look at words, not the page mean
+(`scoring._reading_features`):
+
+- **Each word's reading.** The reader (PaddleOCR) returns one confidence
+  per line, so each word starts at its line's confidence. Reading every
+  line again letter by letter would give per-letter confidence, but in
+  testing it took a scan past its memory limit, so it is not done.
+- **Tangled words.** For each word, the ink in its small-letter band is
+  cut into columns and the strokes each column crosses are counted, and
+  the word's outline is followed to see how much it turns
+  (`letter_geometry._crossings`, `_turning`). A word's tangle is the
+  product of the two, each divided by the page's median word. On the 20
+  real benchmark pages the most tangled word reached 1.18 to 1.47; a
+  planted scribbled word reached 1.27 to 1.83. From 1.35 (`TANGLE_START`)
+  to 1.9 (`TANGLE_FULL`) a word loses that share of its reading, and
+  `tangle` in factor 1 is the same share for the page's most tangled
+  word (2.5 points at most). Pages with fewer than six measured words
+  skip this check.
+- **A copied passage.** When the writer copied a known passage
+  (`expected_text`), each copied word the reader did not read as written
+  counts 0 (`words_read` is the share read as written).
+- **reading** is the mean over all words with the least sure quarter
+  counted twice: `0.5·mean + 0.5·mean of the lowest quarter`.
+
+Character Distinction no longer takes marks off for digits: a clearly
+written number is as distinct as a letter. Legibility's reading share is
+not a factor, so the practice selection (`practice-select.js`) passes
+Legibility's need to factors 1, 5, 7 and 8 in proportion to their weights.
 
 ### The three-zone rule (factor 6)
 
@@ -135,20 +167,29 @@ paper does not count as reach; reach =
 
 ## Honesty rules — what a score does and doesn't claim
 
-- **From a photo, Dynamics (13-16) are not scored.** True speed, pressure
-  and pen lifts are motion, not ink. Photo reports mark these four factors
-  `unmeasured` (`conf: "imu"`, score `null` in the version-2 API), leave
-  them out of section averages, rankings and coaching. None of them is
-  in the overall, so Dynamics' serialized weight is 0. The static-ink
-  proxy formulas above remain only as documentation of what the pen path
-  replaces. The dual-IMU sensor pen measures them directly, and the
+- **From a photo, Dynamics (13-16), Stroke Order (2) and Line Quality
+  (4) are not scored.** True speed, pressure and pen lifts are motion, not
+  ink; stroke order cannot be seen in a finished letter; and at
+  phone-photo size a tremor wobbles on the same scale as the letters' own
+  curves (an edge-roughness measure caught a planted shaky line on 8 of
+  20 writers, #192). Photo reports mark these six factors `unmeasured`
+  (`conf: "imu"`, `scoringInputs.method: "sensor_required"`, score `null`
+  in the version-2 API), leave them out of section averages (Structure
+  averages factors 1, 3, 5 and 6), rankings and coaching. None of them
+  is in the overall, so Dynamics' serialized weight is 0. The static-ink
+  proxy formulas for 13-16 remain only as documentation of what the pen
+  path replaces. The dual-IMU sensor pen measures 13-16 directly, and the
   report marks pen-measured factors (`imuMeasured`).
-- **Some factors lean on OCR text**: loop closure (#3), the factor-6
-  proxy path and character distinction's confidence term. The rest is
+- **Some factors lean on OCR text**: loop closure (#3) takes how many
+  bowl letters each word has from the words read (the closing itself is
+  measured in the ink), the factor-6 proxy path, and the reading term of
+  letter formation, legibility and character distinction (#1, #18, #19).
+  The rest is
   pure geometry and survives OCR being wrong or unavailable.
 - **Slant (#17) is page-level tilt variability**, not a per-letter
-  cursive-lean angle; loop closure is letter-share, not per-letter
-  contour tracing. Both simplifications are stated in
+  cursive-lean angle; loop closure counts closed bowls per word, not per
+  letter, because the reader gives no letter boxes. Both simplifications
+  are stated in
   [`05-computer-vision-algorithms.md`](05-computer-vision-algorithms.md).
 - **Fragmented detection hurts spatial scores.** Word Spacing reads the
   gaps between detected segments on one row, so a line detected whole

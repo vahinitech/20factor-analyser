@@ -97,10 +97,18 @@ function normalize(j){
   return null;
 }
 
+/* Who is checking (report-share.js): one word the server asks for before
+   it reads a page, never kept (DPDP Rules, rule 10). */
+function appendWho(fd){
+  const who = global.VahiniWho && global.VahiniWho.forCheck();
+  if (who) fd.append('who', who);
+}
+
 async function tryEndpoint(url, blob){
   const fd = new FormData();
   fd.append('image', blob, 'sample.png');
   fd.append('det', 'true'); fd.append('rec', 'true');
+  appendWho(fd);
   fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
   // NB: do NOT pin a language: let the server run every script it has loaded
   // (English + Telugu by default) and merge, so mixed pages read fully.
@@ -125,6 +133,7 @@ async function tryEndpoint(url, blob){
 async function tryVLEndpoint(url, blob){
   const fd = new FormData();
   fd.append('image', blob, 'sample.png');
+  appendWho(fd);
   fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
   const ctrl = new AbortController();
   const attempt = (endpointAttempts[url] || 0) + 1;
@@ -191,6 +200,7 @@ async function serverPythonReport(blob, expectedText){
       fd.append('image', blob, 'sample.png');
       fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
       fd.append('expected_text', expectedText || '');
+      appendWho(fd);
       const ctrl = new AbortController();
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.
@@ -242,7 +252,15 @@ async function serverPythonReport(blob, expectedText){
       // Answers about the file or the key, from a server that is up: each
       // has its own screen instead of "server not reachable".
       if (res.status === 413){ lastServerError = 'too large'; return { ok:false, error_code:'too_large' }; }
-      if (res.status === 422){ lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' }; }
+      // 422 is a file the server could not open, or (who_checks.py,
+      // detail.error_code "who_required") a check that did not say who is
+      // checking: that one goes back to the "Who is checking?" row.
+      if (res.status === 422){
+        let detail = null;
+        try { detail = (JSON.parse(raw) || {}).detail; } catch(_e){ /* not JSON */ }
+        if (detail && detail.error_code === 'who_required'){ lastServerError = 'who required'; return { ok:false, error_code:'who_required' }; }
+        lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' };
+      }
       if (res.status === 401 || res.status === 403){ lastServerError = 'key'; return { ok:false, error_code:'key_problem' }; }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;

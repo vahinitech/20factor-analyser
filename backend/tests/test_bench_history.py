@@ -131,7 +131,12 @@ class TestFiles(unittest.TestCase):
 
     def test_catch_rates_come_from_the_committed_floors(self):
         rates = hist.catch_rates()
-        self.assertEqual(rates["indented_line/10"], 1.0)
+        path = os.path.join(ROOT, "benchmarks", "factors", "expected.json")
+        with open(path, encoding="utf-8") as f:
+            floors = json.load(f)
+        self.assertEqual(
+            rates["indented_line/10"], floors["indented_line"]["10"]
+        )
         missing = os.path.join(self.tmp.name, "x")
         self.assertEqual(hist.catch_rates(missing), {})
 
