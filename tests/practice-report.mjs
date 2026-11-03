@@ -207,7 +207,6 @@ try {
   add(telugu.rows.flatMap(r => r.exercises).every(id => catalogue.factors.some(f => (f.exercises || []).some(e => e.id === id && e.script !== 'latin'))),
     'Latin-only exercises are skipped when the page is in another script');
 
-  // Rotation: the next check starts after last time's exercises and wraps.
   // Cursive sheets (owner, 2026-11-03): a page written joined, or joined
   // in places, links the three free cursive sheets on their shop pages,
   // never the PDFs; a printed page or a page in another script gets none.
@@ -235,6 +234,7 @@ try {
   const teluguJoined = await page.evaluate(() => window.__render({ style: 'cursive', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' }));
   add(!printedPage.cursive.length && !teluguJoined.cursive.length && !/joined writing/i.test(printedPage.text),
     'A printed page and a page in another script get no cursive sheets', { printed: printedPage.cursive, telugu: teluguJoined.cursive, sample: noStyle.cursive });
+  // Rotation: the next check starts after last time's exercises and wraps.
   const first = await page.evaluate(() => window.__render({ free: true }));
   const second = await page.evaluate(p => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: p } }), first.out.practice);
   const list5 = catalogue.factors.find(f => f.n === 5).exercises.map(e => e.id);
