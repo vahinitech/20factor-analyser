@@ -233,18 +233,23 @@
     <p>One page. Five writing skills. A clear next step.</p>
     <!-- whats-new:begin (filled from whats-new.json by build_bundle.py --stamp) --><!-- whats-new:end -->
     <!-- Who is checking, and the report's language (owner, 2026-10-25).
-         A student gets the student view; a parent or guardian (the
-         default), a teacher or someone checking their own writing gets the
-         parent report. Both stay in this browser and are never sent. -->
+         A student gets the student view; a parent or guardian, a teacher or
+         someone 18 or over checking their own writing gets the parent
+         report. Nothing is chosen until the visitor chooses (DPDP Rules,
+         rule 10: a parent's yes comes before a child's page is read); a
+         student also ticks that an adult is with them and says yes. The
+         answer goes with the photo as one word and is not kept. -->
     <div class="who-bar" id="who-bar">
-      <fieldset class="who-pick">
-        <legend>I am</legend>
-        <label class="who-opt"><input type="radio" name="check-who" value="parent" checked> Parent or guardian</label>
+      <fieldset class="who-pick" id="who-pick" aria-describedby="who-error">
+        <legend>Who is checking?</legend>
+        <label class="who-opt"><input type="radio" name="check-who" value="parent"> Parent or guardian</label>
         <label class="who-opt"><input type="radio" name="check-who" value="student"> Student</label>
         <label class="who-opt"><input type="radio" name="check-who" value="teacher"> Teacher</label>
-        <label class="who-opt"><input type="radio" name="check-who" value="self"> Myself</label>
+        <label class="who-opt"><input type="radio" name="check-who" value="self"> Myself, 18 or over</label>
       </fieldset>
       <label class="who-lang" for="check-lang">Report in <select id="check-lang"><option value="en">English</option><option value="te" lang="te">తెలుగు (Telugu)</option></select></label>
+      <label class="who-adult" id="who-adult-row" hidden><input type="checkbox" id="who-adult"> A parent, guardian or teacher is with me and says yes</label>
+      <p class="who-error" id="who-error" role="alert" hidden></p>
     </div>
   </header>
 
@@ -386,7 +391,7 @@
     </details>
     </div>
     <p class="pro-plans">For a caseload, a class or your students: <a href="/plans.html">plans</a> · <a href="/for-therapists.html">how therapists use Vahini</a></p>
-    <p class="run-consent" id="run-consent">By running the check you agree to the <a href="/terms.html#analyser-terms">terms of the check</a> and confirm you are the writer's parent, guardian, teacher or therapist, or the writer is 18 or over. It describes the page and does not diagnose anything.</p>
+    <p class="run-consent" id="run-consent">By running the check you agree to the <a href="/terms.html#analyser-terms">terms of the check</a>. If the writer is under 18, a parent, guardian or teacher says yes first. It describes the page and does not diagnose anything.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Analyse my handwriting<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       <p class="run-hint">Choose a photo to begin.</p>
