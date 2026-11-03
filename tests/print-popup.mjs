@@ -137,8 +137,8 @@ try {
   const lead = leadOf(ticked.posts);
   add(lead.length === 1 && lead[0].email === 'vahini.parent@example.com' && lead[0].tips === true && lead[0].type === 'report_pdf_lead',
     'Ticked with an email: one report_pdf_lead with the address', lead);
-  add(lead.length === 1 && !('name' in lead[0]) && !('org' in lead[0]) && !('price' in lead[0]) && !('ua' in lead[0]) && lead[0].consent,
-    'The lead has no name, organisation, price or browser string, and records the consent line', lead);
+  add(lead.length === 1 && !('name' in lead[0]) && !('org' in lead[0]) && !('price' in lead[0]) && !('ua' in lead[0]) && !('lang' in lead[0]) && lead[0].consent,
+    'The lead has no name, organisation, price, browser language or browser string, and records the consent line', lead);
   add(answerOf(ticked.posts).length === 1 && !sentEmail(answerOf(ticked.posts)), 'The price still goes in the anonymous event, never with the email', ticked.posts);
   add(ticked.thanks && /vahini\.parent@example\.com/.test(ticked.thanksText), 'The thank-you says where the tips will go', ticked.thanksText);
 

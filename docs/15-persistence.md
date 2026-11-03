@@ -70,11 +70,11 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
   ```json
   { "type": "report_pdf_lead", "email": "...", "tips": true,
     "consent": "pdf-tips-2026-10-30", "purpose": "child",
-    "page": "/analyser/analyser.html", "lang": "en-IN" }
+    "page": "/analyser/analyser.html" }
   ```
   Only when the box is ticked and the address is valid. No `kind`, so the
   service files it as feedback a person sent. It never carries a name, an
-  organisation, a price or the browser string; `consent` names the line the
+  organisation, a price, the browser's language or the browser string; `consent` names the line the
   person agreed to, and changes when that line does.
 
   Both calls are hard-coded to `/persist/feedback`, not

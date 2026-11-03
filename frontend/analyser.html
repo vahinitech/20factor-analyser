@@ -991,7 +991,7 @@
     // The email, only because its own box was ticked, with the line it agreed to.
     if (address){
       post({ type:"report_pdf_lead", email: address, tips: true, consent: CONSENT,
-             purpose: purpose || undefined, page: location.pathname, lang: navigator.language });
+             purpose: purpose || undefined, page: location.pathname });
     }
     document.getElementById("vg-thanks-text").textContent = address
       ? "We will email practice tips to " + address + "."
