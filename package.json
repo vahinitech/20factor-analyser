@@ -26,6 +26,7 @@
     "test:not-writing-page": "node tests/not-writing-page.mjs",
     "test:turned-page": "node tests/turned-page.mjs",
     "test:whats-new": "node tests/whats-new.mjs",
+    "test:privacy-card": "node tests/privacy-card.mjs",
     "sbom:update": "python backend/tools/update_sbom.py",
     "sbom:check": "python backend/tools/update_sbom.py --check",
     "test:practice": "node tests/practice-report.mjs",
@@ -47,5 +48,9 @@
     "c8": "12.0.0",
     "http-server": "^14.1.1",
     "playwright": "^1.63.0"
+  },
+  "overrides": {
+    "glob": "^14.0.2",
+    "minimatch": "^11.0.1"
   }
 }

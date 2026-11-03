@@ -25,6 +25,27 @@ def clamp_box(x, y, w, h, max_w, max_h):
     return x0, y0, x1, y1
 
 
+def resize(image, size, resample):
+    """Resize a PIL image in two passes, the width first and then the
+    height, whatever its shape.
+
+    Pillow 13 (python-pillow/Pillow#9549) runs the vertical pass first
+    when the height shrinks more than twice as much as the width. That
+    rounds the pixels of a tall photo (a screenshot, a strip of writing)
+    differently, and on the repository's pages made tall it moved
+    scores by up to 5 points and an overall by 30. Two explicit passes
+    give every Pillow version the pixels Pillow 12 gave (Pillow 12 went
+    height-first only past 100 times taller than wide, no page of
+    writing): same photo, same score.
+    """
+    width, height = size
+    if image.width != width:
+        image = image.resize((width, image.height), resample)
+    if image.height != height:
+        image = image.resize((width, height), resample)
+    return image
+
+
 # A reader line's outline gives its band only when it is shaped like a
 # line: at least this many times as long as it is thick. The rotated
 # rectangle around a short word or two letters ("ps") can lean by twenty
