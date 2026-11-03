@@ -14,7 +14,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { chromium } from 'playwright';
 
-const LINES = ['Photo not saved', 'No names', 'Saved if you ask', 'Never sold'];
+const LINES = ['Photo saved only if you ask', 'No names', 'Scores kept 12 months', 'Never sold'];
 const html = fs.readFileSync('frontend/analyser.html', 'utf8');
 const card = html.match(/<details class="prv" id="prv">[\s\S]*?<\/details>/)?.[0] || '';
 assert.ok(card.includes('<p class="prv__title">Your check is private</p>'), 'the title scopes the lines to the check');
