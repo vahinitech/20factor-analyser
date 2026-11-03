@@ -30,9 +30,11 @@ const TARGET = 8.5;
 const REPEAT_PENALTY = 100;
 const LEVEL_COST = 0.75;
 /* Must track backend/scoring_parts/style.py (s[18], s[20] _blend weights);
-   backend/tests/test_practice_catalog.py checks it. */
+   backend/tests/test_practice_catalog.py checks it. Legibility's other
+   0.30 is how surely its words were read, not a factor: its share of the
+   need goes to the factors below in proportion. */
 const COMPOSITES = {
-  18: { 1:0.35, 5:0.25, 8:0.20, 7:0.20 },
+  18: { 1:0.30, 5:0.15, 8:0.15, 7:0.10 },
   20: { 5:0.30, 8:0.20, 10:0.20, 11:0.15, 17:0.15 },
 };
 const bandOf = s=> s>=8.5?'strong' : s>=7.0?'good' : s>=4.5?'dev' : 'focus';

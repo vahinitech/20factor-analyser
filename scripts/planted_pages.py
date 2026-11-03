@@ -162,16 +162,26 @@ def mistake_lines(kinds, li, n_lines):
     """The line each mistake goes on. One mistake: line li. Several (a
     poor page, POOR): the word and gap mistakes stay on line li, a
     turned line is the last, and the other line mistakes go round the
-    remaining lines in turn, so the page is poor all over."""
+    remaining lines in turn, so the page is poor all over. An indented
+    line is never the first: a first line set in opens a paragraph,
+    which Margin Discipline leaves out (#201), so it would not be a
+    margin fault."""
     at = {k: li for k in kinds}
     if len(kinds) < 2:
-        return at
+        return _not_first(at, n_lines)
     others = [j for j in range(n_lines) if j != li] or [li]
     spread = [k for k in kinds if k in LINE_KINDS and k != "tilted_line"]
     for i, k in enumerate(spread):
         at[k] = others[i % len(others)]
     if "tilted_line" in at:
         at["tilted_line"] = n_lines - 1
+    return _not_first(at, n_lines)
+
+
+def _not_first(at, n_lines):
+    """Moves an indent planted on the first line to the second."""
+    if at.get("indented_line") == 0 and n_lines > 1:
+        at["indented_line"] = 1
     return at
 
 
@@ -314,7 +324,7 @@ def build_page(
                 )
                 for ch, placed in line_letters
             ]
-        if kind in FACTOR_TRUTH_LINE and lj == li:
+        if kind in FACTOR_TRUTH_LINE and on(kind, lj):
             truth = _box(strokes)
         if on("tilted_line", lj):
             box = _box(strokes)

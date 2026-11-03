@@ -48,7 +48,8 @@ BACKEND = os.path.join(ROOT, "backend")
 # Where the sets are. A set whose pages may not be published (a licence
 # not yet confirmed) lives outside the repository: --root points at it.
 SETS = [os.path.join(ROOT, "benchmarks")]
-SCORED = tuple(range(1, 13)) + tuple(range(17, 21))  # 13-16 need the pen
+# 2, 4 and 13-16 need the pen (#192).
+SCORED = (1, 3) + tuple(range(5, 13)) + tuple(range(17, 21))
 FREE = (1, 5, 7, 8, 18)
 
 # Limits a change may not cross, whatever expected.json says.
@@ -229,6 +230,15 @@ def _pairs(lines, sentences):
             for s in sentences
         ]
         best = int(max(range(len(sims)), key=sims.__getitem__))
+        # A sentence the page holds twice may be found twice.
+        best = next(
+            (
+                i
+                for i, s in enumerate(sentences)
+                if i not in found and _norm(s) == _norm(sentences[best])
+            ),
+            best,
+        )
         if sims[best] < 0.4:
             out.append((text, None))
         elif best in found:

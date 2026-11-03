@@ -257,14 +257,15 @@ it human.
 ### Section 1: Structure: *letter shapes & control*
 
 **F1 · Letter Formation Accuracy**: *From image*
-`size_penalty = cv(letter heights); score = 10 − size_penalty·9 + (loopRatio − 0.85)·4`
-*In plain words:* rewards even-sized, well-closed letters. A rough shape-quality proxy; a future version
-compares each letter to an ideal template.
+`score = 7.2·reading + 2.8·(1 − cv(line heights)) − 2.5·tangle` (03-scoring-criteria.md, "Reading word by word")
+*In plain words:* how surely each word could be read, with the least sure words counted twice, and a
+check of each word's ink for a scribble: strokes that cross and turn far more than in the writer's other
+words. A future version compares each letter to an ideal template.
 
 **F2 · Stroke Order Consistency**: *Needs the pen*
-`score = 6 + (loopRatio − 0.8)·3`
+Not scored from a photo (#192).
 *In plain words:* "did you build each letter in the usual order?" Order happens **in time**, so only the
-pen truly sees it; a photo can barely guess.
+pen sees it; a photo shows only the finished letter.
 
 **F3 · Loop Closure**: *Measured*
 ```
@@ -273,9 +274,10 @@ loopRatio = closed letters / loopable letters;  score = 10 · loopRatio
 ```
 *In plain words:* are your a, o, e, g actually closed, or left open? Band: ≥95% closed = excellent.
 
-**F4 · Line Quality (Smoothness)**: *Measured*
-`jitter = cv(stroke widths); score = score_from_error(jitter, 0.18, 0.70)`
-*In plain words:* smooth, steady strokes vs shaky ones. Uneven stroke width = the "wobble" signal.
+**F4 · Line Quality (Smoothness)**: *Needs the pen*
+Not scored from a photo (#192).
+*In plain words:* smooth, steady strokes vs shaky ones. At phone-photo size a tremor wobbles on the
+same scale as the letters' own curves, so only the pen measures it.
 
 **F5 · Size Consistency**: *Measured*
 `score = score_from_consistency(letter heights, cv_good=0.12, cv_bad=0.45)`
@@ -342,13 +344,14 @@ score = half from "is the gap about right" + half from "are the gaps even"
 slant (§12.1); falls back to per-pixel angles with a wider band (11, 40) for very short samples.
 
 **F18 · Legibility Score**: *Estimated*
-`score = 0.4·sizeEvenness + 0.3·spacingEvenness + 0.3·sittingOnTheLine` (the report names the weakest part)
-*In plain words:* an overall "how easy to read" built transparently from the basics, and it tells you
-which basic is holding it back.
+`score = 0.30·(10·reading) + 0.30·F1 + 0.15·F5 + 0.15·F8 + 0.10·F7`
+*In plain words:* an overall "how easy to read": how surely the words were read, blended transparently
+with letter shapes, size, spacing and sitting on the line.
 
 **F19 · Character Distinction**: *Estimated*
-`score = 5.5 + (loopRatio − 0.8)·4;  targets = (loops weak ? "a, o, e, g" : "n/h, r/v, c/e")`
-*In plain words:* are easily-confused letters clearly different? It even **names the letters to drill**.
+`score = 10·reading`
+*In plain words:* are the letters clear enough to tell apart? Measured by how surely the reader read each
+word, the least sure words counted twice and tangled words counted as unsure.
 
 **F20 · Overall Neatness**: *Measured*
 `score = average of (size evenness, spacing evenness, line straightness, baseline neatness)`

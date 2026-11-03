@@ -301,20 +301,13 @@ class RulesetHash(unittest.TestCase):
 
 
 def page():
-    arr = np.full((200, 600, 3), 255, dtype=np.uint8)
-    lines = []
-    for i, text in enumerate(("a good dog ran up", "the big hill today")):
-        top, bottom = 30 + i * 60, 70 + i * 60
-        corners = [[20, top], [540, top], [540, bottom], [20, bottom]]
-        lines.append(
-            {
-                "text": text,
-                "score": 0.9,
-                "box": [20, top, 520, 40],
-                "poly": corners,
-            }
-        )
-    return arr, lines
+    """Two lines drawn as joined writing (test_letter_geometry), so Loop
+    Closure has bowls in the ink to measure."""
+    # pylint: disable=import-outside-toplevel
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_letter_geometry import joined_page
+
+    return joined_page(["a good dog ran up", "the big hill today"])
 
 
 def score(ruleset):

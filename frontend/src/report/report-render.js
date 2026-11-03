@@ -168,6 +168,9 @@ function classificationPanels(summary){
 }
 
 
+/* Skills only the sensor pen measures: stroke order (2) and smoothness
+   (4) as well as the four Dynamics (#192, scoring_parts/needs.py). */
+const PEN_SKILLS=[2,4,13,14,15,16];
 /* Pen capture: the server scores the trace image and marks the four
    Dynamics factors unmeasured; the pen's own per-stroke measurements fill
    them in here, and the section scores are recomputed. The overall stays
@@ -714,10 +717,10 @@ function render(host, data){
   const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${byScore(ns).map(scoreChip).join('')}</div></div>`;
   const counts=data.pipeline||{};
   const mSub=t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
-  const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${[13,14,15,16].map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
+  const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${PEN_SKILLS.map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
   // The whole map, measurement by measurement, on screen only: what we
   // measure, the scores built from it, and whether a page can show it.
-  const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[2,9,4],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',[13,14,15,16],'pen']];
+  const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[9],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',PEN_SKILLS,'pen']];
   const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>esc(t('chip.'+n))).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
   // A score whose measurement row could not be drawn (no photo, or too
   // little to measure) is still shown, never dropped.
@@ -725,7 +728,7 @@ function render(host, data){
   const leftover=measured.filter(f=>!shownN.has(f.n)).map(f=>f.n).sort((a,b)=>a-b);
   const measuredHTML=`<div class="sn-h3row"><h3 class="sn-h3">${esc(t('m.title'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
       <div class="sn-subrow"><p class="sn-m-sub">${esc(mSub)}</p>${langLine}</div>${mRows.slice().sort((a,b)=>rowScore(b)-rowScore(a)).map(mRow).join('')}
-      ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[2,9,4,3])}${pen}${howTable}`;
+      ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[9,3])}${pen}${howTable}`;
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
   const firstSheet=worksheetFor(first)||rowFactors.map(worksheetFor).find(Boolean)||null;

@@ -57,8 +57,9 @@ benchmarks/
   recovery read a crop that is not kept, the check says so instead of
   guessing; the live run reads it.
 - **expected.json** holds, per page, the overall score, every factor a
-  photo can measure (all but 13 to 16), the lines as read, how many of the
-  written sentences were scored, and how many lines repeat one.
+  photo can measure (all but 2, 4 and 13 to 16), the lines as read, how
+  many of the written sentences were scored, and how many lines repeat
+  one.
 - **The pages are images, committed.** Making them again from the dataset
   on each run is not safe: another JPEG or OpenCV build changes a few
   pixels and the benchmark would report a move no code made. The UJI pages

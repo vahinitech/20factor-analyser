@@ -461,7 +461,6 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             max(range(len(values)), key=lambda i: abs(values[i] - center))
         ]
 
-    widths = [item["box"][2] for item in accepted]
     heights = [item["box"][3] for item in accepted]
     low_confidence = min(accepted, key=lambda l: float(l.get("score", 0) or 0))
     char_widths = [
@@ -471,7 +470,6 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
     ]
     char_outlier = outlier(char_widths)
     height_outlier = outlier(heights)
-    width_outlier = outlier(widths)
     loop_context = max(
         accepted,
         key=lambda l: len(_LOOP_SHAPE_RE.findall(str(l.get("text") or ""))),
@@ -482,20 +480,10 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
             "ocr-confidence-context",
             "OCR-confidence context; letter-shape fault not localized.",
         ),
-        "2": evidence(
-            [char_outlier],
-            "character-width-proxy-context",
-            "Character-width proxy context; stroke order not visible in a photo.",
-        ),
         "3": evidence(
             [loop_context],
             "loop-text-context",
             "Loop-letter text context; open loop not localized.",
-        ),
-        "4": evidence(
-            [width_outlier],
-            "region-width-proxy-context",
-            "Region width differs most from the median; stroke roughness not localized.",
         ),
         "5": evidence(
             [height_outlier],
@@ -615,7 +603,9 @@ def _factor_region_map(arr: np.ndarray, regions, lines=None):
         )
     for n, found in places.items():
         out[n]["places"] = found
-    for n in range(13, 17):
+    # Stroke order (2), smoothness (4) and the Dynamics (13 to 16) are
+    # measured by the sensor pen, not from a photo (scoring._PEN_ONLY).
+    for n in (2, 4, 13, 14, 15, 16):
         out[str(n)] = unavailable(
             "Requires sensor-pen data; no photo location can show this measurement."
         )
