@@ -100,13 +100,15 @@ try {
     await page.evaluate(() => window.scrollTo(0, 0));
     for (let i = 0; i < 40; i++) {
       await page.keyboard.press('Tab');
-      const covered = await page.evaluate(() => {
+      // Measure after the scroll and the observer that marks the bar stuck
+      // have both run (two frames), or a slow machine reads the old state.
+      const covered = await page.evaluate(() => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(() => {
         const a = document.activeElement, b = document.querySelector('#run-bar');
-        if (!a || b.contains(a) || !b.classList.contains('is-stuck')) return false;
+        if (!a || b.contains(a) || !b.classList.contains('is-stuck')) return done('');
         const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
-        return ar.bottom > br.top + 2 && ar.top < br.bottom;
-      });
-      assert.equal(covered, false, `${w}: a field reached with Tab is never under the stuck bar`);
+        done(ar.bottom > br.top + 2 && ar.top < br.bottom ? `${a.id || a.tagName} ${(a.textContent || a.value || '').trim().slice(0, 30)} at ${Math.round(ar.top)}-${Math.round(ar.bottom)}, bar ${Math.round(br.top)}-${Math.round(br.bottom)}` : '');
+      }))));
+      assert.equal(covered, '', `${w}: a field reached with Tab is never under the stuck bar`);
     }
     // Opened, the row's link says Done; folded again, Change.
     // (The toggle event comes after the click, so wait for the words.)
