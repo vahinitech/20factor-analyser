@@ -5,9 +5,12 @@
 // - the names are in the page's HTML, written from the registry, so
 //   crawlers read them; each joined style is drawn in its own Playwrite
 //   face, which loads from the page's own server;
+// - the picker folds into the "Optional" row, which says Not sure until a
+//   style is picked and then names it (owner, 2026-11-04);
 // - Not sure is picked to start with and sends no letter_style;
 // - picking a style sends its id; More styles opens on a click;
-// - analyser.html?style=french opens with French picked, More styles open;
+// - analyser.html?style=french opens with French picked, the row and More
+//   styles open;
 // - Telugu hides the picker and sends no style.
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -47,7 +50,11 @@ try {
 
   await open();
   assert.equal(await page.locator('input[name="letter-style"][value="unsure"]').isChecked(), true, 'Not sure to start with');
-  assert.equal(await page.locator('#letter-style').isVisible(), true);
+  assert.equal(await page.locator('#page-opts').evaluate((d) => d.open), false, 'folded to start with');
+  assert.equal(await page.locator('#po-style').innerText(), 'Not sure', 'the row says Not sure');
+  assert.equal(await page.locator('#letter-style').isVisible(), false, 'the picker waits in the fold');
+  await page.locator('#page-opts > summary').click();
+  assert.equal(await page.locator('#letter-style').isVisible(), true, 'Change opens it');
   const looped = page.locator('.ls-opt', { has: page.locator('input[value="looped"]') }).locator('.ls-name');
   assert.match(await looped.evaluate((e) => getComputedStyle(e).fontFamily), /Playwrite US Trad/);
   await page.evaluate(() => document.fonts.ready);
@@ -57,11 +64,14 @@ try {
   assert.deepEqual(sent, [null], 'Not sure sends no style');
 
   await open();
+  await page.locator('#page-opts > summary').click();
   await page.locator('.ls-opt', { hasText: 'Looped cursive' }).click();
+  assert.equal(await page.locator('#po-style').innerText(), 'Looped cursive', 'the row names the pick');
   await run();
   assert.deepEqual(sent.slice(-1), ['looped'], 'a picked style sends its id');
 
   await open();
+  await page.locator('#page-opts > summary').click();
   await page.locator('.ls-more summary').click();
   await page.locator('.ls-opt', { hasText: 'Schulausgangsschrift' }).click();
   await run();
@@ -70,17 +80,23 @@ try {
   await open('?style=french');
   assert.equal(await page.locator('input[name="letter-style"][value="french"]').isChecked(), true, 'a link picks French');
   assert.equal(await page.locator('.ls-more').getAttribute('open'), '', 'and opens More styles');
+  assert.equal(await page.locator('#page-opts').getAttribute('open'), '', 'and the Optional row');
+  assert.equal(await page.locator('#po-style').innerText(), 'French cursive', 'which names it');
+  await open('?style=looped');
+  assert.equal(await page.locator('#page-opts').getAttribute('open'), '', 'a main style opens the row too');
   await open('?style=<b>');
   assert.equal(await page.locator('input[name="letter-style"][value="unsure"]').isChecked(), true, 'a bad link changes nothing');
 
   await open();
+  await page.locator('#page-opts > summary').click();
   await page.locator('.ls-opt', { hasText: 'Looped cursive' }).click();
   await page.locator('#write-lang label', { hasText: 'Telugu' }).click();
   assert.equal(await page.locator('#letter-style').isVisible(), false, 'no picker for Telugu');
+  assert.equal(await page.locator('#po-style').isVisible(), false, 'and no style in the row');
   await run();
   assert.deepEqual(sent.slice(-1), [null], 'Telugu sends no style');
   assert.deepEqual(foreign, [], 'no font from another server');
-  console.log('letter-style-choice: names in the HTML, own faces; Not sure sends nothing, a pick sends its id, links pick, Telugu hides it');
+  console.log('letter-style-choice: names in the HTML, own faces, folded in the Optional row; Not sure sends nothing, a pick sends its id, links pick, Telugu hides it');
 } finally {
   if (browser) await browser.close();
   server.kill();

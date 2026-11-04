@@ -1162,6 +1162,8 @@ function setWriteLang(value){
   // Letter styles are an English-page choice (backend/styles).
   const styles = $('#letter-style');
   if (styles) styles.hidden = te;
+  const sum = $('#po-style');
+  if (sum) sum.parentNode.hidden = te;
 }
 /* The letter style taught at school (#346): Not sure until picked. A link
    such as analyser.html?style=looped opens with that style picked, so the
@@ -1172,8 +1174,64 @@ function setupLetterStyle(){
   const radio = document.querySelector(`input[name="letter-style"][value="${wanted}"]`);
   if (!radio) return;
   radio.checked = true;
-  const more = radio.closest('details');
-  if (more) more.open = true;
+  // Open every fold around it: "More styles" and the optional row.
+  for (let d = radio.closest('details'); d; d = d.parentElement.closest('details')) d.open = true;
+  showPageOpts();
+}
+/* Letter style and the copied sentence fold into one row under the
+   language, so Analyse stays near the photo (owner, 2026-11-04). The row
+   says what is picked, so a closed fold still shows the choice. */
+function showPageOpts(){
+  const style = $('#po-style'), sent = $('#po-sent');
+  if (!style || !sent) return;
+  const c = document.querySelector('input[name="letter-style"]:checked');
+  const name = c && c.value !== 'unsure' && c.parentNode.querySelector('.ls-name');
+  style.textContent = name ? name.textContent : 'Not sure';
+  sent.textContent = (($('#cs-text') || {}).value || '').trim() ? 'Added' : 'None';
+}
+function setupPageOpts(){
+  const box = $('#page-opts');
+  if (!box) return;
+  box.addEventListener('change', showPageOpts);
+  box.addEventListener('input', showPageOpts);
+  showPageOpts();
+}
+/* Once a photo is in, the terms line and Analyse stick to the bottom of the
+   screen (CSS, keyed on the button being enabled) until the visitor
+   scrolls to their place. The marker after the bar tells us when it is
+   stuck, for the shadow and to lift the site's Feedback button above it. */
+function setupRunBar(){
+  const bar = $('#run-bar'), end = $('#run-bar-end');
+  if (!bar || !end || !('IntersectionObserver' in window)) return;
+  // is-stuck means "the bar's place is below the screen"; the CSS shows the
+  // stuck look only while the button is enabled, which is when it sticks.
+  new IntersectionObserver((e) => {
+    bar.classList.toggle('is-stuck', !e[0].isIntersecting && e[0].boundingClientRect.top > 0);
+  }).observe(end);
+  const height = () => document.body.style.setProperty('--run-bar-h', bar.offsetHeight + 'px');
+  if ('ResizeObserver' in window) new ResizeObserver(height).observe(bar);
+  height();
+}
+/* "What you will learn": one skill tile plays at a time while the list is
+   on screen. With reduced motion every tile stays at its settled frame. */
+function setupSkillTiles(){
+  const list = $('#benefit-list');
+  if (!list || !('IntersectionObserver' in window)) return;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const rows = list.children;
+  let i = -1, timer = null;
+  const next = () => {
+    if (i >= 0) rows[i].classList.remove('is-on');
+    i = (i + 1) % rows.length;
+    void rows[i].offsetWidth;   // restart the animation on a repeat visit
+    rows[i].classList.add('is-on');
+  };
+  new IntersectionObserver((e) => {
+    clearInterval(timer); timer = null;
+    if (!e[0].isIntersecting) return;
+    if (i < 0) next();
+    timer = setInterval(next, 3400);
+  }).observe(list);
 }
 function setupWriteLang(){
   const radios = document.querySelectorAll('input[name="write-lang"]');
@@ -1538,7 +1596,7 @@ function renderCaseStudies(){
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
-  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupLetterStyle(); setupPassages(); setupLogo();
+  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPageOpts(); setupLetterStyle(); setupRunBar(); setupSkillTiles(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (whoAsked()) return; if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead
