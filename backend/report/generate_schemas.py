@@ -609,6 +609,23 @@ def common():
                 ),
             },
             "languageCheck": language_check(),
+            "writingStyle": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["available"],
+                "properties": {
+                    "available": {"type": "boolean"},
+                    "verdict": {"enum": ["cursive", "print", "mixed"]},
+                    "words": {"type": "integer", "minimum": 0},
+                },
+                "description": (
+                    "Whether the page is written joined, in print or "
+                    "mixed (vision/style_analysis.py), and from how many "
+                    "words. Never a score: it picks the report's cursive "
+                    "sheets and tips. available false, alone, when the "
+                    "check could not read the page."
+                ),
+            },
             "recognitionMetadata": recognition,
             "limitations": {
                 "type": "array",
@@ -1366,6 +1383,7 @@ def compact():
             "age_band": ref("ageBand"),
             "turned": ref("pageTurn"),
             "language": ref("languageCheck"),
+            "style": ref("writingStyle"),
             "sections": {
                 "type": "array",
                 "maxItems": 4,
