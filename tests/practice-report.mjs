@@ -48,7 +48,16 @@ const RENDER = `window.__render = (opts) => {
   if (o.free) analysis.access = { tier: 'free' };
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
-  if (o.style) analysis.styleProfile = { available: true, wordsUsed: 27, shares: {}, verdict: o.style };
+  // As the server sends it: the style check, then the letter style picked
+  // (o.letter) or the guess for Not sure (looped for a joined page, the
+  // sample's lean; print for a printed one).
+  const STYLES = { print: { name: 'Print', font: null, sheets: [] }, looped: { name: 'Looped cursive', font: 'Playwrite US Trad', sheets: ['cursive-lesson-1-basic-strokes', 'cursive-handwriting-worksheets', 'cursive-connecting-letters-worksheets'] }, french: { name: 'French cursive', font: 'Playwrite FR Trad', sheets: [] }, 'joined-breaks': { name: 'Joined with breaks', font: 'Playwrite GB J', sheets: [] } };
+  if (o.style || o.letter) {
+    analysis.styleProfile = o.style ? { available: true, wordsUsed: 27, shares: {}, verdict: o.style } : { available: false };
+    const guess = o.style === 'print' ? 'print' : o.guess || 'looped';
+    const id = o.letter || guess;
+    if (!o.noGuess && (o.letter || o.style)) analysis.styleProfile.letterStyle = { available: true, style: id, guessed: !o.letter, candidates: [id], pageGuess: o.letter && o.style ? guess : null, ...STYLES[id] };
+  }
   window.VahiniCraft = { ...window.__craft };
   const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', pattern: 'ie_ei', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
   const host = document.getElementById('report-host');
@@ -234,6 +243,40 @@ try {
   const teluguJoined = await page.evaluate(() => window.__render({ style: 'cursive', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' }));
   add(!printedPage.cursive.length && !teluguJoined.cursive.length && !/joined writing/i.test(printedPage.text),
     'A printed page and a page in another script get no cursive sheets', { printed: printedPage.cursive, telugu: teluguJoined.cursive, sample: noStyle.cursive });
+  // The letter style picked on the check page (owner, 2026-11-04) leads
+  // the box: its name in its own face, what the page looks like, and its
+  // own sheets. A style with no sheets yet says so and points to our team,
+  // never to another style's sheets; print picked means no cursive box.
+  const fontOf = el => el ? getComputedStyle(el).fontFamily : '';
+  const box = o => page.evaluate(o => { const r = window.__render(o); const b = document.querySelector('[data-cursive-sheets]');
+    const n = b && b.querySelector('.p2-style-name'); return { ...r, font: n ? n.style.fontFamily : '', name: n ? n.textContent : '', id: b ? b.dataset.letterStyle : null }; }, o);
+  const loopedPrinted = await box({ free: true, style: 'print', letter: 'looped' });
+  add(JSON.stringify(loopedPrinted.cursive.map(l => l[0])) === JSON.stringify(SHOP_CURSIVE) && /Your school's style:\s*Looped cursive\./.test(loopedPrinted.cursiveText)
+    && /This page is written in print\./.test(loopedPrinted.cursiveText) && /Playwrite US Trad/.test(loopedPrinted.font),
+    'Looped picked on a printed page: the looped sheets, the name in its own face, and what the page looks like', loopedPrinted.cursiveText);
+  const french = await box({ free: true, style: 'cursive', letter: 'french' });
+  add(french.cursive.length === 1 && /\/reach\.html\?topic=handwriting$/.test(french.cursive[0][0]) && !french.cursive.some(l => /shop\.vahinitech\.com/.test(l[0]))
+    && /French cursive\./.test(french.cursiveText) && /being made/.test(french.cursiveText) && /Playwrite FR Trad/.test(french.font) && french.id === 'french',
+    'French picked: no looped sheets, says its sheets are being made and points to our team', french.cursive);
+  await page.emulateMedia({ media: 'print' });
+  const frenchHeights = await page.evaluate(() => { const host = document.getElementById('report-host'); VahiniReport.fitPrintPages(host);
+    return [...host.querySelectorAll('.free-report')].map(p => Math.round(p.getBoundingClientRect().height)); });
+  await page.evaluate(() => VahiniReport.unfitPrintPages(document.getElementById('report-host')));
+  await page.emulateMedia({ media: 'screen' });
+  add(frenchHeights.length === 2 && frenchHeights.every(h => h <= 1120), 'With a picked style\'s box the report still prints on two A4 pages', frenchHeights);
+  const printPicked = await box({ free: true, style: 'cursive', letter: 'print' });
+  add(!printPicked.cursive.length && !printPicked.cursiveText, 'Print picked: no cursive box, even on a joined page', printPicked.cursiveText);
+  const upright = await box({ free: true, style: 'cursive', guess: 'joined-breaks' });
+  add(!upright.cursive.some(l => /shop\.vahinitech\.com/.test(l[0])) && /This page looks like\s*Joined with breaks\./.test(upright.cursiveText) && /Pick your school's style/.test(upright.cursiveText),
+    'Not sure, page looks like a style with no sheets yet: no looped sheets, asks for the school\'s style', upright.cursiveText);
+  const guessed = await box({ free: true, style: 'cursive' });
+  add(guessed.cursive.length === 3 && /This page looks like\s*Looped cursive\./.test(guessed.cursiveText), 'Not sure, page looks looped: the looped sheets with what it looks like', guessed.cursiveText);
+  const legacy = await box({ free: true, style: 'cursive', noGuess: true });
+  add(legacy.cursive.length === 3 && !/looks like|school's style/.test(legacy.cursiveText), 'A report from before the style guess keeps the looped sheets, with no lead', legacy.cursiveText);
+  const unread = await box({ free: true, letter: 'looped' });
+  add(unread.cursive.length === 3 && !/This page is/.test(unread.cursiveText), 'A picked style shows even when the page\'s style could not be read, without saying how it looks', unread.cursiveText);
+  const teluguPicked = await box({ letter: 'looped', style: 'print', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' });
+  add(!teluguPicked.cursive.length, 'A page in another script gets no cursive box, whatever was picked');
   // Rotation: the next check starts after last time's exercises and wraps.
   const first = await page.evaluate(() => window.__render({ free: true }));
   const second = await page.evaluate(p => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: p } }), first.out.practice);

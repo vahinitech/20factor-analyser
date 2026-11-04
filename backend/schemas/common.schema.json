@@ -1311,6 +1311,30 @@
                 "german-va",
                 "german-sas"
               ]
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 60,
+              "description": "The style's label, as the check page names it."
+            },
+            "font": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "maxLength": 40,
+              "description": "The style's own cursive face (Playwrite), or null for print."
+            },
+            "sheets": {
+              "type": "array",
+              "maxItems": 8,
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "pattern": "^[a-z0-9-]{2,80}$"
+              },
+              "description": "Shop product slugs of the style's free sheets; empty while none are made."
             }
           },
           "description": "The letter style taught at school (backend/styles/letter_styles.json): the one the request's letter_style picked (guessed false, with page_guess when the page gave one), or the check's guess for Not sure (guessed true, every style that fits, best first). Never a score."

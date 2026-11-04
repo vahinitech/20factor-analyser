@@ -16,6 +16,7 @@ from report import practice_catalog
 import scoring
 from server.entitlements import capabilities
 from report.report_contract import FACTOR_IDS, SENSOR_LIMITATIONS, finite_score
+from styles import letter_styles
 
 STATUS_CODES = {
     "estimated": "e",
@@ -122,6 +123,13 @@ def _style(profile):
         }
         if letter.get("pageGuess"):
             out["letter_style"]["page_guess"] = letter["pageGuess"]
+        # What the report's cursive box shows for this style: its name,
+        # written in its own face, and its free sheets on the shop. A
+        # style with no sheets yet says so, never another style's.
+        entry = letter_styles.style(letter["style"]) or {}
+        out["letter_style"]["name"] = entry.get("label", letter["style"])
+        out["letter_style"]["font"] = entry.get("font")
+        out["letter_style"]["sheets"] = list(entry.get("shop_products") or [])
     return out
 
 
