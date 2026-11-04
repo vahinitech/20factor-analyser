@@ -73,9 +73,9 @@ jobs:
       - name: Verify source dependency inventory
         run: python backend/tools/update_sbom.py --check
       - name: Syntax-check server modules
-        run: python -m py_compile backend/server/app.py backend/reading/ocr_backends.py backend/reading/classify.py backend/reading/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/tools/benchmark_ocr.py backend/vision/geometry.py backend/reading/model_map.py backend/reading/gpu_detect.py backend/vision/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/scoring_parts/needs.py backend/server/age_band.py backend/server/who_checks.py backend/reading/detector.py backend/reading/line_recovery.py backend/vision/ink_geometry.py backend/reading/recognizer.py backend/reading/escalation.py backend/config.py backend/server/cache.py backend/languages/tags.py backend/server/scan_slots.py backend/server/capacity.py backend/report/practice_catalog.py backend/server/debug_store.py backend/server/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/server/perf.py backend/reading/telugu_reader.py
+        run: python -m py_compile backend/server/app.py backend/reading/ocr_backends.py backend/reading/classify.py backend/reading/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/tools/benchmark_ocr.py backend/vision/geometry.py backend/reading/model_map.py backend/reading/gpu_detect.py backend/vision/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/scoring_parts/needs.py backend/server/age_band.py backend/server/who_checks.py backend/reading/detector.py backend/reading/line_recovery.py backend/vision/ink_geometry.py backend/reading/recognizer.py backend/reading/escalation.py backend/config.py backend/server/cache.py backend/languages/tags.py backend/server/scan_slots.py backend/server/capacity.py backend/report/practice_catalog.py backend/server/debug_store.py backend/server/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/styles/letter_styles.py backend/server/perf.py backend/reading/telugu_reader.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py scripts/therapist_agreement.py
+        run: black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/styles/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/letter_style_guess_eval.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py scripts/therapist_agreement.py
       - name: Lint (pylint, min score 9.0)
         run: |
           pylint --fail-under=9.0 frontend/build_bundle.py \
@@ -143,6 +143,7 @@ jobs:
             backend/scoring_parts/needs.py backend/tests/test_factor_needs.py \
             backend/languages/profile.py backend/tests/test_profiles.py \
             backend/languages/graphemes.py backend/tests/test_graphemes.py \
+            backend/styles/letter_styles.py backend/tests/test_letter_styles.py \
             backend/tests/test_passage_alignment.py \
             scripts/coverage_ratchet.py backend/tests/test_coverage_ratchet.py \
             scripts/complexity.py backend/tests/test_complexity.py \
@@ -160,6 +161,8 @@ jobs:
         run: python backend/report/generate_schemas.py --check
       - name: Every language pack resolves and validates
         run: python backend/languages/registry.py --check
+      - name: The letter-style table validates
+        run: python backend/styles/letter_styles.py --check
       - name: The recognition ladders are what stages.json gives
         run: python scripts/rank_stages.py --check
       # Discovery, not a hand-written list: eight test files once ran in no

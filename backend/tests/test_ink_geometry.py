@@ -269,6 +269,9 @@ class TestReadInPieces(unittest.TestCase):
         rows, _cover = ig.fragment_rows(self.arr, pieces(self.boxes))
         result = scoring.build_analysis(self.arr, rows, {})
         self.assertEqual(result.style_profile.get("verdict"), "cursive")
+        guess = result.style_profile["letterStyle"]
+        self.assertTrue(guess["guessed"])
+        self.assertNotIn("print", guess["candidates"])
         f = {r.n: r for r in result.results}
         self.assertTrue(f[9].unmeasured)
         self.assertEqual(f[9].value, "Not measured")

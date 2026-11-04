@@ -60,6 +60,7 @@ from scoring_parts.spatial import (
 from scoring_parts.stats import _band, _clamp10, _cv, _std, mean
 from scoring_parts.structure import BOWL_FULL
 from scoring_parts.style import SLANT_SCALE
+from styles import letter_styles
 
 __all__ = [
     "AnalysisResult",
@@ -405,10 +406,21 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
         baseline_drift=baseline_drift,
         zone_profile=zone_profile,
         tbar_profile=advisory.profile(checks["tbars"]),
-        style_profile=advisory.profile(checks["style"]),
+        style_profile=_style_profile(checks["style"], fx),
         coach_tips=coach_tips,
         tip_pillars=tip_pillars,
     )
+
+
+def _style_profile(style_check, fx):
+    """The style check as the report carries it, with the letter-style
+    guess for "Not sure" (#350). The guess changes no score."""
+    out = dict(advisory.profile(style_check))
+    if out.get("available"):
+        out["letterStyle"] = letter_styles.guess(
+            style_check, fx.get("slant_mean")
+        )
+    return out
 
 
 def _based_on(fx):

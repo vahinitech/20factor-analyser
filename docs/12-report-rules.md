@@ -104,7 +104,7 @@ The owner set this direction while designing the cursive work (vahini-web#343, v
 
 - **One check page, many modules.** A new check (cursive, spelling, neat for exams, tips and exercises, everyday writing), a new letter style or a new place is an entry in a registry, not a new landing page and not new hand-written page code. Three registries:
   - **checks**: label, the evidence blocks it adds to the report, the sheets it offers;
-  - **letter styles**: label, its cursive font, its sheet ids;
+  - **letter styles**: label, its cursive font, its sheet ids. Built (#350): `backend/styles/letter_styles.json`, one entry per style with its family, upright or right lean, the letters it leaves unjoined after them, whether capitals join, whether tall letters loop, its Playwrite face, the countries that teach it and its free shop sheets. The style check's profile carries `letterStyle`, the "Not sure" guess: joined or print from the style check, upright or right from the words' mean lean, every style that fits listed best first, always marked as a guess. Nothing renders it yet, and it moves no score;
   - **places**: the school rule in one line, its source and revised date, its letter style, its privacy rules.
 
   The "I want to check" row on `frontend/analyser.html`, the report's blocks and Bheema's plan all read them. Adding Australia is one place entry and one style entry.

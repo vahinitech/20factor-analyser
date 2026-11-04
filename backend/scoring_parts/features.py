@@ -25,6 +25,7 @@ from scoring_parts.page import (
 from scoring_parts.reading import _reading_features
 from scoring_parts.stats import _cv, _std, mean
 from scoring_parts.availability import MIN_BOWLS
+from styles import letter_styles
 
 try:
     import cv2
@@ -441,8 +442,8 @@ def _stroke_features(geo, texts):
     factors whose names it measures: the share of the letters read that
     have a bowl (a, b, d, e, g, o, p, q) whose bowl is closed in the ink,
     counted word by word (3), how even the gaps between letters are (9),
-    how far words wander off their line's baseline (11), and how much the
-    words' lean varies (17). None where the page gives too little to
+    how far words wander off their line's baseline (11), how much the
+    words' lean varies (17) and their mean lean (the letter-style guess). None where the page gives too little to
     measure."""
     lines = [g for g in geo if g]
     loops = [
@@ -482,4 +483,7 @@ def _stroke_features(geo, texts):
             else None
         ),
         "slant_std": _std(slants) if len(slants) >= 3 else None,
+        # Which way the words lean on average: the letter-style guess
+        # reads it (styles/letter_styles.py); no factor does.
+        "slant_mean": letter_styles.mean_lean(slants),
     }

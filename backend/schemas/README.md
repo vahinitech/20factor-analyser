@@ -34,6 +34,13 @@ The request's `profile` field is JSON text checked against
 which sits beside the language packs it layers on and is written by hand,
 not generated. A contracts copy should take it with these files.
 
+The letter-style registry, `backend/styles/letter_styles.json`, is checked
+against `backend/styles/letter_styles.schema.json` (draft-07), also written
+by hand beside its data (#350). The check page's style picker, the report's
+join marks and vahini-web read it; a contracts copy should take both files.
+`python backend/styles/letter_styles.py --check` validates the table, and
+`backend/tests/test_letter_styles.py` holds the rules the schema cannot say.
+
 ## What the schemas enforce
 
 - A Free body never contains Pro material: only factors 1, 5, 7, 8 and 18,
