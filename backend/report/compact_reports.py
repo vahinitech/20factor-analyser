@@ -100,6 +100,19 @@ def catalog_bytes(version):
     return path.read_bytes() if path is not None else None
 
 
+def _style(profile):
+    """The style check in short form, for every tier: it is not a score,
+    and the report's cursive sheets box reads it (#351)."""
+    if not isinstance(profile, dict):
+        return None
+    if not profile.get("available"):
+        return {"available": False}
+    out = {"available": True, "verdict": profile.get("verdict")}
+    if isinstance(profile.get("wordsUsed"), int):
+        out["words"] = profile["wordsUsed"]
+    return out
+
+
 def build_compact(payload, access, include=()):
     """Project directly from scores without building a full verbose response."""
     analysis = payload.get("analysis") or {}
@@ -211,6 +224,9 @@ def build_compact(payload, access, include=()):
     if report["ok"]:
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)
+        style = _style(analysis.get("styleProfile"))
+        if style:
+            report["style"] = style
     else:
         report["error"] = {
             "code": payload.get("error_code", "analysis_failed")
