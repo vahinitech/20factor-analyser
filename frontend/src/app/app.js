@@ -1194,6 +1194,9 @@ function setupPageOpts(){
   if (!box) return;
   box.addEventListener('change', showPageOpts);
   box.addEventListener('input', showPageOpts);
+  // Open, the row's link folds it again, so it says so.
+  const change = box.querySelector('.po-change');
+  if (change) box.addEventListener('toggle', () => { change.textContent = box.open ? 'Done' : 'Change'; });
   showPageOpts();
 }
 /* Once a photo is in, the terms line and Analyse stick to the bottom of the
@@ -1208,7 +1211,8 @@ function setupRunBar(){
   new IntersectionObserver((e) => {
     bar.classList.toggle('is-stuck', !e[0].isIntersecting && e[0].boundingClientRect.top > 0);
   }).observe(end);
-  const height = () => document.body.style.setProperty('--run-bar-h', bar.offsetHeight + 'px');
+  // On the root, so the page's scroll padding can read it too.
+  const height = () => document.documentElement.style.setProperty('--run-bar-h', bar.offsetHeight + 'px');
   if ('ResizeObserver' in window) new ResizeObserver(height).observe(bar);
   height();
 }
@@ -1221,6 +1225,7 @@ function setupSkillTiles(){
   const rows = list.children;
   let i = -1, timer = null;
   const next = () => {
+    if (document.hidden) return;   // no work in a background tab
     if (i >= 0) rows[i].classList.remove('is-on');
     i = (i + 1) % rows.length;
     void rows[i].offsetWidth;   // restart the animation on a repeat visit

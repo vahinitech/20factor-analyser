@@ -210,7 +210,6 @@
 .po-lead { font-weight:600; color:var(--v-text); }
 .po-pick b { color:var(--v-text); font-weight:600; margin-left:3px; }
 .po-change { margin-left:auto; color:var(--v-accent-text); font-weight:600; }
-.page-opts[open] .po-change { visibility:hidden; }
 .po-body { padding:0 14px 14px; border-top:1px solid var(--v-border); }
 .po-body .copy-sentence { background:var(--v-bg); }
 
@@ -219,6 +218,12 @@
    is-stuck for the shadow. */
 .run-bar { margin:16px -14px 0; padding:10px 14px 12px; border-top:1px solid transparent; border-radius:var(--v-radius-lg) var(--v-radius-lg) 0 0; }
 .cl-upload:has(#go-process:not(:disabled)) .run-bar { position:sticky; bottom:0; z-index:6; }
+/* The cookie card (vahinitech.com site.js: body.cc-open, --cc-h) sits in the
+   bottom corner on a first visit and would cover Analyse, so the bar rides
+   just above it until the card is answered. */
+body.cc-open .cl-upload:has(#go-process:not(:disabled)) .run-bar { bottom:var(--cc-h, 0px); }
+/* A field reached with Tab scrolls clear of the stuck bar (and the card). */
+html:has(#go-process:not(:disabled)) { scroll-padding-bottom:calc(var(--run-bar-h, 0px) + var(--cc-h, 0px) + 16px); }
 /* Only the look changes when it sticks, never its size, so nothing jumps
    when it reaches its place. */
 .cl-upload:has(#go-process:not(:disabled)) .run-bar.is-stuck { background:var(--v-surface); border-top-color:var(--v-border); box-shadow:0 -10px 24px color-mix(in srgb, var(--v-dark) 14%, transparent); }
@@ -248,4 +253,4 @@
 @keyframes sk-gap { 0%, 65% { opacity:0; } 80%, 100% { opacity:1; } }
 @media (prefers-reduced-motion: reduce) { .benefit-list li.is-on .sk text, .benefit-list li.is-on .sk-gap { animation:none; } .sk .sk-gap { opacity:1; } }
 /* Lift the site's Feedback button above the stuck Analyse bar (as site.css does for the cookie card). */
-body:has(#go-process:not(:disabled)):has(.run-bar.is-stuck) .vfb-launch { bottom:calc(12px + var(--run-bar-h, 0px)) !important; }
+body:has(#go-process:not(:disabled)):has(.run-bar.is-stuck) .vfb-launch { bottom:calc(12px + var(--run-bar-h, 0px) + var(--cc-h, 0px)) !important; }

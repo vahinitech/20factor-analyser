@@ -77,6 +77,47 @@ try {
     await page.context().close();
   }
 
+  for (const viewport of [{ width: 1440, height: 900 }, { width: 390, height: 844 }]) {
+    // A first visit: vahinitech.com's cookie card sits in the bottom corner
+    // (site.js sets body.cc-open and --cc-h). The stuck bar rides above it,
+    // so Analyse is never under the card, and Feedback goes above both.
+    const page = await open(viewport);
+    const w = viewport.width;
+    await page.evaluate(() => {
+      const cc = document.createElement('div'); cc.className = 'cc';
+      cc.style.cssText = 'position:fixed;left:12px;bottom:12px;width:min(390px,calc(100vw - 24px));height:180px;z-index:400';
+      document.body.append(cc); document.body.classList.add('cc-open');
+      document.documentElement.style.setProperty('--cc-h', '192px');
+    });
+    await addPhoto(page);
+    const card = await page.locator('.cc').boundingBox();
+    const go = await page.locator('#go-process').boundingBox();
+    assert.ok(go.y + go.height <= card.y + 1 && go.y >= 0, `${w}: Analyse sits above the cookie card (${go.y + go.height} vs ${card.y})`);
+    const fb = await page.locator('.vfb-launch').boundingBox();
+    const bar = await page.locator('#run-bar').boundingBox();
+    assert.ok(fb.y + fb.height <= bar.y + 1, `${w}: Feedback sits above the bar and the card`);
+    // Tab through the form: no focused field hides under the bar.
+    await page.evaluate(() => window.scrollTo(0, 0));
+    for (let i = 0; i < 40; i++) {
+      await page.keyboard.press('Tab');
+      const covered = await page.evaluate(() => {
+        const a = document.activeElement, b = document.querySelector('#run-bar');
+        if (!a || b.contains(a) || !b.classList.contains('is-stuck')) return false;
+        const ar = a.getBoundingClientRect(), br = b.getBoundingClientRect();
+        return ar.bottom > br.top + 2 && ar.top < br.bottom;
+      });
+      assert.equal(covered, false, `${w}: a field reached with Tab is never under the stuck bar`);
+    }
+    // Opened, the row's link says Done; folded again, Change.
+    // (The toggle event comes after the click, so wait for the words.)
+    const says = (t) => page.waitForFunction((x) => document.querySelector('.po-change').textContent === x, t, { timeout: 3000 });
+    await page.locator('#page-opts > summary').click();
+    await says('Done');
+    await page.locator('#page-opts > summary').click();
+    await says('Change');
+    await page.context().close();
+  }
+
   {
     const page = await open({ width: 1440, height: 900 }, 'reduce');
     await page.locator('#benefit-list').scrollIntoViewIfNeeded();
@@ -96,7 +137,7 @@ try {
     assert.equal(await page.locator('#po-style').innerText(), 'French cursive');
     await ctx.close();
   }
-  console.log('check-page-run-bar: Analyse on screen with a photo at 1440 and 390, the bar sticks only then, Feedback lifted; Optional row folds the picker; five tiles, one at a time, none with reduced motion');
+  console.log('check-page-run-bar: Analyse on screen with a photo at 1440 and 390, the bar sticks only then, Feedback lifted; above the cookie card; Tab never lands under the bar; Optional row folds the picker (Change/Done); five tiles, one at a time, none with reduced motion');
 } finally {
   if (browser) await browser.close();
   server.kill();
