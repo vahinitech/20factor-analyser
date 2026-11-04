@@ -1,0 +1,1 @@
+- Check page: the folded options row says "Print or cursive" instead of "Letter style", so a closed row still names the choice. A link ending in `#letter-style` (the site's "Check your cursive" buttons) opens the row with the cursive styles on screen, and Pihu's first-visit tour waits for the next visit instead of scrolling the family away from them.

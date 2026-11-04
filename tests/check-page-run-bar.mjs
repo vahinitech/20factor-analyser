@@ -42,7 +42,7 @@ try {
     const w = viewport.width;
     assert.equal(await page.locator('#run-bar').evaluate((e) => getComputedStyle(e).position), 'static', `${w}: no sticking before a photo`);
     assert.equal(await page.locator('#page-opts').evaluate((d) => d.open), false, `${w}: the Optional row starts folded`);
-    assert.match(await page.locator('#page-opts > summary').innerText(), /Optional[\s\S]*Letter style[\s\S]*Not sure[\s\S]*Copied sentence[\s\S]*None[\s\S]*Change/);
+    assert.match(await page.locator('#page-opts > summary').innerText(), /Optional[\s\S]*Print or cursive[\s\S]*Not sure[\s\S]*Copied sentence[\s\S]*None[\s\S]*Change/);
     await addPhoto(page);
     assert.equal(await inView(page, '#go-process'), true, `${w}: Analyse is on screen once a photo is in`);
     assert.equal(await inView(page, '#run-consent'), true, `${w}: and so are the terms beside it`);

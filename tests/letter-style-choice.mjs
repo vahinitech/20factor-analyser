@@ -11,6 +11,9 @@
 // - picking a style sends its id; More styles opens on a click;
 // - analyser.html?style=french opens with French picked, the row and More
 //   styles open;
+// - analyser.html#letter-style (the site's "Check your cursive" links) opens
+//   the row with Not sure still picked and the styles on screen; the closed
+//   row says "Print or cursive" (owner, 2026-11-04);
 // - Telugu hides the picker and sends no style.
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
@@ -86,6 +89,15 @@ try {
   assert.equal(await page.locator('#page-opts').getAttribute('open'), '', 'a main style opens the row too');
   await open('?style=<b>');
   assert.equal(await page.locator('input[name="letter-style"][value="unsure"]').isChecked(), true, 'a bad link changes nothing');
+  assert.equal(await page.locator('#page-opts').evaluate((d) => d.open), false, 'and opens nothing');
+  assert.match(await page.locator('#page-opts > summary').innerText(), /Print or cursive\s*Not sure/, 'the closed row names the choice');
+
+  await open('#letter-style');
+  assert.equal(await page.locator('#page-opts').getAttribute('open'), '', '#letter-style opens the row');
+  assert.equal(await page.locator('input[name="letter-style"][value="unsure"]').isChecked(), true, 'and picks nothing');
+  const looped2 = page.locator('.ls-opt', { has: page.locator('input[value="looped"]') });
+  await page.waitForFunction(() => { const r = document.querySelector('input[value="looped"]').closest('.ls-opt').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; }, null, { timeout: 3000 });
+  assert.equal(await looped2.isVisible(), true, 'with the cursive styles on screen');
 
   await open();
   await page.locator('#page-opts > summary').click();
@@ -96,7 +108,7 @@ try {
   await run();
   assert.deepEqual(sent.slice(-1), [null], 'Telugu sends no style');
   assert.deepEqual(foreign, [], 'no font from another server');
-  console.log('letter-style-choice: names in the HTML, own faces, folded in the Optional row; Not sure sends nothing, a pick sends its id, links pick, Telugu hides it');
+  console.log('letter-style-choice: names in the HTML, own faces, folded in the "Print or cursive" row; Not sure sends nothing, a pick sends its id, links pick, #letter-style opens it, Telugu hides it');
 } finally {
   if (browser) await browser.close();
   server.kill();

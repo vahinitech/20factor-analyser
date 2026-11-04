@@ -1169,6 +1169,9 @@ function setWriteLang(value){
    such as analyser.html?style=looped opens with that style picked, so the
    site's cursive pages can send a family straight here. */
 function setupLetterStyle(){
+  // The site's "Check your cursive" links end in #letter-style: open the
+  // optional row there, so a family who came for cursive sees the styles.
+  if (location.hash === '#letter-style') openLetterStyle();
   const wanted = new URLSearchParams(location.search).get('style');
   if (!wanted || !/^[a-z0-9-]{2,40}$/.test(wanted)) return;
   const radio = document.querySelector(`input[name="letter-style"][value="${wanted}"]`);
@@ -1177,6 +1180,13 @@ function setupLetterStyle(){
   // Open every fold around it: "More styles" and the optional row.
   for (let d = radio.closest('details'); d; d = d.parentElement.closest('details')) d.open = true;
   showPageOpts();
+}
+function openLetterStyle(){
+  const box = $('#page-opts'), styles = $('#letter-style');
+  if (!box || !styles || styles.hidden) return;
+  box.open = true;
+  // The browser's own jump to the fragment ran while the row was shut.
+  requestAnimationFrame(() => box.scrollIntoView({ block:'center' }));
 }
 /* Letter style and the copied sentence fold into one row under the
    language, so Analyse stays near the photo (owner, 2026-11-04). The row
