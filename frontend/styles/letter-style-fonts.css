@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+   Written by frontend/gen_letter_styles.py from the letter-style
+   registry; do not edit. Each face holds only the letters of the
+   style names it draws on the check page. */
+@font-face {font-family:'Playwrite AR';src:url('../assets/fonts/playwrite-ar.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite AU VIC';src:url('../assets/fonts/playwrite-au-vic.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite DE LA';src:url('../assets/fonts/playwrite-de-la.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite DE SAS';src:url('../assets/fonts/playwrite-de-sas.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite DE VA';src:url('../assets/fonts/playwrite-de-va.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite FR Trad';src:url('../assets/fonts/playwrite-fr-trad.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite GB J';src:url('../assets/fonts/playwrite-gb-j.woff2') format('woff2');font-weight:400;font-display:swap;}
+@font-face {font-family:'Playwrite US Trad';src:url('../assets/fonts/playwrite-us-trad.woff2') format('woff2');font-weight:400;font-display:swap;}

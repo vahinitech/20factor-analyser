@@ -103,6 +103,7 @@ from server import (
     age_band as age_bands,
 )  # optional age band, echoed only (#212)
 from server import who_checks  # who is checking, asked first (rule 10)
+from styles import letter_styles  # the letter style picked (#346)
 
 # Paddle 3.x on some CPUs can fail in oneDNN/PIR execution paths for OCR.
 # Prefer the stable execution route unless explicitly overridden.
@@ -1419,6 +1420,23 @@ async def _who(text, pro, image):
         ) from None
 
 
+def _with_letter_style(payload, style_id):
+    """The payload with the visitor's letter style (#346) beside the
+    page's own guess, on a copy: a cached payload is shared by every
+    request for the same photo, whatever style each picked. Applied after
+    scoring, so it moves no score; an unknown or empty style leaves the
+    guess alone."""
+    analysis = payload.get("analysis")
+    if not style_id or not isinstance(analysis, dict):
+        return payload
+    profile = dict(analysis.get("styleProfile") or {"available": False})
+    choice = letter_styles.picked(style_id, profile.get("letterStyle"))
+    if choice is None:
+        return payload
+    profile["letterStyle"] = choice
+    return {**payload, "analysis": {**analysis, "styleProfile": profile}}
+
+
 def _with_age_band(payload, band):
     """The payload with the band echoed, on a copy: a cached payload is
     shared by every request for the same photo, whatever its band."""
@@ -1498,6 +1516,7 @@ async def report_python(
     profile: str = Form(""),
     age_band: str = Form(""),
     who: str = Form(""),
+    letter_style: str = Form(""),
     authorization: str = Header(default=None),
 ):
     await _who(who, await _is_pro(authorization), image)
@@ -1510,6 +1529,7 @@ async def report_python(
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     payload = _with_age_band(payload, band)
+    payload = _with_letter_style(payload, letter_style)
     if enforce:
         # Recheck after inference: expiry/revocation must also affect cache hits.
         access = await run_in_threadpool(
@@ -1547,6 +1567,7 @@ async def api_report(
     profile: str = Form(""),
     age_band: str = Form(""),
     who: str = Form(""),
+    letter_style: str = Form(""),
     authorization: str = Header(default=None),
     format: Literal["expanded", "compact"] = Query(default="expanded"),
     include: str = Query(default=""),
@@ -1573,6 +1594,7 @@ async def api_report(
         )
         _spend_if_report(charge, payload)
         payload = _with_age_band(payload, band)
+        payload = _with_letter_style(payload, letter_style)
         access = await run_in_threadpool(
             entitlements.access_for, authorization
         )
@@ -1585,6 +1607,7 @@ async def api_report(
     payload = await _report_payload(image, lang, expected_text, True, ruleset)
     _spend_if_report(charge, payload)
     payload = _with_age_band(payload, band)
+    payload = _with_letter_style(payload, letter_style)
     access = await run_in_threadpool(entitlements.access_for, authorization)
     with perf.stage("practice"):
         return report_contract.public_report(payload, access)

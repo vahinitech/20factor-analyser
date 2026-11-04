@@ -5,51 +5,134 @@
   "description": "The letter styles schools teach, as data (docs/12-report-rules.md, 'Checks are modules on the analyser page'; #350). A style decides which joins the report expects, which sheets and tips it offers and the font it is drawn in. It never moves a factor score.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["version", "default_style", "styles"],
+  "required": [
+    "version",
+    "default_style",
+    "styles"
+  ],
   "properties": {
-    "$comment": {"type": "string"},
-    "version": {"const": 1},
-    "default_style": {"$ref": "#/definitions/id"},
+    "$comment": {
+      "type": "string"
+    },
+    "version": {
+      "const": 1
+    },
+    "default_style": {
+      "$ref": "#/definitions/id"
+    },
     "styles": {
       "type": "array",
       "minItems": 1,
-      "items": {"$ref": "#/definitions/style"}
+      "items": {
+        "$ref": "#/definitions/style"
+      }
     }
   },
   "definitions": {
-    "id": {"type": "string", "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"},
-    "letter": {"type": "string", "pattern": "^[a-z]$"},
-    "country": {"type": "string", "pattern": "^[A-Z]{2}$"},
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "letter": {
+      "type": "string",
+      "pattern": "^[a-z]$"
+    },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$"
+    },
     "style": {
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "id", "label", "family", "slant", "breaks_after",
-        "capitals_join", "loops", "font", "countries", "shop_products"
+        "id",
+        "label",
+        "family",
+        "slant",
+        "breaks_after",
+        "capitals_join",
+        "loops",
+        "font",
+        "countries",
+        "shop_products",
+        "where",
+        "picker"
       ],
       "properties": {
-        "$comment": {"type": "string"},
-        "id": {"$ref": "#/definitions/id"},
-        "label": {"type": "string", "minLength": 3, "maxLength": 40},
-        "family": {"enum": ["looped", "joined-with-breaks", "french", "german", "print"]},
-        "slant": {"enum": ["upright", "right"]},
+        "$comment": {
+          "type": "string"
+        },
+        "id": {
+          "$ref": "#/definitions/id"
+        },
+        "label": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 40
+        },
+        "family": {
+          "enum": [
+            "looped",
+            "joined-with-breaks",
+            "french",
+            "german",
+            "print"
+          ]
+        },
+        "slant": {
+          "enum": [
+            "upright",
+            "right"
+          ]
+        },
         "breaks_after": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/definitions/letter"}
+          "items": {
+            "$ref": "#/definitions/letter"
+          }
         },
-        "capitals_join": {"enum": ["yes", "some", "no"]},
-        "loops": {"type": "boolean"},
-        "font": {"type": ["string", "null"], "pattern": "^Playwrite [A-Z]{2}( [A-Za-z]+)?$"},
+        "capitals_join": {
+          "enum": [
+            "yes",
+            "some",
+            "no"
+          ]
+        },
+        "loops": {
+          "type": "boolean"
+        },
+        "font": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^Playwrite [A-Z]{2}( [A-Za-z]+)?$"
+        },
         "countries": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/definitions/country"}
+          "items": {
+            "$ref": "#/definitions/country"
+          }
         },
         "shop_products": {
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/definitions/id"}
+          "items": {
+            "$ref": "#/definitions/id"
+          }
+        },
+        "where": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 30
+        },
+        "picker": {
+          "enum": [
+            "first",
+            "more"
+          ]
         }
       }
     }

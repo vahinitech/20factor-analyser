@@ -197,6 +197,29 @@ def guess(style_check, lean=None, country=None):
     }
 
 
+def ids():
+    """Every style id, in table order."""
+    return [s["id"] for s in styles()]
+
+
+def picked(style_id, page_guess=None):
+    """The style the visitor picked, as the report carries it, beside what
+    the page itself looked like (the guess), or None for an id the table
+    does not hold: an unknown style reads as "Not sure"."""
+    if style_id not in ids():
+        return None
+    guess = page_guess if page_guess and page_guess.get("available") else {}
+    return {
+        "available": True,
+        "guessed": False,
+        "style": style_id,
+        "candidates": [style_id],
+        "pageGuess": guess.get("style"),
+        "basis": guess.get("basis")
+        or {"writing": None, "lean": None, "leanDeg": None},
+    }
+
+
 if __name__ == "__main__":
     if sys.argv[1:] == ["--check"]:
         load()

@@ -1252,6 +1252,68 @@
         "words": {
           "type": "integer",
           "minimum": 0
+        },
+        "letter_style": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "style",
+            "guessed",
+            "candidates"
+          ],
+          "properties": {
+            "style": {
+              "enum": [
+                "print",
+                "looped",
+                "vertical",
+                "straight-india",
+                "joined-breaks",
+                "joined-breaks-au",
+                "french",
+                "german-la",
+                "german-va",
+                "german-sas"
+              ]
+            },
+            "guessed": {
+              "type": "boolean"
+            },
+            "candidates": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "print",
+                  "looped",
+                  "vertical",
+                  "straight-india",
+                  "joined-breaks",
+                  "joined-breaks-au",
+                  "french",
+                  "german-la",
+                  "german-va",
+                  "german-sas"
+                ]
+              }
+            },
+            "page_guess": {
+              "enum": [
+                "print",
+                "looped",
+                "vertical",
+                "straight-india",
+                "joined-breaks",
+                "joined-breaks-au",
+                "french",
+                "german-la",
+                "german-va",
+                "german-sas"
+              ]
+            }
+          },
+          "description": "The letter style taught at school (backend/styles/letter_styles.json): the one the request's letter_style picked (guessed false, with page_guess when the page gave one), or the check's guess for Not sure (guessed true, every style that fits, best first). Never a score."
         }
       },
       "description": "Whether the page is written joined, in print or mixed (vision/style_analysis.py), and from how many words. Never a score: it picks the report's cursive sheets and tips. available false, alone, when the check could not read the page."

@@ -179,6 +179,90 @@ class GuessTests(unittest.TestCase):
         )
 
 
+class PickedTests(unittest.TestCase):
+    def test_a_picked_style_keeps_the_page_guess_beside_it(self):
+        guess = ls.guess(CURSIVE, lean=1.5)
+        out = ls.picked("looped", guess)
+        self.assertEqual(out["style"], "looped")
+        self.assertFalse(out["guessed"])
+        self.assertEqual(out["candidates"], ["looped"])
+        self.assertEqual(out["pageGuess"], "vertical")
+        self.assertEqual(out["basis"]["lean"], "upright")
+
+    def test_no_page_guess(self):
+        out = ls.picked("french", {"available": False})
+        self.assertIsNone(out["pageGuess"])
+        self.assertIsNone(ls.picked("french")["basis"]["writing"])
+
+    def test_an_unknown_style_is_not_sure(self):
+        for bad in ("", "cursive", "LOOPED", "looped ", None):
+            self.assertIsNone(ls.picked(bad), bad)
+
+
+class ServerTests(unittest.TestCase):
+    def setUp(self):
+        from server import app  # pylint: disable=import-outside-toplevel
+
+        self.apply = app._with_letter_style
+        self.payload = {
+            "ok": True,
+            "analysis": {
+                "overall": 71,
+                "styleProfile": {
+                    "available": True,
+                    "verdict": "cursive",
+                    "letterStyle": ls.guess(CURSIVE, lean=12.0),
+                },
+            },
+        }
+
+    def test_the_pick_goes_on_a_copy(self):
+        before = copy.deepcopy(self.payload)
+        out = self.apply(self.payload, "german-la")
+        self.assertEqual(self.payload, before, "the cached payload is shared")
+        letter = out["analysis"]["styleProfile"]["letterStyle"]
+        self.assertEqual(letter["style"], "german-la")
+        self.assertEqual(letter["pageGuess"], "looped")
+        self.assertEqual(out["analysis"]["overall"], 71)
+
+    def test_not_sure_or_unknown_leaves_the_guess(self):
+        for value in ("", "unsure", "nope"):
+            self.assertIs(self.apply(self.payload, value), self.payload)
+
+    def test_a_page_the_style_check_could_not_read(self):
+        payload = {"ok": True, "analysis": {"results": []}}
+        out = self.apply(payload, "print")
+        self.assertEqual(
+            out["analysis"]["styleProfile"]["letterStyle"]["style"], "print"
+        )
+        self.assertFalse(out["analysis"]["styleProfile"]["available"])
+        failed = {"ok": False, "analysis": None}
+        self.assertIs(self.apply(failed, "print"), failed)
+
+    def test_the_compact_report_carries_it(self):
+        from report import (  # pylint: disable=import-outside-toplevel
+            compact_reports,
+        )
+
+        style = compact_reports._style(
+            self.apply(self.payload, "looped")["analysis"]["styleProfile"]
+        )
+        self.assertEqual(
+            style["letter_style"],
+            {
+                "style": "looped",
+                "guessed": False,
+                "candidates": ["looped"],
+                "page_guess": "looped",
+            },
+        )
+        guess = compact_reports._style(
+            self.payload["analysis"]["styleProfile"]
+        )
+        self.assertTrue(guess["letter_style"]["guessed"])
+        self.assertNotIn("page_guess", guess["letter_style"])
+
+
 class SameScoreTests(unittest.TestCase):
     def test_the_lean_moves_no_factor(self):
         base = scoring._score_factor_map({**BASE, "slant_mean": 0.0})

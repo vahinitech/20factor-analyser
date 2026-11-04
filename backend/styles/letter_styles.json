@@ -1,8 +1,26 @@
 {
-  "$comment": "Letter styles (#350). breaks_after is a default: school schemes differ, and the teacher view may change it later. No degree targets for slant: no official source gives one. slant agrees with the face each style is drawn in, measured with vision/letter_geometry._slant on Google Fonts' files (docs/history/letter-style-guess-2026-11-04.md). shop_products lists the free sheets for that style; styles without their own sheets get none yet. Print has no font: print examples use the site's own type and are labelled print.",
+  "$comment": "Letter styles (#350). breaks_after is a default: school schemes differ, and the teacher view may change it later. No degree targets for slant: no official source gives one. slant agrees with the face each style is drawn in, measured with vision/letter_geometry._slant on Google Fonts' files (docs/history/letter-style-guess-2026-11-04.md). shop_products lists the free sheets for that style; styles without their own sheets get none yet. Print has no font: print examples use the site's own type and are labelled print. picker says whether the check page shows a style at once or under More styles; where is the short line under its name.",
   "version": 1,
   "default_style": "looped",
   "styles": [
+    {
+      "id": "print",
+      "label": "Print",
+      "$comment": "The control: every letter separate. Germany's Grundschrift and Finland's print-only teaching count here.",
+      "family": "print",
+      "slant": "upright",
+      "breaks_after": [],
+      "capitals_join": "no",
+      "loops": false,
+      "font": null,
+      "countries": [
+        "FI",
+        "DE"
+      ],
+      "where": "Letters apart",
+      "picker": "first",
+      "shop_products": []
+    },
     {
       "id": "looped",
       "label": "Looped cursive",
@@ -17,6 +35,8 @@
         "US",
         "IN"
       ],
+      "where": "US, India",
+      "picker": "first",
       "shop_products": [
         "cursive-lesson-1-basic-strokes",
         "cursive-handwriting-worksheets",
@@ -36,11 +56,13 @@
       "countries": [
         "US"
       ],
+      "where": "US",
+      "picker": "first",
       "shop_products": []
     },
     {
       "id": "straight-india",
-      "label": "Straight cursive (India)",
+      "label": "Straight cursive",
       "$comment": "Looped rules written upright, as in many Indian cursive books; named apart from vertical because schools call it this.",
       "family": "looped",
       "slant": "upright",
@@ -51,6 +73,8 @@
       "countries": [
         "IN"
       ],
+      "where": "India",
+      "picker": "more",
       "shop_products": []
     },
     {
@@ -77,11 +101,13 @@
         "GB",
         "US"
       ],
+      "where": "England, California",
+      "picker": "first",
       "shop_products": []
     },
     {
       "id": "joined-breaks-au",
-      "label": "Australian joined (Victoria)",
+      "label": "Australian joined",
       "$comment": "Victorian Modern Cursive. The other states' scripts (Playwrite AU NSW, QLD, SA, TAS) are entries to add the same way.",
       "family": "joined-with-breaks",
       "slant": "right",
@@ -102,6 +128,8 @@
       "countries": [
         "AU"
       ],
+      "where": "Victoria",
+      "picker": "more",
       "shop_products": []
     },
     {
@@ -116,6 +144,8 @@
       "countries": [
         "FR"
       ],
+      "where": "France",
+      "picker": "more",
       "shop_products": []
     },
     {
@@ -130,6 +160,8 @@
       "countries": [
         "DE"
       ],
+      "where": "Germany (LA)",
+      "picker": "more",
       "shop_products": []
     },
     {
@@ -144,6 +176,8 @@
       "countries": [
         "DE"
       ],
+      "where": "Germany (VA)",
+      "picker": "more",
       "shop_products": []
     },
     {
@@ -158,22 +192,8 @@
       "countries": [
         "DE"
       ],
-      "shop_products": []
-    },
-    {
-      "id": "print",
-      "label": "Print",
-      "$comment": "The control: every letter separate. Germany's Grundschrift and Finland's print-only teaching count here.",
-      "family": "print",
-      "slant": "upright",
-      "breaks_after": [],
-      "capitals_join": "no",
-      "loops": false,
-      "font": null,
-      "countries": [
-        "FI",
-        "DE"
-      ],
+      "where": "Germany (SAS)",
+      "picker": "more",
       "shop_products": []
     }
   ]

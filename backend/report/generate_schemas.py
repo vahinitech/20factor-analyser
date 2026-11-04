@@ -29,6 +29,7 @@ from report.json_schema import DRAFT
 from report.report_contract import FACTOR_IDS, SENSOR_LIMITATIONS
 from reading.grammar import RULES as GRAMMAR_RULES
 from reading.spelling import PATTERNS as SPELLING_PATTERNS
+from styles import letter_styles
 
 OUT = Path(__file__).resolve().parents[1] / "schemas"
 BASE = "https://vahinitech.com/schemas/analyser/v2/"
@@ -617,6 +618,31 @@ def common():
                     "available": {"type": "boolean"},
                     "verdict": {"enum": ["cursive", "print", "mixed"]},
                     "words": {"type": "integer", "minimum": 0},
+                    "letter_style": {
+                        "type": "object",
+                        "additionalProperties": False,
+                        "required": ["style", "guessed", "candidates"],
+                        "properties": {
+                            "style": {"enum": letter_styles.ids()},
+                            "guessed": {"type": "boolean"},
+                            "candidates": {
+                                "type": "array",
+                                "minItems": 1,
+                                "uniqueItems": True,
+                                "items": {"enum": letter_styles.ids()},
+                            },
+                            "page_guess": {"enum": letter_styles.ids()},
+                        },
+                        "description": (
+                            "The letter style taught at school "
+                            "(backend/styles/letter_styles.json): the one "
+                            "the request's letter_style picked (guessed "
+                            "false, with page_guess when the page gave "
+                            "one), or the check's guess for Not sure "
+                            "(guessed true, every style that fits, best "
+                            "first). Never a score."
+                        ),
+                    },
                 },
                 "description": (
                     "Whether the page is written joined, in print or "
@@ -1906,6 +1932,19 @@ def request():
                             "the report as age_band and not stored; no "
                             "score uses it yet (#216). A refused band is "
                             "HTTP 422 before the photo is read."
+                        ),
+                    },
+                    "letter_style": {
+                        "type": "string",
+                        "default": "",
+                        "enum": ["", *letter_styles.ids()],
+                        "description": (
+                            "Optional letter style taught at school, by "
+                            "its id in backend/styles/letter_styles.json. "
+                            "Empty is Not sure: the check guesses from "
+                            "the page. It changes which sheets and tips "
+                            "the report offers, never a score; the server "
+                            "reads an unknown id as Not sure. Not stored."
                         ),
                     },
                     "who": {

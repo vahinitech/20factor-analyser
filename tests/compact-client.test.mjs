@@ -27,7 +27,12 @@ console.log('PASS compact client: turned is 90, 180 or 270, otherwise 0');
 // page gets the cursive sheets box; anything malformed reads as unavailable.
 assert.deepEqual(JSON.parse(JSON.stringify(context.VahiniCompact.decode({...response,style:{available:true,verdict:'mixed',words:9}},catalog).analysis.styleProfile)),{available:true,verdict:'mixed',wordsUsed:9});
 for(const style of [undefined,{available:false},{available:true,verdict:'joined'},{available:'yes',verdict:'cursive'}])assert.equal(context.VahiniCompact.decode({...response,style},catalog).analysis.styleProfile.available,false);
-console.log('PASS compact client: the style check reaches the report, malformed reads as unavailable');
+const picked=context.VahiniCompact.decode({...response,style:{available:true,verdict:'cursive',letter_style:{style:'looped',guessed:false,candidates:['looped'],page_guess:'vertical'}}},catalog).analysis.styleProfile.letterStyle;
+assert.deepEqual(JSON.parse(JSON.stringify(picked)),{available:true,style:'looped',guessed:false,candidates:['looped'],pageGuess:'vertical'});
+const unread=context.VahiniCompact.decode({...response,style:{available:false,letter_style:{style:'print',guessed:false,candidates:['print']}}},catalog).analysis.styleProfile;
+assert.equal(unread.available,false);assert.equal(unread.letterStyle.style,'print');
+assert.equal(context.VahiniCompact.decode({...response,style:{available:true,verdict:'print',letter_style:{style:'<b>'}}},catalog).analysis.styleProfile.letterStyle,undefined);
+console.log('PASS compact client: the style check reaches the report, with the letter style, malformed reads as unavailable');
 // Practice report (#122): the catalogue's exercises, tips and settings reach
 // the renderer; an archived catalogue without them gives none.
 for(const name of fs.readdirSync('backend/catalogs')){
