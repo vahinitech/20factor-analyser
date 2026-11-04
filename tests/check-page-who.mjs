@@ -242,7 +242,7 @@ try {
     await page.goto(URL, { waitUntil: 'networkidle' });
     const box = page.locator('#copy-sentence');
     assert.equal(await box.evaluate((d) => d.open), false, 'folded by default');
-    assert.match(await box.locator('summary').innerText(), /Does this page copy a sentence\?[\s\S]*Optional/);
+    assert.match(await box.locator('summary').textContent(), /Does this page copy a sentence\?[\s\S]*Optional/);
     const expected = (body) => (body.match(/name="expected_text"\r\n\r\n([^\r]*)/) || [])[1];
     const send = async () => {
       bodies.length = 0;   // a local page also tries a second address
@@ -257,8 +257,11 @@ try {
       return body;
     };
     assert.equal(expected(await send()) || '', '', 'empty by default: nothing to compare');
+    assert.equal(await page.locator('#po-sent').innerText(), 'None', 'the Optional row says None');
+    await page.click('#page-opts > summary');
     await page.click('#copy-sentence summary');
     await page.fill('#cs-text', '  Seetha and   Rama practise slowly with care. ');
+    assert.equal(await page.locator('#po-sent').innerText(), 'Added', 'and Added once a sentence is typed');
     assert.equal(expected(await send()), 'Seetha and Rama practise slowly with care.', 'the typed sentence goes with the photo, tidied');
     await ctx.close();
   }

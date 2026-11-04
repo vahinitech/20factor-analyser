@@ -200,3 +200,57 @@
 .ls-more summary { font-size:13px; color:var(--v-accent-text); cursor:pointer; }
 .ls-more .ls-opts { margin-top:8px; }
 .ls-note { font-size:12px; color:var(--v-text-2); margin:8px 0 0; }
+
+/* Letter style and the copied sentence fold into one row under the language,
+   so Analyse sits near the photo (owner, 2026-11-04). app.js fills the row. */
+.page-opts { margin:12px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.page-opts > summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; padding:10px 14px; cursor:pointer; list-style:none; font-size:14px; color:var(--v-text-2); }
+.page-opts > summary::-webkit-details-marker { display:none; }
+.page-opts > summary:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; }
+.po-lead { font-weight:600; color:var(--v-text); }
+.po-pick b { color:var(--v-text); font-weight:600; margin-left:3px; }
+.po-change { margin-left:auto; color:var(--v-accent-text); font-weight:600; }
+.po-body { padding:0 14px 14px; border-top:1px solid var(--v-border); }
+.po-body .copy-sentence { background:var(--v-bg); }
+
+/* The terms line and Analyse stick to the bottom of the screen once a photo
+   is in (the button is enabled), until they reach their place. app.js adds
+   is-stuck for the shadow. */
+.run-bar { margin:16px -14px 0; padding:10px 14px 12px; border-top:1px solid transparent; border-radius:var(--v-radius-lg) var(--v-radius-lg) 0 0; }
+.cl-upload:has(#go-process:not(:disabled)) .run-bar { position:sticky; bottom:0; z-index:6; }
+/* The cookie card (vahinitech.com site.js: body.cc-open, --cc-h) sits in the
+   bottom corner on a first visit and would cover Analyse, so the bar rides
+   just above it until the card is answered. */
+body.cc-open .cl-upload:has(#go-process:not(:disabled)) .run-bar { bottom:var(--cc-h, 0px); }
+/* A field reached with Tab scrolls clear of the stuck bar (and the card). */
+html:has(#go-process:not(:disabled)) { scroll-padding-bottom:calc(var(--run-bar-h, 0px) + var(--cc-h, 0px) + 16px); }
+/* Only the look changes when it sticks, never its size, so nothing jumps
+   when it reaches its place. */
+.cl-upload:has(#go-process:not(:disabled)) .run-bar.is-stuck { background:var(--v-surface); border-top-color:var(--v-border); box-shadow:0 -10px 24px color-mix(in srgb, var(--v-dark) 14%, transparent); }
+.run-bar .run-consent { margin:0 0 10px; }
+.run-bar .actions { margin-top:0 !important; }
+.run-bar-end { display:block; height:1px; }
+
+/* What you will learn: a small piece of handwriting per skill that starts
+   wrong and settles, one row at a time (app.js). Each tile's start is its
+   --f transform; the resting frame is the settled one, so no motion means
+   every tile shows good writing. */
+.benefit-list li { align-items:center; gap:10px; border-radius:10px; transition:background var(--v-dur-base) var(--v-ease); }
+.benefit-list li.is-on { background:color-mix(in srgb, var(--v-surface) 60%, transparent); }
+.sk { flex:0 0 72px; width:72px; height:44px; background:var(--v-surface); border:1px solid var(--v-border); border-radius:10px; overflow:visible; }
+.sk text { font:600 27px var(--v-font-hand); fill:var(--v-text); transform-box:fill-box; transform-origin:50% 100%; }
+.sk .sk-base { stroke:var(--v-border-strong); stroke-width:1; }
+.sk .sk-x { stroke:var(--v-border); stroke-width:1; stroke-dasharray:2 2; }
+.sk-space text { font-size:22px; }
+.sk .sk-gap { stroke:var(--v-accent); stroke-width:1.6; stroke-linecap:round; opacity:0; }
+.sk-shape { --c:var(--v-info); } .sk-size { --c:var(--v-success); } .sk-line { --c:var(--v-warning); } .sk-space { --c:var(--v-accent); } .sk-read { --c:var(--v-danger); }
+.benefit-list li.is-on .sk { border-color:color-mix(in srgb, var(--c) 45%, var(--v-border)); }
+.benefit-list li.is-on .sk text[style] { animation:sk-settle 3.2s var(--v-ease) both; }
+.benefit-list li.is-on .sk-read text { animation:sk-settle 3.2s var(--v-ease) both, sk-blur 3.2s var(--v-ease) both; }
+.benefit-list li.is-on .sk-gap { animation:sk-gap 3.2s var(--v-ease) both; }
+@keyframes sk-settle { 0%, 30% { transform:var(--f, none); fill:var(--c); } 70%, 100% { transform:none; fill:var(--v-text); } }
+@keyframes sk-blur { 0%, 30% { filter:blur(1.2px); } 70%, 100% { filter:none; } }
+@keyframes sk-gap { 0%, 65% { opacity:0; } 80%, 100% { opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .benefit-list li.is-on .sk text, .benefit-list li.is-on .sk-gap { animation:none; } .sk .sk-gap { opacity:1; } }
+/* Lift the site's Feedback button above the stuck Analyse bar (as site.css does for the cookie card). */
+body:has(#go-process:not(:disabled)):has(.run-bar.is-stuck) .vfb-launch { bottom:calc(12px + var(--run-bar-h, 0px) + var(--cc-h, 0px)) !important; }

@@ -329,6 +329,12 @@
          frontend/gen_letter_styles.py; edit the registry, not this. English
          pages only: app.js hides it for Telugu. The style is sent with the
          photo as one word, changes no score and is not kept. -->
+    <!-- Letter style and the copied sentence fold into one row, so Analyse
+         stays near the photo (owner, 2026-11-04). The row shows what is
+         picked; ?style= opens it. -->
+    <details class="page-opts" id="page-opts">
+      <summary><span class="po-lead">Optional</span><span class="po-pick">Letter style <b id="po-style">Not sure</b></span><span class="po-pick">Copied sentence <b id="po-sent">None</b></span><span class="po-change">Change</span></summary>
+      <div class="po-body">
     <!-- letter-styles:begin -->
     <fieldset class="letter-style" id="letter-style">
       <legend>Letter style taught at school</legend>
@@ -360,6 +366,8 @@
         <label for="cs-text">The sentence on this page</label>
         <textarea id="cs-text" maxlength="300" rows="2" spellcheck="false" placeholder="Type the sentence as it was given, e.g. Seetha and Rama practise slowly with care."></textarea>
         <p class="cs-note">We compare the words on the page with this sentence. Leave it empty for free writing, notes or anything else.</p>
+      </div>
+    </details>
       </div>
     </details>
 
@@ -459,22 +467,29 @@
     </details>
     </div>
     <p class="pro-plans">For a caseload, a class or your students: <a href="/plans.html">plans</a> · <a href="/for-therapists.html">how therapists use Vahini</a></p>
+    <!-- The terms line and Analyse travel together: once a photo is in they
+         stick to the bottom of the screen until they reach this place. -->
+    <div class="run-bar" id="run-bar">
     <p class="run-consent" id="run-consent">By running the check you agree to the <a href="/terms.html#analyser-terms">terms of the check</a>. If the writer is under 18, a parent, guardian or teacher says yes first. It describes the page and does not diagnose anything.</p>
     <div class="actions">
       <button class="btn btn-primary" id="go-process" disabled>Analyse my handwriting<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
       <p class="run-hint">Choose a photo to begin.</p>
     </div>
+    </div>
+    <span class="run-bar-end" id="run-bar-end" aria-hidden="true"></span>
      </div>
 
      <aside class="intake-aside check-benefits" aria-labelledby="benefit-title">
       <h2 id="benefit-title">What you will learn</h2>
       <p class="benefit-intro">Your handwriting is checked across five skills.</p>
-      <ul class="benefit-list">
-        <li><span aria-hidden="true">Aa</span><div><h3>Letter shapes</h3><p>How clearly and consistently you form letters.</p></div></li>
-        <li><span aria-hidden="true">aA</span><div><h3>Letter size</h3><p>How even your letter sizes are.</p></div></li>
-        <li><span aria-hidden="true">≡</span><div><h3>Writing on the line</h3><p>How well your writing sits on the line.</p></div></li>
-        <li><span aria-hidden="true">↔</span><div><h3>Word spacing</h3><p>The gaps between your words.</p></div></li>
-        <li><span aria-hidden="true">Ab</span><div><h3>Readability</h3><p>How easy your writing is to read.</p></div></li>
+      <!-- Each skill's tile: handwriting that starts wrong and settles,
+           one row at a time (app.js setupSkillTiles). Drawn in Caveat. -->
+      <ul class="benefit-list" id="benefit-list">
+        <li><svg class="sk sk-shape" viewBox="0 0 72 44" aria-hidden="true"><line class="sk-base" x1="4" y1="33" x2="68" y2="33"/><text x="9" y="32">a</text><text x="30" y="32" style="--f:rotate(-30deg) scale(1.4,.75)">a</text><text x="51" y="32">a</text></svg><div><h3>Letter shapes</h3><p>How clearly and consistently you form letters.</p></div></li>
+        <li><svg class="sk sk-size" viewBox="0 0 72 44" aria-hidden="true"><line class="sk-x" x1="4" y1="22" x2="68" y2="22"/><line class="sk-base" x1="4" y1="33" x2="68" y2="33"/><text x="8" y="32" style="--f:scale(1.6)">a</text><text x="23" y="32" style="--f:scale(.65)">c</text><text x="37" y="32" style="--f:scale(1.35)">e</text><text x="52" y="32" style="--f:scale(.7)">o</text></svg><div><h3>Letter size</h3><p>How even your letter sizes are.</p></div></li>
+        <li><svg class="sk sk-line" viewBox="0 0 72 44" aria-hidden="true"><line class="sk-base" x1="4" y1="33" x2="68" y2="33"/><text x="10" y="32">l</text><text x="18" y="32" style="--f:translateY(-3px)">i</text><text x="25" y="32" style="--f:translateY(-6px)">n</text><text x="38" y="32" style="--f:translateY(-9px)">e</text><text x="50" y="32" style="--f:translateY(-12px)">s</text></svg><div><h3>Writing on the line</h3><p>How well your writing sits on the line.</p></div></li>
+        <li><svg class="sk sk-space" viewBox="0 0 72 44" aria-hidden="true"><line class="sk-base" x1="4" y1="33" x2="68" y2="33"/><text x="5" y="32" style="--f:translateX(6px)">I</text><text x="21" y="32">am</text><text x="49" y="32" style="--f:translateX(-7px)">up</text><path class="sk-gap" d="M13 38h7M44 38h6"/></svg><div><h3>Word spacing</h3><p>The gaps between your words.</p></div></li>
+        <li><svg class="sk sk-read" viewBox="0 0 72 44" aria-hidden="true"><line class="sk-base" x1="4" y1="33" x2="68" y2="33"/><text x="12" y="32" style="--f:rotate(-16deg) translateY(-3px)">r</text><text x="24" y="32" style="--f:rotate(20deg) scale(1.25,.8)">e</text><text x="36" y="32" style="--f:rotate(-12deg) translateX(-3px)">a</text><text x="49" y="32" style="--f:rotate(18deg) scale(.8,1.25)">d</text></svg><div><h3>Readability</h3><p>How easy your writing is to read.</p></div></li>
       </ul>
       <figure class="check-sample">
         <figcaption>What the check found on a sample page</figcaption>

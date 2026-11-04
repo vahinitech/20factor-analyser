@@ -494,6 +494,8 @@ jobs:
         run: npm run test:student-view
       - name: I am, Report in and the line-by-line sweep on the check page
         run: npm run test:check-page-who
+      - name: Analyse on the first screen with a photo, and the five skill tiles
+        run: npm run test:check-page-run-bar
       - name: Pihu's guide to the check page's buttons
         run: npm run test:pihu-guide
       - name: Words and sentences to check, on the child's own ink (#317)
