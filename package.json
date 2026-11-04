@@ -22,6 +22,7 @@
     "test:check-dropped": "node tests/check-dropped.mjs",
     "test:handwriting-not-read": "node tests/handwriting-not-read.mjs",
     "test:telugu-choice": "node tests/telugu-choice.mjs",
+    "test:letter-style-choice": "node tests/letter-style-choice.mjs",
     "test:notice-art": "node tests/notice-art.mjs",
     "test:not-writing-page": "node tests/not-writing-page.mjs",
     "test:turned-page": "node tests/turned-page.mjs",

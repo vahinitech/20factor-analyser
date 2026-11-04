@@ -72,6 +72,24 @@
           "pattern": "^(([3-9]|1[0-8])-([3-9]|1[0-8]))?$",
           "description": "Optional writer's age as two whole-year ages from 3 to 18, the first below the second, such as 6-7. Never a birth date. Echoed in the report as age_band and not stored; no score uses it yet (#216). A refused band is HTTP 422 before the photo is read."
         },
+        "letter_style": {
+          "type": "string",
+          "default": "",
+          "enum": [
+            "",
+            "print",
+            "looped",
+            "vertical",
+            "straight-india",
+            "joined-breaks",
+            "joined-breaks-au",
+            "french",
+            "german-la",
+            "german-va",
+            "german-sas"
+          ],
+          "description": "Optional letter style taught at school, by its id in backend/styles/letter_styles.json. Empty is Not sure: the check guesses from the page. It changes which sheets and tips the report offers, never a score; the server reads an unknown id as Not sure. Not stored."
+        },
         "who": {
           "type": "string",
           "default": "",

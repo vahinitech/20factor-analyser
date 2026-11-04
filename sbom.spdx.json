@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-9a0a1c984bf9fd15894d",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-59458bed4241eefdcc68",
   "creationInfo": {
-    "created": "2026-11-02T16:23:22Z",
+    "created": "2026-11-04T04:42:39Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
@@ -240,6 +240,142 @@
         }
       ],
       "comment": "Locally served report font: the Telugu letters of the report's serif text, scaled to Spectral (Telugu subset, from the @fontsource/noto-serif-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteAr",
+      "name": "playwrite-ar.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritear/PlaywriteAR%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bdeb6e36a4d0c7fdee2b8b831c70ca0c81285d338ca5d8c8210cd04e38ad6342"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteAuVic",
+      "name": "playwrite-au-vic.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteauvic/PlaywriteAUVIC%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "14c7ae493902cd27b0ec76aff74bc4724a2b922c61cbad4e2a79b35814f16ac5"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeLa",
+      "name": "playwrite-de-la.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedela/PlaywriteDELA%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6b75f0ac86b5a53faba28631fa59d2aebd6adbc5c5ca9f713fe6ade23e95c549"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeSas",
+      "name": "playwrite-de-sas.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedesas/PlaywriteDESAS%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cc992181284dab35d0068d27a2849aba9e56de39a3a664ae787ec73a92f6ad69"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeVa",
+      "name": "playwrite-de-va.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedeva/PlaywriteDEVA%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7c796ae1b686890aca27219db6223b1cb8d9b10f42355b87daec7462da296dc7"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteFrTrad",
+      "name": "playwrite-fr-trad.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritefrtrad/PlaywriteFRTrad%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "24bf683196a113b6651ca2818141cf41ddfb0468b07bd5a6d3bbcb58143496ed"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteGbJ",
+      "name": "playwrite-gb-j.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritegbj/PlaywriteGBJ%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9b8339c8cc7747e90f6aefbe87171b42f13f7d966f617f6844ee3b41a0bb843a"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteUsTrad",
+      "name": "playwrite-us-trad.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteustrad/PlaywriteUSTrad%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f292fb043b65f17256f559685234decfb14215d2358433bae0ed4564417566b1"
+        }
+      ]
     },
     {
       "SPDXID": "SPDXRef-LocalFont-Spectral-Regular",
@@ -3412,6 +3548,46 @@
       "spdxElementId": "SPDXRef-Package-Vahini",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-LocalFont-NotoSerifTelugu-Regular"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteAr"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteAuVic"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeLa"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeSas"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeVa"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteFrTrad"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteGbJ"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteUsTrad"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",

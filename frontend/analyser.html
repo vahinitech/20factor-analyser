@@ -36,6 +36,7 @@
 <!-- The Vahini design system (--v-* tokens, v-* classes), served by vahinitech.com -->
 <link rel="stylesheet" href="/site/design/v1/vahini.css">
 <link rel="stylesheet" href="styles/check-landing.css">
+<link rel="stylesheet" href="styles/letter-style-fonts.css">
 <style>
   /* report actions sit at the top of the report and scroll away (not sticky) */
   .report-toolbar{ position:static; justify-content:flex-end; padding:14px 22px; }
@@ -322,6 +323,33 @@
       <label><input type="radio" name="write-lang" value="te"> <span lang="te">తెలుగు</span> Telugu <small>Not yet scored</small></label>
       <p class="write-lang-note" id="write-lang-note" role="status" hidden>Telugu handwriting is not scored yet. The check will tell you, and it will not use a free check. For a score today, write four lines in English.</p>
     </fieldset>
+    <!-- The letter style taught at school (owner, 2026-11-03, #346): "Not
+         sure" until the visitor picks, and then the check guesses from the
+         page. Written from backend/styles/letter_styles.json by
+         frontend/gen_letter_styles.py; edit the registry, not this. English
+         pages only: app.js hides it for Telugu. The style is sent with the
+         photo as one word, changes no score and is not kept. -->
+    <!-- letter-styles:begin -->
+    <fieldset class="letter-style" id="letter-style">
+      <legend>Letter style taught at school</legend>
+      <div class="ls-opts">
+        <label class="ls-opt ls-print"><input type="radio" name="letter-style" value="unsure" checked><span class="ls-name">Not sure</span><span class="ls-where">We find it from the page</span></label>
+        <label class="ls-opt ls-print"><input type="radio" name="letter-style" value="print"><span class="ls-name">Print</span><span class="ls-where">Letters apart</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="looped"><span class="ls-name" style="font-family:'Playwrite US Trad',cursive">Looped cursive</span><span class="ls-where">US, India</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="vertical"><span class="ls-name" style="font-family:'Playwrite AR',cursive">Vertical cursive</span><span class="ls-where">US</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="joined-breaks"><span class="ls-name" style="font-family:'Playwrite GB J',cursive">Joined with breaks</span><span class="ls-where">England, California</span></label>
+      </div>
+      <details class="ls-more"><summary>More styles</summary><div class="ls-opts">
+        <label class="ls-opt"><input type="radio" name="letter-style" value="straight-india"><span class="ls-name" style="font-family:'Playwrite AR',cursive">Straight cursive</span><span class="ls-where">India</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="joined-breaks-au"><span class="ls-name" style="font-family:'Playwrite AU VIC',cursive">Australian joined</span><span class="ls-where">Victoria</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="french"><span class="ls-name" style="font-family:'Playwrite FR Trad',cursive">French cursive</span><span class="ls-where">France</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="german-la"><span class="ls-name" style="font-family:'Playwrite DE LA',cursive">Lateinische Ausgangsschrift</span><span class="ls-where">Germany (LA)</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="german-va"><span class="ls-name" style="font-family:'Playwrite DE VA',cursive">Vereinfachte Ausgangsschrift</span><span class="ls-where">Germany (VA)</span></label>
+        <label class="ls-opt"><input type="radio" name="letter-style" value="german-sas"><span class="ls-name" style="font-family:'Playwrite DE SAS',cursive">Schulausgangsschrift</span><span class="ls-where">Germany (SAS)</span></label>
+      </div></details>
+      <p class="ls-note">The style changes the tips and practice sheets in your report, never the score.</p>
+    </fieldset>
+    <!-- letter-styles:end -->
     <!-- An optional sentence the page copies (owner, 2026-10-25). Spelling is
          then checked against it, which finds far more than free writing.
          Empty means free writing, notes or anything else: nothing assumed.

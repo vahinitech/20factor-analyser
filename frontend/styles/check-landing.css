@@ -183,3 +183,20 @@
 .cs-body label { display:block; margin:0 0 4px; font-size:14px; color:var(--v-text-2); }
 .cs-body textarea { width:100%; box-sizing:border-box; min-height:60px; padding:8px 10px; font:15px/1.4 var(--v-font-sans); color:var(--v-text); background:var(--v-bg); border:1px solid var(--v-border-strong); border-radius:var(--v-radius-sm); resize:vertical; }
 .cs-note { margin:6px 0 0; font-size:13px; color:var(--v-text-2); }
+/* Letter style taught at school (gen_letter_styles.py writes the options).
+   Each name is drawn in its style's face; print and Not sure stay in the
+   page's own type. */
+#screen-upload .letter-style { border:0; margin:14px 0 0; padding:0; min-width:0; }
+#screen-upload .letter-style legend { font-weight:600; font-size:15px; color:var(--v-text); margin-bottom:8px; padding:0; }
+.ls-opts { display:flex; flex-wrap:wrap; gap:8px; }
+.ls-opt { position:relative; display:inline-flex; flex-direction:column; align-items:flex-start; gap:2px; border:1px solid var(--v-border); background:var(--v-surface); border-radius:12px; padding:7px 12px 6px; cursor:pointer; }
+.ls-opt input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+.ls-opt:has(input:checked) { border-color:var(--v-accent); box-shadow:0 0 0 2px var(--v-accent-soft); background:var(--v-accent-soft); }
+.ls-opt:has(input:focus-visible) { outline:2px solid var(--v-accent); outline-offset:2px; }
+.ls-name { font-size:19px; line-height:1.35; color:var(--v-text); }
+.ls-print .ls-name { font:600 14px/1.9 var(--v-font-sans); }
+.ls-where { font-size:11px; color:var(--v-text-2); }
+.ls-more { margin-top:8px; }
+.ls-more summary { font-size:13px; color:var(--v-accent-text); cursor:pointer; }
+.ls-more .ls-opts { margin-top:8px; }
+.ls-note { font-size:12px; color:var(--v-text-2); margin:8px 0 0; }

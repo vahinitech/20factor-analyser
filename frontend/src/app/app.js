@@ -1159,6 +1159,21 @@ function setWriteLang(value){
   window.VAHINI_OCR_LANG = te ? 'te' : 'auto';
   const note = $('#write-lang-note');
   if (note) note.hidden = !te;
+  // Letter styles are an English-page choice (backend/styles).
+  const styles = $('#letter-style');
+  if (styles) styles.hidden = te;
+}
+/* The letter style taught at school (#346): Not sure until picked. A link
+   such as analyser.html?style=looped opens with that style picked, so the
+   site's cursive pages can send a family straight here. */
+function setupLetterStyle(){
+  const wanted = new URLSearchParams(location.search).get('style');
+  if (!wanted || !/^[a-z0-9-]{2,40}$/.test(wanted)) return;
+  const radio = document.querySelector(`input[name="letter-style"][value="${wanted}"]`);
+  if (!radio) return;
+  radio.checked = true;
+  const more = radio.closest('details');
+  if (more) more.open = true;
 }
 function setupWriteLang(){
   const radios = document.querySelectorAll('input[name="write-lang"]');
@@ -1523,7 +1538,7 @@ function renderCaseStudies(){
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
-  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPassages(); setupLogo();
+  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupLetterStyle(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
   const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (whoAsked()) return; if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead

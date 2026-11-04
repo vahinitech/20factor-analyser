@@ -104,6 +104,17 @@ function appendWho(fd){
   if (who) fd.append('who', who);
 }
 
+/* The letter style taught at school (#346), as its registry id, when the
+   visitor picked one on an English page. Not sure sends nothing, and the
+   check guesses. One word, changes no score, never kept. */
+function appendLetterStyle(fd){
+  const doc = global.document;
+  if (!doc || (window.VAHINI_OCR_LANG || 'auto') === 'te') return;
+  const picked = doc.querySelector('input[name="letter-style"]:checked');
+  const value = picked ? picked.value : '';
+  if (value && value !== 'unsure' && /^[a-z0-9-]{2,40}$/.test(value)) fd.append('letter_style', value);
+}
+
 async function tryEndpoint(url, blob){
   const fd = new FormData();
   fd.append('image', blob, 'sample.png');
@@ -201,6 +212,7 @@ async function serverPythonReport(blob, expectedText){
       fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
       fd.append('expected_text', expectedText || '');
       appendWho(fd);
+      appendLetterStyle(fd);
       const ctrl = new AbortController();
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.

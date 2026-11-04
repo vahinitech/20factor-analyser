@@ -106,10 +106,22 @@ def _style(profile):
     if not isinstance(profile, dict):
         return None
     if not profile.get("available"):
-        return {"available": False}
-    out = {"available": True, "verdict": profile.get("verdict")}
-    if isinstance(profile.get("wordsUsed"), int):
-        out["words"] = profile["wordsUsed"]
+        out = {"available": False}
+    else:
+        out = {"available": True, "verdict": profile.get("verdict")}
+        if isinstance(profile.get("wordsUsed"), int):
+            out["words"] = profile["wordsUsed"]
+    letter = profile.get("letterStyle")
+    if isinstance(letter, dict) and letter.get("available"):
+        # The style picked, or the guess for "Not sure" (#350): never a
+        # score; the report's sheets and tips will read it.
+        out["letter_style"] = {
+            "style": letter["style"],
+            "guessed": bool(letter.get("guessed")),
+            "candidates": list(letter.get("candidates") or []),
+        }
+        if letter.get("pageGuess"):
+            out["letter_style"]["page_guess"] = letter["pageGuess"]
     return out
 
 

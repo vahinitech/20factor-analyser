@@ -26,8 +26,11 @@
   // The style check (#351): joined, print or mixed, which picks the
   // report's cursive sheets. Anything else reads as not available.
   function styleOf(style){
-    if(!style||style.available!==true||!['cursive','print','mixed'].includes(style.verdict))return {available:false};
-    return {available:true,verdict:style.verdict,wordsUsed:Number.isInteger(style.words)?style.words:null};
+    const out=(!style||style.available!==true||!['cursive','print','mixed'].includes(style.verdict))?{available:false}:{available:true,verdict:style.verdict,wordsUsed:Number.isInteger(style.words)?style.words:null};
+    // The letter style picked, or guessed for Not sure (#350).
+    const l=style&&style.letter_style,id=v=>typeof v==='string'&&/^[a-z0-9-]{2,40}$/.test(v);
+    if(l&&id(l.style))out.letterStyle={available:true,style:l.style,guessed:l.guessed===true,candidates:Array.isArray(l.candidates)?l.candidates.filter(id):[l.style],pageGuess:id(l.page_guess)?l.page_guess:null};
+    return out;
   }
   // The practice catalogue served with this dictionary version (#122):
   // stages, tries by band, tier defaults and each factor's exercises and
