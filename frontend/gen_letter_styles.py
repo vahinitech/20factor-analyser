@@ -106,8 +106,8 @@ def picker_html():
         '<div class="ls-opts">'
         + "".join(pad + _option(s) for s in more)
         + "\n      </div></details>"
-        '\n      <p class="ls-note">The style changes the tips and practice'
-        " sheets in your report, never the score.</p>"
+        '\n      <p class="ls-note">Not sure is fine: we look at the page.'
+        " Your score is the same whatever you pick.</p>"
         "\n    </fieldset>\n    "
     )
 
