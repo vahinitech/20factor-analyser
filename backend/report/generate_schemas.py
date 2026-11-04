@@ -632,6 +632,37 @@ def common():
                                 "items": {"enum": letter_styles.ids()},
                             },
                             "page_guess": {"enum": letter_styles.ids()},
+                            "name": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 60,
+                                "description": (
+                                    "The style's label, as the check "
+                                    "page names it."
+                                ),
+                            },
+                            "font": {
+                                "type": ["string", "null"],
+                                "maxLength": 40,
+                                "description": (
+                                    "The style's own cursive face "
+                                    "(Playwrite), or null for print."
+                                ),
+                            },
+                            "sheets": {
+                                "type": "array",
+                                "maxItems": 8,
+                                "uniqueItems": True,
+                                "items": {
+                                    "type": "string",
+                                    "pattern": "^[a-z0-9-]{2,80}$",
+                                },
+                                "description": (
+                                    "Shop product slugs of the style's "
+                                    "free sheets; empty while none are "
+                                    "made."
+                                ),
+                            },
                         },
                         "description": (
                             "The letter style taught at school "

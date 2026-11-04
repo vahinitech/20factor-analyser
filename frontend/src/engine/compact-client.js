@@ -29,7 +29,7 @@
     const out=(!style||style.available!==true||!['cursive','print','mixed'].includes(style.verdict))?{available:false}:{available:true,verdict:style.verdict,wordsUsed:Number.isInteger(style.words)?style.words:null};
     // The letter style picked, or guessed for Not sure (#350).
     const l=style&&style.letter_style,id=v=>typeof v==='string'&&/^[a-z0-9-]{2,40}$/.test(v);
-    if(l&&id(l.style))out.letterStyle={available:true,style:l.style,guessed:l.guessed===true,candidates:Array.isArray(l.candidates)?l.candidates.filter(id):[l.style],pageGuess:id(l.page_guess)?l.page_guess:null};
+    if(l&&id(l.style))out.letterStyle={available:true,style:l.style,guessed:l.guessed===true,candidates:Array.isArray(l.candidates)?l.candidates.filter(id):[l.style],pageGuess:id(l.page_guess)?l.page_guess:null,name:typeof l.name==='string'?l.name.slice(0,60):l.style,font:typeof l.font==='string'&&/^[A-Za-z0-9 ]{1,40}$/.test(l.font)?l.font:null,sheets:Array.isArray(l.sheets)?l.sheets.filter(v=>typeof v==='string'&&/^[a-z0-9-]{2,80}$/.test(v)).slice(0,8):[]};
     return out;
   }
   // The practice catalogue served with this dictionary version (#122):

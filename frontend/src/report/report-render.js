@@ -856,15 +856,39 @@ function render(host, data){
   // diagnosis or a promise (owner, 2026-10-11).
   const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
   const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help</a></p></div>`;
-  // Cursive sheets (owner, 2026-11-03): on a page written joined, or
-  // joined in places, the free cursive sheets. The links go to their shop
-  // pages, where the family downloads them (owner: the shop gets the
-  // visit), never straight to the PDFs.
+  // Cursive sheets (owner, 2026-11-03, 2026-11-04): the letter style the
+  // family picked on the check page leads; on Not sure, a page written
+  // joined, or joined in places, gets the sheets of the style it looks
+  // like. A style's sheets are its own: one with none yet says so and
+  // points to our team, never to another style's sheets. The links go to
+  // the shop pages, where the family downloads them (owner: the shop gets
+  // the visit), never straight to the PDFs.
   const style=analysis.styleProfile;
-  const joinedPage=latin&&style&&style.available&&(style.verdict==='cursive'||style.verdict==='mixed');
+  const verdict=style&&style.available?style.verdict:null;
+  const joinedPage=verdict==='cursive'||verdict==='mixed';
+  // A report from before the style guess (#350) carries no letterStyle:
+  // a joined page then gets the looped sheets as before, with no lead.
+  const LOOPED={style:'looped',guessed:true,legacy:true,sheets:['cursive-lesson-1-basic-strokes','cursive-handwriting-worksheets','cursive-connecting-letters-worksheets']};
+  const ls=style&&style.letterStyle&&style.letterStyle.available?style.letterStyle:(joinedPage?LOOPED:null);
+  const picked=ls&&!ls.guessed?ls:null;
+  const lsCursive=ls&&ls.style!=='print';
+  const showStyle=latin&&lsCursive&&(picked||joinedPage);
   const SHOP='shop.vahinitech.com';
-  const shopLink=(slug,key)=>`<a href="${esc(`https://${SHOP}/products/${slug}/`)}" target="_blank" rel="noopener">${esc(t(key))}</a>`;
-  const cursiveNote=joinedPage?`<div class="p2-cursive" data-cursive-sheets><p><b>${esc(t('cursive.title'))}</b> ${shopLink('cursive-lesson-1-basic-strokes','cursive.lesson1')} · ${shopLink('cursive-handwriting-worksheets','cursive.letters')} · ${shopLink('cursive-connecting-letters-worksheets','cursive.joins')}. ${esc(t('cursive.where'))} ${SHOP}</p></div>`:'';
+  const SHEET_KEYS={'cursive-lesson-1-basic-strokes':'cursive.lesson1','cursive-handwriting-worksheets':'cursive.letters','cursive-connecting-letters-worksheets':'cursive.joins'};
+  const sheetName=slug=>SHEET_KEYS[slug]?t(SHEET_KEYS[slug]):slug.replace(/-/g,' ');
+  const shopLink=slug=>`<a href="${esc(`https://${SHOP}/products/${slug}/`)}" target="_blank" rel="noopener">${esc(sheetName(slug))}</a>`;
+  const styleName=l=>`<span class="p2-style-name"${l.font?` style="font-family:'${esc(l.font)}',cursive"`:''}>${esc(l.name||l.style)}</span>`;
+  let cursiveNote='';
+  if(showStyle){
+    const sheets=(ls.sheets||[]).filter(x=>/^[a-z0-9-]{2,80}$/.test(x));
+    const lead=picked
+      ?`<b>${esc(t('cursive.school'))}</b> ${styleName(ls)}.${verdict?' '+esc(t('cursive.page.'+verdict)):''}`
+      :`<b>${esc(t('cursive.looks'))}</b> ${styleName(ls)}. ${esc(t('cursive.pick'))}`;
+    const body=sheets.length
+      ?`<b>${esc(t('cursive.title'))}</b> ${sheets.map(shopLink).join(' · ')}. ${esc(t('cursive.where'))} ${SHOP}`
+      :`${esc(t('cursive.making'))} ${esc(t('cursive.ask'))} <a href="${esc(sheetBase()+'/reach.html?topic=handwriting')}" target="_blank" rel="noopener">${SITE}/reach</a>`;
+    cursiveNote=`<div class="p2-cursive" data-cursive-sheets data-letter-style="${esc(ls.style)}">${ls.legacy?'':`<p>${lead}</p>`}<p>${body}</p></div>`;
+  }
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
   const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>

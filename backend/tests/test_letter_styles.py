@@ -254,8 +254,26 @@ class ServerTests(unittest.TestCase):
                 "guessed": False,
                 "candidates": ["looped"],
                 "page_guess": "looped",
+                "name": "Looped cursive",
+                "font": "Playwrite US Trad",
+                "sheets": [
+                    "cursive-lesson-1-basic-strokes",
+                    "cursive-handwriting-worksheets",
+                    "cursive-connecting-letters-worksheets",
+                ],
             },
         )
+        # A style with no sheets yet carries none, never another style's:
+        # the report then says its sheets are being made.
+        french = compact_reports._style(
+            self.apply(self.payload, "french")["analysis"]["styleProfile"]
+        )["letter_style"]
+        self.assertEqual(french["sheets"], [])
+        self.assertEqual(french["font"], "Playwrite FR Trad")
+        printed = compact_reports._style(
+            self.apply(self.payload, "print")["analysis"]["styleProfile"]
+        )["letter_style"]
+        self.assertIsNone(printed["font"])
         guess = compact_reports._style(
             self.payload["analysis"]["styleProfile"]
         )
