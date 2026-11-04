@@ -201,6 +201,10 @@ function init(){
   const againReport = doc.getElementById('guide-again-report');
   if (againReport) againReport.addEventListener('click', (e) => { e.preventDefault(); start('report'); });
   if (!doc.getElementById('who-bar') || seen('check')) return;
+  // A family sent to the letter styles (#letter-style, the site's cursive
+  // links) came to pick one: the tour would scroll them away. It waits for
+  // their next visit, and "Show me around" still starts it.
+  if (global.location.hash === '#letter-style') return;
   whenFree('check', 'screen-upload', 900);
 }
 if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', init);

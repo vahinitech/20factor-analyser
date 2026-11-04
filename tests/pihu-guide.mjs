@@ -8,6 +8,8 @@
 //   after the visitor has clicked or typed;
 // - once per browser: Done, Skip, Escape or a chosen photo ends it for good,
 //   and "Show me around" brings it back;
+// - not on a visit sent to the letter styles (#letter-style), which keeps
+//   the styles on screen; that visit does not count as seen;
 // - Pihu is the host's cut layers when the host maps them, the whole bird
 //   otherwise; the wings beat only while flying, and with motion off Pihu
 //   appears beside each button without flying;
@@ -23,7 +25,7 @@ let browser;
 try {
   for (let i = 0; i < 60; i++) { try { if ((await fetch('http://127.0.0.1:4231/')).ok) break; } catch {} await new Promise((r) => setTimeout(r, 100)); }
   browser = await chromium.launch();
-  const open = async (viewport, { motion = 'no-preference', art = ART } = {}) => {
+  const open = async (viewport, { motion = 'no-preference', art = ART, hash = '' } = {}) => {
     const ctx = await browser.newContext({ viewport, reducedMotion: motion });
     await ctx.addInitScript((art) => { if (art) window.VAHINI_GUIDE_ART = art; window.VAHINI_REPORT_ART = { tip: '/frontend/assets/samples/handwriting-sample.jpg' }; }, art);
     const page = await ctx.newPage();
@@ -31,7 +33,7 @@ try {
     page.on('request', (r) => { if (r.method() !== 'GET') sent.push(r.url()); });
     await page.route('**/health', (r) => r.fulfill({ json: { ok: true } }));
     await page.route('**/api/v2/me', (r) => r.fulfill({ json: { access: { tier: 'free' } } }));
-    await page.goto(URL, { waitUntil: 'networkidle' });
+    await page.goto(URL + hash, { waitUntil: 'networkidle' });
     return { page, sent, ctx };
   };
   const guide = (page) => page.locator('#pihu-guide.on .pg-say');
@@ -153,7 +155,16 @@ try {
     assert.ok(await lit(page, '#choose-photo'), 'the next button is lit at once');
     await ctx.close();
   }
-  console.log('pihu-guide: four stops at 390 and 1440 px, once per browser, Show me around, Skip, Escape; layers, no flight with motion off');
+  {
+    const { page, ctx } = await open({ width: 390, height: 844 }, { hash: '#letter-style' });
+    await page.waitForTimeout(2500);
+    assert.equal(await guide(page).count(), 0, 'no tour on a visit sent to the letter styles');
+    const box = await page.locator('.ls-opt', { has: page.locator('input[value="looped"]') }).boundingBox();
+    assert.ok(box.y >= 0 && box.y + box.height <= 844, 'the styles stay on screen');
+    assert.equal(await page.evaluate(() => localStorage.getItem('vahini_guide_check')), null, 'and the tour waits for the next visit');
+    await ctx.close();
+  }
+  console.log('pihu-guide: four stops at 390 and 1440 px, once per browser, Show me around, Skip, Escape; layers, no flight with motion off; none on a #letter-style visit');
 } finally {
   if (browser) await browser.close();
   server.kill();
