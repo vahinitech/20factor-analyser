@@ -23,6 +23,11 @@ console.log('PASS compact client: five Free factors, preserved scores, null hand
 for(const turned of [90,180,270])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,turned);
 for(const turned of [undefined,0,45,'90',-90,360])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,0);
 console.log('PASS compact client: turned is 90, 180 or 270, otherwise 0');
+// The style check (#351) reaches the report as styleProfile, so a joined
+// page gets the cursive sheets box; anything malformed reads as unavailable.
+assert.deepEqual(JSON.parse(JSON.stringify(context.VahiniCompact.decode({...response,style:{available:true,verdict:'mixed',words:9}},catalog).analysis.styleProfile)),{available:true,verdict:'mixed',wordsUsed:9});
+for(const style of [undefined,{available:false},{available:true,verdict:'joined'},{available:'yes',verdict:'cursive'}])assert.equal(context.VahiniCompact.decode({...response,style},catalog).analysis.styleProfile.available,false);
+console.log('PASS compact client: the style check reaches the report, malformed reads as unavailable');
 // Practice report (#122): the catalogue's exercises, tips and settings reach
 // the renderer; an archived catalogue without them gives none.
 for(const name of fs.readdirSync('backend/catalogs')){

@@ -281,6 +281,9 @@
     "language": {
       "$ref": "common.schema.json#/definitions/languageCheck"
     },
+    "style": {
+      "$ref": "common.schema.json#/definitions/writingStyle"
+    },
     "sections": {
       "type": "array",
       "maxItems": 4,

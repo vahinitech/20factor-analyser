@@ -49,6 +49,33 @@ class CompactTests(unittest.TestCase):
         )
         self.assertEqual(len(result["evidence"]["factor_regions"]), 20)
 
+    def test_the_style_check_reaches_every_tier(self):
+        # The report's cursive sheets box reads it (#351); without it the
+        # box never showed on the check page.
+        payload = sample()
+        payload["analysis"]["styleProfile"] = {
+            "available": True,
+            "verdict": "cursive",
+            "wordsUsed": 14,
+            "shares": {"cursive": 0.9, "print": 0.1, "mixed": 0.0},
+            "advice": "PRIVATE",
+        }
+        for tier in ("free", "pro"):
+            report = compact_reports.build_compact(payload, {"tier": tier})
+            self.assertEqual(
+                report["style"],
+                {"available": True, "verdict": "cursive", "words": 14},
+            )
+        payload["analysis"]["styleProfile"] = {
+            "available": False,
+            "reason": "too few measurable words to classify the style",
+        }
+        report = compact_reports.build_compact(payload, {"tier": "free"})
+        self.assertEqual(report["style"], {"available": False})
+        del payload["analysis"]["styleProfile"]
+        report = compact_reports.build_compact(payload, {"tier": "free"})
+        self.assertNotIn("style", report)
+
     def test_missing_score_is_not_zero(self):
         payload = sample()
         payload["analysis"]["results"][0]["score"] = None
