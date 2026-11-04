@@ -1,0 +1,180 @@
+{
+  "$comment": "Letter styles (#350). breaks_after is a default: school schemes differ, and the teacher view may change it later. No degree targets for slant: no official source gives one. slant agrees with the face each style is drawn in, measured with vision/letter_geometry._slant on Google Fonts' files (docs/history/letter-style-guess-2026-11-04.md). shop_products lists the free sheets for that style; styles without their own sheets get none yet. Print has no font: print examples use the site's own type and are labelled print.",
+  "version": 1,
+  "default_style": "looped",
+  "styles": [
+    {
+      "id": "looped",
+      "label": "Looped cursive",
+      "$comment": "The free sheets are drawn in Playwrite IN, the same looped model leaning right as Playwrite US Trad (vahinitech/EdTechBooks#19).",
+      "family": "looped",
+      "slant": "right",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": true,
+      "font": "Playwrite US Trad",
+      "countries": [
+        "US",
+        "IN"
+      ],
+      "shop_products": [
+        "cursive-lesson-1-basic-strokes",
+        "cursive-handwriting-worksheets",
+        "cursive-connecting-letters-worksheets"
+      ]
+    },
+    {
+      "id": "vertical",
+      "label": "Vertical cursive",
+      "$comment": "No Playwrite face draws US looped cursive upright; Playwrite AR is the upright looped face closest to it.",
+      "family": "looped",
+      "slant": "upright",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": true,
+      "font": "Playwrite AR",
+      "countries": [
+        "US"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "straight-india",
+      "label": "Straight cursive (India)",
+      "$comment": "Looped rules written upright, as in many Indian cursive books; named apart from vertical because schools call it this.",
+      "family": "looped",
+      "slant": "upright",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": true,
+      "font": "Playwrite AR",
+      "countries": [
+        "IN"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "joined-breaks",
+      "label": "Joined with breaks",
+      "$comment": "England's joined handwriting and California's joined italic option. Break letters vary by scheme.",
+      "family": "joined-with-breaks",
+      "slant": "upright",
+      "breaks_after": [
+        "b",
+        "g",
+        "j",
+        "p",
+        "q",
+        "s",
+        "x",
+        "y",
+        "z"
+      ],
+      "capitals_join": "no",
+      "loops": false,
+      "font": "Playwrite GB J",
+      "countries": [
+        "GB",
+        "US"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "joined-breaks-au",
+      "label": "Australian joined (Victoria)",
+      "$comment": "Victorian Modern Cursive. The other states' scripts (Playwrite AU NSW, QLD, SA, TAS) are entries to add the same way.",
+      "family": "joined-with-breaks",
+      "slant": "right",
+      "breaks_after": [
+        "b",
+        "g",
+        "j",
+        "p",
+        "q",
+        "s",
+        "x",
+        "y",
+        "z"
+      ],
+      "capitals_join": "no",
+      "loops": false,
+      "font": "Playwrite AU VIC",
+      "countries": [
+        "AU"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "french",
+      "label": "French cursive",
+      "family": "french",
+      "slant": "upright",
+      "breaks_after": [],
+      "capitals_join": "no",
+      "loops": true,
+      "font": "Playwrite FR Trad",
+      "countries": [
+        "FR"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "german-la",
+      "label": "Lateinische Ausgangsschrift",
+      "family": "german",
+      "slant": "right",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": true,
+      "font": "Playwrite DE LA",
+      "countries": [
+        "DE"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "german-va",
+      "label": "Vereinfachte Ausgangsschrift",
+      "family": "german",
+      "slant": "right",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": false,
+      "font": "Playwrite DE VA",
+      "countries": [
+        "DE"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "german-sas",
+      "label": "Schulausgangsschrift",
+      "family": "german",
+      "slant": "right",
+      "breaks_after": [],
+      "capitals_join": "some",
+      "loops": false,
+      "font": "Playwrite DE SAS",
+      "countries": [
+        "DE"
+      ],
+      "shop_products": []
+    },
+    {
+      "id": "print",
+      "label": "Print",
+      "$comment": "The control: every letter separate. Germany's Grundschrift and Finland's print-only teaching count here.",
+      "family": "print",
+      "slant": "upright",
+      "breaks_after": [],
+      "capitals_join": "no",
+      "loops": false,
+      "font": null,
+      "countries": [
+        "FI",
+        "DE"
+      ],
+      "shop_products": []
+    }
+  ]
+}
