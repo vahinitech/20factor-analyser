@@ -3,8 +3,9 @@
    Distributed under GNU AGPL v3.0 only. Third-party notices: /THIRD-PARTY-NOTICES.md · SBOM: /sbom.spdx.json */
 /* =========================================================================
    Pihu shows the buttons that matter (owner, 2026-10-25). On a first visit
-   to the check page Pihu flies to four stops in turn: "I am", the photo
-   button, "Try a sample" and "Analyse". After the first report, two more:
+   to the check page Pihu flies to five stops in turn: "I am", the photo
+   button, "Print or cursive" (the letter style, English pages only), "Try a
+   sample" and "Analyse". After the first report, two more:
    Print and the other view's link. At each stop the rest of the page dims
    and a short note says what the button does, with Next and Skip. Once per
    browser for each set; "Show me around" brings it back. Escape, Skip, a
@@ -41,9 +42,13 @@ function stops(kind){
   return [
     { sel: '#who-bar', title: 'Hello! I am Pihu.', text: 'Tell us who is checking. A student gets a report made for them.' },
     { sel: visible('#take-photo') ? '#take-photo' : '#choose-photo', title: 'Add one page', text: 'A photo of four to six lines of writing.' },
+    // The letter style taught at school sits in the folded "Optional" row
+    // (#359), where few find it (owner, 2026-11-05). English pages only:
+    // the styles are hidden for Telugu, and then so is this stop.
+    { sel: '#page-opts > summary', title: 'Print or cursive?', text: 'Pick the style your school teaches. Not sure is fine: we find it from the page.', when: () => { const ls = doc.querySelector('#letter-style'); return !!ls && !ls.hidden; } },
     { sel: '#try-sample', title: 'No page handy?', text: 'Try our sample page first.' },
     { sel: '#go-process', title: 'Then press here', text: 'Your report usually comes in 5 to 20 seconds.' },
-  ].filter((s) => visible(s.sel));
+  ].filter((s) => visible(s.sel) && (!s.when || s.when()));
 }
 
 function seen(kind){ try{ return global.localStorage.getItem(KEYS[kind]) === '1'; }catch(_e){ return true; } }
