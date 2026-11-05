@@ -47,16 +47,16 @@ try {
     const { page, sent, ctx } = await open(viewport);
     await guide(page).waitFor({ timeout: 3000 });
     const photo = viewport.width < 500 ? '#take-photo' : '#choose-photo';
-    const stops = [['#who-bar', 'Hello! I am Pihu.'], [photo, 'Add one page'], ['#try-sample', 'No page handy?'], ['#go-process', 'Then press here']];
+    const stops = [['#who-bar', 'Hello! I am Pihu.'], [photo, 'Add one page'], ['#page-opts > summary', 'Print or cursive?'], ['#try-sample', 'No page handy?'], ['#go-process', 'Then press here']];
     for (let i = 0; i < stops.length; i++) {
       const [sel, title] = stops[i];
-      assert.equal(await page.locator('.pg-n').innerText(), `${i + 1} of 4`);
+      assert.equal(await page.locator('.pg-n').innerText(), `${i + 1} of 5`);
       assert.equal(await page.locator('#pg-title').innerText(), title);
       assert.ok(await lit(page, sel), `${viewport.width}px: ${sel} is lit`);
       const say = await page.locator('.pg-say').boundingBox();
       assert.ok(say.x >= 0 && say.x + say.width <= viewport.width, `${viewport.width}px: the note fits the screen`);
       assert.equal(await page.evaluate(() => document.activeElement.className), 'pg-next', 'the keyboard is on Next');
-      assert.equal(await page.locator('.pg-next').innerText(), i === 3 ? 'Done' : 'Next');
+      assert.equal(await page.locator('.pg-next').innerText(), i === stops.length - 1 ? 'Done' : 'Next');
       await page.click('.pg-next');
     }
     assert.equal(await page.locator('#pihu-guide').count(), 0, 'Done closes it');
@@ -65,7 +65,7 @@ try {
     assert.equal(await page.locator('#pihu-guide').count(), 0, 'once per browser');
     await page.click('#guide-again');
     await guide(page).waitFor();
-    assert.equal(await page.locator('.pg-n').innerText(), '1 of 4', '"Show me around" brings it back');
+    assert.equal(await page.locator('.pg-n').innerText(), '1 of 5', '"Show me around" brings it back');
     await page.keyboard.press('Escape');
     assert.equal(await page.locator('#pihu-guide').count(), 0, 'Escape closes it');
     assert.deepEqual(sent, [], 'nothing is sent');
@@ -107,7 +107,23 @@ try {
     assert.equal(await page.locator('#pihu-guide').count(), 0, 'not while the cookie card shows');
     await page.click('#cc-accept');
     await guide(page).waitFor({ timeout: 3000 });
-    assert.equal(await page.locator('.pg-n').innerText(), '1 of 4', 'then the guide starts');
+    assert.equal(await page.locator('.pg-n').innerText(), '1 of 5', 'then the guide starts');
+    await ctx.close();
+  }
+
+  // The letter style is an English-page choice: with Telugu picked the
+  // styles are hidden, and Pihu skips that stop.
+  {
+    const { page, ctx } = await open({ width: 1280, height: 900 });
+    await guide(page).waitFor({ timeout: 3000 });
+    await page.click('.pg-skip');
+    await page.check('input[name="write-lang"][value="te"]');
+    await page.click('#guide-again');
+    await guide(page).waitFor();
+    assert.equal(await page.locator('.pg-n').innerText(), '1 of 4', 'four stops on a Telugu page');
+    const titles = [];
+    for (let i = 0; i < 4; i++) { titles.push(await page.locator('#pg-title').innerText()); await page.click('.pg-next'); }
+    assert.ok(!titles.includes('Print or cursive?'), 'no letter-style stop for Telugu');
     await ctx.close();
   }
 
@@ -164,7 +180,7 @@ try {
     assert.equal(await page.evaluate(() => localStorage.getItem('vahini_guide_check')), null, 'and the tour waits for the next visit');
     await ctx.close();
   }
-  console.log('pihu-guide: four stops at 390 and 1440 px, once per browser, Show me around, Skip, Escape; layers, no flight with motion off; none on a #letter-style visit');
+  console.log('pihu-guide: five stops at 390 and 1440 px (four for Telugu), once per browser, Show me around, Skip, Escape; layers, no flight with motion off; none on a #letter-style visit');
 } finally {
   if (browser) await browser.close();
   server.kill();
