@@ -1,0 +1,76 @@
+{
+ "description": "Six copies of upright (vertical) looped cursive from an unused public-domain copybook, Barnes's National Vertical Penmanship No. 6 (1898): running sentences, adult model writing engraved for pupils to copy. Family 1, upright variant (#342).",
+ "role": "cursive-reference",
+ "family": "looped",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "barnes-014-new-orleans": [
+   "new orleans, the chief cotton port of",
+   "the world, is a great sugar market."
+  ],
+  "barnes-018-yokohama": [
+   "yokohama, the seaport of tokyo, is the",
+   "chief center of japan for foreign trade."
+  ],
+  "barnes-019-java": [
+   "java, no larger than the empire",
+   "state, has four times the population."
+  ],
+  "barnes-021-milton": [
+   "milton, the poet, was born the year",
+   "before hudson sailed up the beautiful",
+   "river that now bears his name."
+  ],
+  "barnes-022-chicago": [
+   "chicago is the greatest railroad cen-",
+   "ter in the world, and, except new york,",
+   "is the largest city in america."
+  ],
+  "barnes-023-english-settlements": [
+   "the english settlements in north",
+   "america began when english liter-",
+   "ature had just reached its zenith."
+  ]
+ },
+ "page_style": {
+  "barnes-014-new-orleans": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  },
+  "barnes-018-yokohama": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  },
+  "barnes-019-java": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  },
+  "barnes-021-milton": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  },
+  "barnes-022-chicago": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  },
+  "barnes-023-english-settlements": {
+   "slant": "upright",
+   "scheme": "Barnes National Vertical Penmanship"
+  }
+ },
+ "floor_sentences_found": 0,
+ "eye_ranking": []
+}

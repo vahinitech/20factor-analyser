@@ -17,6 +17,7 @@ it through the current code:
     python scripts/benchmark.py planted [--update]  # planted mistakes
     python scripts/benchmark.py factors [--update]  # each factor's own
     python scripts/benchmark.py fragments        # read in pieces? (#277)
+    python scripts/benchmark.py families [--update]  # cursive families (#342)
 
 check fails when any score, line or text differs from expected.json, and
 prints a table of what moved. Accepting a change is running update and
@@ -70,6 +71,16 @@ LIVE_TOLERANCE = 0.3
 # How far the character error rate of the reading may rise above
 # reading.json, in percentage points (#253): per page, and for the set.
 READING_RISE = {"page": 0.5, "set": 0.2}
+# The letter-model families of the cursive reference pages (#342). A set
+# names its family in set.json ("family"); docs/24-cursive-families.md.
+FAMILIES = {
+    "looped": "1. Looped cursive",
+    "breaks": "2. Joined, taught break letters",
+    "french": "3. French cursive",
+    "german": "4. German school scripts",
+    "print": "5. Print only (control)",
+}
+FAMILIES_FILE = "cursive-families.json"
 
 
 def _load_set(name):
@@ -182,22 +193,31 @@ def _reader_lines(arr, raw, reader, meta):
         layout_filter.excluded_regions = real_regions
 
 
-def _score(arr, raw, reader, meta):
-    """One page through the pipeline after the reader, from its kept
-    output. Returns the result kept in expected.json. A page the reader
-    read in pieces is measured on whole rows of its ink, as the server
-    does (ink_geometry.fragment_rows, #277); the lines kept are still
-    the reader's."""
+def _analyse(arr, raw, reader, meta):
+    """(analysis, handwriting lines, cover) for one page from its kept
+    reader output, as the server builds it: a page the reader read in
+    pieces is measured on whole rows of its ink (#277). cover is
+    ink_geometry.fragment_rows's numbers for the page."""
     from vision import computer_vision
     from vision import ink_geometry
     import scoring
 
     found, hand = _reader_lines(arr, raw, reader, meta)
     printed = [l for l in found if l.get("printed_hint")]
-    rows, _cover = ink_geometry.fragment_rows(arr, hand, printed)
+    rows, cover = ink_geometry.fragment_rows(arr, hand, printed)
     measured = rows or hand
     layout = computer_vision.vl_analyze(arr, measured, False)["layout"]
     analysis = scoring.build_analysis(arr, measured, layout).to_dict()
+    return analysis, hand, cover
+
+
+def _score(arr, raw, reader, meta):
+    """One page through the pipeline after the reader, from its kept
+    output. Returns the result kept in expected.json. A page the reader
+    read in pieces is measured on whole rows of its ink, as the server
+    does (ink_geometry.fragment_rows, #277); the lines kept are still
+    the reader's."""
+    analysis, hand, _cover = _analyse(arr, raw, reader, meta)
     results = {r["n"]: r for r in analysis["results"]}
     return {
         "overall": analysis["overall"],
@@ -1119,6 +1139,184 @@ def cmd_fragments(args):
     return 1 if args.none and in_pieces else 0
 
 
+def _family_sets():
+    """The sets that name a letter-model family, in FAMILIES order."""
+    out = []
+    for path in sorted(glob.glob(os.path.join(SETS[0], "*", "set.json"))):
+        with open(path, encoding="utf-8") as f:
+            family = json.load(f).get("family")
+        if family:
+            if family not in FAMILIES:
+                raise ValueError(f"{path}: unknown family {family!r}")
+            out.append((family, os.path.basename(os.path.dirname(path))))
+    order = list(FAMILIES)
+    return sorted(out, key=lambda x: (order.index(x[0]), x[1]))
+
+
+def family_page(arr, raw, reader, meta):
+    """What #342 asks of one page: the style check's verdict, whether the
+    page was read in pieces, and the factors that came out not measured."""
+    analysis, hand, cover = _analyse(arr, raw, reader, meta)
+    style = analysis.get("styleProfile") or {}
+    guess = style.get("letterStyle") or {}
+    return {
+        "verdict": (
+            style.get("verdict") if style.get("available") else "unavailable"
+        ),
+        "shares": style.get("shares"),
+        "words": style.get("wordsUsed", 0),
+        "lean": (guess.get("basis") or {}).get("lean"),
+        "letter_style": guess.get("style"),
+        "lines": len(hand),
+        "rows": cover["rows"],
+        "in_pieces": bool(cover["fragments"]),
+        "not_measured": sorted(
+            n
+            for n in SCORED
+            for r in analysis["results"]
+            if r["n"] == n and r["unmeasured"]
+        ),
+    }
+
+
+def run_families():
+    """Every page of every family set, and each family's totals."""
+    pages, totals = {}, {}
+    for family, name in _family_sets():
+        folder, meta = _load_set(name)
+        _apply_settings(meta)
+        tags = meta.get("page_style", {})
+        for page in _pages(folder):
+            raw, arr = _image(folder, page, meta)
+            path = os.path.join(folder, "reader", page + ".json")
+            if not os.path.exists(path):
+                raise FileNotFoundError(
+                    f"{name}/{page}: no reader output; run `capture` in "
+                    "the analyser image"
+                )
+            with open(path, encoding="utf-8") as f:
+                reader = json.load(f)
+            row = family_page(arr, raw, reader, meta)
+            row.update({"family": family, "set": name, **tags.get(page, {})})
+            pages[f"{name}/{page}"] = row
+    for row in pages.values():
+        t = totals.setdefault(
+            row["family"],
+            {
+                "pages": 0,
+                "verdicts": {},
+                "pages_in_pieces": 0,
+                "rows": 0,
+                "rows_in_pieces": 0,
+                "not_measured": {},
+            },
+        )
+        t["pages"] += 1
+        v = t["verdicts"]
+        v[row["verdict"]] = v.get(row["verdict"], 0) + 1
+        t["rows"] += row["rows"]
+        if row["in_pieces"]:
+            t["pages_in_pieces"] += 1
+            t["rows_in_pieces"] += row["rows"]
+        for n in row["not_measured"]:
+            t["not_measured"][str(n)] = t["not_measured"].get(str(n), 0) + 1
+    return {"families": totals, "pages": pages}
+
+
+def _verdicts(v):
+    order = ("cursive", "mixed", "print", "unavailable")
+    return ", ".join(f"{k} {v[k]}" for k in order if v.get(k)) or "none"
+
+
+def families_table(data):
+    """Markdown: one row per family, then one per page."""
+    out = [
+        "| Family | Pages | Style verdict | Read in pieces (pages) "
+        "| Rows on those pages | Not measured (factor: pages) |",
+        "|---|---|---|---|---|---|",
+    ]
+    for family, label in FAMILIES.items():
+        t = data["families"].get(family)
+        if not t:
+            out.append(f"| {label} | 0, no licensed pages yet | | | | |")
+            continue
+        nm = t["not_measured"]
+        missing = ", ".join(
+            f"{n}: {nm[n]}" for n in sorted(nm, key=int)
+        ) or "none"
+        out.append(
+            f"| {label} | {t['pages']} | {_verdicts(t['verdicts'])} "
+            f"| {t['pages_in_pieces']} of {t['pages']} "
+            f"| {t['rows_in_pieces']} of {t['rows']} | {missing} |"
+        )
+    out += [
+        "",
+        "| Page | Family | Slant written | Verdict (cursive/print/mixed "
+        "shares) | Lean measured | Lines, rows | In pieces "
+        "| Not measured |",
+        "|---|---|---|---|---|---|---|---|",
+    ]
+    for key, r in data["pages"].items():
+        sh = r["shares"]
+        shares = (
+            f" ({sh['cursive']}/{sh['print']}/{sh['mixed']})" if sh else ""
+        )
+        out.append(
+            f"| {key} | {r['family']} | {r.get('slant', '')} "
+            f"| {r['verdict']}{shares} | {r['lean'] or ''} "
+            f"| {r['lines']}, {r['rows']} "
+            f"| {'yes' if r['in_pieces'] else 'no'} "
+            f"| {', '.join(map(str, r['not_measured'])) or 'none'} |"
+        )
+    return "\n".join(out)
+
+
+def _family_moves(old, new):
+    """"family: what old -> new" for every family total that moved."""
+    moves = []
+    for family in FAMILIES:
+        a = old.get("families", {}).get(family)
+        b = new["families"].get(family)
+        if a == b:
+            continue
+        if a is None or b is None:
+            moves.append(f"{family}: {'added' if b else 'removed'}")
+            continue
+        for key in sorted(set(a) | set(b)):
+            if a.get(key) != b.get(key):
+                moves.append(f"{family}: {key} {a.get(key)} -> {b.get(key)}")
+    for key in sorted(set(old.get("pages", {})) | set(new["pages"])):
+        if old.get("pages", {}).get(key) != new["pages"].get(key):
+            moves.append(f"page {key} changed")
+    return moves
+
+
+def cmd_families(args):
+    """Per letter-model family (#342): the style verdict, the pages and
+    rows read in pieces, and the factors not measured. Compared with
+    benchmarks/cursive-families.json; --update keeps the new numbers."""
+    data = run_families()
+    path = os.path.join(SETS[0], FAMILIES_FILE)
+    _report("## Cursive reference pages by family (#342)\n")
+    _report(families_table(data) + "\n")
+    if args.update:
+        _write_results(path, data)
+        return 0
+    old = {}
+    if os.path.exists(path):
+        with open(path, encoding="utf-8") as f:
+            old = json.load(f)
+    moves = _family_moves(old, data)
+    for m in moves:
+        _report(f"- {m}")
+    if moves:
+        _report(
+            f"\nThe numbers differ from {FAMILIES_FILE}. If the change is "
+            "meant, run `benchmark.py families --update` and commit it."
+        )
+    return 1 if moves else 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(
         description=__doc__.split("\n", maxsplit=1)[0]
@@ -1148,6 +1346,9 @@ def main(argv=None):
     p.add_argument("--root", help="a folder of sets outside the repository")
     p.add_argument("--lang", default="en", help="the named language")
     p.add_argument("--photo", action="append", help="another photo to read")
+    p = sub.add_parser("families")
+    p.add_argument("--root", help="a folder of sets outside the repository")
+    p.add_argument("--update", action="store_true")
     for name in ("planted", "factors"):
         p = sub.add_parser(name)
         p.add_argument(
@@ -1175,6 +1376,7 @@ def main(argv=None):
         "planted": cmd_planted,
         "factors": cmd_factors,
         "fragments": cmd_fragments,
+        "families": cmd_families,
     }[args.cmd](args)
 
 

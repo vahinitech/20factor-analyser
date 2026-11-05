@@ -1,0 +1,81 @@
+{
+ "description": "German joined Latin-letter handwriting: one adult page in the GDR Schulausgangsschrift (Wikimedia Commons, public domain) and three lithographed 1866 copy sheets of the englische Current, kept as precursors. No licensed running text was found in the Lateinische or Vereinfachte Ausgangsschrift or the Grundschrift. Family 4 (#342).",
+ "role": "cursive-reference",
+ "family": "german",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "berger-001-grund-und-boden": [
+   "fels- oder steinboden ist derjenige, wo die oberfläche aus wirk-",
+   "lichem fels oder doch aus steingeröll, geschieben und",
+   "blöcken besteht. er taugt also nicht zur hervorbringung",
+   "von gewächsen, außer wo die spalten mit erdigem grund",
+   "ausgefüllt sind oder steingeröll damit vermischt ist.",
+   "sandboden ist entweder grober kies oder leichterer sand und",
+   "flugsand. bewässert und mit erdigem grund vermischt",
+   "ist er zur vegetation tauglich, er heißt dann in manchen",
+   "gegenden geestland."
+  ],
+  "berger-012-boeschungen": [
+   "manche böschungen sind bauchig, abschüssig und",
+   "mühsam zu ersteigen, schroff und jäh, so daß nur ein",
+   "geschickter kletterer hinauf kann, mitunter so steil,",
+   "daß keine erddecke daran zu haften vermag und",
+   "nackter fels herausragt, der nicht zu erklimmen ist.",
+   "man spricht alsdann von steiler, senkrechter, ja",
+   "von überhängender felswand. der name gebirg",
+   "bedeutet eine masse von bergen und bergrücken",
+   "mit vertiefungen dazwischen."
+  ],
+  "berger-018-weiher": [
+   "weiher ist ein stehendes wasser, das zu- und abfluß",
+   "hat und deshalb reiner und frischer als pfützenwasser ist.",
+   "teich ist ein künstlich angelegter weiher. ein großer",
+   "weiher wird ein landsee genannt. das meer oder die",
+   "see ist die ungeheure zusammenhängende wassermasse,",
+   "welche die größten länder oder welttheile umgibt und",
+   "auf der oberfläche der erde mehr raum einnimmt, als das",
+   "feste land. alles feste land und alle meer- inseln ra-",
+   "gen über der oberfläche des meeres (meerspiegel) hervor."
+  ],
+  "wohingenau-2009-schulausgangsschrift": [
+   "dies ist eine schreibschrift wie sie heutzutage",
+   "verwendet wird. alle kleinbuchstaben werden",
+   "verbunden, was die lesbarkeit erschwert.",
+   "falsches üben von xylophonmusik quält",
+   "jeden größeren zwerg."
+  ]
+ },
+ "page_style": {
+  "berger-001-grund-und-boden": {
+   "slant": "slanted",
+   "scheme": "precursor: englische Current (Bavaria 1866)"
+  },
+  "berger-012-boeschungen": {
+   "slant": "slanted",
+   "scheme": "precursor: englische Current (Bavaria 1866)"
+  },
+  "berger-018-weiher": {
+   "slant": "slanted",
+   "scheme": "precursor: englische Current (Bavaria 1866)"
+  },
+  "wohingenau-2009-schulausgangsschrift": {
+   "slant": "slanted",
+   "scheme": "Schulausgangsschrift (GDR 1968), the writer's own hand"
+  }
+ },
+ "floor_sentences_found": 0,
+ "eye_ranking": []
+}

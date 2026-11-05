@@ -1,0 +1,91 @@
+{
+ "description": "Five crops of joined italic handwriting from M. M. Bridges, A New Handwriting for Teachers (1907 printing): the model the English and Australian joined-italic schemes descend from, with letters left unjoined after f, b, x and the descenders. Family 2 (#342).",
+ "role": "cursive-reference",
+ "family": "breaks",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "bridges-006-ways-of-life": [
+   "all the ways of life are pleasant;",
+   "in the market place are goodly",
+   "companionships & at home griefs",
+   "are hidden; the country brings",
+   "pleasure, seafaring wealth, &",
+   "foreign lands knowledge."
+  ],
+  "bridges-007-stone-pine": [
+   "come & sit under my stone pine that",
+   "murmurs so honey sweet as it bends to",
+   "the soft western breeze; & lo this honey",
+   "dropping fountain, where i bring sweet",
+   "sleep, playing on my lonely reeds",
+   "thyrsis, the reveller, the keeper of the nymphs",
+   "sheep, thyrsis who pipes on the reed like pan,",
+   "having drunk at noon, sleeps under the shady",
+   "pine, & love himself has taken the crook &",
+   "watches the flocks"
+  ],
+  "bridges-008-read-not": [
+   "read not to contradict & confute,",
+   "nor to believe & take for granted,",
+   "nor to find talk & discourse, but",
+   "to weigh & to consider.",
+   "some books are to be read only in",
+   "parts; others to be read, but not curious",
+   "ly; & some few to be read wholly, &",
+   "with diligence & attention"
+  ],
+  "bridges-009-bays": [
+   "bays yield no smell as they grow, rosemary",
+   "little, nor sweet marjoram; that which, above",
+   "all others, yields the sweetest smell in the air, is",
+   "the violet; especially the white double violet. wh.",
+   "comes twice a year - about the middle of april,",
+   "& about bartholomew-tide. next to that"
+  ],
+  "bridges-009-musk-rose": [
+   "is the musk rose; then the strawberry leaves",
+   "dying, with a most excellent cordial smell;",
+   "then the flower of the vines - it is a little",
+   "dust, like the dust of a bent, wh. grows",
+   "upon the cluster in the first coming forth; then",
+   "sweetbriar, then wall-flowers"
+  ]
+ },
+ "page_style": {
+  "bridges-006-ways-of-life": {
+   "slant": "slanted",
+   "scheme": "Bridges italic (1899)"
+  },
+  "bridges-007-stone-pine": {
+   "slant": "slanted",
+   "scheme": "Bridges italic (1899)"
+  },
+  "bridges-008-read-not": {
+   "slant": "slanted",
+   "scheme": "Bridges italic (1899)"
+  },
+  "bridges-009-bays": {
+   "slant": "slanted",
+   "scheme": "Bridges italic (1899)"
+  },
+  "bridges-009-musk-rose": {
+   "slant": "slanted",
+   "scheme": "Bridges italic (1899)"
+  }
+ },
+ "floor_sentences_found": 0,
+ "eye_ranking": []
+}

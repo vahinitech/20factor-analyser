@@ -236,6 +236,14 @@ jobs:
           for set in $sets; do
             python scripts/benchmark.py fragments --set "$set" --none
           done
+      # The cursive reference pages by letter-model family (#342): the
+      # style verdict, pages read in pieces and factors not measured,
+      # per family, against benchmarks/cursive-families.json. A change
+      # that moves them runs `families --update` and commits the file,
+      # so the diff shows which family moved (docs/24-cursive-families.md).
+      - name: Cursive families as kept
+        run: python scripts/benchmark.py families
+
       # Each page through the server's own scan with perf.py recording:
       # a page over a budget in backend/perf/budgets.json fails (#229),
       # and so does any work count above benchmarks/<set>/work.json
