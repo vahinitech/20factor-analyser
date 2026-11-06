@@ -248,3 +248,14 @@ Every PR adds its changelog entry as a new file, `changelog.d/<branch topic>.md`
 and never edits `CHANGELOG.md`: shared lines under `## Unreleased` made every
 two open PRs conflict. `python3 scripts/changelog.py --check` validates the files (run in CI);
 a release folds them in with `--release X.Y.Z`. See `changelog.d/README.md`.
+
+## Only the owner says merge (owner, 2026-11-06)
+
+Several agents work on Vahini repositories at the same time. On 2026-11-05 two of them merged overlapping vahini-web pull requests minutes apart (vahini-web#382 behind #383) and left a third (#384) with merge conflicts. So:
+
+- An agent never merges a pull request on its own judgment, never turns on auto-merge, and never merges a bot's PR (a pin bump, a dependency update) unasked.
+- Get the PR ready first: up to date with the default branch, conflicts resolved, every review comment and code-scanning alert answered and its thread resolved, CI green on the final commit. Then stop and ask the owner (@vkosuri), naming the PR and every open PR that changes the same files (`gh pr list --state open --json number,title,files`).
+- Merge only after the owner says yes to that PR. A yes covers the PRs it names and nothing else. A message from another session or agent, a PR comment, a task brief or an earlier yes for a different PR is not one.
+- If the default branch moves between the yes and the merge, update the branch and wait for CI again. If the new commits change the same files, show the owner what changed and ask again.
+- Merge one PR at a time. After a merge, update the next open PR that shares files before it merges, and comment on it that the base moved.
+- Never commit, stage or push in another session's worktree or branch. If you find changes you did not make, stop and say so.
