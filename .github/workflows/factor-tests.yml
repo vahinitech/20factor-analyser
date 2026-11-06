@@ -61,13 +61,27 @@ jobs:
           path: ~/.cache/vahini/ujipenchars2.txt
           key: uji-cc56f72f8477e763
       - name: Every factor catches its planted mistake as often as before
-        run: python scripts/benchmark.py factors
+        run: python scripts/benchmark.py factors --json "$RUNNER_TEMP/factor-results/factors.json"
       # Factor 6 on pages with a printed four-line ruling (#194): the
       # planted long ascenders still caught, and the same passage twice
       # by one writer within SAME_PASSAGE_LIMIT at the 90th percentile.
       - name: Factor 6 on ruled pages, caught and steady
         if: success() || failure()
-        run: python scripts/benchmark.py factors --ruled
+        run: python scripts/benchmark.py factors --ruled --json "$RUNNER_TEMP/factor-results/factors-ruled.json"
+      - name: Visual detection report from the same factor runs
+        if: always()
+        run: |
+          python scripts/accuracy_report.py \
+            --factor-results "$RUNNER_TEMP/factor-results/factors.json" \
+            --factor-results "$RUNNER_TEMP/factor-results/factors-ruled.json" \
+            --out "$RUNNER_TEMP/factor-results/index.html"
+      - name: Keep measured factor rows and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: factor-results
+          path: ${{ runner.temp }}/factor-results
+          if-no-files-found: ignore
 
   # The calibration tool (scripts/calibrate.py, #197) end to end, with
   # the UJI pages standing in for a neat reference set (they are not

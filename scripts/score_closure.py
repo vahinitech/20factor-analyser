@@ -47,6 +47,7 @@ GROUPS = {
             "scripts/variation_study.py",
             "scripts/paired_timing.py",
             "scripts/bench_history.py",
+            "scripts/accuracy_report.py",
         ),
         "stop": (),
         "data": (

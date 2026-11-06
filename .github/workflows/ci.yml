@@ -75,7 +75,7 @@ jobs:
       - name: Syntax-check server modules
         run: python -m py_compile backend/server/app.py backend/reading/ocr_backends.py backend/reading/classify.py backend/reading/layout_filter.py backend/analyser-ocr-server.py backend/warmup_models.py backend/tools/benchmark_ocr.py backend/vision/geometry.py backend/reading/model_map.py backend/reading/gpu_detect.py backend/vision/computer_vision.py backend/scoring.py backend/scoring_parts/__init__.py backend/scoring_parts/advisory.py backend/scoring_parts/availability.py backend/scoring_parts/dynamics.py backend/scoring_parts/features.py backend/scoring_parts/page.py backend/scoring_parts/results.py backend/scoring_parts/spatial.py backend/scoring_parts/stats.py backend/scoring_parts/structure.py backend/scoring_parts/style.py backend/scoring_parts/needs.py backend/server/age_band.py backend/server/who_checks.py backend/reading/detector.py backend/reading/line_recovery.py backend/vision/ink_geometry.py backend/reading/recognizer.py backend/reading/escalation.py backend/config.py backend/server/cache.py backend/languages/tags.py backend/server/scan_slots.py backend/server/capacity.py backend/report/practice_catalog.py backend/server/debug_store.py backend/server/access_api.py backend/languages/registry.py backend/languages/stages.py backend/languages/ladders.py backend/languages/graphemes.py backend/languages/profile.py backend/styles/letter_styles.py backend/server/perf.py backend/reading/telugu_reader.py
       - name: Check formatting (black, line-length 79)
-        run: black --check --line-length 79 frontend/build_bundle.py frontend/gen_letter_styles.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/styles/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/letter_style_guess_eval.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py scripts/therapist_agreement.py
+        run: black --check --line-length 79 frontend/build_bundle.py frontend/gen_letter_styles.py backend/*.py backend/server/*.py backend/reading/*.py backend/vision/*.py backend/report/*.py backend/tools/*.py backend/languages/*.py backend/styles/*.py backend/scoring_parts/*.py backend/tests/*.py scripts/coverage_ratchet.py scripts/letter_style_guess_eval.py scripts/paired_timing.py scripts/live_timing.py scripts/calibrate.py scripts/score_closure.py scripts/therapist_agreement.py scripts/accuracy_report.py
       - name: Lint (pylint, min score 9.0)
         run: |
           pylint --fail-under=9.0 frontend/build_bundle.py \
@@ -152,6 +152,7 @@ jobs:
             scripts/perf_budgets.py backend/tests/test_work_counts.py \
             scripts/paired_timing.py backend/tests/test_paired_timing.py \
             scripts/bench_history.py backend/tests/test_bench_history.py \
+            scripts/accuracy_report.py backend/tests/test_accuracy_report.py \
             backend/server/report_store.py backend/tests/test_report_store.py \
             scripts/therapist_agreement.py backend/tests/test_therapist_agreement.py
       - name: Verify immutable report dictionary
@@ -220,6 +221,15 @@ jobs:
       # What `benchmark.py update` would write, so a pull request that
       # means to move scores can commit it without running the replay
       # itself (docs/18-benchmark.md).
+      - name: Visual accuracy report from this replay's outputs
+        if: always()
+        run: |
+          args=()
+          for set in $(python backend/languages/registry.py --benchmark-sets); do
+            args+=(--expected-set "$set")
+          done
+          python scripts/accuracy_report.py --results "$RUNNER_TEMP/benchmark-results" \
+            "${args[@]}" --out "$RUNNER_TEMP/benchmark-results/index.html"
       - name: Keep the replay's results
         if: always()
         uses: actions/upload-artifact@v4
@@ -413,6 +423,19 @@ jobs:
           done
           exit 1
 
+      - name: Visual history report from existing measurements
+        if: always()
+        run: |
+          python scripts/accuracy_report.py --history "$RUNNER_TEMP/history" \
+            --now "$RUNNER_TEMP/now" --out "$RUNNER_TEMP/accuracy-history/index.html"
+      - name: Keep the accuracy history report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: accuracy-history
+          path: ${{ runner.temp }}/accuracy-history
+          if-no-files-found: ignore
+
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -456,6 +479,15 @@ jobs:
             echo "::error::A page carries a committed ?v= asset stamp. Run 'python frontend/build_bundle.py --strip'."
             exit 1
           fi
+      - name: Synthetic Free/Pro upload flow, consent, retry and responsive report checks
+        run: npm run test:synthetic-report
+      - name: Upload synthetic browser review screenshots and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-browser-review
+          path: test-results/synthetic-report-flow/
+          if-no-files-found: warn
       - name: Browser PDF upload checks
         run: npm run test:pdf
       - name: Unreadable photos (iPhone HEIC in Chrome) are explained, not sent to the store
