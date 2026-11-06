@@ -1,0 +1,1 @@
+- Agents merge a pull request only after the owner's yes for that PR, and coordinate when several work at once (AGENTS.md/CLAUDE.md, "Only the owner says merge").
