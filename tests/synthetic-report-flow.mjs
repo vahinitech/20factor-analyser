@@ -9,6 +9,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { useDesign } from './design-route.mjs';
 import { browserServer } from './helpers/browser-server.mjs';
+import { isSyntheticUploadRecord } from './helpers/synthetic-upload-record.mjs';
 import { ALL_FACTORS, FREE_FACTORS, SENSOR_FACTORS, catalog, syntheticReport, syntheticPhoto } from './helpers/synthetic-report.mjs';
 
 const output = 'test-results/synthetic-report-flow';
@@ -28,7 +29,7 @@ async function open(viewport) {
     localStorage.setItem('vahini_guide_report', '1');
     localStorage.setItem('vahini_report_feedback_day', '2026-01-15');
   });
-  const calls = { reports: [], stores: 0, unexpected: [], catalog: 0 };
+  const calls = { reports: [], uploadRecords: [], stores: 0, unexpected: [], catalog: 0 };
   const control = { failure: null };
   // A disposable value used only by the intercepted API; never accepted by
   // a server, saved to disk, included in artifacts or printed in assertions.
@@ -46,7 +47,16 @@ async function open(viewport) {
       if (control.failure) return route.fulfill(control.failure);
       return route.fulfill({ json: syntheticReport(tier) });
     }
-    if (url.pathname.startsWith('/persist/')) { calls.stores++; return route.fulfill({ status: 500, json: { ok: false } }); }
+    // Selecting a file already writes sanitized metadata in analyser.html.
+    // It is not the separate, opt-in photo store. Validate its exact shape
+    // without retaining the body, and reject every other persist write.
+    if (url.pathname === '/persist/upload-image' && req.method() === 'POST') {
+      let valid = false;
+      try { valid = isSyntheticUploadRecord(req.postDataJSON()); } catch { /* invalid JSON */ }
+      calls.uploadRecords.push(valid);
+      return route.fulfill({ json: { ok: true, id: 'synthetic-upload-record' } });
+    }
+    if (url.pathname.startsWith('/persist/keep/')) { calls.stores++; return route.fulfill({ status: 500, json: { ok: false } }); }
     if (req.method() !== 'GET' && req.method() !== 'HEAD') { calls.unexpected.push(url.pathname); return route.abort(); }
     return route.continue();
   });
@@ -113,7 +123,8 @@ async function assertReport(state, tier) {
     if (tier === 'pro') assert.ok(fact.score === null && fact.measured === false, `factor ${n}: unavailable, not a zero or a measured score`);
   }
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true, 'no horizontal page overflow');
-  assert.equal(calls.stores, 0, 'no keep/upload/store request without opt-in');
+  assert.ok(calls.uploadRecords.length > 0 && calls.uploadRecords.every(Boolean), 'upload records contain only the existing sanitized metadata, not photo bytes or text');
+  assert.equal(calls.stores, 0, 'no opt-in photo-store request without opt-in');
   assert.deepEqual(calls.unexpected, [], 'no unexpected write request');
   assert.deepEqual(errors, [], 'no JavaScript page errors');
   const sent = calls.reports.at(-1);

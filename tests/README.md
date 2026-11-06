@@ -61,9 +61,12 @@ existing Playwright tier, at 390 and 1440 px. It uses generated curves and
 invented compact responses, the current committed dictionary, and the real
 account client, decoder and report renderer. It covers:
 
-- No upload before choosing who checks or before the Student adult tick.
+- No photo sent to the analyser before choosing who checks or before the
+  Student adult tick.
 - “Keep my pages” with no email blocks before upload; with it off, no keep
-  request is made.
+  request is made. The existing metadata-only `/persist/upload-image` record
+  is checked separately for its exact sanitized shape; it contains no photo
+  bytes, original filename or recognised text.
 - Free's five factor records, Pro's twenty unique records, and all six
   sensor-only skills (2, 4, 13–16) remaining unavailable with null scores.
 - Pro connection, cleared key input, no key in browser storage or URLs,
