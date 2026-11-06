@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 4: the finished class table</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+<script src="mock-data.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 4 of 6 &middot; finished table</span>
+  <h1 class="page-title">Class 3B, checked 28 October 2026</h1>
+  <p class="lead">25 pages in 3 minutes 52 seconds. Pages worth a closer look come first.</p>
+
+  <div class="summary">
+    <div class="sum"><div class="n">25</div><div class="t">pages added</div></div>
+    <div class="sum"><div class="n">18</div><div class="t">checked, no flag</div></div>
+    <div class="sum sum--flag"><div class="n">4</div><div class="t">worth a therapist's look</div></div>
+    <div class="sum"><div class="n">3</div><div class="t">not checked, need a new photo</div></div>
+  </div>
+
+  <div class="toolbar">
+    <span class="chk"><i></i>Only pages worth a look</span>
+    <span class="muted small hide-phone">Sort by: <b>worth a look first</b> &middot; <a href="#">pupil code</a></span>
+    <span class="grow"></span>
+    <span class="btn btn--ghost btn--sm">Download CSV</span>
+    <span class="btn btn--ghost btn--sm">Print the table</span>
+  </div>
+
+  <div class="table-wrap"><table class="class" id="t"></table></div>
+
+  <p class="not-diagnosis"><b>What a flag means.</b> A flag says that, on this one page, two or more of the five skills are at the first stage, Learning, and names them. It is a reason to look at the page and at the child's other work, not a finding about the child and not a diagnosis. One rushed or tired page can be flagged; a child who finds writing hard can write one good page. We have not yet measured how often these flags agree with a therapist's own view.</p>
+
+  <div class="next">
+    <div class="card"><h3>Practise as a class</h3><p>Word spacing is the skill most of the class is still building (9 of 22 pages). Bheema's plan makes a week of sheets for it.</p><a href="#">Make the class's practice sheets</a></div>
+    <div class="card"><h3>Check again in a few weeks</h3><p>Check the same class later and each row shows what changed since this check.</p><a href="#">How progress works</a></div>
+    <div class="card"><h3>Talk to us about your school</h3><p>Questions about a page, or about checking more classes.</p><a href="#">Ask our team</a></div>
+  </div>
+</main>
+<script>
+MOCK.fill("t", { order: "flag", open: true });
+var p = MOCK.practiseMost();
+document.querySelector(".next p").textContent = p.skill + " is the skill most of the class is still building (" + p.n + " of 22 pages). Bheema's plan makes a week of sheets for it.";
+</script>
+</body>
+</html>

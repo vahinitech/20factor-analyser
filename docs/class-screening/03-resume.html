@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 3: partly done, back after closing the tab</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+<script src="mock-data.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 3 of 6 &middot; partly done, tab closed and opened again</span>
+  <div class="crumb"><a href="#">Home</a> / Handwriting check</div>
+  <h1 class="page-title">Check a whole class's handwriting</h1>
+
+  <section class="card" style="border-color:var(--v-accent);margin-top:14px">
+    <div class="status-line">
+      <span class="big">Class 3B stopped at 14 of 25</span>
+      <span class="muted">Today, when this tab was closed</span>
+    </div>
+    <div class="progress" aria-label="Progress, one square per page">
+      <i class="done"></i><i class="done"></i><i class="flag"></i><i class="refused"></i><i class="done"></i><i class="done"></i><i class="flag"></i><i class="done"></i><i class="refused"></i><i class="done"></i><i class="done"></i><i class="done"></i><i class="flag"></i><i class="done"></i>
+      <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+
+    <div class="grid" style="margin-top:12px">
+      <div>
+        <h3>Option A: the photos are still on this computer</h3>
+        <p class="small" style="margin:2px 0 0">11 pages still to check, about 1 minute 40 seconds.</p>
+        <div class="actions" style="margin-top:10px"><span class="btn btn--main">Continue</span><span class="btn btn--ghost">See the 14 done</span></div>
+      </div>
+      <div>
+        <h3>Option B: only the results were kept</h3>
+        <p class="small" style="margin:2px 0 0">Pick the same photos or folder again. We skip the 14 codes already done and check the rest.</p>
+        <div class="actions" style="margin-top:10px"><span class="btn btn--ghost">Pick the photos again</span></div>
+      </div>
+    </div>
+    <div class="note note--keep">Kept in this browser only: the 14 rows of results, the pupil codes and, in option A, the 11 photos not yet checked. Each photo is removed from this computer as soon as its page is checked. <a href="#">Clear this class now</a>.</div>
+  </section>
+
+  <section class="card">
+    <h2>Another class</h2>
+    <p class="muted small" style="margin:0">Classes on this computer: Class 3B (14 of 25), Class 3A (finished, 24 pages, kept until 27 November).</p>
+    <div class="actions"><span class="btn btn--ghost">Start a new class</span><span class="btn btn--quiet">Open Class 3A</span></div>
+  </section>
+
+  <div class="table-wrap"><table class="class" id="t"></table></div>
+</main>
+<script>MOCK.fill("t", { done: 14, limit: 16, waitText: "Not checked yet" });</script>
+</body>
+</html>
