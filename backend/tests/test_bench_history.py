@@ -35,6 +35,8 @@ def line(**change):
         "overall_mean": 85.0,
         "eye": None,
         "catch": {"indented_line/10": 1.0, "tall_ascenders/6": 0.75},
+        "catch_source": "measured factor pairs",
+        "valid": True,
     }
     out.update(change)
     return out
@@ -93,6 +95,39 @@ class TestCompare(unittest.TestCase):
     def test_small_reading_moves_inside_the_gate_pass(self):
         fails, _flags = hist.compare(line(cer=9.7), [line()] * 10)
         self.assertEqual(fails, [])
+
+    def test_legacy_floor_records_do_not_become_catch_measurements(self):
+        past = line(catch_source=None)
+        now = line(catch={"indented_line/10": 0.01})
+        self.assertEqual(hist.compare(now, [past]), ([], []))
+
+    def test_invalid_replay_cannot_pass_or_change_historical_median(self):
+        self.assertIn(
+            "invalid", hist.compare(line(valid=False), [line()])[0][0]
+        )
+        self.assertEqual(
+            hist.compare(line(), [line(valid=False, cer=0)]), ([], [])
+        )
+
+    def test_accepted_floor_review_gate_survives_legacy_history(self):
+        previous = line()
+        previous.pop("catch_source")
+        current = line(
+            catch={},
+            catch_source="not measured",
+            catch_baseline={"indented_line/10": 0.5},
+        )
+        fails, _flags = hist.compare(current, [previous])
+        self.assertEqual(
+            fails, ["accepted catch floor indented_line/10 lowered to 0.5"]
+        )
+        fails, flags = hist.compare(
+            current,
+            [previous],
+            {"indented_line/10": {"rate": 0.5, "pr": 2, "why": "reviewed"}},
+        )
+        self.assertFalse(fails)
+        self.assertIn("accepted in #2", flags[0])
 
     def test_missing_numbers_are_skipped(self):
         now = line(work_total=None, cer=None, eye=None)
@@ -159,8 +194,47 @@ class TestFiles(unittest.TestCase):
         self.assertEqual(got["cpu_s"], 16.0)
         self.assertGreaterEqual(got["sentences_found"], 77)
         self.assertIsInstance(got["cer"], float)
-        self.assertIn("indented_line/10", got["catch"])
+        self.assertEqual(got["catch"], {})
+        self.assertEqual(got["catch_source"], "not measured")
+        self.assertIn("indented_line/10", got["catch_baseline"])
         self.assertIsNone(got["work_total"])
+
+    def test_only_same_commit_measured_factor_pairs_enter_history(self):
+        path = os.path.join(ROOT, "benchmarks", "uji-clean", "expected.json")
+        with open(path, encoding="utf-8") as source:
+            pages = json.load(source)["pages"]
+        factor_path = os.path.join(self.tmp.name, "factors.json")
+        factors = {
+            "set": "factors",
+            "sha": "abc",
+            "summary": {
+                "gap": {
+                    "targets": {
+                        "8": {"measured": 2, "caught": 0.5},
+                        "9": {"measured": 0, "caught": 0},
+                    }
+                }
+            },
+        }
+        with open(factor_path, "w", encoding="utf-8") as target:
+            json.dump(factors, target)
+        with mock.patch.dict(os.environ, {"GITHUB_SHA": "abc"}):
+            got = hist.collect(
+                "uji-clean",
+                cpu=(1, 1),
+                pages=pages,
+                factor_results=factor_path,
+            )
+        self.assertEqual(got["catch"], {"gap/8": 0.5})
+        self.assertEqual(got["catch_source"], "measured factor pairs")
+        with mock.patch.dict(os.environ, {"GITHUB_SHA": "other"}):
+            with self.assertRaisesRegex(ValueError, "this commit"):
+                hist.collect(
+                    "uji-clean",
+                    cpu=(1, 1),
+                    pages=pages,
+                    factor_results=factor_path,
+                )
 
     def test_check_and_append_commands(self):
         now = os.path.join(self.tmp.name, "now.json")
