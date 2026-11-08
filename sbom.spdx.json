@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-59458bed4241eefdcc68",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-e483b5628ef56414b1ed",
   "creationInfo": {
-    "created": "2026-11-04T04:42:39Z",
+    "created": "2026-11-08T18:16:35Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
@@ -14,6 +14,58 @@
   },
   "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. Datasets used for training, tests and evaluation are SPDXRef-Data-* packages (purpose OTHER), described in docs/22-datasets.md; print_hand.json is the one first-party weights file. This is not a complete container SBOM: Python transitive packages, OS libraries, third-party model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
   "packages": [
+    {
+      "SPDXID": "SPDXRef-Data-CursiveBreaks",
+      "name": "M. M. Bridges, A New Handwriting for Teachers (1907 printing)",
+      "versionInfo": "scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/ANewHandwritingForTeachers",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Five crops. Public domain as recorded in benchmarks/cursive-breaks/source.md, cursive reference pages (#342); committed in benchmarks/cursive-breaks/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-CursiveFrench",
+      "name": "Meyrat, Recueil m\u00e9thodique de principes d'\u00e9criture (about 1900) and D'Avignon, L'\u00c9criture am\u00e9ricaine",
+      "versionInfo": "scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/RecueilMethodiqueDePrincipesDEcriture",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Eight crops; also https://archive.org/details/DAvignonLecritureAmercaine. Public domain as recorded in benchmarks/cursive-french/source.md, cursive reference pages (#342); committed in benchmarks/cursive-french/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-CursiveGerman",
+      "name": "Berger, 21 Vorlegebl\u00e4tter (1866) and a Schulausgangsschrift sample (Wikimedia Commons, PD-self)",
+      "versionInfo": "scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/bub_gb_DQBCAAAAcAAJ",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Four crops; also https://commons.wikimedia.org/wiki/File:Beispiel-Schulausgangsschrift.png. Public domain as recorded in benchmarks/cursive-german/source.md, cursive reference pages (#342); committed in benchmarks/cursive-german/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-CursiveLoopedUpright",
+      "name": "Barnes's National Vertical Penmanship No. 6 (1898)",
+      "versionInfo": "scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/barnesnationalv00unkngoog",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Six crops. Public domain as recorded in benchmarks/cursive-looped-upright/source.md, cursive reference pages (#342); committed in benchmarks/cursive-looped-upright/pages; not in the image."
+    },
     {
       "SPDXID": "SPDXRef-Data-FixtureSamples",
       "name": "tests/fixtures/samples",
@@ -78,6 +130,19 @@
       "copyrightText": "NOASSERTION",
       "primaryPackagePurpose": "OTHER",
       "comment": "Dataset (SPDX 2.3 has no data purpose). Also https://archive.org/details/zaner-method-writing-manual-144. Public domain as recorded in benchmarks/neat-penmanship/source.md. Eight crops committed in benchmarks/neat-penmanship/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-PrintControl",
+      "name": "Manuscript Writing and Lettering (Pitman, 1920)",
+      "versionInfo": "scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/manuscriptwritin00educ",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). One crop. Public domain as recorded in benchmarks/print-control/source.md, cursive reference pages (#342); committed in benchmarks/print-control/pages; not in the image."
     },
     {
       "SPDXID": "SPDXRef-Data-PrintLineFonts",
@@ -3401,77 +3466,32 @@
           "checksumValue": "ad592cbec9cd09d27fa2119ceb180fc3237c7a1782c6c88b33c9b1b84fedfe6395a897b03ee3b59a22e94c74224604ca08b7b12f831e00555a82db3b1e6359d9"
         }
       ]
-    },
-    {
-      "SPDXID": "SPDXRef-Data-CursiveLoopedUpright",
-      "name": "Barnes's National Vertical Penmanship No. 6 (1898)",
-      "versionInfo": "scans",
-      "supplier": "Organization: Internet Archive (scans)",
-      "downloadLocation": "https://archive.org/details/barnesnationalv00unkngoog",
-      "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Public-Domain",
-      "licenseDeclared": "LicenseRef-Public-Domain",
-      "copyrightText": "NOASSERTION",
-      "primaryPackagePurpose": "OTHER",
-      "comment": "Dataset (SPDX 2.3 has no data purpose). Six crops. Public domain as recorded in benchmarks/cursive-looped-upright/source.md, cursive reference pages (#342); committed in benchmarks/cursive-looped-upright/pages; not in the image."
-    },
-    {
-      "SPDXID": "SPDXRef-Data-CursiveBreaks",
-      "name": "M. M. Bridges, A New Handwriting for Teachers (1907 printing)",
-      "versionInfo": "scans",
-      "supplier": "Organization: Internet Archive (scans)",
-      "downloadLocation": "https://archive.org/details/ANewHandwritingForTeachers",
-      "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Public-Domain",
-      "licenseDeclared": "LicenseRef-Public-Domain",
-      "copyrightText": "NOASSERTION",
-      "primaryPackagePurpose": "OTHER",
-      "comment": "Dataset (SPDX 2.3 has no data purpose). Five crops. Public domain as recorded in benchmarks/cursive-breaks/source.md, cursive reference pages (#342); committed in benchmarks/cursive-breaks/pages; not in the image."
-    },
-    {
-      "SPDXID": "SPDXRef-Data-CursiveFrench",
-      "name": "Meyrat, Recueil m\u00e9thodique de principes d'\u00e9criture (about 1900) and D'Avignon, L'\u00c9criture am\u00e9ricaine",
-      "versionInfo": "scans",
-      "supplier": "Organization: Internet Archive (scans)",
-      "downloadLocation": "https://archive.org/details/RecueilMethodiqueDePrincipesDEcriture",
-      "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Public-Domain",
-      "licenseDeclared": "LicenseRef-Public-Domain",
-      "copyrightText": "NOASSERTION",
-      "primaryPackagePurpose": "OTHER",
-      "comment": "Dataset (SPDX 2.3 has no data purpose). Eight crops; also https://archive.org/details/DAvignonLecritureAmercaine. Public domain as recorded in benchmarks/cursive-french/source.md, cursive reference pages (#342); committed in benchmarks/cursive-french/pages; not in the image."
-    },
-    {
-      "SPDXID": "SPDXRef-Data-CursiveGerman",
-      "name": "Berger, 21 Vorlegebl\u00e4tter (1866) and a Schulausgangsschrift sample (Wikimedia Commons, PD-self)",
-      "versionInfo": "scans",
-      "supplier": "Organization: Internet Archive (scans)",
-      "downloadLocation": "https://archive.org/details/bub_gb_DQBCAAAAcAAJ",
-      "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Public-Domain",
-      "licenseDeclared": "LicenseRef-Public-Domain",
-      "copyrightText": "NOASSERTION",
-      "primaryPackagePurpose": "OTHER",
-      "comment": "Dataset (SPDX 2.3 has no data purpose). Four crops; also https://commons.wikimedia.org/wiki/File:Beispiel-Schulausgangsschrift.png. Public domain as recorded in benchmarks/cursive-german/source.md, cursive reference pages (#342); committed in benchmarks/cursive-german/pages; not in the image."
-    },
-    {
-      "SPDXID": "SPDXRef-Data-PrintControl",
-      "name": "Manuscript Writing and Lettering (Pitman, 1920)",
-      "versionInfo": "scans",
-      "supplier": "Organization: Internet Archive (scans)",
-      "downloadLocation": "https://archive.org/details/manuscriptwritin00educ",
-      "filesAnalyzed": false,
-      "licenseConcluded": "LicenseRef-Public-Domain",
-      "licenseDeclared": "LicenseRef-Public-Domain",
-      "copyrightText": "NOASSERTION",
-      "primaryPackagePurpose": "OTHER",
-      "comment": "Dataset (SPDX 2.3 has no data purpose). One crop. Public domain as recorded in benchmarks/print-control/source.md, cursive reference pages (#342); committed in benchmarks/print-control/pages; not in the image."
     }
   ],
   "relationships": [
     {
       "spdxElementId": "SPDXRef-DOCUMENT",
       "relationshipType": "DESCRIBES",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-CursiveBreaks",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-CursiveFrench",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-CursiveGerman",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-CursiveLoopedUpright",
+      "relationshipType": "TEST_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
@@ -3491,6 +3511,11 @@
     },
     {
       "spdxElementId": "SPDXRef-Data-PenmanshipManuals",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-PrintControl",
       "relationshipType": "TEST_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -4252,31 +4277,6 @@
     {
       "spdxElementId": "SPDXRef-npm-node-modules-yocto-queue",
       "relationshipType": "DEV_DEPENDENCY_OF",
-      "relatedSpdxElement": "SPDXRef-Package-Vahini"
-    },
-    {
-      "spdxElementId": "SPDXRef-Data-CursiveLoopedUpright",
-      "relationshipType": "TEST_OF",
-      "relatedSpdxElement": "SPDXRef-Package-Vahini"
-    },
-    {
-      "spdxElementId": "SPDXRef-Data-CursiveBreaks",
-      "relationshipType": "TEST_OF",
-      "relatedSpdxElement": "SPDXRef-Package-Vahini"
-    },
-    {
-      "spdxElementId": "SPDXRef-Data-CursiveFrench",
-      "relationshipType": "TEST_OF",
-      "relatedSpdxElement": "SPDXRef-Package-Vahini"
-    },
-    {
-      "spdxElementId": "SPDXRef-Data-CursiveGerman",
-      "relationshipType": "TEST_OF",
-      "relatedSpdxElement": "SPDXRef-Package-Vahini"
-    },
-    {
-      "spdxElementId": "SPDXRef-Data-PrintControl",
-      "relationshipType": "TEST_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     }
   ],
