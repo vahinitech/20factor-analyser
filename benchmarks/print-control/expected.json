@@ -1,0 +1,33 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "manuscript-writing-101-poetry": {
+   "lines": [
+    "word ds what",
+    "by",
+    "Lord M"
+   ],
+   "overall": 52,
+   "repeats": 0,
+   "scores": {
+    "1": 8.4,
+    "10": null,
+    "11": 0.0,
+    "12": 0.0,
+    "17": 7.8,
+    "18": 6.3,
+    "19": 9.0,
+    "20": 4.0,
+    "3": 7.9,
+    "5": 5.5,
+    "6": 8.0,
+    "7": 0.0,
+    "8": 1.8,
+    "9": 0.0
+   },
+   "sentences_found": 2,
+   "unmatched": 1
+  }
+ },
+ "set": "print-control"
+}

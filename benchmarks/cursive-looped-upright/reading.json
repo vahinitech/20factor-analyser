@@ -1,0 +1,44 @@
+{
+ "cer": 19.01,
+ "edits": 100,
+ "graphemes": 526,
+ "pages": {
+  "barnes-014-new-orleans": {
+   "cer": 6.94,
+   "edits": 5,
+   "graphemes": 72
+  },
+  "barnes-018-yokohama": {
+   "cer": 32.05,
+   "edits": 25,
+   "graphemes": 78
+  },
+  "barnes-019-java": {
+   "cer": 8.82,
+   "edits": 6,
+   "graphemes": 68
+  },
+  "barnes-021-milton": {
+   "cer": 26.47,
+   "edits": 27,
+   "graphemes": 102
+  },
+  "barnes-022-chicago": {
+   "cer": 17.76,
+   "edits": 19,
+   "graphemes": 107
+  },
+  "barnes-023-english-settlements": {
+   "cer": 18.18,
+   "edits": 18,
+   "graphemes": 99
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 19.01,
+   "edits": 100,
+   "graphemes": 526
+  }
+ }
+}

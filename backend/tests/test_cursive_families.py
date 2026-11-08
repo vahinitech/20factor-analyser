@@ -57,7 +57,9 @@ class TestFamilies(unittest.TestCase):
         path = os.path.join(bench.SETS[0], bench.FAMILIES_FILE)
         with open(path, encoding="utf-8") as f:
             kept = json.load(f)
-        names = {name for _f, name in bench._family_sets()}  # noqa
+        names = {
+            name for _f, name in bench._family_sets()  # pylint: disable=W0212
+        }
         self.assertEqual({r["set"] for r in kept["pages"].values()}, names)
 
     def test_a_family_without_pages_says_so(self):
@@ -84,7 +86,9 @@ class TestFamilies(unittest.TestCase):
         self.assertIn("breaks: pages_in_pieces 1 -> 0", moves)
         self.assertIn("french: added", moves)
         self.assertIn("page a/p1 changed", moves)
-        self.assertEqual(bench._family_moves(new, new), [])  # noqa
+        self.assertFalse(
+            bench._family_moves(new, new)  # pylint: disable=W0212
+        )
 
 
 if __name__ == "__main__":

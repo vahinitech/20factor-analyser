@@ -1,0 +1,34 @@
+{
+ "cer": 36.39,
+ "edits": 433,
+ "graphemes": 1190,
+ "pages": {
+  "berger-001-grund-und-boden": {
+   "cer": 59.19,
+   "edits": 190,
+   "graphemes": 321
+  },
+  "berger-012-boeschungen": {
+   "cer": 33.01,
+   "edits": 136,
+   "graphemes": 412
+  },
+  "berger-018-weiher": {
+   "cer": 31.6,
+   "edits": 85,
+   "graphemes": 269
+  },
+  "wohingenau-2009-schulausgangsschrift": {
+   "cer": 11.7,
+   "edits": 22,
+   "graphemes": 188
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 36.39,
+   "edits": 433,
+   "graphemes": 1190
+  }
+ }
+}

@@ -1,0 +1,166 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "barnes-014-new-orleans": {
+   "lines": [
+    "New Orleans, the chief cotton port",
+    "the world isa great sugar market."
+   ],
+   "overall": 67,
+   "repeats": 0,
+   "scores": {
+    "1": 7.8,
+    "10": null,
+    "11": 8.9,
+    "12": 9.7,
+    "17": 9.6,
+    "18": 7.3,
+    "19": 8.5,
+    "20": 7.2,
+    "3": 10.0,
+    "5": 4.1,
+    "6": 9.8,
+    "7": 4.7,
+    "8": 8.7,
+    "9": 9.4
+   },
+   "sentences_found": 2,
+   "unmatched": 0
+  },
+  "barnes-018-yokohama": {
+   "lines": [
+    "rama the Deaport TOk to, t the",
+    "chief",
+    "center of Japan foreign trade"
+   ],
+   "overall": 46,
+   "repeats": 0,
+   "scores": {
+    "1": 5.1,
+    "10": null,
+    "11": 4.8,
+    "12": 9.8,
+    "17": 8.8,
+    "18": 5.7,
+    "19": 7.6,
+    "20": 5.0,
+    "3": 6.5,
+    "5": 1.3,
+    "6": 8.6,
+    "7": 4.8,
+    "8": 7.7,
+    "9": 8.2
+   },
+   "sentences_found": 2,
+   "unmatched": 1
+  },
+  "barnes-019-java": {
+   "lines": [
+    "ava,no larger thar in the Empire",
+    "State has four times the population."
+   ],
+   "overall": 82,
+   "repeats": 0,
+   "scores": {
+    "1": 9.5,
+    "10": null,
+    "11": 9.8,
+    "12": 10.0,
+    "17": 9.0,
+    "18": 8.5,
+    "19": 9.6,
+    "20": 8.4,
+    "3": 9.1,
+    "5": 7.6,
+    "6": 9.8,
+    "7": 4.8,
+    "8": 8.0,
+    "9": 9.8
+   },
+   "sentences_found": 2,
+   "unmatched": 0
+  },
+  "barnes-021-milton": {
+   "lines": [
+    "milto on , the poet was vom the ye ear",
+    "fore Hudson sailed up",
+    "rer that now bears his name."
+   ],
+   "overall": 83,
+   "repeats": 0,
+   "scores": {
+    "1": 9.4,
+    "10": 5.6,
+    "11": 9.5,
+    "12": 9.5,
+    "17": 9.4,
+    "18": 8.6,
+    "19": 9.5,
+    "20": 7.4,
+    "3": 10.0,
+    "5": 5.6,
+    "6": 8.5,
+    "7": 7.7,
+    "8": 8.8,
+    "9": 8.6
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "barnes-022-chicago": {
+   "lines": [
+    "ricago to the prealest railroad cen-",
+    "ter worlo and except ew York,",
+    "is the largest city isn america"
+   ],
+   "overall": 74,
+   "repeats": 0,
+   "scores": {
+    "1": 8.9,
+    "10": null,
+    "11": 7.6,
+    "12": 9.9,
+    "17": 9.5,
+    "18": 8.0,
+    "19": 9.3,
+    "20": 7.3,
+    "3": 9.3,
+    "5": 5.8,
+    "6": 8.5,
+    "7": 4.8,
+    "8": 7.8,
+    "9": 8.3
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  },
+  "barnes-023-english-settlements": {
+   "lines": [
+    "The English settler lement north",
+    "merca an wher en English liter-",
+    "ature had just reach red its zenith."
+   ],
+   "overall": 84,
+   "repeats": 0,
+   "scores": {
+    "1": 9.1,
+    "10": null,
+    "11": 9.2,
+    "12": 9.2,
+    "17": 9.6,
+    "18": 7.5,
+    "19": 9.5,
+    "20": 6.1,
+    "3": 10.0,
+    "5": 2.8,
+    "6": 9.9,
+    "7": 6.1,
+    "8": 6.1,
+    "9": 8.8
+   },
+   "sentences_found": 3,
+   "unmatched": 0
+  }
+ },
+ "set": "cursive-looped-upright"
+}

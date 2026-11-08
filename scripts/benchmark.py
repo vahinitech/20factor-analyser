@@ -1241,9 +1241,9 @@ def families_table(data):
             out.append(f"| {label} | 0, no licensed pages yet | | | | |")
             continue
         nm = t["not_measured"]
-        missing = ", ".join(
-            f"{n}: {nm[n]}" for n in sorted(nm, key=int)
-        ) or "none"
+        missing = (
+            ", ".join(f"{n}: {nm[n]}" for n in sorted(nm, key=int)) or "none"
+        )
         out.append(
             f"| {label} | {t['pages']} | {_verdicts(t['verdicts'])} "
             f"| {t['pages_in_pieces']} of {t['pages']} "
@@ -1272,7 +1272,7 @@ def families_table(data):
 
 
 def _family_moves(old, new):
-    """"family: what old -> new" for every family total that moved."""
+    """ "family: what old -> new" for every family total that moved."""
     moves = []
     for family in FAMILIES:
         a = old.get("families", {}).get(family)

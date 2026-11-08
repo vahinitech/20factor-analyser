@@ -1,0 +1,54 @@
+{
+ "cer": 50.93,
+ "edits": 356,
+ "graphemes": 699,
+ "pages": {
+  "davignon-007-salutaire": {
+   "cer": null,
+   "edits": 0,
+   "graphemes": 0
+  },
+  "davignon-008-flatte": {
+   "cer": 40.51,
+   "edits": 32,
+   "graphemes": 79
+  },
+  "davignon-009-reconnaissance": {
+   "cer": 43.24,
+   "edits": 16,
+   "graphemes": 37
+  },
+  "davignon-010-vertu": {
+   "cer": 61.9,
+   "edits": 39,
+   "graphemes": 63
+  },
+  "meyrat-018-engagements": {
+   "cer": null,
+   "edits": 0,
+   "graphemes": 0
+  },
+  "meyrat-020-esprit": {
+   "cer": 51.28,
+   "edits": 40,
+   "graphemes": 78
+  },
+  "meyrat-021-mirabeau": {
+   "cer": 48.75,
+   "edits": 117,
+   "graphemes": 240
+  },
+  "meyrat-023-affaires": {
+   "cer": 55.45,
+   "edits": 112,
+   "graphemes": 202
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 50.93,
+   "edits": 356,
+   "graphemes": 699
+  }
+ }
+}

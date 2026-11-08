@@ -89,6 +89,17 @@ image.
 - **Palmer Method of Business Writing** (A. N. Palmer, 1915) and
   **Zaner-Bloser Manual 144**, from archive.org: **public domain**. Eight
   crops in `benchmarks/neat-penmanship/pages/`.
+- Cursive reference pages by letter-model family (#342), each set's
+  `source.md` giving the scan and the rights: **public domain**.
+  Barnes's National Vertical Penmanship No. 6 (1898),
+  `benchmarks/cursive-looped-upright/`; M. M. Bridges, A New Handwriting
+  for Teachers (1907 printing), `benchmarks/cursive-breaks/`; P. Meyrat,
+  Recueil méthodique de principes d'écriture (about 1900) and D'Avignon,
+  L'Écriture américaine (early 19th century), `benchmarks/cursive-french/`;
+  A. Berger, 21 Vorlegeblätter (1866), and Wohingenau's Schulausgangsschrift
+  sample from Wikimedia Commons (released into the public domain by its
+  writer), `benchmarks/cursive-german/`; Manuscript Writing and Lettering
+  (Pitman, 1920), `benchmarks/print-control/`.
 
 ---
 
