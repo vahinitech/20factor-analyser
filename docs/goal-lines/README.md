@@ -8,9 +8,8 @@ rendering, so this folder only shows the options.
 
 ## Why
 
-A school therapist at Elmhurst Community Unit School District 205
-(Illinois) printed a report on 27 October 2026 and said the free report was
-enough. School therapists and teachers write measurable goals and progress
+A school therapist in a US district printed a report on 27 October 2026
+and said the free report was enough. School therapists and teachers write measurable goals and progress
 notes for children on support plans. A line they can paste into that
 paperwork, built from what we measured, would make the report part of their
 routine, and is something a district could pay for.
@@ -50,7 +49,10 @@ website theme. Desktop is 1440 px wide; print is Chromium print media on A4.
 | Print, all 20 factors | [before-pro-print.png](before-pro-print.png) (2 sheets) | A and B: identical to before (2 sheets) · C: [after-c-pro-print.png](after-c-pro-print.png) (3 sheets) |
 | Print, Free | [before-free-print.png](before-free-print.png) (2 sheets) | A: identical to before (2 sheets) |
 
-The yellow tag on each proposed part is for this review only.
+The yellow tag on each proposed part is for this review only. The
+"skills with no line" list in the screenshots predates two wording fixes
+in `goal-lines-mock.js`: stroke order and smooth lines now sit with the
+sensor-pen skills, and letter spacing no longer says "lowest mark".
 
 ## The lines, factor by factor
 
@@ -84,13 +86,11 @@ whole-number pair up to 173 words that gives the share 0.0805 exactly, and
 |---|---|---|
 | 1 | Letter shapes | The score is the text reader's confidence plus how much row heights vary. Neither counts letter shapes. |
 | 19 | Clear letters | The text reader's confidence plus the share of digits. Not a count of letters a person could tell apart. |
-| 2 | Stroke order | Letter widths and reader confidence. A photo cannot see stroke order. |
 | 3 | Closed letters | Closed bowls found in the ink against the bowl letters (a, b, d, e, g, o, p, q) in the text the reader guessed, not matched letter by letter. On the sample the reader misread much of the page ("eviclc brown fox"), so the count of expected letters is unreliable. |
-| 4 | Smooth lines | Built from how much row widths vary, not from the strokes. |
-| 9 | Letter spacing | Counts exist (`letter_gaps_odd`, `words_spaced_off`) but the report labels this an estimate, the counts behind the shares are not sent, and it gives our own neat practice page its lowest mark (0.0). Leave it out until it passes the neat-page test. |
+| 9 | Letter spacing | Counts exist (`letter_gaps_odd`, `words_spaced_off`) but the report labels this an estimate, the counts behind the shares are not sent, and it scores our own neat practice page 0.0. Leave it out until it passes the neat-page test. |
 | 12 | Upright strokes | Measures how much row angles vary, not how upright the strokes are. A line about it would describe something else under this skill's name. |
 | 18, 20 | Readability, Neat page | Blends of other scores with no count of their own. |
-| 13 to 16 | Writing speed, Pen pressure, Smooth joins, Pen lifts | Need the Vahini sensor pen; a photo has no pen data. |
+| 2, 4, 13 to 16 | Stroke order, Smooth lines, Writing speed, Pen pressure, Smooth joins, Pen lifts | Need the Vahini sensor pen; a photo has no pen data (#192 moved 2 and 4 here). |
 
 The reader's average confidence (71% on the sample) is also left out as a
 line: a therapist would read it as a legibility percentage, which it is not.

@@ -1,0 +1,1 @@
+- Mock-ups of goal-ready lines for school therapists (`docs/goal-lines/`): one measured line per scored factor, in three layouts with before and after screenshots. For the owner's decision; nothing is built and the report does not change.
