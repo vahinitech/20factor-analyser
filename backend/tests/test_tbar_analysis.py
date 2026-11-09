@@ -17,7 +17,12 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from tbar_analysis import analyze_tbars, line_tbar_events  # noqa: E402
+from vision.tbar_analysis import (  # noqa: E402
+    _bar_runs,
+    _stems,
+    analyze_tbars,
+    line_tbar_events,
+)
 
 H_M = 16  # x-height in px
 H_U = 16  # ascender rise above the midline
@@ -105,6 +110,80 @@ def test_bar_riding_over_the_l_is_an_overshoot():
     )
     events = line_tbar_events(page, lines[0]["box"])
     assert "overshoot" in events
+
+
+def test_bar_from_the_right_stem_riding_left_is_an_overshoot():
+    # the bar sits on the second stem and runs back toward the first
+    page, lines = _make_line(
+        bars=[(164, 208)], stems=[160, 200], text="at least"
+    )
+    assert "overshoot" in line_tbar_events(page, lines[0]["box"])
+
+
+def test_bar_on_the_right_stem_kept_short_is_contained():
+    page, lines = _make_line(
+        bars=[(192, 208)], stems=[160, 200], text="at least"
+    )
+    assert "contained" in line_tbar_events(page, lines[0]["box"])
+
+
+def test_stems_too_far_apart_are_not_a_pair():
+    # 160 px apart is ten x-heights: separate letters, not tt or tl
+    page, lines = _make_line(
+        bars=[(152, 168)], stems=[160, 320], text="a little"
+    )
+    assert line_tbar_events(page, lines[0]["box"]) == []
+
+
+def test_one_stem_has_no_pair():
+    page, lines = _make_line(bars=[(152, 168)], stems=[160], text="at")
+    assert line_tbar_events(page, lines[0]["box"]) == []
+
+
+# --- geometry that cannot be measured ---------------------------------------
+
+
+def test_box_smaller_than_an_x_height_is_skipped():
+    page, _ = _make_line(bars=[(150, 200)], stems=[160, 184], text="")
+    assert line_tbar_events(page, [30, 0, 320, 0]) == []
+    assert line_tbar_events(page, [500, 20, 10, 30]) == []
+
+
+def test_blank_line_is_skipped():
+    page = _blank_line_page()
+    assert line_tbar_events(page, _line_box(30, 320)) == []
+
+
+def test_x_height_below_the_floor_is_skipped():
+    # bodies only 3 px tall: no x-height the rule can be measured at
+    page = _blank_line_page()
+    for col in range(30, 350):
+        if (col // 3) % 2 == 0:
+            page[40:43, col] = 20
+    assert line_tbar_events(page, _line_box(30, 320)) == []
+
+
+def test_helpers_return_nothing_for_an_empty_band():
+    ink = np.zeros((10, 20), dtype=bool)
+    assert _stems(ink, 5, 5, 8) == []
+    assert _bar_runs(ink, 10, 10, 8) == []
+
+
+def test_wide_blob_is_not_a_stem():
+    # a solid block wider than STEM_MAX_W_FRAC x-heights
+    ink = np.zeros((10, 40), dtype=bool)
+    ink[:, 5:30] = True
+    assert _stems(ink, 0, 10, 16) == []
+
+
+def test_line_without_a_box_is_ignored():
+    page, lines = _make_line(
+        bars=[(150, 200)], stems=[160, 184], text="a little bottle"
+    )
+    lines.insert(0, {"text": "a little", "score": 0.9})
+    out = analyze_tbars(page, lines)
+    assert out["available"] is True
+    assert out["sharedBars"] >= 1
 
 
 # --- page-level aggregation and honesty -------------------------------------

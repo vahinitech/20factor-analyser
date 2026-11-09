@@ -27,7 +27,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
-import recognizer  # noqa: E402
+from reading import recognizer  # noqa: E402
 import scoring  # noqa: E402
 
 # పిల్లి పాలు తాగింది ("the cat drank milk") and the same line with the
@@ -150,7 +150,7 @@ PAGE = _flat_page()
 
 def _scores(reading, passage=None):
     """Factor scores for PAGE read as reading, with the passage aligned
-    the way the server does it (ppocr-server.py keeps the reading as
+    the way the server does it (server/app.py keeps the reading as
     text_as_read, then aligns)."""
     line = _line(reading)
     line.setdefault("text_as_read", line["text"])
@@ -180,22 +180,18 @@ class TestPassageCannotRaiseLetterCounts(unittest.TestCase):
         # expect; the closed bowls are counted in the ink.
         self.assert_not_raised(3, "we see one moon", "we see the good moon")
 
-    @unittest.expectedFailure
     def test_loop_share_without_enough_bowls_comes_from_the_ink(self):
         # Factor 3 with fewer than three bowl letters falls back to the
         # share of loop letters in the text. With a passage that text is
-        # the passage, so its a's count as loops the ink never showed.
-        # Expected to fail until scoring counts this share from
-        # text_as_read (the PR for #209 describes the change).
+        # the passage, so its a's counted as loops the ink never showed;
+        # scoring now counts this share from text_as_read (#209).
         self.assert_not_raised(3, "i im it it", "i am at it")
 
-    @unittest.expectedFailure
     def test_tall_letter_share_comes_from_the_ink(self):
         # Factor 6 (Letter Zones) on a page too short for zone bands is
         # the share of tall letters in the text. With a passage, the t
-        # and h of "the" count though the ink has no tall letter.
-        # Expected to fail until scoring counts this share from
-        # text_as_read (the PR for #209 describes the change).
+        # and h of "the" counted though the ink has no tall letter;
+        # scoring now counts this share from text_as_read (#209).
         self.assert_not_raised(6, "we see one", "we see the")
 
 

@@ -23,10 +23,10 @@ Checked on `main` at d24cf63 (20 October 2026):
 
 | What | Where | What it covers |
 |---|---|---|
-| Whole request time | `_with_meta`, `ppocr-server.py:530`, `:696`, `:998` | one number per request, no steps |
+| Whole request time | `_with_meta`, `server/app.py:530`, `:696`, `:998` | one number per request, no steps |
 | Engine time per line | `recognizer.py:306-315`, `engine_speed_snapshot` in `/health` | hybrid engines only, information only since #112 |
 | Memory plan | `capacity.py`, [13-api-and-capacity.md](13-api-and-capacity.md) | scan slots from the container limit |
-| Peak memory under load | `backend/load_test.py` on stage | by hand |
+| Peak memory under load | `backend/tools/load_test.py` on stage | by hand |
 | Backend tests | `python -m unittest` with a hand-written list, `ci.yml:115` (replaced by discovery in #228) | 38 of 46 test files |
 | Coverage | none (since #232: section 6) | |
 | Profiler | none | |
@@ -61,18 +61,20 @@ runs; one that finds a real bug gets its own issue.
 
 ## 2. Stage timings on every scan (#229)
 
-Built in #229: `backend/perf.py`, and `stage_timings` in `/health`. The
+Built in #229: `backend/server/perf.py`, and `stage_timings` in `/health`. The
 stages are `decode`, `detect` (and `detect.ink` when rows are found from
 the ink), `merge`, `layout`, `recovery`, `printed`, `join`, `ladder` with
 one `read.<stage id>` per rung, `decode.full` for the crops a rung reads,
-`passage`, `evidence`, `features`, `scoring` and `practice`. CPU time is
+`passage`, `fragments` (the reader's boxes against the ink rows, #277),
+`evidence`, `features`, `scoring`, `language` (spelling and grammar,
+#317) and `practice`. CPU time is
 the time of the thread the stage ran on; work a library does on its own
 threads (Paddle's) shows in the wall time only. A scan's work keeps the
 request's context on the scan thread (`scan_slots.run`), so concurrent
 scans never mix their numbers, except the container's memory, which is
 shared.
 
-A small module, `backend/perf.py`, standard library only:
+A small module, `backend/server/perf.py`, standard library only:
 
 ```python
 with perf.stage("read.rung", rung="paddle", lines=len(todo)):
@@ -119,6 +121,22 @@ In CI a benchmark page that breaks a budget fails the build, which is
 where a loop that calls a reader once per word instead of once per line
 shows up. In production a breach is counted in `/health` and the weekly
 report, never refused: the page was already admitted and paid for.
+
+### Work counts per page (#250)
+
+A budget catches a page that costs several times too much; a count
+catches one extra call. The same replay turns each page's stage summary
+into flat counts: every stage's runs, sizes and call counts
+(`recovery.reader_calls`, `decode.pixels`, `features.lines`,
+`scoring.words` and the rest). The same code on the same page gives the
+same counts on every run, whatever the runner's speed, so they are
+committed as `benchmarks/<set>/work.json` and `check` fails when any
+count on any page rises, naming the page, the count and both numbers. A
+fall passes and asks for an update. When a rise is meant (a fix that
+reads more lines), run `python scripts/perf_budgets.py update-work`,
+commit `work.json` and say why in the pull request. Where the replay
+cannot run, the `work-counts` artifact of the `benchmark` job holds
+what `update-work` would write (`check --results <dir>`).
 
 ## 4. Recording growth: big O per function (#230)
 
@@ -242,6 +260,34 @@ change has to lower one (a file split in two, tests moved elsewhere),
 edit `coverage-baseline.json` by hand and say why in the PR, so the lower
 number is in the diff for review.
 
+### Unused code: what coverage cannot see
+
+Coverage says which lines the tests ran. It does not say whether anything
+in the product calls them, and the ratchet only fails when a number falls,
+so a file at 0% never fails it. `report-render.js` and `app.js` run only in
+browser tests, which c8 does not count, so they sit at 0%, and an unused
+role table, score ring, trajectory chart and nine other helpers stayed in
+`report-render.js` for months. pylint did not see them either: it checks
+unused imports and variables inside one file, not a function no other file
+calls.
+
+Two tests look for that directly, and run wherever the other tests run:
+
+- `backend/tests/test_unused_code.py` runs vulture over `backend/`,
+  `scripts/` and `frontend/build_bundle.py`, with the tests left out, at 60%
+  confidence. Route handlers and middleware are skipped, since FastAPI
+  calls them through `@app.*` and `@router.*`.
+- `tests/unused-code.test.mjs` lists every top-level function and constant
+  in `frontend/src/` and fails on one that nothing else under `frontend/`
+  names. The sources are joined into one script, so a per-file linter
+  would take every top-level name as a global someone might call.
+
+A test is not a use: a function only a test calls never runs for a
+visitor. When a name stays on purpose (a test helper, an attribute a
+library reads, a feature waiting for its report), it goes in the test's
+`KEEP` table with the reason. Both tests also fail on a `KEEP` entry that
+is used or gone, so the table cannot go stale.
+
 ## 7. Regression gate: is this commit slower or less accurate?
 
 Every commit should answer two questions before it merges: does a scan
@@ -313,6 +359,37 @@ that reads slightly differently) is not blocked forever: the PR updates
 `expected.json`, `work.json` or `reading.json` and says in its body which
 pages moved, by how much and why, as [18-benchmark.md](18-benchmark.md)
 already asks for scores. The point is that nothing moves silently.
+
+### History of main and slow drift (built in #254)
+
+The `history` job in `ci.yml` (`scripts/bench_history.py`) measures every
+commit it runs on, per benchmark set: the replay's CPU seconds (the
+median of three passes) and memory peak, the reading's character error
+rate, the written lines scored, the mean overall score, the agreement
+with the ranking by eye, each planted mistake's catch rate (from
+`benchmarks/factors/expected.json`) and, once #250 is on `main`, the
+total work count. Numbers only.
+
+- **On a push to main** the job adds one line per set to
+  `history/<set>.jsonl` on the `bench-history` branch (JSON lines: commit,
+  date, the numbers). The first push creates the branch.
+- **On a pull request** it compares the pull request with the median of
+  the last ten lines. It fails when accuracy falls: the error rate more
+  than 0.2 points up (the reading gate's tolerance), fewer written lines
+  scored, the eye agreement more than 0.05 down, or any catch rate lower.
+  A catch rate a pull request lowers on purpose is named in
+  `benchmarks/factors/accepted.json` with the rate, the pull request and
+  the reason, by hand and in that pull request: a fall no lower than
+  that rate is reported, not failed. Once ten main runs carry the new
+  rate the entry has no effect and can go.
+  CPU, memory or work more than 15% above the median is flagged in the
+  summary and as a warning, not failed: the lines come from different
+  runners, whose speed differs by tens of percent, and gate 2 already
+  compares each pull request with main on one runner. A run of small
+  slowdowns shows as a flag on the pull request that crosses 15% and as a
+  rising row in the trend.
+- **Both** write a trend table to the job summary: each number over the
+  last 50 runs as a row of bars, oldest first, and its latest value.
 
 ### Accuracy against people, not only against ourselves
 

@@ -20,10 +20,12 @@ except Exception:
 
 
 SERVER_DIR = Path(__file__).resolve().parents[1]
-SERVER_FILE = SERVER_DIR / "ppocr-server.py"
+SERVER_FILE = SERVER_DIR / "server/app.py"
 sys.path.insert(0, str(SERVER_DIR))
 
-import detector  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    detector,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 # White-box tests deliberately reach into module-private helpers below.
 # pylint: disable=protected-access
@@ -87,7 +89,7 @@ def _load_server_module():
         "vahini_ppocr_server_test", str(SERVER_FILE)
     )
     if spec is None or spec.loader is None:
-        raise RuntimeError("Unable to load ppocr-server.py")
+        raise RuntimeError("Unable to load server/app.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
@@ -232,7 +234,10 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertGreaterEqual(int(a.get("overall", 0)), 0)
         self.assertLessEqual(int(a.get("overall", 100)), 100)
         self.assertEqual(a.get("source"), "python")
-        self.assertEqual(int(a.get("measuredCount", 0)), 16)
+        # 2, 4 and 13 to 16 need the sensor pen, and the fixture holds
+        # fewer than three lines, so Margin Discipline is not measured
+        # (#201).
+        self.assertEqual(int(a.get("measuredCount", 0)), 13)
 
         # Renderer-completeness: the browser is render-only now, so every factor
         # must arrive with the rendering extras (drill group, target band, tip)
@@ -638,7 +643,7 @@ class RegressionFunctionalTests(unittest.TestCase):
         self.assertEqual(len(fmap), 20)
         for n in range(1, 21):
             entry = fmap.get(str(n)) or {}
-            if 13 <= n <= 16:
+            if n in (2, 4, 13, 14, 15, 16):
                 self.assertEqual(entry["status"], "unavailable")
                 self.assertFalse(entry["url"])
                 continue

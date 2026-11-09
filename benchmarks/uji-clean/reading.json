@@ -1,6 +1,6 @@
 {
- "cer": 9.54,
- "edits": 290,
+ "cer": 8.72,
+ "edits": 265,
  "graphemes": 3040,
  "pages": {
   "UJI_W12": {
@@ -9,8 +9,8 @@
    "graphemes": 156
   },
   "UJI_W13": {
-   "cer": 14.1,
-   "edits": 22,
+   "cer": 12.18,
+   "edits": 19,
    "graphemes": 156
   },
   "UJI_W14": {
@@ -84,30 +84,30 @@
    "graphemes": 156
   },
   "UPV_W51": {
-   "cer": 13.84,
-   "edits": 22,
+   "cer": 10.06,
+   "edits": 16,
    "graphemes": 159
   },
   "UPV_W54": {
-   "cer": 9.52,
-   "edits": 12,
+   "cer": 6.35,
+   "edits": 8,
    "graphemes": 126
   },
   "UPV_W57": {
-   "cer": 6.75,
-   "edits": 11,
+   "cer": 5.52,
+   "edits": 9,
    "graphemes": 163
   },
   "UPV_W60": {
-   "cer": 21.74,
-   "edits": 35,
+   "cer": 15.53,
+   "edits": 25,
    "graphemes": 161
   }
  },
  "scripts": {
   "Latin": {
-   "cer": 9.54,
-   "edits": 290,
+   "cer": 8.72,
+   "edits": 265,
    "graphemes": 3040
   }
  }

@@ -15,7 +15,7 @@ more than the tolerance (0.3) above the declared class:
 
 Shared runners are noisy, so only slopes are compared, never times.
 Model inference is not here: its cost is fixed per crop, and the call
-counts of backend/perf.py (#229) show how many crops a page had.
+counts of backend/server/perf.py (#229) show how many crops a page had.
 """
 
 # The analyser modules are imported from backend/ inside each builder.
@@ -167,7 +167,7 @@ def _copies(lines):
 
 def build_merge_lines(k):
     _backend()
-    import detector
+    from reading import detector
 
     lines = [
         _line(f"line {i} word {i * 7}", [20, 20 + 30 * i, 500, 24])
@@ -178,7 +178,7 @@ def build_merge_lines(k):
 
 def build_region_filter_lines(k):
     _backend()
-    import detector
+    from reading import detector
 
     lines = [
         _line(f"line {i} word", [20, 20 + 30 * i, 500, 24]) for i in range(k)
@@ -191,7 +191,7 @@ def build_join_row_pieces(k):
     """k pieces, four to a written line: the reader's pieces of k / 4
     lines."""
     _backend()
-    import detector
+    from reading import detector
 
     pieces = []
     for i in range(k):
@@ -204,7 +204,7 @@ def build_join_row_pieces(k):
 
 def build_classify_lines(k):
     _backend()
-    import classify
+    from reading import classify
 
     page, lines = _page(k)
     return k, lambda: classify.classify_lines(page, _copies(lines))
@@ -212,7 +212,7 @@ def build_classify_lines(k):
 
 def build_find_rows(k):
     _backend()
-    import ink_geometry
+    from vision import ink_geometry
 
     page, _lines = _page(k)
     return page.shape[0] * page.shape[1], lambda: ink_geometry.find_rows(page)
@@ -222,7 +222,7 @@ def build_missed_regions(k):
     """Rows found by the reader over their left half only, so the right
     half of every row is writing the detector missed."""
     _backend()
-    import line_recovery
+    from reading import line_recovery
 
     page, lines = _page(k)
     for line in lines:
@@ -235,7 +235,7 @@ def build_missed_regions(k):
 
 def build_vl_analyze(k):
     _backend()
-    import computer_vision
+    from vision import computer_vision
 
     page, lines = _page(k)
     return k, lambda: computer_vision.vl_analyze(page, _copies(lines), True)
@@ -243,7 +243,7 @@ def build_vl_analyze(k):
 
 def build_build_analysis(k):
     _backend()
-    import computer_vision
+    from vision import computer_vision
     import scoring
 
     page, lines = _page(k)
@@ -255,7 +255,7 @@ def build_align_to_expected(k):
     """One line read with every fifth letter wrong against its passage
     line, k graphemes long."""
     _backend()
-    import recognizer
+    from reading import recognizer
 
     letters = "abcdefghijklmnopqrstuvwxyz"
     passage = "".join(
@@ -292,7 +292,7 @@ def build_climb(k):
     _backend()
     import numpy as np
 
-    import escalation
+    from reading import escalation
 
     lines = [
         _line(f"line {i}", [20, 20 + 30 * i, 500, 24], score=0.5)
@@ -327,7 +327,7 @@ def build_to_numpy(k):
 
     from PIL import Image
 
-    import computer_vision
+    from vision import computer_vision
 
     page, _lines = _page(k)
     buf = io.BytesIO()
@@ -369,9 +369,10 @@ def table_problems(table, builders=None):
             problems.append(f"{name}: no synthetic input in this script")
         if entry.get("declared") not in CLASSES:
             problems.append(f"{name}: unknown class {entry.get('declared')}")
-        elif CLASSES.index(entry["declared"]) > CLASSES.index(
-            "O(n log n)"
-        ) and not str(entry.get("why") or "").strip():
+        elif (
+            CLASSES.index(entry["declared"]) > CLASSES.index("O(n log n)")
+            and not str(entry.get("why") or "").strip()
+        ):
             problems.append(f"{name}: above O(n log n) without a why")
     for name in builders:
         if name not in table["functions"]:

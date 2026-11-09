@@ -5,11 +5,11 @@
 # tier files and the VAHINI_OCR_BACKEND env var (paddle|trocr|surya|hybrid|auto):
 #
 #   pip install -r requirements.txt                 # core + paddle (default)
-#   pip install -r requirements-trocr.txt           # + English handwriting
-#   pip install -r requirements-surya.txt           # + multilingual/Indic
+#   pip install -r requirements/trocr.txt           # + English handwriting
+#   pip install -r requirements/surya.txt           # + multilingual/Indic
 #
-# hybrid mode needs both requirements-trocr.txt and requirements-surya.txt
+# hybrid mode needs both requirements/trocr.txt and requirements/surya.txt
 # installed (it routes each handwriting line to whichever fits its script).
 # Or just run setup.sh, which creates the venv, installs the tiers you pick
--r requirements-core.txt
--r requirements-paddle.txt
+-r requirements/core.txt
+-r requirements/paddle.txt

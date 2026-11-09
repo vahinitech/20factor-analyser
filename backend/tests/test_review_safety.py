@@ -13,10 +13,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from fastapi import FastAPI, File, UploadFile
 from fastapi.testclient import TestClient
 from PIL import Image
-import computer_vision as cv
-import entitlements
-import subscription_admin
-from upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
+from vision import computer_vision as cv
+from server import entitlements
+from server import subscription_admin
+from server.upload_limits import MAX_UPLOAD_BYTES, UploadBodyLimit
 
 
 class ReviewSafetyTests(unittest.TestCase):

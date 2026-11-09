@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Placing the reader's characters on the page (backend/letter_boxes.py)."""
+"""Placing the reader's characters on the page (backend/vision/letter_boxes.py)."""
 
 import os
 import sys
@@ -8,7 +8,9 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-import letter_boxes  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    letter_boxes,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 # A level line 400 px wide from x=100, y=50 to 90, read over 40 columns.
 POLY = [[100, 50], [500, 50], [500, 90], [100, 90]]

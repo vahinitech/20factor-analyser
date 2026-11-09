@@ -3,17 +3,121 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-50c9abfb693c12d0b809",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-59458bed4241eefdcc68",
   "creationInfo": {
-    "created": "2026-10-20T12:02:05Z",
+    "created": "2026-11-04T04:42:39Z",
     "creators": [
       "Organization: Vahini Technologies",
-      "Tool: backend/update_sbom.py"
+      "Tool: backend/tools/update_sbom.py"
     ],
     "licenseListVersion": "3.22"
   },
-  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. This is not a complete container SBOM: Python transitive packages, OS libraries, model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
+  "comment": "Source dependency inventory: exact npm lockfile packages (including transitive dev tooling), pinned CDN PDF.js and libheif-js, and declared Python core/default-engine dependencies. Unresolved Python ranges are recorded in comments, not as installed versions. Datasets used for training, tests and evaluation are SPDXRef-Data-* packages (purpose OTHER), described in docs/22-datasets.md; print_hand.json is the one first-party weights file. This is not a complete container SBOM: Python transitive packages, OS libraries, third-party model weights and optional OCR tiers require an inventory from the built image. Rolling font and hosted-service entries describe runtime integrations.",
   "packages": [
+    {
+      "SPDXID": "SPDXRef-Data-FixtureSamples",
+      "name": "tests/fixtures/samples",
+      "versionInfo": "8 images",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Old letters (1722, 1889), a 1929 receipt, font specimens and printed forms used by the handwriting-only tests and as real test lines for print_hand.json. Source and licence not recorded. Not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-GNHK",
+      "name": "GNHK: GoodNotes Handwriting Kollection",
+      "versionInfo": "Hugging Face mirror aryaman27/goodnotes-handwritten-dataset at 904297760a9fec813fdc1ecb5f8055cb1ca03550, fetched 2026-10-19",
+      "supplier": "Organization: GoodNotes",
+      "downloadLocation": "https://github.com/GoodNotes/GNHK-dataset",
+      "filesAnalyzed": false,
+      "licenseConcluded": "CC-BY-4.0",
+      "licenseDeclared": "CC-BY-4.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Lee, Chung and Lee, ICDAR 2021. Licence stated in the official repository; the mirror the files came from declares none and was not compared with the official release. Evaluation only: 200 photos scored on 2026-10-19 (docs/history/real-photos-gnhk-2026-10-19.md). Holds personal data; not in this repository or the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-HandwritingSample",
+      "name": "handwriting-sample.jpg",
+      "versionInfo": "first public release",
+      "supplier": "NOASSERTION",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). One adult's notebook page. Author, source and terms not recorded. Ships in the image as frontend/assets/samples/handwriting-sample.jpg and as crops in frontend/scripts/core/sample-report-data.js; also tests/fixtures/ and benchmarks/sample-page/."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-IIIT-Telugu",
+      "name": "IIIT-INDIC-HW-WORDS-Telugu",
+      "versionInfo": "80,637 training words; source page not recorded",
+      "supplier": "Organization: CVIT, IIIT Hyderabad",
+      "downloadLocation": "https://ilocr.iiit.ac.in/dataset/23",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Gongidi and Jawahar, ICDAR 2021. ILOCR and the AIKOSH portal state CC BY 4.0; the ICFHR 2022 IHTR split (80,637 Telugu training words, the same count as our copy) is for that competition only; terms for our copy unverified. Trains the Telugu reader (weights not committed, not used by a scan) and builds Telugu evaluation pages kept outside the repository. Not in this repository or the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-PenmanshipManuals",
+      "name": "Palmer Method (1915) and Zaner-Bloser Manual 144",
+      "versionInfo": "archive.org scans",
+      "supplier": "Organization: Internet Archive (scans)",
+      "downloadLocation": "https://archive.org/details/palmermethodofbu00palmrich",
+      "filesAnalyzed": false,
+      "licenseConcluded": "LicenseRef-Public-Domain",
+      "licenseDeclared": "LicenseRef-Public-Domain",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Also https://archive.org/details/zaner-method-writing-manual-144. Public domain as recorded in benchmarks/neat-penmanship/source.md. Eight crops committed in benchmarks/neat-penmanship/pages; not in the image."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-PrintLineFonts",
+      "name": "google/fonts (24 families for printed training lines)",
+      "versionInfo": "66928797f271fed5ee428544e7229685e2d90127",
+      "supplier": "Organization: Google Fonts contributors",
+      "downloadLocation": "https://github.com/google/fonts/tree/66928797f271fed5ee428544e7229685e2d90127",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1 AND Apache-2.0",
+      "licenseDeclared": "OFL-1.1 AND Apache-2.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Font files listed with their SHA-256 in scripts/print_hand_data.py, used to render the printed lines that train and test print_hand.json. Special Elite is Apache-2.0, the rest OFL-1.1. No font file is included."
+    },
+    {
+      "SPDXID": "SPDXRef-Data-UJIPenChars2",
+      "name": "UJI Pen Characters (Version 2)",
+      "versionInfo": "ujipenchars2.txt",
+      "supplier": "Organization: Universitat Jaume I and Universitat Politecnica de Valencia (UCI Machine Learning Repository)",
+      "downloadLocation": "https://archive.ics.uci.edu/ml/machine-learning-databases/uji-penchars/version2/ujipenchars2.txt",
+      "filesAnalyzed": false,
+      "licenseConcluded": "CC-BY-4.0",
+      "licenseDeclared": "CC-BY-4.0",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "Dataset (SPDX 2.3 has no data purpose). Prat, Castro, Llorens, Marzal and Vilar, 2008, doi:10.24432/C5FG8S; licence stated on https://archive.ics.uci.edu/dataset/177/uji+pen+characters+version+2. 40 training writers train print_hand.json; the 20 test writers make the synthetic test pages and the 20 rendered pages in benchmarks/uji-clean/pages (committed, not in the image). The raw file is not redistributed. See docs/22-datasets.md.",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cc56f72f8477e763dd06a44746ba05a679e9232468aac93b3a7aad46a0300d61"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "OTHER",
+          "referenceType": "doi",
+          "referenceLocator": "10.24432/C5FG8S"
+        }
+      ]
+    },
     {
       "SPDXID": "SPDXRef-LocalFont-Caveat",
       "name": "Caveat.ttf",
@@ -102,6 +206,178 @@
       "comment": "Locally served report font for reports printed in Telugu (Telugu subset, from the @fontsource/noto-sans-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
     },
     {
+      "SPDXID": "SPDXRef-LocalFont-NotoSerifTelugu-Bold",
+      "name": "NotoSerifTelugu-Bold.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-700-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "3c660f60b2696031c4dd0404040cf45437fb6ddef87de03eca5a721ad0f2109c"
+        }
+      ],
+      "comment": "Locally served report font: the Telugu letters of the report's serif text, scaled to Spectral (Telugu subset, from the @fontsource/noto-serif-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-NotoSerifTelugu-Regular",
+      "name": "NotoSerifTelugu-Regular.woff2",
+      "versionInfo": "5.3.0",
+      "downloadLocation": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-400-normal.woff2",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2022 The Noto Project Authors (https://github.com/notofonts/telugu)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "580b25337f62d4d2517beae261ce727df1d7185bd99d77f8f41734f4a2ab5a3e"
+        }
+      ],
+      "comment": "Locally served report font: the Telugu letters of the report's serif text, scaled to Spectral (Telugu subset, from the @fontsource/noto-serif-telugu npm package). Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteAr",
+      "name": "playwrite-ar.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritear/PlaywriteAR%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "bdeb6e36a4d0c7fdee2b8b831c70ca0c81285d338ca5d8c8210cd04e38ad6342"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteAuVic",
+      "name": "playwrite-au-vic.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteauvic/PlaywriteAUVIC%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "14c7ae493902cd27b0ec76aff74bc4724a2b922c61cbad4e2a79b35814f16ac5"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeLa",
+      "name": "playwrite-de-la.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedela/PlaywriteDELA%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "6b75f0ac86b5a53faba28631fa59d2aebd6adbc5c5ca9f713fe6ade23e95c549"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeSas",
+      "name": "playwrite-de-sas.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedesas/PlaywriteDESAS%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "cc992181284dab35d0068d27a2849aba9e56de39a3a664ae787ec73a92f6ad69"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteDeVa",
+      "name": "playwrite-de-va.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedeva/PlaywriteDEVA%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "7c796ae1b686890aca27219db6223b1cb8d9b10f42355b87daec7462da296dc7"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteFrTrad",
+      "name": "playwrite-fr-trad.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritefrtrad/PlaywriteFRTrad%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "24bf683196a113b6651ca2818141cf41ddfb0468b07bd5a6d3bbcb58143496ed"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteGbJ",
+      "name": "playwrite-gb-j.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritegbj/PlaywriteGBJ%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "9b8339c8cc7747e90f6aefbe87171b42f13f7d966f617f6844ee3b41a0bb843a"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-LocalFont-PlaywriteUsTrad",
+      "name": "playwrite-us-trad.woff2",
+      "versionInfo": "google/fonts main, cut to the style names",
+      "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteustrad/PlaywriteUSTrad%5Bwght%5D.ttf",
+      "filesAnalyzed": false,
+      "licenseConcluded": "OFL-1.1",
+      "licenseDeclared": "OFL-1.1",
+      "copyrightText": "Copyright 2023 The Playwrite Project Authors (https://github.com/TypeTogether/Playwrite)",
+      "primaryPackagePurpose": "OTHER",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f292fb043b65f17256f559685234decfb14215d2358433bae0ed4564417566b1"
+        }
+      ]
+    },
+    {
       "SPDXID": "SPDXRef-LocalFont-Spectral-Regular",
       "name": "Spectral-Regular.ttf",
       "downloadLocation": "https://raw.githubusercontent.com/google/fonts/main/ofl/spectral/Spectral-Regular.ttf",
@@ -134,6 +410,19 @@
         }
       ],
       "comment": "Locally served report font. Original license and source manifest in frontend/assets/fonts/."
+    },
+    {
+      "SPDXID": "SPDXRef-Model-PrintHand",
+      "name": "print_hand.json",
+      "versionInfo": "trained at d842980",
+      "supplier": "Organization: Vahini Technologies",
+      "downloadLocation": "https://github.com/vahinitech/20factor-analyser/blob/main/backend/models/print_hand.json",
+      "filesAnalyzed": false,
+      "licenseConcluded": "AGPL-3.0-only",
+      "licenseDeclared": "AGPL-3.0-only",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "OTHER",
+      "comment": "First-party weights of the print-or-handwriting line reader (backend/reading/print_hand.py), trained by scripts/train_print_hand.py. Ships in the image. Trained on UJI Pen Characters v2 and fonts from google/fonts; no training data is included."
     },
     {
       "SPDXID": "SPDXRef-Package-Caveat",
@@ -192,7 +481,7 @@
           "referenceLocator": "pkg:pypi/fastapi"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: fastapi>=0.110. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: fastapi>=0.110. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-HankenGrotesk",
@@ -231,7 +520,7 @@
           "referenceLocator": "pkg:pypi/httpx"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: httpx>=0.27. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: httpx>=0.27. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-LibheifJs",
@@ -270,7 +559,7 @@
           "referenceLocator": "pkg:pypi/numpy"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: numpy>=1.24. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: numpy>=1.24. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-OpenCV",
@@ -289,7 +578,7 @@
           "referenceLocator": "pkg:pypi/opencv-python-headless"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: opencv-python-headless>=4.9.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: opencv-python-headless>=4.9.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PaddleOCR",
@@ -308,7 +597,7 @@
           "referenceLocator": "pkg:pypi/paddleocr"
         }
       ],
-      "comment": "Declared in backend/requirements-paddle.txt: paddleocr>=3.0.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/paddle.txt: paddleocr>=3.0.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PaddlePaddle",
@@ -328,7 +617,7 @@
           "referenceLocator": "pkg:pypi/paddlepaddle@3.1.1"
         }
       ],
-      "comment": "Declared in backend/requirements-paddle.txt: paddlepaddle==3.1.1. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/paddle.txt: paddlepaddle==3.1.1. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PdfJs",
@@ -367,8 +656,8 @@
           "referenceLocator": "pkg:pypi/pillow"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: pillow==12.3.0. Resolved container versions require a build SBOM.",
-      "versionInfo": "12.3.0"
+      "comment": "Declared in backend/requirements/core.txt: pillow==13.0.0. Resolved container versions require a build SBOM.",
+      "versionInfo": "13.0.0"
     },
     {
       "SPDXID": "SPDXRef-Package-Pypdfium2",
@@ -388,7 +677,7 @@
           "referenceLocator": "pkg:pypi/pypdfium2"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: pypdfium2==5.13.0. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: pypdfium2==5.13.0. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-PythonMultipart",
@@ -407,7 +696,7 @@
           "referenceLocator": "pkg:pypi/python-multipart"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: python-multipart>=0.0.9. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: python-multipart>=0.0.9. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-Spectral",
@@ -446,7 +735,7 @@
           "referenceLocator": "pkg:pypi/uvicorn"
         }
       ],
-      "comment": "Declared in backend/requirements-core.txt: uvicorn>=0.29. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: uvicorn>=0.29. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-Vahini",
@@ -470,8 +759,8 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "versionInfo": "26.5.1",
-      "comment": "Declared in backend/requirements-core.txt: black==26.5.1. Resolved container versions require a build SBOM."
+      "versionInfo": "26.10.1",
+      "comment": "Declared in backend/requirements/core.txt: black==26.10.1. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-coverage",
@@ -482,7 +771,7 @@
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
       "versionInfo": "7.16.2",
-      "comment": "Declared in backend/requirements-core.txt: coverage==7.16.2. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: coverage==7.16.2. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-goQR",
@@ -505,7 +794,7 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "comment": "Declared in backend/requirements-core.txt: jsonschema>=4.18. Resolved container versions require a build SBOM."
+      "comment": "Declared in backend/requirements/core.txt: jsonschema>=4.18. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Package-nginx",
@@ -528,8 +817,19 @@
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "NOASSERTION",
       "copyrightText": "NOASSERTION",
-      "versionInfo": "4.0.6",
-      "comment": "Declared in backend/requirements-core.txt: pylint==4.0.6. Resolved container versions require a build SBOM."
+      "versionInfo": "4.0.9",
+      "comment": "Declared in backend/requirements/core.txt: pylint==4.0.9. Resolved container versions require a build SBOM."
+    },
+    {
+      "SPDXID": "SPDXRef-Package-vulture",
+      "name": "vulture",
+      "downloadLocation": "https://pypi.org/project/vulture/",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION",
+      "copyrightText": "NOASSERTION",
+      "versionInfo": "2.14",
+      "comment": "Declared in backend/requirements/core.txt: vulture==2.14. Resolved container versions require a build SBOM."
     },
     {
       "SPDXID": "SPDXRef-Vendor-html2canvas",
@@ -627,6 +927,30 @@
         {
           "algorithm": "SHA512",
           "checksumValue": "eb300193f10203f418482435346895c306d07ab50267e4d06e9eb843702099f36fbab1c7d23f13b576b5a9b4a15c0eaaaa4a408f85795bca4fea62ded6670ca8"
+        }
+      ]
+    },
+    {
+      "SPDXID": "SPDXRef-npm-node-modules--isaacs-nonrecursive-glob-match",
+      "name": "@isaacs/nonrecursive-glob-match",
+      "versionInfo": "1.0.3",
+      "downloadLocation": "https://registry.npmjs.org/@isaacs/nonrecursive-glob-match/-/nonrecursive-glob-match-1.0.3.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "BlueOak-1.0.0",
+      "copyrightText": "NOASSERTION",
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/%40isaacs/nonrecursive-glob-match@1.0.3"
+        }
+      ],
+      "comment": "Generated from package-lock.json: node_modules/@isaacs/nonrecursive-glob-match. Includes transitive dependencies.",
+      "checksums": [
+        {
+          "algorithm": "SHA512",
+          "checksumValue": "488ee4c8a1eae175c3468cf0fabf4695166489ad59905ae92d6f7caf6202d81a6bf18905184ddfbe3ce6c421b4c7bf00fbeebd1e60cdac3bd23180599871a928"
         }
       ]
     },
@@ -1377,8 +1701,8 @@
     {
       "SPDXID": "SPDXRef-npm-node-modules-follow-redirects",
       "name": "follow-redirects",
-      "versionInfo": "1.16.0",
-      "downloadLocation": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.0.tgz",
+      "versionInfo": "1.16.2",
+      "downloadLocation": "https://registry.npmjs.org/follow-redirects/-/follow-redirects-1.16.2.tgz",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "MIT",
@@ -1387,14 +1711,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/follow-redirects@1.16.0"
+          "referenceLocator": "pkg:npm/follow-redirects@1.16.2"
         }
       ],
       "comment": "Generated from package-lock.json: node_modules/follow-redirects. Includes transitive dependencies.",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "cb9acdfee3ac69d153fc97d8c21c514b947b41c7be837cc6f7bf89aed159942f64957fd6e610fb8a22f349c2389d9a944bb0cd51d84f830e3123c5b62ee5e553"
+          "checksumValue": "fe454fd94f33e7de886b483016bc3221ea3be2d6b9695992794d457c050c0267043f910fef3c9d99a83748b88deb835a44a79fde5c6cabb8bf83b96d2500c6a3"
         }
       ]
     },
@@ -1545,8 +1869,8 @@
     {
       "SPDXID": "SPDXRef-npm-node-modules-glob",
       "name": "glob",
-      "versionInfo": "13.0.6",
-      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-13.0.6.tgz",
+      "versionInfo": "14.0.3",
+      "downloadLocation": "https://registry.npmjs.org/glob/-/glob-14.0.3.tgz",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -1555,14 +1879,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/glob@13.0.6"
+          "referenceLocator": "pkg:npm/glob@14.0.3"
         }
       ],
       "comment": "Generated from package-lock.json: node_modules/glob. Includes transitive dependencies.",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "5a3972ae89669bcb83a66fe8806c976576f567e09ad81f0d6c9c2a0558346b12bd19b05ea12ef2195eaf8d79d87469ba5f9de27a112ec716f288aa7c42637857"
+          "checksumValue": "035be32300b7aa9742b28e39230d76ee09e9eec3e1aa063c9544210eb02b22cf866e67da6953c5ba8cb2ed6c8b4fd10f642459ee3eda2ddc1485098759eb04a3"
         }
       ]
     },
@@ -2025,8 +2349,8 @@
     {
       "SPDXID": "SPDXRef-npm-node-modules-minimatch",
       "name": "minimatch",
-      "versionInfo": "10.2.6",
-      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-10.2.6.tgz",
+      "versionInfo": "11.0.4",
+      "downloadLocation": "https://registry.npmjs.org/minimatch/-/minimatch-11.0.4.tgz",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -2035,14 +2359,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/minimatch@10.2.6"
+          "referenceLocator": "pkg:npm/minimatch@11.0.4"
         }
       ],
       "comment": "Generated from package-lock.json: node_modules/minimatch. Includes transitive dependencies.",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "be92d012cf952c2af59d4d015d2d3b99a628170943007d209e042ebadb71230bad0c510c1ead9b957fbcbe98310dd2b72753f08c22627a9efb3a2b536782e5d4"
+          "checksumValue": "fd4275744a154138cf34387a486954a3eb9e2cc9a81d36ace2afbcc9a011ff9b7a9cb0088810c9b68614876d086257a2c7b7a18909207336fce0f137bb31e4c6"
         }
       ]
     },
@@ -2265,8 +2589,8 @@
     {
       "SPDXID": "SPDXRef-npm-node-modules-path-scurry",
       "name": "path-scurry",
-      "versionInfo": "2.0.2",
-      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-2.0.2.tgz",
+      "versionInfo": "3.0.0",
+      "downloadLocation": "https://registry.npmjs.org/path-scurry/-/path-scurry-3.0.0.tgz",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "BlueOak-1.0.0",
@@ -2275,14 +2599,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/path-scurry@2.0.2"
+          "referenceLocator": "pkg:npm/path-scurry@3.0.0"
         }
       ],
       "comment": "Generated from package-lock.json: node_modules/path-scurry. Includes transitive dependencies.",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "dcefe2555b0900fb0e9e9c1621e0fe77acffecf9aa029c9078f52d0a77636ad8fff48e4bca51efb79aa5b856814f7239877af57a37d1d39e9cf850aff8d9cd5e"
+          "checksumValue": "d694db42a1f5c08c0c8bf7a5790e657854d30a4cc5b0f7205cd8f0380f181865bf5b8fe41d3dddb2c13b67a347fb3baa34b3b3381d2e683eb5ca5edc01c56182"
         }
       ]
     },
@@ -2361,8 +2685,8 @@
     {
       "SPDXID": "SPDXRef-npm-node-modules-qs",
       "name": "qs",
-      "versionInfo": "6.16.0",
-      "downloadLocation": "https://registry.npmjs.org/qs/-/qs-6.16.0.tgz",
+      "versionInfo": "6.17.1",
+      "downloadLocation": "https://registry.npmjs.org/qs/-/qs-6.17.1.tgz",
       "filesAnalyzed": false,
       "licenseConcluded": "NOASSERTION",
       "licenseDeclared": "BSD-3-Clause",
@@ -2371,14 +2695,14 @@
         {
           "referenceCategory": "PACKAGE-MANAGER",
           "referenceType": "purl",
-          "referenceLocator": "pkg:npm/qs@6.16.0"
+          "referenceLocator": "pkg:npm/qs@6.17.1"
         }
       ],
       "comment": "Generated from package-lock.json: node_modules/qs. Includes transitive dependencies.",
       "checksums": [
         {
           "algorithm": "SHA512",
-          "checksumValue": "87a7e1388691ac80f609b118d9faacfbbb7e517668f8c2c09d4e60448abce6e16d76250f09db00a4c947857a202953381ccd8355b22318d4d3607d8e7263f5bc"
+          "checksumValue": "8dddc23a468a5601945be647c841c21bd6c7ed1a1a6a25ae320cec2018d43158cb01a5865a9a14015c258d5bc11f146eff6a841e769d2c666b92eb585013d024"
         }
       ]
     },
@@ -3086,6 +3410,41 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-Data-FixtureSamples",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-GNHK",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-IIIT-Telugu",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-PenmanshipManuals",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Data-UJIPenChars2",
+      "relationshipType": "TEST_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Model-PrintHand",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-Data-PrintLineFonts"
+    },
+    {
+      "spdxElementId": "SPDXRef-Model-PrintHand",
+      "relationshipType": "GENERATED_FROM",
+      "relatedSpdxElement": "SPDXRef-Data-UJIPenChars2"
+    },
+    {
       "spdxElementId": "SPDXRef-Package-FastAPI",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -3147,6 +3506,16 @@
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Data-HandwritingSample"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "CONTAINS",
+      "relatedSpdxElement": "SPDXRef-Model-PrintHand"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-LocalFont-Caveat"
     },
@@ -3169,6 +3538,56 @@
       "spdxElementId": "SPDXRef-Package-Vahini",
       "relationshipType": "DEPENDS_ON",
       "relatedSpdxElement": "SPDXRef-LocalFont-NotoSansTelugu-Regular"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSerifTelugu-Bold"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-NotoSerifTelugu-Regular"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteAr"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteAuVic"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeLa"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeSas"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteDeVa"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteFrTrad"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteGbJ"
+    },
+    {
+      "spdxElementId": "SPDXRef-Package-Vahini",
+      "relationshipType": "DEPENDS_ON",
+      "relatedSpdxElement": "SPDXRef-LocalFont-PlaywriteUsTrad"
     },
     {
       "spdxElementId": "SPDXRef-Package-Vahini",
@@ -3231,6 +3650,11 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-Package-vulture",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-Vendor-html2canvas",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -3247,6 +3671,11 @@
     },
     {
       "spdxElementId": "SPDXRef-npm-node-modules--bcoe-v8-coverage",
+      "relationshipType": "DEV_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-npm-node-modules--isaacs-nonrecursive-glob-match",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
@@ -3759,6 +4188,16 @@
       "spdxElementId": "SPDXRef-npm-node-modules-yocto-queue",
       "relationshipType": "DEV_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    }
+  ],
+  "hasExtractedLicensingInfos": [
+    {
+      "licenseId": "LicenseRef-Public-Domain",
+      "name": "Public domain",
+      "extractedText": "Works out of copyright: archive.org marks these scans NOT_IN_COPYRIGHT and Public Domain Mark 1.0.",
+      "seeAlsos": [
+        "https://creativecommons.org/publicdomain/mark/1.0/"
+      ]
     }
   ]
 }

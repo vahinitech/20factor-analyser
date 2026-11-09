@@ -1,5 +1,5 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://vahinitech.com/schemas/recognition-ladders.schema.json",
   "title": "Recognition ladders",
   "description": "The stages that may read a line of each script, cheapest first, per OCR mode (docs/20-languages.md, section 17.2). Built by scripts/rank_stages.py from stages.json; never edited by hand.",
@@ -23,13 +23,13 @@
       "additionalProperties": false,
       "required": ["paddle", "trocr", "hybrid"],
       "properties": {
-        "paddle": {"$ref": "#/$defs/mode"},
-        "trocr": {"$ref": "#/$defs/mode"},
-        "hybrid": {"$ref": "#/$defs/mode"}
+        "paddle": {"$ref": "#/definitions/mode"},
+        "trocr": {"$ref": "#/definitions/mode"},
+        "hybrid": {"$ref": "#/definitions/mode"}
       }
     }
   },
-  "$defs": {
+  "definitions": {
     "script": {"type": "string", "pattern": "^[A-Z][a-z]{3}$"},
     "stageId": {"type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"},
     "mode": {
@@ -40,8 +40,8 @@
         "read": {
           "type": "object",
           "minProperties": 1,
-          "propertyNames": {"$ref": "#/$defs/script"},
-          "additionalProperties": {"$ref": "#/$defs/ladder"}
+          "propertyNames": {"$ref": "#/definitions/script"},
+          "additionalProperties": {"$ref": "#/definitions/ladder"}
         }
       }
     },
@@ -58,19 +58,19 @@
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/stageId"}
+          "items": {"$ref": "#/definitions/stageId"}
         },
         "left_off": {
           "description": "Stages that could read this script but are not on the ladder, and why.",
           "type": "object",
-          "propertyNames": {"$ref": "#/$defs/stageId"},
+          "propertyNames": {"$ref": "#/definitions/stageId"},
           "additionalProperties": {"type": "string", "minLength": 1}
         },
         "unmeasured": {
           "description": "Stages whose quality or cost for this script is not measured, so the ladder could not be ranked.",
           "type": "array",
           "uniqueItems": true,
-          "items": {"$ref": "#/$defs/stageId"}
+          "items": {"$ref": "#/definitions/stageId"}
         }
       }
     }

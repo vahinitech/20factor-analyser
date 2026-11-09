@@ -135,10 +135,11 @@ def _planted():
     return module
 
 
-def synthetic_pairs(writers, count, planted=None):
+def synthetic_pairs(writers, count, planted=None, ruled=False):
     """Two clean planted pages per pair, the same four sentences on both
     (a copied passage), drawn from one writer's letters with different
-    seeds. Scores from the real scorer, without OCR."""
+    seeds, on printed ruling when ruled. Scores from the real scorer,
+    without OCR."""
     sys.path.insert(0, os.path.join(ROOT, "backend"))
     import scoring  # pylint: disable=import-outside-toplevel
 
@@ -152,7 +153,10 @@ def synthetic_pairs(writers, count, planted=None):
                 scores = []
                 for seed in (2 * k + 1, 2 * k + 2):
                     img, lines, _ = planted.build_page(
-                        letters, np.random.default_rng(seed), "clean"
+                        letters,
+                        np.random.default_rng(seed),
+                        "clean",
+                        ruled=ruled,
                     )
                     analysis = scoring.build_analysis(img, lines, {})
                     scores.append(

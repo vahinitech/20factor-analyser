@@ -7,8 +7,8 @@ import unittest
 from unittest.mock import patch, AsyncMock
 
 from backend.tests import test_report_access as base
-import compact_reports
-import computer_vision
+from report import compact_reports
+from vision import computer_vision
 import numpy as np
 
 sample = base.sample
@@ -49,6 +49,33 @@ class CompactTests(unittest.TestCase):
         )
         self.assertEqual(len(result["evidence"]["factor_regions"]), 20)
 
+    def test_the_style_check_reaches_every_tier(self):
+        # The report's cursive sheets box reads it (#351); without it the
+        # box never showed on the check page.
+        payload = sample()
+        payload["analysis"]["styleProfile"] = {
+            "available": True,
+            "verdict": "cursive",
+            "wordsUsed": 14,
+            "shares": {"cursive": 0.9, "print": 0.1, "mixed": 0.0},
+            "advice": "PRIVATE",
+        }
+        for tier in ("free", "pro"):
+            report = compact_reports.build_compact(payload, {"tier": tier})
+            self.assertEqual(
+                report["style"],
+                {"available": True, "verdict": "cursive", "words": 14},
+            )
+        payload["analysis"]["styleProfile"] = {
+            "available": False,
+            "reason": "too few measurable words to classify the style",
+        }
+        report = compact_reports.build_compact(payload, {"tier": "free"})
+        self.assertEqual(report["style"], {"available": False})
+        del payload["analysis"]["styleProfile"]
+        report = compact_reports.build_compact(payload, {"tier": "free"})
+        self.assertNotIn("style", report)
+
     def test_missing_score_is_not_zero(self):
         payload = sample()
         payload["analysis"]["results"][0]["score"] = None
@@ -84,7 +111,7 @@ class CompactHTTPTests(unittest.TestCase):
 
         spec = importlib.util.spec_from_file_location(
             "compact_test_server",
-            Path(__file__).resolve().parents[1] / "ppocr-server.py",
+            Path(__file__).resolve().parents[1] / "server/app.py",
         )
         server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(server)

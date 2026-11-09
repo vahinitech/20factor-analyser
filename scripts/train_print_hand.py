@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-only
 # (c) 2026 Vahini Technologies.
-"""Train the print-or-handwriting line reader (backend/print_hand.py).
+"""Train the print-or-handwriting line reader (backend/reading/print_hand.py).
 
 Reads the lines scripts/print_hand_data.py wrote, trains on 64-pixel
 windows of the training lines, keeps the epoch that does best on a
@@ -31,7 +31,9 @@ from torch import nn
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(ROOT, "backend"))
 
-import print_hand  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    print_hand,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 
 def model():

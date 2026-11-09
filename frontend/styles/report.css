@@ -48,10 +48,14 @@
   --sn-focus:      var(--band-focus);
 
   /* Type */
-  --serif: var(--v-font-serif);
-  --sans:  var(--v-font-sans);
-  --handA: "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
-  --handB: "Caveat", cursive;                            /* actual, loose  */
+  /* The same lists in every language: a script's letters come from the
+     "Vahini Script" faces first (report-fonts.css), everything else from
+     the English faces after them: the website theme's, or the report's own
+     bundled faces where the host page has no theme. */
+  --serif: "Vahini Script Serif", var(--v-font-serif, Spectral, Georgia, serif);
+  --sans:  "Vahini Script Sans", var(--v-font-sans, "Hanken Grotesk", sans-serif);
+  --handA: "Vahini Script Hand", "Edu SA Beginner", "Comic Sans MS", cursive; /* expected, neat */
+  --handB: "Vahini Script Hand", "Caveat", cursive;                            /* actual, loose  */
 
   --pg-pad: 17mm;
 }
@@ -932,24 +936,16 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 @media screen and (max-width:600px){ .progress-panel .pp-compare{ columns:1; } }
 @media print{ .progress-panel{ display:none !important; } }
 
-/* Printed in Telugu ("Print in", lang="te" on the report and on "Your
-   progress"). Noto Sans Telugu comes first in every face, but its
-   unicode-range holds only Telugu letters, so English words, numbers and
-   the Latin practice text keep their own faces. The font is declared in
-   report-fonts.css and loads only when Telugu is on the page. These stacks
-   name the report's own bundled faces rather than the host's tokens, so a
-   Telugu print never depends on the host's stylesheet for its script. */
-[lang="te"]{
-  --serif: "Noto Sans Telugu", Spectral, Georgia, serif;
-  --sans:  "Noto Sans Telugu", "Hanken Grotesk", sans-serif;
-  --handA: "Noto Sans Telugu", "Edu SA Beginner", "Comic Sans MS", cursive;
-  --handB: "Noto Sans Telugu", "Caveat", cursive;
-}
-.report-host[lang="te"], .progress-panel[lang="te"]{ font-family:var(--sans); }
-/* Letter spacing splits Telugu letters from their vowel signs and joined
-   consonants, and Telugu has no capitals: the small spaced capitals of
-   the labels stay plain in Telugu. */
-.report-host[lang="te"] .page, .report-host[lang="te"] .page *{ letter-spacing:normal; text-transform:none; }
+/* Every language keeps the English report (docs/12-report-rules.md): no
+   rule here names a language. The report and "Your progress" are set in
+   the report's sans in every language, so text the stylesheet gives no
+   face still takes the script's face. */
+.report-host, .progress-panel{ font-family:var(--sans); }
+/* A script without capitals (data-caseless, from VahiniI18n.caseless):
+   letter spacing would split its letters from their vowel signs, and the
+   labels' spaced capitals have nothing to capitalise. Sizes and places do
+   not change. */
+.report-host[data-caseless] .page, .report-host[data-caseless] .page *{ letter-spacing:normal; text-transform:none; }
 
 /* Page 2 is the practice sheet (2026-10-11): a label pointing back to page 1
    on the left, and on the right a drawn model to copy and lines to try it. */
@@ -1010,6 +1006,14 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .sn-note-end{ display:flex; justify-content:space-between; align-items:baseline; gap:2px 14px; flex-wrap:wrap; margin-top:1px; }
 .free-report.compact-report .sn-note p.sn-grade{ font-weight:700; margin:0; }
 .free-report.compact-report .sn-note p.sn-sign{ font:600 23px/1 var(--handB); color:var(--v-accent-text); margin:0; }
+.free-report.compact-report .sn-note p.sn-promise{ flex:1 1 320px; margin:0; }
+/* What the writer is a master at, beside what to improve next. */
+.sn-note-table{ width:100%; border-collapse:collapse; margin:3px 0 4px; background:var(--v-surface); border-radius:8px; }
+.free-report.compact-report .sn-note-table th, .free-report.compact-report .sn-note-table td{ width:50%; padding:3px 10px; text-align:left; vertical-align:top; font:400 14px/1.3 var(--serif); color:var(--v-text); }
+.free-report.compact-report .sn-note-table th{ font-weight:700; color:var(--v-accent-text); }
+.free-report.compact-report .sn-note-table td{ border-top:1px solid var(--v-border); }
+.free-report.compact-report .sn-note-table th:first-child::before{ content:"✓ "; }
+.free-report.compact-report .sn-note-table th:last-child::before{ content:"→ "; }
 .sn-leaf{ width:30px; height:38px; flex:none; }
 .sn-leaf .lf-stem{ fill:none; stroke:var(--v-success); stroke-width:2.2; stroke-linecap:round; }
 .sn-leaf .lf-a{ fill:var(--v-success); opacity:.7; } .sn-leaf .lf-b{ fill:var(--v-success); }
@@ -1131,6 +1135,9 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .md-margin i{ display:block; height:2px; width:55%; background:var(--v-paper-ink); opacity:.6; margin-left:2px; }
 .md-margin i:nth-child(2){ width:70%; } .md-margin i:nth-child(3){ width:40%; }
 .md-waves svg{ width:100%; height:80%; } .md-waves path{ fill:none; stroke:var(--v-paper-ink); stroke-width:2.2; stroke-linecap:round; }
+.md-ovals svg, .md-push-pulls svg{ width:100%; height:80%; } .md-ovals ellipse, .md-push-pulls path{ fill:none; stroke:var(--v-paper-ink); stroke-width:1.6; stroke-linecap:round; }
+.md-ovals path, .md-push-pulls path{ fill:none; }
+.md-ovals .md-way, .md-push-pulls .md-way{ stroke:var(--v-highlight); stroke-width:2; stroke-linejoin:round; }
 .md-page{ justify-content:flex-start; }
 .md-sheet{ display:flex; flex-direction:column; gap:4px; justify-content:center; width:90px; height:90%; border:1px solid var(--v-border-strong); border-radius:3px; padding:3px 8px 3px 16px; background:linear-gradient(var(--v-highlight),var(--v-highlight)) 11px 0/1px 100% no-repeat, var(--v-surface); }
 .md-sheet i{ display:block; height:2px; background:var(--v-paper-ink); opacity:.55; }
@@ -1173,7 +1180,12 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
   .report-layout{ display:grid; grid-template-columns:minmax(0,210mm) 300px; gap:24px; justify-content:center; align-items:start; }
   .report-side{ position:sticky; top:140px; max-height:calc(100vh - 160px); overflow:auto; margin:24px 0 40px; padding:0; }
 }
-@media print{ .report-side, .report-layout > aside{ display:none !important; } }
+/* Under the report: the other view of the same check (screen only). */
+.view-switch{ margin:-44px 0 40px; text-align:center; font-family:var(--sans); }
+.view-switch__btn{ background:none; border:0; padding:6px 8px; font:inherit; font-size:14px; color:var(--v-accent-text); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.view-switch__btn:focus-visible{ outline:2px solid var(--v-accent); outline-offset:2px; border-radius:6px; }
+@media screen and (min-width:1200px){ .report-layout > .view-switch{ grid-column:1; grid-row:2; } .report-layout > .report-side{ grid-column:2; grid-row:1 / span 2; } }
+@media print{ .report-side, .report-layout > aside, .view-switch{ display:none !important; } }
 /* The shared PDF: html2canvas draws the page as on a wide screen. */
 .pdf-capture .page{ margin:0 !important; box-shadow:none !important; width:210mm !important; min-height:297mm !important; }
 .pdf-capture body{ background:var(--v-paper); }
@@ -1194,10 +1206,10 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .pdf-busy .page::after{ content:none; }
 .pdf-capture .sn-cn{ overflow-wrap:normal; }
 .pdf-capture .sn-try{ display:flex; width:fit-content; }
-/* The Latin practice letters keep their spacing in a Telugu report. */
-.report-host[lang="te"] .page .sn-guide .md-hand{ letter-spacing:.3em; }
-.report-host[lang="te"] .page .md-ladder .md-hand, .report-host[lang="te"] .page .md-zones .md-hand{ letter-spacing:.22em; }
-.report-host[lang="te"] .page .md-slant .md-hand{ letter-spacing:.3em; }
+/* The Latin practice letters keep their spacing in a caseless script's report. */
+.report-host[data-caseless] .page .sn-guide .md-hand{ letter-spacing:.3em; }
+.report-host[data-caseless] .page .md-ladder .md-hand, .report-host[data-caseless] .page .md-zones .md-hand{ letter-spacing:.22em; }
+.report-host[data-caseless] .page .md-slant .md-hand{ letter-spacing:.3em; }
 /* Pro's two tips sit side by side, and its lines to try are slimmer, so
    three skills with two exercises each and a spelling row stay on one
    sheet in Telugu too. */
@@ -1225,6 +1237,28 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 .practice-pro .pr-about .pr-why{ font-size:11.5px; }
 .practice-pro .pr-about .pr-win{ font-size:10.5px; }
 .practice-row.trim-more .pr-more, .practice-row.trim-why .pr-why, .practice-row.trim-win .pr-win{ display:none; }
+.practice-row.trim-also .pr-saw-also, .practice-row.trim-words .pr-saw-words, .practice-row.trim-rule .pr-saw-why{ display:none; }
+/* Grammar on page 2 (owner, 2026-10-25): one plain rule each, dropped
+   first when the row would be taller than its exercise. */
+.grammar-row .pr-gr-rules{ margin:6px 0 0; padding:0; list-style:none; font-size:12.5px; line-height:1.45; color:var(--v-text-2); }
+.practice-row.trim-rules .pr-gr-rules, .practice-row.trim-gram2 .pr-gr-one + .pr-gr-one{ display:none; }
+.spelling-row.with-grammar .pr-saw-why b{ color:var(--v-text); }
+/* Page 1's "Spelling and grammar" line, between the photo and the
+   measurements, in place of a sentence in the small print. */
+.sn-subrow{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 5px; }
+.free-report.compact-report .sn-subrow .sn-m-sub{ margin:0; flex:1 1 auto; min-width:0; }
+.sn-subrow .sn-lang{ flex:0 1 60%; }
+.sn-lang{ display:block; margin:0; padding:3px 10px; border-radius:8px; background:var(--v-accent-soft); color:var(--v-accent-text); font:12px/1.35 var(--sans); }
+.sn-lang b{ margin-right:6px; }
+.sn-lang b{ font-weight:700; }
+/* Free cursive sheets: a dashed box of shop links on a joined page. */
+.free-report.compact-report .p2-cursive{ margin:4px 0 0; padding:6px 10px; border:1px dashed var(--v-border); border-radius:10px; }
+.free-report.compact-report .p2-cursive p{ margin:0; font:500 11.5px/1.45 var(--sans); }
+.free-report.compact-report .p2-cursive b{ font:700 13px/1.3 var(--serif); }
+.free-report.compact-report .p2-cursive a{ color:var(--v-accent-text); font-weight:600; }
+.free-report.compact-report .p2-cursive p + p{ margin-top:2px; }
+/* The style's name in its own cursive face (frontend/styles/letter-style-fonts.css). */
+.free-report.compact-report .p2-cursive .p2-style-name{ font-size:13.5px; font-weight:400; color:var(--v-text); }
 /* When writing feels hard: a calm note before the closing line. */
 .free-report.compact-report .p2-hard{ margin:4px 0 0; padding:6px 10px; border-radius:10px; background:var(--v-accent-soft); color:var(--v-text); }
 .free-report.compact-report .p2-hard p{ margin:0; font:500 11.5px/1.4 var(--sans); }
@@ -1268,3 +1302,84 @@ body.has-bar .page:first-of-type{ margin-top:74px; }
 @media print{ .sn-m-how{ display:none !important; } }
 @media (max-width: 700px){ .sn-m, .sn-m-group{ grid-template-columns:1fr; } }
 .sn-pen-skill{ border:1px dashed var(--v-border-strong); border-radius:9px; padding:3px 8px; font-size:11.5px; color:var(--v-text-muted); background:var(--v-surface); }
+
+/* ---- The student view (owner, 2026-10-23, option A): one screen above the
+   pages, screen only. Website tokens only; the proof strips reuse the
+   "What your page shows" strip and its marks. ------------------------- */
+.stu{ display:grid; gap:14px; margin:0 auto 18px; max-width:980px; font-family:var(--sans); color:var(--v-text); }
+.stu-card{ display:grid; gap:10px; background:var(--v-surface); border:1px solid var(--v-border); border-radius:16px; padding:16px; }
+.stu-card p{ margin:0; font-size:16px; line-height:1.45; }
+.stu-who{ display:flex; gap:12px; align-items:center; }
+.stu-art{ width:72px; height:72px; object-fit:contain; flex:none; }
+.stu-say{ font:700 22px/1.25 var(--serif) !important; }
+.stu-pill{ display:inline-flex; align-items:center; gap:6px; width:fit-content; border-radius:999px; padding:4px 10px; font:700 13px var(--sans); background:var(--v-warning-bg); color:var(--v-warning); }
+.stu-pill svg{ width:16px; height:16px; }
+.stu-proof .sn-m-strip{ height:auto; aspect-ratio:3.2; border:1px solid var(--v-border); background:var(--v-paper); }
+.stu-why{ color:var(--v-success); font-weight:600; font-size:14px !important; }
+.stu-plan{ display:flex; gap:10px; align-items:center; border-radius:12px; padding:10px 12px; background:var(--v-accent-soft); color:var(--v-accent-text); font-weight:600; }
+.stu-plan-art{ width:44px; height:44px; object-fit:contain; flex:none; }
+.stu-btn{ display:block; text-align:center; border-radius:12px; padding:12px 16px; background:var(--v-accent); color:var(--v-on-accent); font:700 16px var(--sans); text-decoration:none; }
+.stu-btn:focus-visible, .stu-more:focus-visible{ outline:3px solid var(--v-accent-text); outline-offset:2px; }
+.stu-again{ text-align:center; color:var(--v-text-muted); font-size:14px !important; }
+.stu-five h2{ margin:0; font:700 19px/1.25 var(--serif); }
+.stu-five ul{ list-style:none; margin:0; padding:0; display:grid; gap:8px; }
+.stu-row{ display:grid; grid-template-columns:28px minmax(0,1fr); gap:10px; align-items:start; padding:6px; border-radius:12px; }
+.stu-row-now{ background:var(--v-warning-bg); }
+.stu-row-body{ display:grid; gap:6px; min-width:0; }
+.stu-row-body .stu-proof{ max-width:none; }
+.stu-mk{ display:inline-flex; align-items:center; gap:4px; border-radius:999px; padding:2px 8px 2px 4px; font:700 12px var(--sans); vertical-align:1px; white-space:nowrap; }
+.stu-row > .stu-mk{ width:28px; height:28px; padding:0; justify-content:center; }
+.stu-mk svg{ width:15px; height:15px; fill:none; stroke:currentColor; stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round; }
+.stu-mk-keep{ background:var(--v-success-bg); color:var(--v-success); }
+.stu-mk-now{ background:var(--v-warning-bg); color:var(--v-warning); }
+.stu-mk-later{ background:var(--v-bg-alt); color:var(--v-text-muted); }
+.stu-mk-grow{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+/* Page 2's spelling row (#317): the child's own ink, an arrow, the word to write. */
+.pr-saw-ink{ display:flex; align-items:center; gap:4px 14px; flex-wrap:wrap; }
+.pr-saw-one{ display:inline-flex; align-items:center; gap:6px; }
+.pr-saw-ink .stu-ink{ height:28px; width:auto; max-width:120px; border:1px solid var(--v-border); border-radius:6px; background:var(--v-paper); }
+.pr-saw-arrow{ color:var(--v-text-muted); }
+.pr-saw-right{ font:600 22px/1 var(--handB); color:var(--v-success); }
+.pr-saw-why{ margin:2px 0 0; font-size:12.5px; color:var(--v-text-2); }
+.pr-saw-words{ margin:4px 0 0; font-size:13px; color:var(--v-text-2); }
+.pr-saw-list{ font:600 18px/1.2 var(--handB); color:var(--v-success); }
+.pr-saw-also{ margin:2px 0 0; font-size:12.5px; color:var(--v-text-muted); }
+/* Words and sentences to check (#317): one card, words beside sentences;
+   each finding one line: the child's own ink, an arrow, the word to write. */
+.stu-lang{ grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:12px 28px; padding:14px 16px; }
+.stu-lang-sec{ display:grid; gap:8px; align-content:start; min-width:0; }
+.stu-lang-head{ display:flex; flex-wrap:wrap; align-items:center; gap:4px 10px; }
+.stu-pill-lang{ background:var(--v-accent-soft); color:var(--v-accent-text); }
+.stu-lang-note{ color:var(--v-text-muted); font-size:14px; }
+.stu-fixes{ list-style:none; margin:0; padding:0; display:grid; grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr)); gap:8px 18px; }
+.stu-fix{ display:grid; grid-template-columns:auto auto minmax(0,1fr); align-items:center; gap:8px; min-width:0; }
+.stu-ink{ height:40px; width:auto; max-width:130px; border:1px solid var(--v-border); border-radius:8px; background:var(--v-paper); }
+.stu-arrow{ width:18px; height:18px; fill:none; stroke:var(--v-text-muted); stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.stu-fix-text{ display:grid; min-width:0; }
+.stu-right{ font:600 24px/1.05 var(--handB); color:var(--v-success); overflow-wrap:anywhere; }
+.stu-fix-why{ color:var(--v-text-2); font-size:13px; line-height:1.3; }
+.stu-patterns{ display:grid; gap:2px; font-size:14px; color:var(--v-text-2); }
+.stu-card p.stu-patterns-head{ font-size:13px; font-weight:700; color:var(--v-text-muted); }
+.stu-patterns ul{ margin:0; padding-left:18px; display:grid; gap:2px; }
+.stu-pattern-words{ font-family:var(--handB); font-size:18px; color:var(--v-success); }
+.stu-card p.stu-tip{ display:flex; gap:8px; align-items:center; color:var(--v-text-2); font-size:14px; line-height:1.35; }
+.stu-tip-art{ width:28px; height:28px; object-fit:contain; flex:none; }
+.stu-more{ justify-self:center; border:0; background:none; padding:6px; font:600 15px var(--sans); color:var(--v-text-muted); text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+/* Folded on screen only: print (stu-printing) and the shared PDF (pdf-busy) take the pages as they are. */
+@media screen{ html:not(.pdf-busy) .report-host.stu-folded:not(.stu-printing) > section.page{ display:none; } }
+@media print{ .stu{ display:none !important; } }
+/* No empty halves (owner, 2026-10-24). Wide screens: the greeting and
+   the five skills on the left, the practice card on the right; each
+   skill's strip beside its sentence. Phones: one column, the practice
+   card after the greeting. */
+.stu-main{ display:grid; gap:14px; grid-template-columns:1fr; grid-template-areas:"greet" "work" "five"; }
+.stu-main > .stu-greet{ grid-area:greet; } .stu-main > .stu-work{ grid-area:work; } .stu-main > .stu-five{ grid-area:five; }
+@media (min-width: 721px){
+  .stu-main{ grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); grid-template-areas:"greet work" "five work"; align-items:start; }
+  .stu-main.stu-main-one{ grid-template-columns:minmax(0,1fr) minmax(0,1.6fr); grid-template-areas:"greet five"; }
+  .stu-row-body{ grid-template-columns:minmax(0,1fr) minmax(0,200px); align-items:center; column-gap:12px; }
+  .stu-row-body .stu-proof{ grid-column:2; grid-row:1; }
+  .stu-row-body .stu-mk{ white-space:normal; }
+  .stu-greet .stu-proof{ max-width:420px; }
+}
+@media (max-width: 720px){ .stu-art{ width:72px; height:72px; } .stu-row-body .stu-proof{ max-width:none; } }

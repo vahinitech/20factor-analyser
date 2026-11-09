@@ -5,10 +5,13 @@
    Saved checks and "Your progress" (owner request with the practice report,
    2026-10-11, #122). Every check is kept in this browser's localStorage
    ("vahini_history", the last 60, by writer name); sample runs are never
-   saved. Nothing here makes a network call: the panel, the progress file
-   and "forget" all work on this device only. The panel is screen-only and
-   never printed; the printed report keeps comparing with the previous
-   check.
+   saved. The panel is screen-only and never printed; the printed report
+   keeps comparing with the previous check.
+   Each check also keeps its receipt for the server's stored report
+   (backend/server/report_store.py, owner decision 2026-10-16): a random id and
+   token, nothing else. The only network calls here use receipts: a new
+   check renews the earlier ones for another 12 months, and "forget"
+   deletes their stored reports. The name stays on this device.
    ========================================================================= */
 (function (global) {
 'use strict';
@@ -43,8 +46,13 @@ function last(name){ const mine = forName(name); return mine.length ? mine[mine.
 
 /* One saved check, from the report: scores, and the exercise and tip ids
    the report printed so the next one moves on. No text, no photo. */
+let pending = null;
+/* The receipt of the check just made (engine/ocr.js), for entryFrom. */
+function receiptFor(receipt){ pending = cleanReceipt(receipt); }
 function entryFrom(name, overall, sections, results, practice){
+  const receipt = pending; pending = null;
   return clean({
+    receipt: receipt || undefined,
     name: String(name || '').slice(0, 80), date: new Date().toISOString().slice(0,10),
     overall: Number.isFinite(overall) ? overall : null,
     sections: (sections||[]).filter(s=>s && SECTION_IDS.includes(s.id))
@@ -71,6 +79,14 @@ function cleanIds(map){
   }
   return out;
 }
+const RECEIPT_ID = /^[0-9a-f]{32}$/;
+const RECEIPT_TOKEN = /^[A-Za-z0-9_-]{43}$/;
+function cleanReceipt(r){
+  if (!r || typeof r !== 'object' || !RECEIPT_ID.test(r.id) || !RECEIPT_TOKEN.test(r.token)) return null;
+  const out = { id:r.id, token:r.token };
+  if (typeof r.expires === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.expires)) out.expires = r.expires;
+  return out;
+}
 /* A valid entry rebuilt from known fields only, or null. */
 function clean(e){
   if (!e || typeof e !== 'object' || Array.isArray(e)) return null;
@@ -86,6 +102,11 @@ function clean(e){
     seen.add(f.n); factors.push({n:f.n, score:f.score});
   }
   const out = { name:e.name, date:e.date, overall:e.overall, factors };
+  if (e.receipt !== undefined){
+    const receipt = cleanReceipt(e.receipt);
+    if (!receipt) return null;
+    out.receipt = receipt;
+  }
   if (e.sections !== undefined){
     if (!Array.isArray(e.sections) || e.sections.length > 4) return null;
     for (const s of e.sections){
@@ -131,7 +152,33 @@ function merge(checks){
 }
 function forget(name){
   const k = keyOf(name);
-  return store(load().filter(e=>keyOf(e && e.name)!==k));
+  const all = load();
+  const gone = all.filter(e=>keyOf(e && e.name)===k);
+  const ok = store(all.filter(e=>keyOf(e && e.name)!==k));
+  if (ok) gone.forEach(e=>{ const r = cleanReceipt(e && e.receipt); if (r) send('DELETE', r.id, r); });
+  return ok;
+}
+
+/* ---- stored reports on the server (receipts only) ---------------------- */
+let base = null;
+function send(method, id, receipt){
+  if (typeof global.fetch !== 'function') return;
+  /* The analyser's API is on this page's own host unless a check this
+     visit used another one. */
+  const url = new URL('/api/v2/reports/' + id, base || global.location.href);
+  global.fetch(url, { method, headers:{ 'X-Report-Token': receipt.token }, keepalive:true }).catch(()=>{});
+}
+/* The family checked again: keep every earlier stored report another 12
+   months (newest 50). Fire and forget; a failure only means they expire. */
+function renew(endpoint){
+  try{ base = new URL(endpoint, global.location.href); }catch(_e){ return; }
+  const receipts = load().map(e=>cleanReceipt(e && e.receipt)).filter(Boolean).slice(-50)
+    .map(r=>({ id:r.id, token:r.token }));
+  if (!receipts.length || typeof global.fetch !== 'function') return;
+  global.fetch(new URL('/api/v2/reports/renew', base), {
+    method:'POST', headers:{ 'Content-Type':'application/json' },
+    body:JSON.stringify({ receipts }), keepalive:true,
+  }).catch(()=>{});
 }
 
 /* ---- comparison ----------------------------------------------------------
@@ -162,6 +209,7 @@ function mount(after, opts){
   panel.id = 'progress-panel'; panel.className = 'progress-panel';
   panel.setAttribute('aria-labelledby', 'pp-title');
   panel.setAttribute('lang', t.lang);
+  panel.toggleAttribute('data-caseless', !!(global.VahiniI18n && global.VahiniI18n.caseless(t.lang)));
   // Beside the report on a wide screen (the side panel's slot), else
   // under the report.
   const slot = global.document.getElementById('side-progress');
@@ -176,14 +224,16 @@ function mount(after, opts){
     if (!compareWith || !earlier.some(e=>sameCheck(e, compareWith))) compareWith = earlier[0] || null;
     const shown = mine.slice().reverse().slice(0, SHOWN);
     const rows = compareWith && now ? compare(now, compareWith) : [];
-    const word = r=>r.kind==='up' ? `<span class="pp-up">↑ +${esc(r.change.toFixed(1))}</span>`
+    // Scores stay internal (owner, 2026-10-23): checks by date, skills by
+    // whether they got better.
+    const word = r=>r.kind==='up' ? `<span class="pp-up">↑ ${esc(t('pp.better'))}</span>`
       : r.kind==='same' ? `<span class="pp-same">${esc(t('pp.same'))}</span>` : `<span class="pp-tries">${esc(t('pp.tries'))}</span>`;
     panel.innerHTML = `<h2 id="pp-title">${esc(t('pp.title'))}</h2>
       <p>${esc(now ? t('pp.saved.now') : t('pp.saved.none'))} ${esc(t('pp.private'))}</p>
-      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(e.overall==null?t('pp.list.noscore',{date:day(e.date)}):t('pp.list.score',{date:day(e.date),score:e.overall}))}${e===now?` <b>${esc(t('pp.list.this'))}</b>`:''}</li>`).join('')}</ol>`
+      ${shown.length ? `<ol class="pp-list">${shown.map(e=>`<li>${esc(day(e.date))}${e===now?` <b>${esc(t('pp.list.this'))}</b>`:''}</li>`).join('')}</ol>`
         : `<p class="pp-empty">${esc(t('pp.empty'))}</p>`}
-      ${earlier.length ? `<label class="pp-pick">${esc(t('pp.compare'))} <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(e.overall==null?t('pp.option.noscore',{date:day(e.date)}):t('pp.option.score',{date:day(e.date),score:e.overall}))}</option>`).join('')}</select></label>
-        <ul class="pp-compare">${rows.map(r=>`<li data-factor="${r.n}" data-kind="${r.kind}"><span class="pp-name">${esc(r.name)}</span> ${esc(r.was.toFixed(1))} → ${esc(r.now.toFixed(1))} ${word(r)}</li>`).join('')}</ul>`
+      ${earlier.length ? `<label class="pp-pick">${esc(t('pp.compare'))} <select id="pp-compare">${earlier.map((e,i)=>`<option value="${i}"${sameCheck(e, compareWith)?' selected':''}>${esc(day(e.date))}</option>`).join('')}</select></label>
+        <ul class="pp-compare">${rows.map(r=>`<li data-factor="${r.n}" data-kind="${r.kind}"><span class="pp-name">${esc(r.name)}</span> ${word(r)}</li>`).join('')}</ul>`
         : now ? `<p class="pp-first">${esc(t('pp.first',{who}))}</p>` : ''}
       <p class="pp-keep">${esc(t('pp.keep'))} <a href="/progress.html">${esc(t('pp.keep.link'))}</a></p>
       <div class="pp-actions">
@@ -228,5 +278,5 @@ function remount(){
   return mount(lastMount.after, lastMount.opts);
 }
 
-global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, remount, MAX_ENTRIES };
+global.VahiniProgress = { load, forName, last, entryFrom, save, clean, readFile, merge, forget, exportFile, compare, mount, remount, receiptFor, renew, MAX_ENTRIES };
 })(window);

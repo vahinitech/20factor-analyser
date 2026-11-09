@@ -13,26 +13,26 @@
 # the PR fails when its p95 page time is 15% above main's, its memory peak
 # 10% above, or any page passes 2500 MiB. The weekly run compares main
 # with its own last weekly run and only reports.
+#
+# Three jobs run side by side, each building the image from the shared
+# cache: live (read and compare), langs (auto against en, report only)
+# and timing. The timing job stays one job: main and the PR are timed on
+# the same runner, one after the other, so the runner's speed cancels.
 name: Benchmark (live reader)
 
 on:
+  # A coarse filter so a website-only change starts nothing; the changes
+  # job below decides from the reader's import closure
+  # (scripts/score_closure.py): live, langs and timing run only when the
+  # change can change what the reader reads.
   pull_request:
     paths:
-      - 'backend/recognizer.py'
-      - 'backend/escalation.py'
-      - 'backend/languages/ladders.json'
-      - 'backend/ocr_backends.py'
-      - 'backend/detector.py'
-      - 'backend/line_recovery.py'
-      - 'backend/layout_filter.py'
-      - 'backend/classify.py'
-      - 'backend/config.py'
-      - 'backend/requirements*.txt'
-      - 'deployment/Dockerfile'
-      - 'scripts/benchmark.py'
-      - 'scripts/live_timing.py'
-      - '.github/workflows/benchmark-live.yml'
+      - 'backend/**'
+      - 'scripts/**'
       - 'benchmarks/**'
+      - 'deployment/**'
+      - '.github/actions/changes/**'
+      - '.github/workflows/benchmark-live.yml'
   schedule:
     - cron: '0 3 * * 1'
   workflow_dispatch:
@@ -46,9 +46,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  live:
+  changes:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 5
+    outputs:
+      reader: ${{ steps.closure.outputs.reader }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: closure
+        uses: ./.github/actions/changes
+
+  live:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -78,6 +92,56 @@ jobs:
           name: reading
           path: ${{ runner.temp }}/reading
           retention-days: 14
+
+  langs:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build analyser image (cached paddle layer, shared with CI)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          tags: vahini/20factor-analyser:local
+          load: true
+          cache-from: type=gha,scope=analyser
+      - run: mkdir -p "$RUNNER_TEMP/reading" && chmod 777 "$RUNNER_TEMP/reading"
+      # Same photo, same score, whatever language the request names (#145).
+      # Report only until #145 is fixed: on 20 October 2026 only 4 of 21
+      # photos agreed, so failing here would block every reader PR for a
+      # difference main already has. Remove continue-on-error with the fix.
+      - name: Every page and the sample photo, read with auto and with en
+        continue-on-error: true
+        run: |
+          docker run --rm -e GITHUB_STEP_SUMMARY=/out/langs.md \
+            -v "$PWD:/repo:ro" -v "$RUNNER_TEMP/reading:/out" -w /repo \
+            vahini/20factor-analyser:local \
+            python scripts/benchmark.py langs --lang en \
+              --photo tests/fixtures/handwriting-sample.jpg
+      - name: Summary
+        if: always()
+        run: cat "$RUNNER_TEMP/reading/langs.md" >> "$GITHUB_STEP_SUMMARY" || true
+
+  timing:
+    needs: changes
+    if: needs.changes.outputs.reader == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build analyser image (cached paddle layer, shared with CI)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/Dockerfile
+          tags: vahini/20factor-analyser:local
+          load: true
+          cache-from: type=gha,scope=analyser
       # Two passes a side, in the order main, PR, PR, main, so a slow
       # stretch on the runner falls on both; each page keeps its fastest.
       - name: Check out main for the timing

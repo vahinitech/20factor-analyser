@@ -2,8 +2,8 @@
 
 `analyser.html` will optionally post three kinds of record to a
 `/persist` service, if one is deployed in front of it: the uploaded image,
-the generated report, and lead-capture feedback. None of this lives in this
-repo. `ppocr-server.py` does not implement `/persist/*`, and
+the generated report, and the optional answers asked after a report PDF. None of this lives in this
+repo. `server/app.py` does not implement `/persist/*`, and
 `docker-compose.yml` runs a single `analyser` service with no persistence
 service alongside it. If nothing answers at `/persist`, every call below
 fails silently and the app works exactly the same, since scoring and the
@@ -50,13 +50,38 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
   somewhere.
 
 - `POST /persist/feedback`
+
+  The report PDF never waits for this (owner, 2026-10-30, India's DPDP
+  Act). Print / Save as PDF prints at once; a card then opens, at most once
+  a day, with two optional questions and an unticked "Email me practice
+  tips" box (see the `vgate` script in `analyser.html`). Pressing Send posts
+  up to two records:
+
   ```json
-  { "kind": "report_pdf_lead", "ts": "2026-07-05T12:00:00.000Z", "data": { "name": "...", "email": "..." } }
+  { "kind": "report_pdf_answer", "page": "/analyser/analyser.html",
+    "data": { "purpose": "child", "price": "100", "currency": "INR" } }
   ```
-  Fires once, right after the lead-capture form in the PDF download dialog
-  is submitted (see the `vgate` script in `analyser.html`). This call
-  is hard-coded to `/persist/feedback`, not `VAHINI_PERSIST_ENDPOINT`, so a
-  deployment that moves the base path needs to update both.
+  Only when a question was answered, and only the answers given. It holds
+  no name or email: an anonymous event, counted by the price section of
+  vahini-web's Friday report. `purpose` is one of `own`, `child`,
+  `teaching`, `therapy`, `research`, `business`, `other`; `price` is a key
+  from `PRICES` in the same script.
+
+  ```json
+  { "type": "report_pdf_lead", "email": "...", "tips": true,
+    "consent": "pdf-tips-2026-10-30", "purpose": "child",
+    "page": "/analyser/analyser.html" }
+  ```
+  Only when the box is ticked and the address is valid. No `kind`, so the
+  service files it as feedback a person sent. It never carries a name, an
+  organisation, a price, the browser's language or the browser string; `consent` names the line the
+  person agreed to, and changes when that line does.
+
+  Both calls are hard-coded to `/persist/feedback`, not
+  `VAHINI_PERSIST_ENDPOINT`, so a deployment that moves the base path needs
+  to update both. Earlier versions of the page required a name and email
+  before the PDF opened and kept them in `localStorage` (`vahini_leads`,
+  `vahini_report_lead`); the page now deletes those keys on load.
 
 ## What is NOT part of this repo
 
@@ -69,15 +94,26 @@ success; everything else is optional.
 ## Stage debug storage (the analyser's one write)
 
 The analyser itself never keeps a photo, with one switch for stage only.
-`backend/debug_store.py` keeps each answered upload's photo and response
-when both `VAHINI_DEBUG_STORE=1` and `VAHINI_DEBUG_STORE_DIR` are set:
+`backend/server/debug_store.py` keeps each upload's photo as soon as it is
+read, and a record of how the request ended, when both `VAHINI_DEBUG_STORE=1`
+and `VAHINI_DEBUG_STORE_DIR` are set:
 
 ```
 <dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.jpg    the photo, as sent
 <dir>/analyser/2026-10-15/091502-3f9a0c1d2b4e5f60.json   route, lang, saved_at,
                                                           photo, photo_bytes,
-                                                          response
+                                                          outcome, finished_at
+                                                          and status + response
+                                                          or error
 ```
+
+`outcome` is `answered` (with the HTTP status and the whole response),
+`refused` (an HTTP error: its status and message) or `failed` (an error the
+server did not expect: its type and message, cut to 500 characters). A record
+still `started` is a scan the analyser never finished: it died mid-scan. On
+2026-10-23 the stage analyser crashed during a check and nothing was left to
+replay, because only answered checks were kept; since then the photo is
+written first. A photo too large to read (413) has nothing to keep.
 
 Dates and times are UTC. The routes are `/ocr`, `/analyze-vl`,
 `/report-python` and `/api/v2/reports`; a cache hit is kept too, since the
@@ -92,3 +128,57 @@ Nothing is deleted automatically: `purge` does it. `/health` reports
 `debug_store` so either host can be checked. The rule this is an
 exception to, and the exception's limits, are in
 [SECURITY.md](../SECURITY.md#upload-and-image-security-rules-for-every-change).
+
+## Report records (kept for every family, no personal data)
+
+So a family can compare a later check with an earlier one, the analyser
+keeps a small record of every successful compact report (owner decision,
+2026-10-16; `backend/server/report_store.py`). It is on when
+`VAHINI_REPORT_STORE_DIR` names a writable folder:
+
+```
+<dir>/reports/<32 hex>.json    id, token_sha256, read_token_sha256, expires, report
+```
+
+`report` is built from an allowlist, never by deleting fields from the
+response. It holds the day of the check (UTC, no time), the catalogue
+version, the tier, the overall score, each factor's score and status, the
+Pro section scores, the comparability counts (lines, words, characters,
+script, reading languages, printed lines left out, reading level, passage
+match) and where each factor was measured, as boxes and lines in the
+photo's pixels. It never holds the photo, a cut-out of it, the words read
+from the page, a caption, the uploaded file's name, the passage typed in,
+the access key, the caller's address or browser, or a time of day. The
+words are left out because children often write their name or school at
+the top of the page.
+
+| Call | What it does |
+| --- | --- |
+| `POST /api/v2/reports?format=compact` | The report, plus `receipt: {id, token, read_token, expires}` when a record was kept |
+| `GET /api/v2/reports/{id}` with `X-Report-Token` | The record (`backend/schemas/stored-report.schema.json`), or 404 |
+| `DELETE /api/v2/reports/{id}` with `X-Report-Token` | Deletes it: 204, or 404 |
+| `POST /api/v2/reports/renew` `{"receipts": [...]}` | Moves each valid receipt's expiry to 12 months from today |
+| `POST /api/v2/compare` `{"receipts": [before, after]}` with a Pro `Authorization` | Both records and what makes them hard to compare (`backend/schemas/compare.schema.json`); 403 without Pro, before any record is opened |
+
+Unknown, expired and deleted records, and a wrong token, all answer 404.
+A receipt has two tokens. `token` reads, renews and deletes; it stays in the
+browser's saved checks. `read_token` goes into the shared PDF and works only
+in `POST /api/v2/compare`, with a Pro key: `GET`, `DELETE` and renew refuse
+it like a wrong token, so whoever the family sends a PDF to can neither
+read the record without Pro nor delete it. Comparing two checks is Pro
+(owner decision, 2026-10-16), and the server enforces it; the viewer's own
+key check is only for its message. The comparison stores nothing.
+Only each token's SHA-256 is stored, so a copy of the folder cannot read a
+record back, and nothing links a record to a person, a device or another
+record. The check page keeps each receipt with the browser's saved checks
+(`frontend/src/report/progress.js`); a new check renews the earlier
+receipts, and "Forget" deletes their records. Records expire 12 months
+after the family's last check: `sweep()` deletes expired files at the first
+save of each day. Files are mode 600 in a folder of mode 700. The expanded
+format (`format=expanded`, for API partners) keeps nothing.
+
+`backend/tests/test_report_store.py` is the proof that nothing personal is
+kept: it puts a page whose words name a child and a school, with a named
+upload and a typed passage, through the real route and searches every byte
+written; it also checks every key and string of a record against a closed
+list, and feeds a hostile report with extra text fields.

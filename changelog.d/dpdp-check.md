@@ -1,0 +1,1 @@
+- Agents and reviewers now check every change that touches personal data against the DPDP Act 2023 and Rules 2025 (`.claude/skills/dpdp-check/SKILL.md`, the shared skill). A change that may break a rule, adds an identifier or outside service, keeps data longer or weakens a privacy test stops for the owner's decision, and the PR body carries a `DPDP` section.

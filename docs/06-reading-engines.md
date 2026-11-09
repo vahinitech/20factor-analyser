@@ -16,7 +16,7 @@ not change the neatness or spacing scores.
 | Job | What it answers | Where it runs | Needs OCR |
 |---|---|---|---|
 | Quality measurement (the 20 factors) | How neat, even, straight and well-spaced is the writing | The server's computer-vision pipeline (`backend/scoring.py`, `geometry.py`, `computer_vision.py`) | No |
-| Reading (words, spelling, craft) | Which letters and words are these, and are there spelling or grammar issues | The OCR backend registry (`backend/ocr_backends.py`) | Yes |
+| Reading (words, spelling, craft) | Which letters and words are these, and are there spelling or grammar issues | The OCR backend registry (`backend/reading/ocr_backends.py`) | Yes |
 
 Everything below is about the second job.
 
@@ -52,6 +52,37 @@ recognised text is matched against the expected text directly. A close
 match replaces the raw OCR output with the known-correct text and yields
 a real per-line accuracy score. This works with any of the engines above.
 
+### The three models and their algorithms
+
+Checked against the model files on the deploy box
+(`official_models/<name>/inference.yml` and the layer names in
+`inference.json`) and PaddleX's `configs/pipelines/OCR.yaml`, 24 October
+2026. A page goes through them in this order: the detector finds the text
+lines on the whole page once, the recogniser reads each line, and the
+layout model marks pictures and seals. Everything finer than a line
+(letters, words, gaps, slope, size) is measured from the ink by our own
+OpenCV code, not by a model (`docs/05-computer-vision-algorithms.md`).
+
+| Job | Model | Algorithm | Backbone | Input | Settings |
+|---|---|---|---|---|---|
+| Find text lines | `PP-OCRv5_mobile_det` | **DB** (Differentiable Binarization, the DBNet family): the network draws a map of how likely each pixel is to be text, the map is thresholded, and each region becomes a four-corner box, grown so it covers the strokes | PP-LCNetV3 | the page with its short side raised to 2048 px (`VAHINI_OCR_DET_LIMIT_SIDE_LEN`, Paddle's `min` limit type), long side at most 4000 | pixel threshold 0.3, box score 0.6, box growth (`unclip_ratio`) 1.5 |
+| Read one line | `en_PP-OCRv5_mobile_rec` (stage); `te_PP-OCRv5_mobile_rec` for Telugu | **CTC** recogniser: a PP-LCNetV3 CNN for features, SVTR blocks (self-attention across the line) for context, and CTC decoding, best character per step with no dictionary or language model. It was trained with GTC: an NRTR attention decoder guides the training and is not run when reading | PP-LCNetV3 + SVTR | each line resized to 48 px tall | 6 lines per batch, no score cut-off (`text_rec_score_thresh` 0) |
+| Read one line, production English | `PP-OCRv5_server_rec` (the default from `backend/languages/stages.json`; production's compose sets no `VAHINI_OCR_REC_MODEL_MAP`, stage's sets the mobile model above) | the same **CTC** decoding and GTC training, with a larger CNN for features (PaddleOCR lists it as PP-HGNetV2; its layers have none of PP-LCNetV3's learnable-affine blocks) | PP-HGNetV2 + SVTR | each line resized to 48 px tall | as above |
+| Mark pictures, charts, seals | `PP-DocLayout-M` | object detector with a **GFL** head (Generalized Focal Loss, the PicoDet family) | PP-LCNet | the page resized to 640x640 | score 0.3, overlap suppression 0.5; one fixed model, never switched by speed (#112) |
+
+Not used: CTPN, EAST or CRAFT (other text detectors); CRNN's BiLSTM
+(SVTR blocks take its place) and attention decoders at reading time;
+word beam search or any language model over the CTC output
+(`docs/07-ambiguous-handwriting.md` says why none shipped). Optional
+engines (TrOCR, Surya, PP-OCRv6) are described in the sections below.
+
+**Line recovery** (`line_recovery.py`, `docs/02-how-a-scan-works.md`
+section 2) adds one more pass of the same detector and recogniser over
+up to 12 crops a round, two rounds, where our ink analysis finds writing
+outside every detected line. On a phone photo of a closely ruled page it
+is most of the scan's time: 44 of 50 seconds on stage on 23 October 2026
+(20factor-analyser#298 and #311 measure it and cut it).
+
 ## Why Chandra OCR is not in the deployed set
 
 Chandra OCR 2 (Datalab) was evaluated: a vision-language model with
@@ -86,7 +117,7 @@ revisiting then.
 2. Turn on hybrid mode (`VAHINI_OCR_BACKEND=hybrid`, built with
    `VAHINI_WITH_TROCR=1` and `VAHINI_WITH_SURYA=1`) once English or Indic
    handwriting reading quality matters more than the extra CPU cost of
-   the specialist recognisers. See `backend/README.md`.
+   the specialist recognisers. See [Engine settings and modes](#engine-settings-and-modes).
 3. Collect real Telugu and English handwriting samples and measure actual
    per-line accuracy. This is the basis for deciding whether the current
    engines are good enough, not a guess.
@@ -117,3 +148,150 @@ one with explicit consent and a privacy review first.
 - Self-host: run the model on your own machine, so data never leaves it.
 
 Companion to `04-algorithms-plain-guide.md` and `16-roadmap.md`.
+
+## Engine settings and modes
+
+Moved here from `backend/README.md` when the backend was sorted into folders.
+
+### OCR engines
+
+Pick the engine with one env var: `VAHINI_OCR_BACKEND`.
+
+| Value | Engine | Best at | CPU speed | Install |
+|---|---|---|---|---|
+| `paddle` (default) | PaddleOCR PP-OCRv5 | printed text, fast private default | 1 to 3 s | `requirements/paddle.txt` |
+| `trocr` | TrOCR (Microsoft) | English handwriting | 1 to 4 s/line | `requirements/trocr.txt` |
+| `surya` | Surya 2 (Datalab) | multilingual and Indic handwriting | slow | `requirements/surya.txt` |
+| `hybrid` | paddle + trocr + surya | mixed pages: printed AND handwriting, any of the languages above | 1 to 4 s/handwriting line | `requirements/trocr.txt` + `requirements/surya.txt` |
+| `paddleocr-vl` | PaddleOCR-VL | strong handwriting, needs GPU | impractical | ships in `paddleocr` |
+| `auto` | best of the installed engines | | | |
+
+Every engine maps to the same response shape, so the app never changes when
+you switch. In `trocr` and `hybrid` mode, paddle still detects and classifies
+every line (that decision stays centralised in `classify.py`); only the
+*handwriting* lines get re-read by a specialist, and paddle keeps doing what
+it's already good at on the printed ones. `trocr` mode always re-reads with
+TrOCR; `hybrid` mode picks the specialist per line by script: English to
+TrOCR, Telugu/Hindi/Tamil/Kannada/Malayalam to Surya: so a mixed-language
+page gets the right engine for each line instead of one engine for the whole
+page.
+
+That routing, and the model each engine reads with, is data:
+`backend/languages/stages.json` (checked against `stages.schema.json` when
+the server starts). Its `scripts` part lists the languages of each script
+and the engine that re-reads that script; a language it does not name reads
+as Latin, so it goes to TrOCR. Its `stages` part has one entry per engine,
+script and device with the facts the ladders (#219) will be built from:
+quality, cost, memory, threads and maturity, all `unmeasured` until
+`backend/tools/load_test.py` and the benchmark measure them on stage. The default
+Paddle recognition models (`VAHINI_OCR_REC_MODEL_MAP`) and the TrOCR model
+(`VAHINI_TROCR_MODEL`) come from the same file, and both variables still
+override it. `GET /health`'s `recognition` field gives the file's sha256
+and the device each engine resolved to (`null` until the engine is built).
+
+`backend/languages/ladders.json` is built from that table by
+`python scripts/rank_stages.py` and committed (#219, design in
+`docs/20-languages.md`, section 17.2). For each mode and script it lists
+the stages that may read a handwriting line, cheapest first: the Paddle
+stage that found the line, then the stages a line is sent up to. In
+paddle mode that is Paddle alone, in trocr mode Paddle then TrOCR for
+every script, and in hybrid mode the stages ranked by the rules of 17.2.
+While a quality or a cost is `unmeasured`, a hybrid ladder cannot be
+ranked, so it is the route the stage table names (`basis: route`) and
+lists the stages that were not measured. The file records the sha256 of
+the stage table it was built from; after any change to `stages.json`,
+run the script again and commit both. CI runs it with `--check`.
+
+The re-read text is accepted when EITHER it agrees with paddle's own reading
+at least 70% (`VAHINI_REFINE_MIN_SIM`), or the specialist's own confidence is
+at least 75% (`VAHINI_REFINE_MIN_CONF`) even if it disagrees with paddle.
+Paddle is not a handwriting specialist, which is the whole reason to
+re-read. On genuinely hard handwriting, requiring agreement with paddle's
+own possibly wrong reading would throw away real corrections, so a
+confident specialist reading is trusted on its own. The agreement path
+still guards against hallucination on low-confidence, made-up text.
+
+The re-reading is `backend/reading/escalation.py`, driven by `ladders.json`
+(`docs/20-languages.md`, section 17.6). Each line climbs its ladder
+until a rung's reading passes the acceptance test. No language pack sets
+an acceptance limit yet (`reading.accept_confidence`), so a reading is
+accepted at the top rung only and every line is re-read, as before. Lines
+that reach the same rung on a page go in one call when the engine reads
+batches, and answers are cached per loaded engine by the crop's hash,
+the stage version and the prompt version. If a line needs an engine that
+cannot answer (not installed, failing, or a remote stage whose circuit
+breaker is open), the page is refused with `ocr_unavailable`, a 503 and
+`Retry-After: 60`, on `/ocr`, `/analyze-vl`, `/report-python` and
+`/api/v2/reports`. It is not cached and uses no free check. The line is
+never left with the lower reading, so one photo always gets the same
+score or a "try again". In the legacy payloads, each entry of
+`hand_lines` carries `trail` (`ladder`, `tried`, `answered`, `accepted`,
+and `held` when a line could not be sent up: `no_crop` or `line_limit`
+past 40 lines), and the payload carries `ladder`: the sha256 of
+`ladders.json` and `stages.json`, the version of each stage tried, and
+how many lines each stage answered.
+
+To bake TrOCR into the Docker image, build with `VAHINI_WITH_TROCR=1` in
+`docker-compose.yml`. Surya is `VAHINI_WITH_SURYA=1` (heavy, compiles
+llama.cpp). `hybrid` mode needs both.
+
+#### Hybrid mode re-reads every line, every time
+
+Hybrid and trocr modes re-read every handwriting line (up to 40) on every
+scan. They used to skip an engine after one line slower than
+`VAHINI_HYBRID_MAX_MS_PER_LINE`, for the rest of the page and for
+`VAHINI_HYBRID_RETRY_SEC` afterwards, so the same photo could read
+differently on a busy server (#112). Speed no longer changes the result.
+`GET /health`'s `adaptive_engine_speed` still shows the measured
+milliseconds per line, and whether that is under
+`VAHINI_HYBRID_MAX_MS_PER_LINE`, so you can see whether this machine can
+afford hybrid mode. If it cannot, run `paddle`.
+
+**Proof a specialist engine actually ran, not just that hybrid mode was
+requested:** `POST /report-python`'s response has
+`analysis.recognition.refined_by`: a count per engine of how many
+handwriting lines it actually refined this scan (e.g.
+`{"trocr": 4, "surya": 1}`), and `refined_lines` for the total. An empty
+`{}` means no specialist touched any line this scan: check three things
+in order: (1) `VAHINI_OCR_BACKEND` is actually `hybrid` or `trocr` (the
+default is `paddle`, which never refines anything); (2) `GET /health`
+lists `trocr`/`surya` as available, not skipped (they must be baked into
+the image via `VAHINI_WITH_TROCR=1`/`VAHINI_WITH_SURYA=1`); (3) the
+engine's `recognize_crop` did not raise on these lines (a failing call
+keeps paddle's reading for that line).
+
+#### Layout pre-filter (excludes photos, seals, charts: never handwriting)
+
+Before a page's detected lines reach the printed/handwriting classifier,
+an optional pass using PaddleOCR's own document-layout model (PP-DocLayout)
+drops anything that clearly isn't ink-on-paper content at all: photos,
+figures, charts, seals/stamps, and decorative header/footer images (e.g. a
+printed letterhead crest). It is a NEGATIVE filter only: it never
+restricts analysis to "text-labelled" regions, because that would also
+throw away genuine handwritten formulas and filled-in table cells, which
+PP-DocLayout tags `formula`/`table` regardless of whether a pen or a
+printer produced them. Those categories, along with captions and titles
+(a student's own handwritten caption is real text, not decoration), are
+always kept.
+
+This does not replace `classify.py`: PP-DocLayout's categories are
+document structure (title, text, table, formula, image, seal...), not a
+printed-vs-handwriting signal.
+
+One model, chosen by configuration (`VAHINI_LAYOUT_MODEL`, default
+`PP-DocLayout-M`; `PP-DocLayout-S` is the other choice), never by how fast
+the last call was. It used to drop to `-S`, or skip filtering, after one
+slow call, and to skip it while the model loaded; the two models and "no
+filter" keep different lines, so the same photo scored differently under
+load (#112). The model is preloaded in the image and warmed at start-up,
+and a scan that arrives first waits for it. Both models are a few MB and
+live in the same model cache as PaddleOCR (see "Keep models on disk
+between deployments" below).
+
+| Env var | Default | What it does |
+|---|---|---|
+| `VAHINI_LAYOUT_FILTER` | `1` | turn the layout pre-filter off with `0` |
+| `VAHINI_LAYOUT_MODEL` | `PP-DocLayout-M` | the one layout model used, `PP-DocLayout-M` or `PP-DocLayout-S` |
+
+Check `GET /health`'s `layout_filter` field for whether it's enabled and
+which model tier is actually built and ready on this machine.

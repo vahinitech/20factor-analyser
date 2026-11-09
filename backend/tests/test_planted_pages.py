@@ -82,3 +82,76 @@ class TestPlantedPages(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+SPREAD = ("wavy_line", "slanted_line", "shaky_line", "indented_line")
+
+
+class TestPoorPages(unittest.TestCase):
+    """Several mistakes on one page (planted_pages.POOR, #197)."""
+
+    def test_one_mistake_stays_on_its_line(self):
+        self.assertEqual(
+            planted.mistake_lines(("wavy_line",), 2, 4), {"wavy_line": 2}
+        )
+        self.assertEqual(
+            planted.mistake_lines(("tilted_line",), 3, 4),
+            {"tilted_line": 3},
+        )
+
+    def test_line_mistakes_spread_over_the_other_lines(self):
+        kinds = ("narrow_gap",) + SPREAD + ("tilted_line",)
+        at = planted.mistake_lines(kinds, 1, 4)
+        self.assertEqual(at["narrow_gap"], 1)
+        self.assertEqual(at["tilted_line"], 3)
+        # The indent would have gone on line 0, a paragraph's first
+        # line, so it moves to line 1.
+        self.assertEqual([at[k] for k in SPREAD], [0, 2, 3, 1])
+
+    def test_an_indent_is_never_planted_on_the_first_line(self):
+        # A first line set in opens a paragraph, which Margin Discipline
+        # leaves out (#201); a planted indent must be a margin fault.
+        for li in range(4):
+            at = planted.mistake_lines(("indented_line",), li, 4)
+            self.assertEqual(at["indented_line"], max(li, 1))
+
+    def test_a_poor_page_is_built_with_no_single_box(self):
+        img, lines, truth = planted.build_page(
+            LETTERS, np.random.default_rng(0), planted.POOR
+        )
+        self.assertEqual(len(lines), 4)
+        self.assertIsNone(truth)
+        clean, _lines, _truth = planted.build_page(
+            LETTERS, np.random.default_rng(0), "clean"
+        )
+        self.assertNotEqual(img.tobytes(), clean.tobytes())
+
+    def test_one_mistake_as_a_tuple_is_the_same_page(self):
+        a = planted.build_page(LETTERS, np.random.default_rng(3), "wide_gap")
+        b = planted.build_page(
+            LETTERS, np.random.default_rng(3), ("wide_gap",)
+        )
+        self.assertEqual(a[0].tobytes(), b[0].tobytes())
+        self.assertEqual(a[2], b[2])
+
+
+class TestRuledPages(unittest.TestCase):
+    """Pages on a printed four-line ruling (#194)."""
+
+    def test_the_ruling_changes_the_paper_not_the_writing(self):
+        plain = planted.build_page(LETTERS, np.random.default_rng(5), "clean")
+        ruled = planted.build_page(
+            LETTERS, np.random.default_rng(5), "clean", ruled=True
+        )
+        self.assertEqual(plain[1], ruled[1])
+        self.assertNotEqual(plain[0].tobytes(), ruled[0].tobytes())
+
+    def test_four_rules_under_each_line(self):
+        rules = planted.ruling([100.0, 180.0], 600)
+        self.assertEqual(len(rules), 8)
+        ys = [r[0] for r in rules[:4]]
+        self.assertEqual(ys, [100 - 2 * planted.X, 100 - planted.X, 100, 124])
+        self.assertTrue(rules[1][3])  # the midline is dashed
+        mask = planted._rule_mask(rules, 600, 300)
+        self.assertEqual(mask[100, 300], planted.RULE_ALPHA)
+        self.assertEqual(mask[100, 10], 0.0)

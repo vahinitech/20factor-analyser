@@ -53,7 +53,7 @@ discuss it before merging.
 python frontend/build_bundle.py
 
 # Python OCR/20-factor server
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 ```
 
 The packed bundle `frontend/scripts/core/engine.bundle.js` is generated from
@@ -68,6 +68,8 @@ Run what CI runs:
 ```bash
 python frontend/build_bundle.py          # build output, not committed
 python -m unittest discover -v -s backend/tests -t .
+python scripts/score_closure.py changed origin/main   # which benchmarks this change needs
+python scripts/benchmark.py check        # when it says scores: run (docs/18-benchmark.md)
 npm ci && npx playwright install --with-deps chromium
 npm run test:regression:headless
 ```

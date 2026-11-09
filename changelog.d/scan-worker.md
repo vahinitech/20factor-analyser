@@ -1,0 +1,1 @@
+- Scans run in a child process that the server outlives (#299). When the kernel kills a scan for memory, the API keeps answering, a new child starts, queued scans wait for it, and the lost scan runs once more the same way; lost twice, it is a 503 `ocr_unavailable`, never a 502. `/health` reports the child as `scan_worker`.

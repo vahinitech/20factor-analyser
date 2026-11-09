@@ -22,6 +22,7 @@
 import base64
 import glob
 import hashlib
+import html
 import importlib.util
 import json
 import os
@@ -31,7 +32,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 # Order matters: app.js references globals defined by earlier modules.
-# Scoring + CV now run server-side (ppocr-server.py); the browser bundle is
+# Scoring + CV now run server-side (server/app.py); the browser bundle is
 # recognition-client + report rendering only.
 SOURCES = [
     "src/engine/compact-client.js",
@@ -44,12 +45,15 @@ SOURCES = [
     "src/report/worksheet-catalog.js",
     "src/report/worksheets.js",
     "src/report/strings/en.js",
+    "src/report/strings/en-us.js",
     "src/report/strings/te.js",
     "src/report/i18n.js",
     "src/report/progress.js",
     "src/report/practice-select.js",
     "src/report/report-render.js",
     "src/report/report-share.js",
+    "src/app/scan-sweep.js",
+    "src/app/guide.js",
     "src/app/app.js",
     "src/app/share.js",
 ]
@@ -69,17 +73,82 @@ ASSET_REF = re.compile(
 )
 
 
+# "What's new" on the check page (owner, 2026-10-24): one line at the top
+# showing the latest changes in turn, the newest first, one every 5 s
+# (scripts/core/whats-new.js), over the full list. The lines are written
+# for parents and teachers in whats-new.json, each naming the changelog
+# fragments it comes from; tests/whats-new.test.mjs holds the rules. Like
+# the stamps, the list is written into the page by --stamp and never
+# committed, so two PRs never conflict on it.
+WHATS_NEW = os.path.join(HERE, "whats-new.json")
+WHATS_NEW_PAGE = os.path.join(HERE, "analyser.html")
+WHATS_NEW_SHOWN = 10
+WHATS_NEW_REGION = re.compile(
+    r"(<!-- whats-new:begin[^>]*-->)[\s\S]*?(<!-- whats-new:end -->)"
+)
+MONTHS = "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split()
+
+
+def _day(date):
+    year, month, day = date.split("-")
+    return f"{int(day)} {MONTHS[int(month) - 1]}", year
+
+
+def _whats_new_item(item):
+    day, _ = _day(item["date"])
+    return (
+        f'<time datetime="{item["date"]}">{day}</time> '
+        f'<span>{html.escape(item["text"], quote=False)}</span>'
+    )
+
+
+def whats_new_html():
+    """The check page's What's new block, from whats-new.json."""
+    with open(WHATS_NEW, "r", encoding="utf-8") as f:
+        items = json.load(f)["items"][:WHATS_NEW_SHOWN]
+    day, year = _day(items[0]["date"])
+    rows = "".join(
+        f"\n        <li>{_whats_new_item(item)}</li>" for item in items
+    )
+    return (
+        '\n    <details class="whats-new" id="whats-new">'
+        '\n      <summary><span class="wn-dot" aria-hidden="true"></span>'
+        f'<span class="wn-line">{_whats_new_item(items[0])}</span>'
+        f'<span class="wn-count">1 of {len(items)}</span>'
+        '<span class="wn-all">What\'s new</span></summary>'
+        f'\n      <div class="wn-panel"><p class="wn-head">Updated {day}'
+        f" {year}. The latest changes to the free check, newest first.</p>"
+        f'\n      <ol class="wn-list">{rows}\n      </ol></div>'
+        "\n    </details>\n    "
+    )
+
+
+def fill_whats_new(fill):
+    """Write the What's new block into analyser.html, or empty it (the
+    committed form). Returns True when the page changed."""
+    with open(WHATS_NEW_PAGE, "r", encoding="utf-8") as f:
+        text = f.read()
+    body = whats_new_html() if fill else ""
+    out = WHATS_NEW_REGION.sub(lambda m: m.group(1) + body + m.group(2), text)
+    if out != text:
+        with open(WHATS_NEW_PAGE, "w", encoding="utf-8", newline="\n") as f:
+            f.write(out)
+    return out != text
+
+
 def practice_source():
     """The practice catalogue for reports made without a server catalogue
-    (the sample report). One source: backend/practice_catalog.py, which
+    (the sample report). One source: backend/report/practice_catalog.py, which
     validates itself on import and uses only the standard library."""
-    path = os.path.join(HERE, os.pardir, "backend", "practice_catalog.py")
+    path = os.path.join(
+        HERE, os.pardir, "backend", "report", "practice_catalog.py"
+    )
     spec = importlib.util.spec_from_file_location("practice_catalog", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     data = json.dumps(module.browser_catalog(), ensure_ascii=False)
     return (
-        "/* Generated from backend/practice_catalog.py by build_bundle.py */"
+        "/* Generated from backend/report/practice_catalog.py by build_bundle.py */"
         f"\nwindow.VahiniPracticeCatalog = {data};\n"
     )
 
@@ -145,6 +214,8 @@ def stamp_pages():
     after stamping the @import URLs inside the stylesheets, so a sheet's
     own stamp also changes when a file it imports changes."""
     changed = _rewrite_imports(True)
+    if fill_whats_new(True):
+        changed.append("analyser.html (what's new)")
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
@@ -164,6 +235,8 @@ def strip_pages():
     """Remove every ?v= stamp from frontend/*.html and the stylesheets'
     @import URLs (the committed form)."""
     changed = _rewrite_imports(False)
+    if fill_whats_new(False):
+        changed.append("analyser.html (what's new)")
     for page in sorted(glob.glob(os.path.join(HERE, "*.html"))):
         with open(page, "r", encoding="utf-8") as f:
             text = f.read()
@@ -185,6 +258,10 @@ if __name__ == "__main__":
     #   python frontend/build_bundle.py           build engine.bundle.js
     #   python frontend/build_bundle.py --stamp   ...and stamp the pages
     #   python frontend/build_bundle.py --strip   remove stamps from pages
+    #   python frontend/build_bundle.py --whats-new   print the What's new block
+    if "--whats-new" in sys.argv:
+        print(whats_new_html())
+        sys.exit(0)
     if "--strip" in sys.argv:
         for name in strip_pages():
             print(f"[build] removed asset stamps from {name}")

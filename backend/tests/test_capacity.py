@@ -11,8 +11,10 @@ import unittest
 from unittest.mock import patch
 
 from backend.tests import test_report_access  # noqa: F401  (sys.path)
-import capacity  # backend/ is on sys.path once the test helpers load
-import ocr_backends
+from server import (
+    capacity,
+)  # backend/ is on sys.path once the test helpers load
+from reading import ocr_backends
 
 CONST = {
     "base_mb": 1100,

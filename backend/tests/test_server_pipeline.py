@@ -24,7 +24,7 @@ sys.path.insert(0, SERVER_DIR)
 
 
 def _load_server():
-    path = os.path.join(SERVER_DIR, "ppocr-server.py")
+    path = os.path.join(SERVER_DIR, "server/app.py")
     spec = importlib.util.spec_from_file_location(
         "ppocr_server_under_test", path
     )
@@ -412,7 +412,7 @@ class TestServerPipeline(unittest.TestCase):
         # How many scans run at once is the capacity plan's choice for the
         # host (scan_slots.PLAN); pin five slots and five scan threads so
         # this checks the server, not the free memory of the machine.
-        slots = sys.modules["scan_slots"]
+        slots = sys.modules["server.scan_slots"]
         pinned = ThreadPoolExecutor(max_workers=5, thread_name_prefix="scan")
         orig_slots, orig_executor = slots.SLOTS, slots.EXECUTOR
         slots.SLOTS, slots.EXECUTOR = slots.ScanSlots(5, 5), pinned

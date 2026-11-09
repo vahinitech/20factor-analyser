@@ -13,7 +13,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import letter_geometry as lg  # noqa: E402
+from vision import letter_geometry as lg  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(HERE))
 spec = importlib.util.spec_from_file_location(
@@ -236,9 +236,67 @@ class TestLetterGeometry(unittest.TestCase):
         opened = np.zeros((60, 200), np.uint8)
         for x in (30, 80, 130):
             lg.cv2.circle(closed, (x, 35), 12, 1, 3)
+            # A c: the pen stops short of where the bowl began.
             lg.cv2.ellipse(opened, (x, 35), (12, 12), 0, 40, 320, 1, 3)
-        self.assertEqual(lg._bowls(closed.astype(bool), 30), 3)  # noqa
-        self.assertEqual(lg._bowls(opened.astype(bool), 30), 0)  # noqa
+        # Baseline at y = 50, small letters 30 pixels high.
+        holes = lg._bowl_holes(closed.astype(bool), 0, 0, 0.0, 50.0, 30)
+        self.assertEqual(len(holes), 3)  # noqa
+        self.assertEqual(
+            lg._bowl_holes(opened.astype(bool), 0, 0, 0.0, 50.0, 30), []
+        )
+
+    def test_loops_of_tall_letters_and_tails_are_not_bowls(self):
+        mask = np.zeros((160, 200), np.uint8)
+        # Baseline at y = 100, small letters 30 high: an l's loop from
+        # half-way up to twice the small letters, a y's loop below.
+        lg.cv2.ellipse(mask, (40, 63), (5, 22), 0, 0, 360, 1, 3)
+        lg.cv2.ellipse(mask, (90, 122), (5, 20), 0, 0, 360, 1, 3)
+        self.assertEqual(
+            lg._bowl_holes(mask.astype(bool), 0, 0, 0.0, 100.0, 30), []
+        )
+        # A bowl written tall, standing on the baseline, is still a bowl.
+        lg.cv2.ellipse(mask, (150, 80), (12, 21), 0, 0, 360, 1, 3)
+        self.assertEqual(
+            len(lg._bowl_holes(mask.astype(bool), 0, 0, 0.0, 100.0, 30)),
+            1,
+        )
+
+    def test_a_word_s_extra_holes_do_not_close_another_word_s_bowls(self):
+        geo = {
+            "words": [{"bbox": [0, 0, 100, 30]}, {"bbox": [120, 0, 100, 30]}],
+            # Three holes in the first word (an o, an r's loop and a
+            # join), none in the second.
+            "bowl_holes": [10.0, 40.0, 70.0],
+        }
+        bowls = set("abdegopq")
+        self.assertEqual(lg.count_loops(geo, "or oo", bowls), (3, 1))
+        # Words that do not match the text: the line is one word.
+        geo["words"] = geo["words"][:1]
+        self.assertEqual(lg.count_loops(geo, "or oo", bowls), (3, 3))
+
+    def test_open_letters_on_a_written_line_are_measured_open(self):
+        def line(open_ones):
+            img = np.full((140, 700, 3), 245, np.uint8)
+            x = 40
+            for word in ("dog", "pod", "go", "ago"):
+                for _ch in word:
+                    if open_ones:
+                        lg.cv2.ellipse(
+                            img, (x, 70), (11, 12), 0, 40, 320, (40,) * 3, 3
+                        )
+                    else:
+                        lg.cv2.circle(img, (x, 70), 12, (40,) * 3, 3)
+                    x += 30
+                x += 40
+            gray = lg.cv2.cvtColor(img, lg.cv2.COLOR_RGB2GRAY)
+            text = "dog pod go ago"
+            geo = lg.measure_line(
+                gray, {"text": text, "box": [20, 50, 660, 40]}
+            )
+            return lg.count_loops(geo, text, set("abdegopq"))
+
+        self.assertEqual(line(False), (11, 11))
+        self.assertEqual(line(True), (11, 0))
 
     def test_a_wavy_line_wanders_off_its_baseline(self):
         flat = [[x, 70, x + 15, 100] for x in range(0, 300, 25)]

@@ -18,6 +18,24 @@ const missing=context.VahiniCompact.decode({...response,factors:[{n:1,s:null,st:
 assert.equal(missing.analysis.results[0].score,null);
 assert.equal(missing.analysis.results[0].unmeasured,true);
 console.log('PASS compact client: five Free factors, preserved scores, null handling and version validation');
+// A page the server set upright (#297) says how far it turned it; anything
+// but a quarter, half or three-quarter turn is drawn as sent.
+for(const turned of [90,180,270])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,turned);
+for(const turned of [undefined,0,45,'90',-90,360])assert.equal(context.VahiniCompact.decode({...response,turned},catalog).turned,0);
+console.log('PASS compact client: turned is 90, 180 or 270, otherwise 0');
+// The style check (#351) reaches the report as styleProfile, so a joined
+// page gets the cursive sheets box; anything malformed reads as unavailable.
+assert.deepEqual(JSON.parse(JSON.stringify(context.VahiniCompact.decode({...response,style:{available:true,verdict:'mixed',words:9}},catalog).analysis.styleProfile)),{available:true,verdict:'mixed',wordsUsed:9});
+for(const style of [undefined,{available:false},{available:true,verdict:'joined'},{available:'yes',verdict:'cursive'}])assert.equal(context.VahiniCompact.decode({...response,style},catalog).analysis.styleProfile.available,false);
+const picked=context.VahiniCompact.decode({...response,style:{available:true,verdict:'cursive',letter_style:{style:'looped',guessed:false,candidates:['looped'],page_guess:'vertical',name:'Looped cursive',font:'Playwrite US Trad',sheets:['cursive-lesson-1-basic-strokes','<a>']}}},catalog).analysis.styleProfile.letterStyle;
+assert.deepEqual(JSON.parse(JSON.stringify(picked)),{available:true,style:'looped',guessed:false,candidates:['looped'],pageGuess:'vertical',name:'Looped cursive',font:'Playwrite US Trad',sheets:['cursive-lesson-1-basic-strokes']});
+// A font name that could break out of the style attribute is dropped.
+const odd=context.VahiniCompact.decode({...response,style:{available:true,verdict:'cursive',letter_style:{style:'french',guessed:false,candidates:['french'],font:"x',cursive;}<b>"}}},catalog).analysis.styleProfile.letterStyle;
+assert.equal(odd.font,null);assert.deepEqual(JSON.parse(JSON.stringify(odd.sheets)),[]);assert.equal(odd.name,'french');
+const unread=context.VahiniCompact.decode({...response,style:{available:false,letter_style:{style:'print',guessed:false,candidates:['print']}}},catalog).analysis.styleProfile;
+assert.equal(unread.available,false);assert.equal(unread.letterStyle.style,'print');
+assert.equal(context.VahiniCompact.decode({...response,style:{available:true,verdict:'print',letter_style:{style:'<b>'}}},catalog).analysis.styleProfile.letterStyle,undefined);
+console.log('PASS compact client: the style check reaches the report, with the letter style, malformed reads as unavailable');
 // Practice report (#122): the catalogue's exercises, tips and settings reach
 // the renderer; an archived catalogue without them gives none.
 for(const name of fs.readdirSync('backend/catalogs')){

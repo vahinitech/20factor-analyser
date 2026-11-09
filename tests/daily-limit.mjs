@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
    (c) 2026 Vahini Technologies. */
-// The free tier's daily checks (backend/daily_limit.py) as the visitor sees
+// The free tier's daily checks (backend/server/daily_limit.py) as the visitor sees
 // them. The real analyser page, its recognition server stubbed:
 // - the server's 429 daily_limit shows "Today's free checks are used", why,
 //   when the count starts again, and the next steps, not "server not
@@ -44,7 +44,7 @@ try {
   mode = 'daily';
   await page.setInputFiles('#file-input', 'frontend/assets/samples/handwriting-sample.jpg');
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#dz-preview')).display === 'block');
-  await page.click('#go-process');
+  await page.check('input[name="check-who"][value="parent"]'); await page.click('#go-process');
   await page.waitForSelector("text=Today’s free checks are used", { timeout: 20000 });
   const panel = await page.locator('#screen-process .panel').innerText();
   assert.match(panel, /allows 3 pages a day from each internet connection/);

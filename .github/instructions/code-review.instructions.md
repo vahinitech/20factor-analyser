@@ -12,6 +12,10 @@ AI by design. Consumed by `vahinitech/vahini-web` as a pinned submodule.
 
 Flag, as a blocking issue, any PR that changes the rendered report's page count, sections, card types, styling or per-tier rendering, adds an early return or alternate renderer for a tier, swaps report CSS classes for inline styles, or weakens `tests/report-layout.mjs` or the Free-report checks, unless the PR links the owner's (@vkosuri) explicit approval. A description of a different layout elsewhere (issue text, plan, another doc) is not approval. Rule and protected files: [report format baseline](../../docs/12-report-rules.md#report-format-baseline-owner-approval-required).
 
+## Personal data and the DPDP Act
+
+Use the [DPDP check](../../.claude/skills/dpdp-check/SKILL.md) on any diff that touches uploads and the check (`backend/server/app.py`, `upload_limits.py`, `daily_limit.py`), the report store (`backend/server/report_store.py`), the debug store (`debug_store.py`), access and subscriptions (`access_api.py`, `entitlements.py`, `subscription_admin.py`), the age band (`age_band.py`), the words read from a page and anything in the report text that could name a person, and the check page, print popup and share in `frontend/src/app/`. Flag as blocking: no `DPDP` section in the PR body; a photo, crop, the words read, a name, email, IP address, browser string or time of day reaching a record, log or store; a field added to the report store's allowlist; a new outside service that receives a page; a longer retention or a removed deletion; a path around the parent or guardian step; a weakened privacy test. Each needs the owner's (@vkosuri) quoted decision in the PR, not an agent's reasoning.
+
 ## Report and subscription review
 
 Use [report contract guidance](../../docs/12-report-rules.md) and [API specification](../../backend/API-V2.md). Review server entitlement enforcement on fresh results and cache hits, expiry rechecks, the five-factor Free allowlist, compact/expanded compatibility, immutable dictionaries, optional Pro fields and skipped preview work. Check the browser decoder and actual PDF output when those paths change. Report real defects with file/line evidence, and distinguish core tests from live OCR, load and native-app validation.
@@ -50,17 +54,23 @@ Use [report contract guidance](../../docs/12-report-rules.md) and [API specifica
 ## Performance Red Flags
 
 - Heavy work (OCR inference, image decode/crop) must run via
-  `run_in_threadpool` off the event loop in `ppocr-server.py` — flag any
+  `run_in_threadpool` off the event loop in `server/app.py` — flag any
   new endpoint that does blocking work directly in an `async def` handler.
 - Crop/preview generation (`computer_vision.py`): check new code doesn't
   duplicate the shared `geometry.py` clamp-box logic — `classify.py`,
   `ocr_backends.py`, and `zone_analysis.py` already import `clamp_box`
   from it specifically to avoid drift; a fourth reimplementation
-  (including inside `ppocr-server.py`, which doesn't use it today) is
+  (including inside `server/app.py`, which doesn't use it today) is
   the drift this rule exists to prevent.
-- `npm run build:bundle` must be re-run whenever `frontend/src/` changes —
-  CI checks the bundle is in sync; a PR with source changes but no bundle
-  diff is a red flag.
+- The bundle (`frontend/scripts/core/engine.bundle.js`) is build output
+  and gitignored: a PR that commits it, or a `?v=` stamp, is a red flag
+  (CI fails on both).
+- Benchmarks run only when the `changes` job says the change can move
+  them (`scripts/score_closure.py`). When it skipped them, check the PR
+  adds no module loaded by name (importlib, a file path) and no new
+  benchmark script; either needs an entry in `GROUPS` there, or a skipped
+  benchmark could hide a moved score. A PR that moves a score must commit
+  the updated `expected.json`.
 
 ## Code Quality Essentials
 

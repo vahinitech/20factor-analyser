@@ -13,7 +13,7 @@ from backend.tests import function_tests
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from coach_tips import (  # noqa: E402
+from report.coach_tips import (  # noqa: E402
     MAX_TIPS,
     PILLARS,
     TIP_LIBRARY,

@@ -13,7 +13,7 @@ to the real engine, `build_analysis()` in `backend/scoring.py`. The raw
 response is committed next to this file. Reproduce it yourself:
 
 ```bash
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python docs/examples/generate_examples.py   # deterministic, fixed seed
 ```
 
@@ -26,6 +26,8 @@ explains every number the engine produces.
 ## Page 1 — Scorecard
 
 **Overall: 83 / 100** — the weighted average of the three sections a photo can score (Structure 37.5%, Spatial 37.5%, Style 25% after renormalising; Dynamics needs the sensor pen).
+
+That was how the overall was made when this example was run. Since 23 October 2026 it counts five factors only ([03-scoring-criteria.md](03-scoring-criteria.md#sections-weights-and-the-overall-score)), so the same page would get a different overall today.
 
 | Section | Weight | Score |
 |---|---|---|
@@ -101,7 +103,7 @@ model. That traceability is the point of deterministic scoring.
 
 ## Page 4 — Coach's corner
 
-The tip engine (`backend/coach_tips.py`) ranks its lesson library
+The tip engine (`backend/report/coach_tips.py`) ranks its lesson library
 against this page's measurements and keeps the top few, each with a
 `why` naming what earned it the slot. This page drew:
 

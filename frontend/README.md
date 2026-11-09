@@ -39,6 +39,21 @@ python build_bundle.py     # or: python frontend/build_bundle.py from the root
 The browser loads only the packed `scripts/core/engine.bundle.js`. CI fails
 if the bundle is out of date with `src/`.
 
+## What's new on the check page
+
+One line under the check page's heading shows one of the latest changes, the
+next one on each visit, and a tap opens all of them (owner, 2026-10-24). The
+lines live in `whats-new.json`, newest first, at most ten. When a merged
+change is one a parent or teacher would notice, add a line there: one plain
+sentence, the merge date, the PR numbers and the `changelog.d` fragments it
+comes from. Leave out CI, tests, docs and refactors, prices and paid tiers,
+and anything about Telugu scoring until it is tested; drop the oldest line
+to stay at ten. `build_bundle.py --stamp` writes the list into
+`analyser.html` at build time (the committed page keeps only the empty
+`whats-new` markers), and `tests/whats-new.test.mjs` fails on a line that
+breaks a rule. Visitors see the list that vahinitech.com has pinned and
+released.
+
 ## Pictures on the error screens (optional)
 
 Each refusal, upload notice and photo warning has an outcome code. A host
@@ -62,7 +77,11 @@ the object every screen keeps its icon. The codes:
 | `no_handwriting` | the page is blank or fully printed |
 | `handwriting_not_read` | a page asked for as Telugu was not read (mostly Latin letters, or an unsure reading) |
 | `not_writing_page` | the page read is mostly numbers and sums (a maths or science page) |
-| `server_down` | the server did not answer |
+| `turned_page` | the lines run up and down and the server could not tell which way up the page is |
+| `server_down` | the server did not answer, and its health check did not come back within 90 seconds |
+| `server_restarting` | a check got no answer (a dropped connection, a 502); the page waits for the health check |
+| `server_back` | the health check answered again; the page offers the same photo once more, on a tap |
+| `check_failed_twice` | the same photo got no answer twice; it is not offered again |
 | `too_large` | the server refused the file's size (413) |
 | `invalid_file` | the server could not open the file (422) |
 | `key_problem` | the access key was refused (401, 403) |
@@ -139,7 +158,7 @@ speaker has checked it.
 `scripts/vendor/` holds unchanged copies of qrcode-generator (the QR code
 on page 1, loaded with the page), jsPDF and html2canvas (the shared PDF,
 loaded on demand), with their licences and `sources.json` (package,
-version, npm tarball, SHA-256). `backend/update_sbom.py` writes their SBOM
+version, npm tarball, SHA-256). `backend/tools/update_sbom.py` writes their SBOM
 entries from that file and fails if a file no longer matches its hash.
 Their URLs carry `?v=` stamps from `build_bundle.py --stamp` like the other
 assets.

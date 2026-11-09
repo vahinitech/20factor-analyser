@@ -12,7 +12,9 @@ from fastapi import HTTPException
 
 from backend.tests import test_report_access as access
 from backend.tests.test_server_pipeline import _load_server
-import scan_slots  # backend/ is on sys.path once the test helpers load
+from server import (
+    scan_slots,
+)  # backend/ is on sys.path once the test helpers load
 
 
 class ScanSlotsTests(unittest.IsolatedAsyncioTestCase):

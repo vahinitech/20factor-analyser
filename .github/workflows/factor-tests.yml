@@ -6,19 +6,15 @@
 name: Factor tests
 
 on:
+  # A coarse filter so a website-only change starts nothing; the changes
+  # job below decides from the import closure (scripts/score_closure.py).
   pull_request:
     paths:
-      - 'backend/scoring.py'
-      - 'backend/scoring_parts/**'
-      - 'backend/letter_geometry.py'
-      - 'backend/computer_vision.py'
-      - 'backend/zone_analysis.py'
-      - 'backend/marked_places.py'
-      - 'backend/baseline_track.py'
-      - 'scripts/planted_pages.py'
-      - 'scripts/factor_tests.py'
-      - 'scripts/benchmark.py'
-      - 'benchmarks/factors/**'
+      - 'backend/**'
+      - 'scripts/**'
+      - 'benchmarks/**'
+      - '.github/actions/changes/**'
+      - '.github/workflows/factor-tests.yml'
   schedule:
     - cron: '0 4 * * 1'
   workflow_dispatch:
@@ -31,7 +27,25 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Which benchmarks this change can move (scripts/score_closure.py,
+  # docs/18-benchmark.md "When the benchmarks run"). On a pull request
+  # that touches nothing the replay imports or reads, the factor and
+  # calibration jobs are skipped; the weekly run and runs by hand run them.
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      scores: ${{ steps.closure.outputs.scores }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: closure
+        uses: ./.github/actions/changes
+
   factors:
+    needs: changes
+    if: needs.changes.outputs.scores == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
@@ -40,7 +54,7 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: pip install -r backend/requirements-core.txt
+      - run: pip install -r backend/requirements/core.txt
       - name: Cache the UJI letters
         uses: actions/cache@v4
         with:
@@ -48,3 +62,55 @@ jobs:
           key: uji-cc56f72f8477e763
       - name: Every factor catches its planted mistake as often as before
         run: python scripts/benchmark.py factors
+      # Factor 6 on pages with a printed four-line ruling (#194): the
+      # planted long ascenders still caught, and the same passage twice
+      # by one writer within SAME_PASSAGE_LIMIT at the 90th percentile.
+      - name: Factor 6 on ruled pages, caught and steady
+        if: success() || failure()
+        run: python scripts/benchmark.py factors --ruled
+
+  # The calibration tool (scripts/calibrate.py, #197) end to end, with
+  # the UJI pages standing in for a neat reference set (they are not
+  # neat writing, so the proposals only show the tool works), then on
+  # the engraved model pages, and every factor on neat, UJI, clean and
+  # poor pages side by side. Nothing here is applied to a scale.
+  calibration:
+    needs: changes
+    if: needs.changes.outputs.scores == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: pip install -r backend/requirements/core.txt
+      - name: Cache the UJI letters
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/vahini/ujipenchars2.txt
+          key: uji-cc56f72f8477e763
+      - name: Calibration tool test on the UJI pages (not neat writing)
+        run: |
+          python scripts/calibrate.py --neat uji-clean --tool-test \
+            --json "$RUNNER_TEMP/calibration/calibration.json"
+      # The neat reference set (benchmarks/neat-penmanship): engraved model
+      # pages, a reference for the owner, never applied (docs/18-benchmark.md).
+      - name: Calibration on the neat reference set (a reference only)
+        if: success() || failure()
+        run: |
+          python scripts/calibrate.py \
+            --json "$RUNNER_TEMP/calibration/neat-calibration.json"
+      - name: Every factor on neat, UJI, clean and poor pages
+        if: success() || failure()
+        run: |
+          python scripts/score_ranges.py \
+            --json "$RUNNER_TEMP/calibration/score-ranges.json"
+      - name: Keep the tool test's report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: calibration-tool-test
+          path: ${{ runner.temp }}/calibration
+          if-no-files-found: ignore

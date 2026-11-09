@@ -1,0 +1,256 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+   Copyright (c) 2026 Vahini Technologies. */
+#screen-upload { padding-top:24px; }
+.check-heading { margin-bottom:22px; }
+.check-heading h1 { font:600 clamp(30px,3.5vw,44px)/1.15 var(--v-font-serif); color:var(--v-text); margin:10px 0; letter-spacing:-.025em; }
+.check-heading p { font-size:18px; line-height:1.5; color:var(--v-text-2); margin:0; }
+.check-heading .check-breadcrumb { font-size:12px; }
+.check-breadcrumb a { color:var(--v-accent-text); }
+#screen-upload .intake-col { background:var(--v-accent-soft); border-radius:16px; padding:28px; }
+#screen-upload .trust-ticks { justify-content:flex-start; gap:8px 16px; font-size:13px; margin:16px 0 4px; }
+#screen-upload .write-lang small { font-size:11px; color:var(--v-text-2); background:var(--v-bg-alt); padding:3px 6px; border-radius:12px; }
+#screen-upload .benefit-intro { font-size:14px; color:var(--v-text-2); margin:0; }
+.check-sample { margin:18px 0; padding:12px; border-radius:12px; background:var(--v-surface); }
+.check-sample figcaption { font-size:12px; color:var(--v-text-2); margin-bottom:8px; }
+.check-sample .sample-marks { display:block; width:100%; height:auto; aspect-ratio:700 / 340; border-radius:8px; }
+.sample-marks ellipse { fill:none; stroke-width:4; }
+.sample-marks .mark-spacing { stroke:var(--v-accent); }
+.sample-marks .mark-size { stroke:var(--v-success); }
+.sample-marks .mark-line { stroke:var(--v-warning); }
+.sample-key { list-style:none; margin:10px 0 0; padding:0; display:grid; gap:4px; font-size:13px; color:var(--v-text-2); }
+.sample-key li { display:flex; align-items:center; gap:8px; }
+.sample-key i { flex:0 0 12px; height:12px; border-radius:50%; border:2.5px solid; }
+.sample-key .key-spacing { border-color:var(--v-accent); }
+.sample-key .key-size { border-color:var(--v-success); }
+.sample-key .key-line { border-color:var(--v-warning); }
+.check-sample .btn { display:flex; justify-content:center; margin-top:12px; text-decoration:none; }
+.check-path { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; border-block:1px solid var(--v-border); padding:20px 0; margin:0 0 32px; }
+.check-path a { color:var(--v-text-2); font-size:14px; text-decoration:none; display:flex; align-items:center; gap:12px; }
+.check-path span { flex:0 0 32px; height:32px; display:grid; place-items:center; font-size:14px; font-weight:600; color:var(--v-accent-text); background:var(--v-accent-soft); border-radius:50%; }
+.check-path a { display:grid; grid-template-columns:32px 1fr; column-gap:12px; align-items:center; }
+.check-path span { grid-row:span 2; }
+.check-path b { color:var(--v-text); font-size:15px; font-weight:600; }
+.check-path small { color:var(--v-text-2); font-size:13px; grid-column:2; }
+#screen-upload .cl-upload { box-shadow:none; border:0; background:transparent; padding:0; scroll-margin-top:100px; }
+#screen-upload .intake-split { grid-template-columns:1.5fr 1fr; gap:24px; }
+#screen-upload .intake-cap { margin-bottom:18px; }
+#screen-upload .intake-cap h2, .check-benefits h2, .check-about h2 { font:600 28px/1.2 var(--v-font-serif); color:var(--v-text); margin:8px 0 10px; }
+#screen-upload .intake-cap p { font-size:14px; line-height:1.5; color:var(--v-text-2); margin:0; }
+#screen-upload .dropzone--solo { min-height:220px; aspect-ratio:auto; background:var(--v-bg-alt); border-color:var(--v-accent-light); }
+#screen-upload .check-benefits { background:var(--v-accent-soft); padding:28px; border-radius:16px; }
+.benefit-list { display:grid; gap:0; padding:0; margin:12px 0; list-style:none; }
+.benefit-list li { display:flex; gap:12px; padding:12px 0; border-bottom:1px solid var(--v-border); }
+.benefit-list li > span { display:grid; place-items:center; flex:0 0 36px; height:36px; background:var(--v-info-bg); color:var(--v-info); border-radius:50%; font-size:15px; font-weight:600; }
+.benefit-list li:nth-child(2) > span { background:var(--v-success-bg); color:var(--v-success); }
+.benefit-list li:nth-child(3) > span { background:var(--v-warning-bg); color:var(--v-warning); }
+.benefit-list li:nth-child(4) > span { background:var(--v-surface); color:var(--v-accent); }
+.benefit-list li:nth-child(5) > span { background:var(--v-danger-bg); color:var(--v-danger); }
+.benefit-list h3 { font-size:16px; color:var(--v-text); margin:2px 0 5px; }
+.benefit-list p, .check-kind-note { font-size:14px; line-height:1.6; color:var(--v-text-2); margin:0; }
+.check-kind-note { border-top:1px solid var(--v-border); padding-top:18px; }
+.check-video { margin:22px 0; font-size:14px; color:var(--v-accent-text); }
+.check-video summary { cursor:pointer; font-weight:600; padding:6px 0; }
+.check-video .video-frame { margin-top:12px; }
+#screen-upload .check-proof { padding:32px; gap:32px; }
+#screen-upload .proof-limit { margin-top:18px; font-size:13px; }
+#screen-upload .cp-stats li { padding:15px; }
+.cp-stats a { display:inline-block; font-size:12px; margin-top:4px; text-underline-offset:3px; }
+.check-about { display:grid; grid-template-columns:1fr 1fr; gap:48px; padding:28px 8px; border-block:1px solid var(--v-border); }
+.check-about p { font-size:15px; line-height:1.6; color:var(--v-text-2); margin:0 0 16px; }
+.check-about a { display:block; margin-top:10px; color:var(--v-accent-text); font-size:14px; font-weight:600; }
+#screen-upload a:focus-visible, #screen-upload button:focus-visible, #screen-upload summary:focus-visible { outline:3px solid var(--v-accent); outline-offset:4px; }
+
+#screen-upload .check-proof { display:block; padding:24px; background:var(--v-accent-soft); }
+#screen-upload .cp-stats { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+#screen-upload .cp-stats li { display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:16px 12px; background:var(--v-surface); }
+#screen-upload .cp-stats b { font-size:38px; color:var(--v-accent); }
+#screen-upload .cp-stats span { color:var(--v-text); font-weight:600; font-size:14px; line-height:1.35; }
+.proof-foot { display:flex; justify-content:center; align-items:center; flex-wrap:wrap; gap:10px 24px; padding-top:16px; }
+.proof-foot p, .proof-foot a { font-size:12px; }
+#screen-upload .proof-limit { margin-top:8px; text-align:center; font-size:12px; }
+.check-path { margin:0; padding:12px 0; border:0; }
+@media (max-width:900px) {
+  #screen-upload .intake-split { grid-template-columns:1fr; gap:20px; }
+  .check-about { grid-template-columns:1fr; gap:12px; }
+  #screen-upload .cp-stats { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@media (max-width:560px) {
+  #screen-upload { padding:18px 14px 40px; }
+  .check-heading { margin-bottom:16px; }
+  .check-heading h1 { font-size:30px; }
+  .check-heading p { font-size:15px; }
+  #screen-upload .intake-col, #screen-upload .check-benefits { padding:18px; }
+  #screen-upload .cl-upload { padding:0; }
+  #screen-upload .check-proof { padding:18px; }
+  #screen-upload .dropzone--solo { min-height:200px; }
+  #screen-upload .intake-cap h2, .check-benefits h2 { font-size:25px; }
+  #screen-upload .cp-stats b { font-size:30px; }
+  .check-path { grid-template-columns:1fr; gap:12px; }
+}
+@media (prefers-reduced-motion:reduce) { #screen-upload.screen.on { animation:none; } }
+
+/* Under the run button: only while it waits for a photo. */
+.cl-upload .actions { flex-wrap:wrap; }
+.run-hint { display:none; flex-basis:100%; margin:8px 0 0; font-size:14px; color:var(--v-text-2); text-align:center; }
+#go-process:disabled + .run-hint { display:block; }
+.dz-sub { margin:4px 0 12px; font-size:14px; color:var(--v-text-2); }
+/* Who is checking, and the report's language: one row under the heading. */
+.who-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px; margin-top:14px; padding:10px 14px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.who-pick { display:flex; flex-wrap:wrap; align-items:center; gap:8px; border:0; margin:0; padding:0; min-width:0; }
+.who-pick legend { float:left; margin-right:6px; padding:0; font-weight:700; font-size:15px; color:var(--v-text); }
+.who-opt { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border:1px solid var(--v-border); border-radius:var(--v-radius-pill); background:var(--v-bg); font-size:15px; color:var(--v-text); cursor:pointer; }
+.who-opt:has(input:checked) { border-color:var(--v-accent); background:var(--v-accent-soft); color:var(--v-accent-text); font-weight:600; }
+.who-opt:has(input:focus-visible) { outline:2px solid var(--v-accent); outline-offset:2px; }
+.who-opt input { margin:0; accent-color:var(--v-accent); }
+.who-lang { display:inline-flex; align-items:center; gap:8px; margin-left:auto; font-weight:700; font-size:15px; color:var(--v-text); }
+.who-lang select { font:inherit; font-weight:400; padding:5px 10px; border:1px solid var(--v-border); border-radius:var(--v-radius-sm); background:var(--v-bg); color:var(--v-text); }
+/* A student's tick that an adult says yes, and the "choose who is checking"
+   note; both take a whole row of the bar. */
+.who-adult { flex-basis:100%; display:flex; align-items:center; gap:8px; font-size:15px; font-weight:600; color:var(--v-text); cursor:pointer; }
+.who-adult[hidden], .who-error[hidden] { display:none; }
+.who-adult input { margin:0; width:18px; height:18px; accent-color:var(--v-accent); }
+.check-heading .who-error { flex-basis:100%; margin:0; font-size:14px; font-weight:600; color:var(--v-danger, var(--v-accent-text)); }
+.who-bar.is-missing { border-color:var(--v-accent); box-shadow:0 0 0 2px var(--v-accent-soft); }
+@media (max-width:720px) {
+  .who-bar { gap:6px 10px; margin-top:10px; padding:8px 10px; }
+  .who-pick { gap:6px; }
+  .who-pick legend { font-size:14px; margin-right:2px; }
+  .who-opt { padding:4px 9px; gap:4px; font-size:14px; }
+  .who-lang { margin-left:0; font-size:14px; }
+  .who-lang select { padding:4px 8px; }
+}
+/* What's new: one line under the heading, the full list on a tap. */
+.whats-new { margin-top:12px; }
+.whats-new summary { display:flex; align-items:center; gap:8px; max-width:100%; width:max-content; padding:5px 12px; border:1px solid var(--v-border); border-radius:var(--v-radius-pill); background:var(--v-surface); color:var(--v-text-2); font-size:14px; line-height:1.4; cursor:pointer; list-style:none; box-sizing:border-box; }
+.whats-new summary::-webkit-details-marker { display:none; }
+.whats-new summary:hover, .whats-new[open] summary { border-color:var(--v-border-strong); }
+.whats-new summary:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; }
+.wn-dot { flex:0 0 8px; height:8px; border-radius:50%; background:var(--v-success); }
+.wn-line { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.wn-line time, .wn-list time { font-weight:600; color:var(--v-text); }
+.wn-all { flex:none; font-weight:600; color:var(--v-accent-text); }
+.wn-count { flex:none; font-size:12px; color:var(--v-text-muted); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.wn-line.wn-in { animation:wnIn .45s ease; }
+@keyframes wnIn { from { transform:translateY(60%); opacity:0; } to { transform:none; opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .wn-line.wn-in { animation:none; } }
+.wn-all::after { content:" \203A"; }
+.whats-new[open] .wn-all::after { content:" \2039"; }
+.wn-panel { max-width:640px; margin-top:8px; padding:14px 16px; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.check-heading .wn-head { font-size:13px; color:var(--v-text-2); margin:0 0 10px; }
+.wn-list { list-style:none; margin:0; padding:0; display:grid; gap:8px; font-size:14px; line-height:1.45; color:var(--v-text); }
+.wn-list li { display:grid; grid-template-columns:56px 1fr; gap:8px; }
+@media (max-width:560px) {
+  .whats-new summary { font-size:13px; padding:5px 10px; }
+  .wn-list li { grid-template-columns:1fr; gap:0; }
+}
+
+/* Pihu's guide (src/app/guide.js): a lit ring round the button, the rest of
+   the page dimmed, Pihu perched at its corner and a short note. */
+.pg { position:absolute; top:0; left:0; width:0; height:0; z-index:9600; }
+.pg-ring { position:absolute; border-radius:var(--v-radius-md); box-shadow:0 0 0 4px var(--v-accent), 0 0 0 200vmax color-mix(in srgb, var(--v-dark) 55%, transparent); pointer-events:none; transition:left .45s ease, top .45s ease, width .45s ease, height .45s ease; }
+.pg-say { position:absolute; box-sizing:border-box; padding:14px 16px 12px; border-radius:var(--v-radius-md); background:var(--v-surface); color:var(--v-text); box-shadow:var(--v-shadow-lg, 0 10px 30px color-mix(in srgb, var(--v-dark) 30%, transparent)); font:15px/1.45 var(--v-font-sans); transition:left .45s ease, top .45s ease; }
+.pg-say .pg-n { margin:0 0 4px; font-size:12px; color:var(--v-text-muted); }
+.pg-say h2 { margin:0 0 4px; font:700 17px/1.3 var(--v-font-serif); color:var(--v-text); }
+.pg-say p { margin:0; }
+.pg-act { display:flex; justify-content:flex-end; gap:8px; margin-top:10px; }
+.pg-act button { font:600 14px var(--v-font-sans); padding:7px 14px; border-radius:var(--v-radius-pill); border:1px solid var(--v-border); background:transparent; color:var(--v-text-2); cursor:pointer; }
+.pg-act .pg-next { background:var(--v-accent); border-color:var(--v-accent); color:var(--v-on-accent); }
+.pg-act button:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; }
+.pg-bird { position:absolute; top:0; left:0; aspect-ratio:1; pointer-events:none; filter:drop-shadow(0 6px 8px color-mix(in srgb, var(--v-dark) 25%, transparent)); }
+.pg-bird img { position:absolute; inset:0; width:100%; height:100%; }
+/* The wings beat from the shoulders while Pihu flies. */
+.pg-bird .pg-wf { transform-origin:48% 59%; }
+.pg-bird .pg-wb { transform-origin:72% 57%; }
+.pg-bird.is-flying .pg-wf { animation:pgBeatFront .28s ease-in-out infinite; }
+.pg-bird.is-flying .pg-wb { animation:pgBeatBack .28s ease-in-out infinite; }
+.pg-bird:not(.pg-bird--layers).is-flying .pg-body { animation:pgBob .28s ease-in-out infinite; }
+@keyframes pgBeatFront { 0%,100% { transform:rotate(0); } 50% { transform:rotate(-28deg); } }
+@keyframes pgBeatBack { 0%,100% { transform:rotate(0); } 50% { transform:rotate(24deg); } }
+@keyframes pgBob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .pg-ring, .pg-say { transition:none; } .pg-bird .pg-wf, .pg-bird .pg-wb, .pg-bird .pg-body { animation:none !important; } }
+@media print { .pg { display:none !important; } }
+
+/* "Does this page copy a sentence?": folded under the page's language. */
+.copy-sentence { margin:12px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.copy-sentence summary { cursor:pointer; list-style:none; padding:10px 14px; font-size:15px; color:var(--v-text); }
+.copy-sentence summary::-webkit-details-marker { display:none; }
+.copy-sentence summary b { color:var(--v-accent-text); }
+.copy-sentence summary b::before { content:"+ "; }
+.copy-sentence[open] summary b::before { content:"\2212  "; }
+.copy-sentence summary small { display:block; font-size:13px; color:var(--v-text-muted); }
+.copy-sentence summary:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; border-radius:var(--v-radius-md); }
+.cs-body { padding:0 14px 12px; }
+.cs-body label { display:block; margin:0 0 4px; font-size:14px; color:var(--v-text-2); }
+.cs-body textarea { width:100%; box-sizing:border-box; min-height:60px; padding:8px 10px; font:15px/1.4 var(--v-font-sans); color:var(--v-text); background:var(--v-bg); border:1px solid var(--v-border-strong); border-radius:var(--v-radius-sm); resize:vertical; }
+.cs-note { margin:6px 0 0; font-size:13px; color:var(--v-text-2); }
+/* Letter style taught at school (gen_letter_styles.py writes the options).
+   Each name is drawn in its style's face; print and Not sure stay in the
+   page's own type. */
+#screen-upload .letter-style { border:0; margin:14px 0 0; padding:0; min-width:0; }
+#screen-upload .letter-style legend { font-weight:600; font-size:15px; color:var(--v-text); margin-bottom:8px; padding:0; }
+.ls-opts { display:flex; flex-wrap:wrap; gap:8px; }
+.ls-opt { position:relative; display:inline-flex; flex-direction:column; align-items:flex-start; gap:2px; border:1px solid var(--v-border); background:var(--v-surface); border-radius:12px; padding:7px 12px 6px; cursor:pointer; }
+.ls-opt input { position:absolute; inset:0; opacity:0; margin:0; cursor:pointer; }
+.ls-opt:has(input:checked) { border-color:var(--v-accent); box-shadow:0 0 0 2px var(--v-accent-soft); background:var(--v-accent-soft); }
+.ls-opt:has(input:focus-visible) { outline:2px solid var(--v-accent); outline-offset:2px; }
+.ls-name { font-size:19px; line-height:1.35; color:var(--v-text); }
+.ls-print .ls-name { font:600 14px/1.9 var(--v-font-sans); }
+.ls-where { font-size:11px; color:var(--v-text-2); }
+.ls-more { margin-top:8px; }
+.ls-more summary { font-size:13px; color:var(--v-accent-text); cursor:pointer; }
+.ls-more .ls-opts { margin-top:8px; }
+.ls-note { font-size:12px; color:var(--v-text-2); margin:8px 0 0; }
+
+/* Letter style and the copied sentence fold into one row under the language,
+   so Analyse sits near the photo (owner, 2026-11-04). app.js fills the row. */
+.page-opts { margin:12px 0 0; border:1px solid var(--v-border); border-radius:var(--v-radius-md); background:var(--v-surface); }
+.page-opts > summary { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; padding:10px 14px; cursor:pointer; list-style:none; font-size:14px; color:var(--v-text-2); }
+.page-opts > summary::-webkit-details-marker { display:none; }
+.page-opts > summary:focus-visible { outline:2px solid var(--v-accent); outline-offset:2px; }
+.po-lead { font-weight:600; color:var(--v-text); }
+.po-pick b { color:var(--v-text); font-weight:600; margin-left:3px; }
+.po-change { margin-left:auto; color:var(--v-accent-text); font-weight:600; }
+.po-body { padding:0 14px 14px; border-top:1px solid var(--v-border); }
+.po-body .copy-sentence { background:var(--v-bg); }
+
+/* The terms line and Analyse stick to the bottom of the screen once a photo
+   is in (the button is enabled), until they reach their place. app.js adds
+   is-stuck for the shadow. */
+.run-bar { margin:16px -14px 0; padding:10px 14px 12px; border-top:1px solid transparent; border-radius:var(--v-radius-lg) var(--v-radius-lg) 0 0; }
+.cl-upload:has(#go-process:not(:disabled)) .run-bar { position:sticky; bottom:0; z-index:6; }
+/* The cookie card (vahinitech.com site.js: body.cc-open, --cc-h) sits in the
+   bottom corner on a first visit and would cover Analyse, so the bar rides
+   just above it until the card is answered. */
+body.cc-open .cl-upload:has(#go-process:not(:disabled)) .run-bar { bottom:var(--cc-h, 0px); }
+/* A field reached with Tab scrolls clear of the stuck bar (and the card). */
+html:has(#go-process:not(:disabled)) { scroll-padding-bottom:calc(var(--run-bar-h, 0px) + var(--cc-h, 0px) + 16px); }
+/* Only the look changes when it sticks, never its size, so nothing jumps
+   when it reaches its place. */
+.cl-upload:has(#go-process:not(:disabled)) .run-bar.is-stuck { background:var(--v-surface); border-top-color:var(--v-border); box-shadow:0 -10px 24px color-mix(in srgb, var(--v-dark) 14%, transparent); }
+.run-bar .run-consent { margin:0 0 10px; }
+.run-bar .actions { margin-top:0 !important; }
+.run-bar-end { display:block; height:1px; }
+
+/* What you will learn: a small piece of handwriting per skill that starts
+   wrong and settles, one row at a time (app.js). Each tile's start is its
+   --f transform; the resting frame is the settled one, so no motion means
+   every tile shows good writing. */
+.benefit-list li { align-items:center; gap:10px; border-radius:10px; transition:background var(--v-dur-base) var(--v-ease); }
+.benefit-list li.is-on { background:color-mix(in srgb, var(--v-surface) 60%, transparent); }
+.sk { flex:0 0 72px; width:72px; height:44px; background:var(--v-surface); border:1px solid var(--v-border); border-radius:10px; overflow:visible; }
+.sk text { font:600 27px var(--v-font-hand); fill:var(--v-text); transform-box:fill-box; transform-origin:50% 100%; }
+.sk .sk-base { stroke:var(--v-border-strong); stroke-width:1; }
+.sk .sk-x { stroke:var(--v-border); stroke-width:1; stroke-dasharray:2 2; }
+.sk-space text { font-size:22px; }
+.sk .sk-gap { stroke:var(--v-accent); stroke-width:1.6; stroke-linecap:round; opacity:0; }
+.sk-shape { --c:var(--v-info); } .sk-size { --c:var(--v-success); } .sk-line { --c:var(--v-warning); } .sk-space { --c:var(--v-accent); } .sk-read { --c:var(--v-danger); }
+.benefit-list li.is-on .sk { border-color:color-mix(in srgb, var(--c) 45%, var(--v-border)); }
+.benefit-list li.is-on .sk text[style] { animation:sk-settle 3.2s var(--v-ease) both; }
+.benefit-list li.is-on .sk-read text { animation:sk-settle 3.2s var(--v-ease) both, sk-blur 3.2s var(--v-ease) both; }
+.benefit-list li.is-on .sk-gap { animation:sk-gap 3.2s var(--v-ease) both; }
+@keyframes sk-settle { 0%, 30% { transform:var(--f, none); fill:var(--c); } 70%, 100% { transform:none; fill:var(--v-text); } }
+@keyframes sk-blur { 0%, 30% { filter:blur(1.2px); } 70%, 100% { filter:none; } }
+@keyframes sk-gap { 0%, 65% { opacity:0; } 80%, 100% { opacity:1; } }
+@media (prefers-reduced-motion: reduce) { .benefit-list li.is-on .sk text, .benefit-list li.is-on .sk-gap { animation:none; } .sk .sk-gap { opacity:1; } }
+/* Lift the site's Feedback button above the stuck Analyse bar (as site.css does for the cookie card). */
+body:has(#go-process:not(:disabled)):has(.run-bar.is-stuck) .vfb-launch { bottom:calc(12px + var(--run-bar-h, 0px) + var(--cc-h, 0px)) !important; }

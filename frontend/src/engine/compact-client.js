@@ -21,7 +21,16 @@
       return {...s,blurb:'',factors,avg,avg100:avg===null?null:Math.round(avg*10),scoredCount:factors.length};
     }).filter(s=>s.scoredCount);
     const access={...report.access,capabilities:{factor_numbers:results.map(f=>f.n),personalised_worksheets:report.access.tier==='pro'}};
-    return {ok:true,access,full_text:report.text||'',counts:report.counts,engine:'server',analysis:{access,results,sections,practice:practiceOf(catalog),recognition:report.recognition||null,comparability:report.comparability||null,overall:report.summary.score,overallMeasured:report.summary.score,measuredCount:available.length,topWeak:[...available].sort((a,b)=>a.score-b.score).slice(0,3),topStrong:[...available].sort((a,b)=>b.score-a.score).slice(0,4),coachTips:report.coaching||[],source:'python'},factor_regions:report.evidence?.factor_regions||{},measurements:report.evidence?.measurements||{},document_context:null,regions:[],layout:{}};
+    return {ok:true,access,full_text:report.text||'',counts:report.counts,engine:'server',analysis:{access,results,sections,practice:practiceOf(catalog),recognition:report.recognition||null,comparability:report.comparability||null,styleProfile:styleOf(report.style),overall:report.summary.score,overallMeasured:report.summary.score,measuredCount:available.length,topWeak:[...available].sort((a,b)=>a.score-b.score).slice(0,3),topStrong:[...available].sort((a,b)=>b.score-a.score).slice(0,4),coachTips:report.coaching||[],source:'python'},factor_regions:report.evidence?.factor_regions||{},measurements:report.evidence?.measurements||{},turned:[90,180,270].includes(report.turned)?report.turned:0,language:report.language||null,document_context:null,regions:[],layout:{}};
+  }
+  // The style check (#351): joined, print or mixed, which picks the
+  // report's cursive sheets. Anything else reads as not available.
+  function styleOf(style){
+    const out=(!style||style.available!==true||!['cursive','print','mixed'].includes(style.verdict))?{available:false}:{available:true,verdict:style.verdict,wordsUsed:Number.isInteger(style.words)?style.words:null};
+    // The letter style picked, or guessed for Not sure (#350).
+    const l=style&&style.letter_style,id=v=>typeof v==='string'&&/^[a-z0-9-]{2,40}$/.test(v);
+    if(l&&id(l.style))out.letterStyle={available:true,style:l.style,guessed:l.guessed===true,candidates:Array.isArray(l.candidates)?l.candidates.filter(id):[l.style],pageGuess:id(l.page_guess)?l.page_guess:null,name:typeof l.name==='string'?l.name.slice(0,60):l.style,font:typeof l.font==='string'&&/^[A-Za-z0-9 ]{1,40}$/.test(l.font)?l.font:null,sheets:Array.isArray(l.sheets)?l.sheets.filter(v=>typeof v==='string'&&/^[a-z0-9-]{2,80}$/.test(v)).slice(0,8):[]};
+    return out;
   }
   // The practice catalogue served with this dictionary version (#122):
   // stages, tries by band, tier defaults and each factor's exercises and

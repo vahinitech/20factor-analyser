@@ -77,7 +77,7 @@ const server = spawn('./node_modules/.bin/http-server', ['.', '-p', String(PORT)
 const results = [];
 const add = (ok, name, detail = '') => results.push({ ok: !!ok, name, detail: typeof detail === 'string' ? detail : JSON.stringify(detail) });
 const TELUGU = /[ఀ-౿]/;
-const python = readFileSync('backend/practice_catalog.py', 'utf8');
+const python = readFileSync('backend/report/practice_catalog.py', 'utf8');
 const AVOID_TE = [...python.match(/AVOID_WORDS_TE = \(([\s\S]*?)\)/)[1].matchAll(/"([^"]+)"/g)].map(m => m[1]);
 const AVOID = /\b(weak|poor|bad|wrong|problem|inadequate|fail|lowest|mistake)/i;
 
@@ -156,9 +156,11 @@ try {
     const font = await page.evaluate(async () => {
       await document.fonts.ready;
       const h = document.querySelector('#report-host .page h2');
-      return { family: getComputedStyle(h).fontFamily, loaded: [...document.fonts].some(f => f.family.replace(/"/g, '') === 'Noto Sans Telugu' && f.status === 'loaded'), check: document.fonts.check("16px 'Noto Sans Telugu'", 'అక్షరం') };
+      return { family: getComputedStyle(h).fontFamily, loaded: [...document.fonts].some(f => f.family.replace(/"/g, '') === 'Vahini Script Serif' && f.status === 'loaded'), check: document.fonts.check("16px 'Vahini Script Serif'", 'అక్షరం') };
     });
-    add(/^"?Noto Sans Telugu/.test(font.family) && font.loaded && font.check, `${tier}: the bundled Noto Sans Telugu loads and leads the Telugu faces`, font);
+    // The same font list as English, the bundled Telugu face first
+    // (tests/report-parity.mjs holds every other element to English).
+    add(/^"?Vahini Script Serif"?, Spectral/.test(font.family) && font.loaded && font.check, `${tier}: the bundled Telugu face (Noto Serif Telugu) loads and leads the report's own font list`, font);
     await page.emulateMedia({ media: 'print' });
     const pdf = (await page.pdf({ format: 'A4', printBackground: true })).toString('latin1');
     add(/NotoSansTelugu/.test(pdf), `${tier}: the saved PDF embeds Noto Sans Telugu`);
@@ -244,8 +246,8 @@ try {
     await page.waitForSelector('#report-host .practice-page');
     await renderLongest(page, pro);
     const pages = async () => ((await page.pdf({ format: 'A4', printBackground: true })).toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length;
-    const rows = await page.evaluate(() => ({ lang: document.getElementById('report-host').getAttribute('lang'), rows: document.querySelectorAll('.practice-row').length, spelling: document.querySelector('.spelling-row .pr-saw').textContent }));
-    add(rows.lang === 'te' && rows.rows === 4 && /ఇంగ్లీష్ పదాల/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row says it checked English words only`, rows);
+    const rows = await page.evaluate(() => ({ lang: document.getElementById('report-host').getAttribute('lang'), rows: document.querySelectorAll('.practice-row').length, spelling: document.querySelector('.spelling-row .pr-skill').textContent }));
+    add(rows.lang === 'te' && rows.rows === 4 && /letters/.test(rows.spelling) && /రెండు ఒకే అక్షరాలు/.test(rows.spelling) && /ఒకే అక్షరం రెండుసార్లు/.test(rows.spelling), `${label}: longest case in Telugu, the spelling row names its pattern and gives its rule in Telugu`, rows);
     await page.emulateMedia({ media: 'print' });
     add(await pages() === 2, `${label}: prints on exactly two A4 pages`);
     await page.evaluate(() => {

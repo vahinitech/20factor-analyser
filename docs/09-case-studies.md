@@ -12,7 +12,7 @@ portray one habit, and every number is genuine output of the real engine
 [`examples/`](examples/) and regenerate deterministically:
 
 ```bash
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python docs/examples/generate_examples.py
 ```
 

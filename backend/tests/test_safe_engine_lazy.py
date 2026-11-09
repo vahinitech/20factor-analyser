@@ -16,9 +16,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
-import detector  # noqa: E402
-import ocr_backends  # noqa: E402
-import recognizer  # noqa: E402
+from reading import detector  # noqa: E402
+from reading import ocr_backends  # noqa: E402
+from reading import recognizer  # noqa: E402
 
 # White-box tests deliberately reach into module-private helpers below.
 # pylint: disable=protected-access

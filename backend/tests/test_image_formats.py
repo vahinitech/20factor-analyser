@@ -7,6 +7,7 @@ real endpoint as a 422. The image runs as an ordinary user, and Pillow, the
 library that parses visitors' files, is pinned to an exact version.
 """
 
+import hashlib
 import importlib.util
 import io
 import os
@@ -18,11 +19,17 @@ SERVER_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 REPO = os.path.dirname(SERVER_DIR)
 sys.path.insert(0, SERVER_DIR)
 
+import numpy as np  # noqa: E402  pylint: disable=wrong-import-position
 from PIL import (  # noqa: E402  pylint: disable=wrong-import-position
     Image,
     UnidentifiedImageError,
 )
-import computer_vision as cv  # noqa: E402  pylint: disable=wrong-import-position
+from reading import (
+    telugu_reader,
+)  # noqa: E402  pylint: disable=wrong-import-position
+from vision import (
+    computer_vision as cv,
+)  # noqa: E402  pylint: disable=wrong-import-position
 
 # White-box: the endpoint test swaps the server's daily limit off.
 # pylint: disable=protected-access
@@ -80,7 +87,7 @@ class ImageFormatTests(unittest.TestCase):
 
     def test_the_endpoint_answers_422(self):
         spec = importlib.util.spec_from_file_location(
-            "ppocr_server_formats", os.path.join(SERVER_DIR, "ppocr-server.py")
+            "ppocr_server_formats", os.path.join(SERVER_DIR, "server/app.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -115,10 +122,47 @@ class HardeningTests(unittest.TestCase):
 
     def test_pillow_is_pinned_exactly(self):
         with open(
-            os.path.join(SERVER_DIR, "requirements-core.txt"), encoding="utf-8"
+            os.path.join(SERVER_DIR, "requirements/core.txt"), encoding="utf-8"
         ) as f:
             reqs = f.read()
         self.assertRegex(reqs, r"(?m)^pillow==\d+\.\d+\.\d+$")
+
+
+def _pattern(height, width):
+    # Fine detail with no randomness, so every rounding step shows.
+    y, x = np.mgrid[0:height, 0:width]
+    return ((x * x + 3 * y * y + x * y) % 251).astype(np.uint8)
+
+
+def _sha(arr):
+    return hashlib.sha256(np.ascontiguousarray(arr).tobytes()).hexdigest()
+
+
+class DownscaleTests(unittest.TestCase):
+    """A photo more than twice as tall as wide gives the pixels Pillow
+    12.3 gave. Pillow 13 resizes such a photo vertical-first
+    (python-pillow/Pillow#9549), which moved scores; vision.geometry's
+    resize keeps the old order. The hashes were taken with Pillow 12.3."""
+
+    def test_a_tall_photo_is_downscaled_as_before(self):
+        buf = io.BytesIO()
+        Image.fromarray(_pattern(2600, 900)).save(buf, format="PNG")
+        arr = cv.to_numpy(buf.getvalue(), max_side=2200)
+        self.assertEqual(arr.shape, (2200, 761, 3))
+        self.assertEqual(
+            _sha(arr),
+            "050425c23cb31229400b67694d862570"
+            "f3b840cdd3a6b06149eda317997b6509",
+        )
+
+    def test_a_narrow_telugu_crop_is_scaled_as_before(self):
+        prepared = telugu_reader.prepare(_pattern(160, 12))
+        self.assertEqual(prepared.shape, (48, 16))
+        self.assertEqual(
+            _sha(prepared),
+            "3c20ac9e55ad3c44bb33e3ba554535c4"
+            "a0bcce732fbe04bc75db72e40c3e9b33",
+        )
 
 
 if __name__ == "__main__":

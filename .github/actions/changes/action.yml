@@ -1,0 +1,27 @@
+# Which benchmarks a change can move (scripts/score_closure.py). On a pull
+# request it compares GitHub's merge commit with its first parent, the
+# base branch: scores=false skips the replay, factor, calibration, timing
+# and history jobs, reader=false skips the live reader. Any other event
+# (a push to main, the weekly run, a run by hand) runs every benchmark.
+# The checkout before it needs fetch-depth: 2.
+name: Which benchmarks a change can move
+description: Run or skip the score and reader benchmarks for this change.
+outputs:
+  scores:
+    description: true when the change can move a replayed score
+    value: ${{ steps.closure.outputs.scores }}
+  reader:
+    description: true when the change can change what the live reader reads
+    value: ${{ steps.closure.outputs.reader }}
+runs:
+  using: composite
+  steps:
+    - id: closure
+      shell: bash
+      run: |
+        if [ "${{ github.event_name }}" = "pull_request" ]; then
+          python3 scripts/score_closure.py changed HEAD^1 --github-output
+        else
+          echo "Not a pull request: every benchmark runs."
+          printf 'scores=true\nreader=true\n' >> "$GITHUB_OUTPUT"
+        fi

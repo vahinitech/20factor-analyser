@@ -158,9 +158,46 @@ def writer_scale(letters):
     return X / max(1e-6, float(np.median(heights)))
 
 
-def build_page(letters, rng, kind, style="photo", letters_out=None):
-    """Lines of words in one writer's letters, with one planted mistake.
-    Returns (image, lines, truth) where lines carry box, poly and text."""
+def mistake_lines(kinds, li, n_lines):
+    """The line each mistake goes on. One mistake: line li. Several (a
+    poor page, POOR): the word and gap mistakes stay on line li, a
+    turned line is the last, and the other line mistakes go round the
+    remaining lines in turn, so the page is poor all over. An indented
+    line is never the first: a first line set in opens a paragraph,
+    which Margin Discipline leaves out (#201), so it would not be a
+    margin fault."""
+    at = {k: li for k in kinds}
+    if len(kinds) < 2:
+        return _not_first(at, n_lines)
+    others = [j for j in range(n_lines) if j != li] or [li]
+    spread = [k for k in kinds if k in LINE_KINDS and k != "tilted_line"]
+    for i, k in enumerate(spread):
+        at[k] = others[i % len(others)]
+    if "tilted_line" in at:
+        at["tilted_line"] = n_lines - 1
+    return _not_first(at, n_lines)
+
+
+def _not_first(at, n_lines):
+    """Moves an indent planted on the first line to the second."""
+    if at.get("indented_line") == 0 and n_lines > 1:
+        at["indented_line"] = 1
+    return at
+
+
+def build_page(
+    letters, rng, kind, style="photo", letters_out=None, ruled=False
+):
+    """Lines of words in one writer's letters, with one planted mistake,
+    or several when kind is a tuple of them (mistake_lines).
+    Returns (image, lines, truth) where lines carry box, poly and text;
+    truth is the one mistake's box, None for several.
+    ruled: the page has a printed four-line ruling under each line
+    (ruling); it draws no random numbers, so the writing is the same
+    as on the unruled page."""
+    if not isinstance(kind, str) and len(kind) == 1:
+        kind = kind[0]
+    kinds = (kind,) if isinstance(kind, str) else tuple(kind)
     scale = writer_scale(letters)
     sentences = list(SENTENCES)
     rng.shuffle(sentences)
@@ -186,8 +223,13 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
         else int(rng.integers(len(lines)))
     )
     line = lines[li]
-    if kind == "indented_line":
-        line["x0"] += 2.5 * X
+    at = mistake_lines(kinds, li, len(lines))
+
+    def on(k, lj):
+        return k in at and lj == at[k]
+
+    if "indented_line" in at:
+        lines[at["indented_line"]]["x0"] += 2.5 * X
     nw = len(line["words"])
     wi = int(rng.integers(1, nw - 1))
     small_at = [
@@ -207,51 +249,37 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
         word_boxes = []
         line_letters = []
         for wj, word in enumerate(line_["words"]):
-            drop = (
-                0.6 * X
-                if kind == "low_word" and lj == li and wj == wi
-                else 0.0
-            )
+            drop = 0.6 * X if on("low_word", lj) and wj == wi else 0.0
             word_pts = []
             for gj, g in enumerate(word):
                 grow = (
                     1.7
-                    if kind == "tall_letter"
-                    and lj == li
-                    and (wj, gj) == target_glyph
+                    if on("tall_letter", lj) and (wj, gj) == target_glyph
                     else 1.0
                 )
-                if kind == "big_word" and lj == li and wj == wi:
+                if on("big_word", lj) and wj == wi:
                     grow = 1.5
-                if (
-                    kind == "tall_ascenders"
-                    and lj == li
-                    and g["ch"] in TALL | LOW
-                ):
+                if on("tall_ascenders", lj) and g["ch"] in TALL | LOW:
                     grow = 1.5
                 wave = (
                     0.35 * X * np.sin(2 * np.pi * len(line_letters) / 6.0)
-                    if kind == "wavy_line" and lj == li
+                    if on("wavy_line", lj)
                     else 0.0
                 )
                 placed, width = _place(
                     g, scale, x, line_["baseline"] + drop + wave, grow
                 )
-                if kind == "open_loops" and g["ch"] in LOOPS:
+                if "open_loops" in at and g["ch"] in LOOPS:
                     placed = _open(placed)
-                if kind == "messy_word" and lj == li and wj == wi:
+                if on("messy_word", lj) and wj == wi:
                     placed = _shake(placed, 0.4 * X, 7 + gj)
-                if kind == "shaky_line" and lj == li:
+                if on("shaky_line", lj):
                     placed = _shake(placed, 0.1 * X, 11 + len(line_letters))
                 if grow != 1.0 and kind == "tall_letter":
                     truth = _box(placed)
                 word_pts.extend(placed)
                 line_letters.append((g["ch"], placed))
-                spread = (
-                    3.0
-                    if kind == "wide_letters" and lj == li and wj == wi
-                    else 1.0
-                )
+                spread = 3.0 if on("wide_letters", lj) and wj == wi else 1.0
                 x += width + spread * LETTER_GAP * rng.uniform(0.7, 1.3)
             if drop or (
                 lj == li
@@ -262,12 +290,8 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
             word_boxes.append(_box(word_pts))
             pts_line.append(word_pts)
             gap = WORD_GAP * rng.uniform(0.85, 1.15)
-            if (
-                lj == li
-                and wj == wi - 1
-                and kind in ("wide_gap", "narrow_gap")
-            ):
-                gap = WORD_GAP * (3.0 if kind == "wide_gap" else 0.25)
+            if wj == wi - 1 and (on("wide_gap", lj) or on("narrow_gap", lj)):
+                gap = WORD_GAP * (3.0 if on("wide_gap", lj) else 0.25)
             x += gap - LETTER_GAP
         if kind in ("wide_gap", "narrow_gap") and lj == li:
             left = word_boxes[wi - 1]
@@ -281,7 +305,7 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
                 - min(left[1], right[1]),
             ]
         strokes = [s for w in pts_line for s in w]
-        if kind == "slanted_line" and lj == li:
+        if on("slanted_line", lj):
             base = line_["baseline"]
             shear = np.tan(np.radians(25.0))
             strokes = [
@@ -300,9 +324,9 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
                 )
                 for ch, placed in line_letters
             ]
-        if kind in FACTOR_TRUTH_LINE and lj == li:
+        if kind in FACTOR_TRUTH_LINE and on(kind, lj):
             truth = _box(strokes)
-        if kind == "tilted_line" and lj == li:
+        if on("tilted_line", lj):
             box = _box(strokes)
             cx, cy = box[0], line_["baseline"]
             strokes = [_rotate(s, cx, cy, TILT_DEG) for s in strokes]
@@ -326,10 +350,11 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
     far = np.concatenate(ink).max(0)
     width = max(PAGE_W, int(far[0]) + MARGIN)
     height = max(PAGE_H, int(far[1]) + MARGIN)
+    rules = ruling([l["baseline"] for l in lines], width) if ruled else None
     img = (
-        _photo(ink, width, height, rng)
+        _photo(ink, width, height, rng, rules)
         if style == "photo"
-        else _plain(ink, width, height, rng)
+        else _plain(ink, width, height, rng, rules)
     )
 
     hand_lines = []
@@ -346,6 +371,8 @@ def build_page(letters, rng, kind, style="photo", letters_out=None):
                 "poly": _quad(corners),
             }
         )
+    if len(kinds) > 1:
+        truth = None
     if truth is not None:
         truth = [int(round(v)) for v in truth]
     return img, hand_lines, truth
@@ -360,6 +387,27 @@ FACTOR_TRUTH_LINE = (
     "wavy_line",
     "slanted_line",
     "shaky_line",
+)
+# Mistakes that change a whole line (mistake_lines spreads them).
+LINE_KINDS = FACTOR_TRUTH_LINE + ("tilted_line",)
+# A poor page: every mistake at once, for comparing poor writing with
+# neat (scripts/score_ranges.py). Left out: the wide gap (the narrow gap
+# takes the same place) and the scribbled word, which is meant for the
+# factors read from the reader's confidence; these pages are measured
+# without the reader.
+POOR = (
+    "narrow_gap",
+    "wide_letters",
+    "low_word",
+    "big_word",
+    "tall_letter",
+    "open_loops",
+    "tall_ascenders",
+    "indented_line",
+    "wavy_line",
+    "slanted_line",
+    "shaky_line",
+    "tilted_line",
 )
 
 
@@ -409,9 +457,12 @@ def _shake(placed, amount, seed):
     return out
 
 
-def _plain(ink, width, height, rng):
+def _plain(ink, width, height, rng, rules=None):
     """An even 2-pixel pen on clean paper."""
     img = np.full((height, width, 3), 250, np.uint8)
+    if rules is not None:
+        r = _rule_mask(rules, width, height)[..., None]
+        img = (img * (1 - r) + np.array(RULE_RGB) * r).astype(np.uint8)
     for s in ink:
         pts = np.round(s).astype(np.int32).reshape(-1, 1, 2)
         cv2.polylines(img, [pts], False, (40, 40, 60), PEN, cv2.LINE_AA)
@@ -419,7 +470,7 @@ def _plain(ink, width, height, rng):
     return np.clip(img.astype(np.float64) + noise, 0, 255).astype(np.uint8)
 
 
-def _photo(ink, width, height, rng):
+def _photo(ink, width, height, rng, rules=None):
     """A phone photo of a pen page: the stroke thickens and thins as
     pressure changes, the ink is not one colour, the light falls off
     across the page, the paper has grain, and the picture is slightly
@@ -457,6 +508,9 @@ def _photo(ink, width, height, rng):
     paper = np.array([238, 234, 222]) * light[..., None]
     grain = cv2.GaussianBlur(rng.normal(0, 6, (height, width)), (0, 0), 1.2)
     paper = paper + grain[..., None]
+    if rules is not None:
+        r = _rule_mask(rules, width, height)[..., None]
+        paper = paper * (1 - r) + np.array(RULE_RGB) * r
     shade = 1.0 - 0.25 * cv2.GaussianBlur(
         rng.uniform(0, 1, (height, width)), (0, 0), 3
     )
@@ -600,13 +654,13 @@ _SERVER = []
 
 def real_reader():
     """The reader exactly as the server sets it up: loading
-    backend/ppocr-server.py runs its recognizer.configure() and backend
+    backend/server/app.py runs its recognizer.configure() and backend
     registry from the same environment. Calling recognizer directly
     skips that and reads with library defaults (other models, and
     repeated lines from the image variants)."""
     if not _SERVER:
         spec = importlib.util.spec_from_file_location(
-            "planted_server", os.path.join(ROOT, "backend", "ppocr-server.py")
+            "planted_server", os.path.join(ROOT, "backend", "server/app.py")
         )
         server = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(server)
@@ -615,8 +669,12 @@ def real_reader():
 
 
 def run_page(img, hand_lines, ocr):
-    import computer_vision  # pylint: disable=import-outside-toplevel
-    import letter_geometry  # pylint: disable=import-outside-toplevel
+    from vision import (
+        computer_vision,
+    )  # pylint: disable=import-outside-toplevel
+    from vision import (
+        letter_geometry,
+    )  # pylint: disable=import-outside-toplevel
     import scoring  # pylint: disable=import-outside-toplevel
 
     if ocr:
@@ -641,7 +699,7 @@ def run_page(img, hand_lines, ocr):
         for r in analysis["results"]
     }
     places = {n: regions[n].get("places", []) for n in ("1", "5", "7", "8")}
-    # The letter-level measurement (backend/letter_geometry.py), kept
+    # The letter-level measurement (backend/vision/letter_geometry.py), kept
     # beside today's marks so the two can be compared on the same pages.
     geo = letter_geometry.measure_page(img, hand_lines)
     places["5L"] = letter_geometry.size_marks(hand_lines, geo)
@@ -732,3 +790,43 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+
+
+# A printed four-line ruling (#194), as on a handwriting worksheet or a
+# four-line notebook: the ascender line two small letters above the
+# baseline, a dashed midline one above it, the baseline, and the
+# descender line one below. Printed in a light blue-grey, under the ink.
+RULE_RGB = (120, 140, 175)
+RULE_ALPHA = 0.85
+RULE_DASH = (12, 6)  # dash and gap of the midline, pixels
+
+
+def ruling(baselines, width):
+    """The rules under lines written on these baselines: (y, x0, x1,
+    dashed) each, across the page less half a margin either side."""
+    x0, x1 = MARGIN // 2, width - MARGIN // 2
+    out = []
+    for b in baselines:
+        out += [
+            (b - 2 * X, x0, x1, False),
+            (b - X, x0, x1, True),
+            (b, x0, x1, False),
+            (b + X, x0, x1, False),
+        ]
+    return out
+
+
+def _rule_mask(rules, width, height):
+    """The rules as a 0 to 1 mask, two pixels thick."""
+    mask = np.zeros((height, width), np.float64)
+    dash, gap = RULE_DASH
+    cols = np.arange(width)
+    for y, x0, x1, dashed in rules:
+        row = int(round(y))
+        if not 0 <= row < height - 1:
+            continue
+        on = (cols >= x0) & (cols < x1)
+        if dashed:
+            on &= (cols - x0) % (dash + gap) < dash
+        mask[row : row + 2, on] = RULE_ALPHA
+    return mask

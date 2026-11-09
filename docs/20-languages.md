@@ -26,18 +26,18 @@ letter lists and `[A-Za-z]` tests. Each module decided for itself what
 | `backend/scoring.py:620` | `BOWL_LETTERS = set("abdegopq")` |
 | `backend/scoring.py:673` | `_LATIN_ONLY = (3, 6)`, factors that count Latin letters |
 | `backend/scoring.py:744` | about 5 letters per word as the ideal (factor 15) |
-| `backend/zone_analysis.py:55-57` | ascenders `[bdfhklt]`, descenders `[gjpqy]`, `[A-Za-z]` |
-| `backend/letter_geometry.py:43` | x-height letters `acemnorsuvwxz` |
-| `backend/tbar_analysis.py:35-36` | the `tt` and `t[lhkb]` patterns |
-| `backend/finishing_letters.py:22-24` | finishing letters `adhilmnrtu`, words `[A-Za-z]+` |
-| `backend/style_analysis.py:44,56,69` | cursive check only above 90% ASCII letters |
-| `backend/coach_tips.py:65` | `_latin_share`, gating seven tips at 0.9 (lines 264 to 612) |
-| `backend/classify.py:49,200,291` | English form words, uppercase share, `[A-Z]{5,}` |
-| `backend/computer_vision.py:275,865` | fallback lines tagged `"en"`, `[A-Za-z]` letter count |
-| `backend/line_recovery.py:188,252` | `lang="en"` defaults |
-| `backend/recognizer.py:53,232` | `_INDIC_LANGS` sends te/hi/ta/kn/ml to Surya, the rest to TrOCR |
-| `backend/ocr_backends.py:55` | a line is Telugu if any character is in U+0C00 to U+0C7F |
-| `backend/ocr_backends.py:661` | TrOCR model fixed to `microsoft/trocr-base-handwritten` (English) |
+| `backend/vision/zone_analysis.py:55-57` | ascenders `[bdfhklt]`, descenders `[gjpqy]`, `[A-Za-z]` |
+| `backend/vision/letter_geometry.py:43` | x-height letters `acemnorsuvwxz` |
+| `backend/vision/tbar_analysis.py:35-36` | the `tt` and `t[lhkb]` patterns |
+| `backend/vision/finishing_letters.py:22-24` | finishing letters `adhilmnrtu`, words `[A-Za-z]+` |
+| `backend/vision/style_analysis.py:44,56,69` | cursive check only above 90% ASCII letters |
+| `backend/report/coach_tips.py:65` | `_latin_share`, gating seven tips at 0.9 (lines 264 to 612) |
+| `backend/reading/classify.py:49,200,291` | English form words, uppercase share, `[A-Z]{5,}` |
+| `backend/vision/computer_vision.py:275,865` | fallback lines tagged `"en"`, `[A-Za-z]` letter count |
+| `backend/reading/line_recovery.py:188,252` | `lang="en"` defaults |
+| `backend/reading/recognizer.py:53,232` | `_INDIC_LANGS` sends te/hi/ta/kn/ml to Surya, the rest to TrOCR |
+| `backend/reading/ocr_backends.py:55` | a line is Telugu if any character is in U+0C00 to U+0C7F |
+| `backend/reading/ocr_backends.py:661` | TrOCR model fixed to `microsoft/trocr-base-handwritten` (English) |
 
 The line numbers are from when this design was written. The letter facts
 have since moved to the language packs (#223), and `scoring.py` is split
@@ -292,7 +292,7 @@ engine is down.
 ### 6.1 A reader for handwritten Telugu (2026-10-20)
 
 PP-OCRv5's Telugu model reads print; on handwriting it returned Latin
-fragments. `backend/telugu_reader.py` is a reader trained on handwriting:
+fragments. `backend/reading/telugu_reader.py` is a reader trained on handwriting:
 a small convolutional network with two bidirectional LSTM layers and CTC,
 about 1.3 million weights stored as 8-bit integers, run in numpy like
 `print_hand.py`, so the same crop gives the same text and the image needs
@@ -363,7 +363,8 @@ are replaced by this one rule.
 Needs: `rows` (ink rows with baselines), `words` (word boxes), `graphemes`
 (read graphemes with boxes), `confidence` (reader confidence), `zones` (the
 pack's zone model fitted to the page), `classes` (a letter class from the
-pack), `sensor` (pen data).
+pack), `sensor` (pen data), `apart` (letters written apart: not joined
+cursive, #277).
 
 | # | Factor | Needs | Notes |
 |---|---|---|---|
@@ -375,7 +376,7 @@ pack), `sensor` (pen data).
 | 6 | Ascender / Descender Control | zones | becomes "zone control" per script (see section 10) |
 | 7 | Baseline Alignment | rows | |
 | 8 | Word Spacing | words | from a passage when the script has no reliable word reader |
-| 9 | Letter Spacing | rows or graphemes | |
+| 9 | Letter Spacing | graphemes, apart | joined cursive has pen lifts, not letter gaps: "Not measured" (#277) |
 | 10 | Margin Discipline | rows | |
 | 11 | Line Straightness | rows | |
 | 12 | Vertical Alignment | rows | |
@@ -416,6 +417,38 @@ all change the report. Each needs before and after screenshots and
 [12-report-rules.md](12-report-rules.md#report-format-baseline-owner-approval-required).
 Until then the report keeps its current labels, and the new fields live
 only in the JSON.
+
+**Every language keeps the English report** (owner, 2026-10-23: the report
+will come in many languages, and it is credible only if each looks like
+the English one). Only the words change. Fonts, sizes and places are
+the rule in [12-report-rules.md](12-report-rules.md#every-language-keeps-the-english-report),
+held by `tests/report-parity.mjs`. Adding a report language:
+
+1. Words: `frontend/src/report/strings/<lang>.js` with every id of `en.js`
+   (`tests/report-strings.test.mjs`), reviewed by a teacher who writes the
+   language. Keep sentences no longer than the English: a longer one makes
+   the renderer hide a line in a practice row or zoom a printed page, and
+   the parity test lists each case under "words longer than English".
+2. The language and its script in `frontend/src/report/i18n.js` (`LANGS`,
+   `SCRIPT`). A script without capitals is already in `CASELESS`.
+3. A script other than Latin: its faces in
+   `frontend/styles/report-fonts.css` under the three existing names,
+   `Vahini Script Serif`, `Vahini Script Sans` and `Vahini Script Hand`, each
+   limited to the script's letters with `unicode-range`. Use Google Noto
+   (Noto Serif and Noto Sans in the script), the one family designed for
+   every script, self-hosted from the `@fontsource` packages with the
+   licence, `sources.json`, `THIRD-PARTY-NOTICES.md` and SBOM entries. Add
+   a row per face to `scripts/report_font_scale.mjs` and set each face's
+   `size-adjust` to what it measures.
+4. Latin languages (German, French, Spanish, Portuguese) need no font:
+   Spectral, Hanken Grotesk and Caveat carry their letters. Edu SA Beginner,
+   the tracing face of the practice lines, has no accented letters, so a
+   language whose practice words have them needs a tracing face first.
+5. Nothing in `report.css` or the renderer may name a language. Run
+   `npm run test:parity`: it fails on any element whose font size, weight,
+   line height or font list differs from English, any block that moves,
+   a print longer than two A4 pages, a face not scaled to its English face,
+   or a character no report font covers.
 
 ## 11. Maturity levels
 
@@ -805,7 +838,7 @@ Escalation is about doubt; fallback is about a rung that cannot answer
 - If a line needs a rung that is down, the server does not skip to the
   next rung or settle for the last accepted answer. It refuses the page
   with `ocr_unavailable` and `Retry-After`, as it already does when the
-  reader fails (`ppocr-server.py:333-345`). The refusal is not cached and
+  reader fails (`server/app.py:333-345`). The refusal is not cached and
   does not use a free check.
 - A remote rung (a GPU service or an API) gets a circuit breaker: after a
   run of failures it is marked down for a set time, so pages that need it
@@ -887,7 +920,7 @@ ladders. An unread line is "Not measured" for every factor that needs
 graphemes (section 8), and still counts for the factors that need only
 rows.
 
-As built (#219): the loop is `backend/escalation.py`. Two parts wait for
+As built (#219): the loop is `backend/reading/escalation.py`. Two parts wait for
 other work. First, the acceptance test checks confidence and script share
 against `reading.accept_confidence` in the line's pack. No pack sets that
 limit until `rank_stages.py` calibrates one (section 19, gap 5), so a
@@ -914,7 +947,7 @@ How each step's time, memory and calls are measured, and how CI catches a
 step that grows too fast, is [21-performance-and-coverage.md](21-performance-and-coverage.md).
 
 What the analyser does today ([13-api-and-capacity.md](13-api-and-capacity.md),
-`backend/capacity.py`): at start-up it works out how many scans can run at
+`backend/server/capacity.py`): at start-up it works out how many scans can run at
 once as the smallest of three limits, memory, cores and GPUs, capped at
 16. It counts 1100 MB for the loaded process, 600 MB of working memory per
 running scan and 200 MB for each extra engine copy, all overridable. The
@@ -956,7 +989,7 @@ What changes when ladders arrive:
 1. **Every stage declares what it uses.** `stages.json` gains `device`
    (`cpu`, `gpu` or `remote`), `load_mb` (resident once loaded),
    `work_mb` (extra while it runs), `vram_mb` and `threads`, measured with
-   `backend/load_test.py` on stage, never guessed.
+   `backend/tools/load_test.py` on stage, never guessed.
 2. **Everything a CPU ladder can reach is loaded at start-up.** Today a
    Paddle language can be built the first time a request uses it
    (`recognizer.py:75-84`), which adds memory in the middle of a scan,

@@ -30,11 +30,18 @@ async function waitUp() {
   throw new Error('static server did not start');
 }
 
+/* The sample's twenty scores when these checks were written. The practice
+   logic is tested against them, so regenerating the sample photo's report
+   (#316: the overall moved from 74 to 59) does not move every expectation
+   below; the photo, crops and regions are still the sample's own. */
+const PINNED = {"1": 7.0, "2": 9.0, "3": 10.0, "4": 6.7, "5": 6.1, "6": 6.1, "7": 7.4, "8": 5.7, "9": 8.5, "10": 6.2, "11": 7.9, "12": 8.3, "13": 0.0, "14": 0.0, "15": 0.0, "16": 0.0, "17": 8.6, "18": 6.6, "19": 7.6, "20": 6.7};
+
 /* Render the sample's real run with the given changes, in the page. */
 const RENDER = `window.__render = (opts) => {
   const d = window.VAHINI_SAMPLE_REPORT;
   const o = opts || {};
-  let results = d.analysis.results.map(f => ({ ...f }));
+  const pinned = ${JSON.stringify(PINNED)};
+  let results = d.analysis.results.map(f => ({ ...f, score: pinned[f.n] != null ? pinned[f.n] : f.score }));
   if (o.free) results = results.filter(f => [1, 5, 7, 8, 18].includes(f.n));
   if (o.scores) results.forEach(f => { if (o.scores[f.n] != null) { f.score = o.scores[f.n]; } });
   // A page measured from the ink: its layout scored, its letters not read.
@@ -43,9 +50,20 @@ const RENDER = `window.__render = (opts) => {
   if (o.free) analysis.access = { tier: 'free' };
   if (o.text) delete analysis.textClassification;   // read this text instead of the sample's
   if (o.limits) analysis.practiceLimits = o.limits;
-  window.VahiniCraft = { ...window.__craft, checkSpelling: t => (o.spelling && t) ? [{ word: 'recieve', suggestion: 'receive', context: 'I recieve it' }] : [] };
+  // As the server sends it: the style check, then the letter style picked
+  // (o.letter) or the guess for Not sure (looped for a joined page, the
+  // sample's lean; print for a printed one).
+  const STYLES = { print: { name: 'Print', font: null, sheets: [] }, looped: { name: 'Looped cursive', font: 'Playwrite US Trad', sheets: ['cursive-lesson-1-basic-strokes', 'cursive-handwriting-worksheets', 'cursive-connecting-letters-worksheets'] }, french: { name: 'French cursive', font: 'Playwrite FR Trad', sheets: [] }, 'joined-breaks': { name: 'Joined with breaks', font: 'Playwrite GB J', sheets: [] } };
+  if (o.style || o.letter) {
+    analysis.styleProfile = o.style ? { available: true, wordsUsed: 27, shares: {}, verdict: o.style } : { available: false };
+    const guess = o.style === 'print' ? 'print' : o.guess || 'looped';
+    const id = o.letter || guess;
+    if (!o.noGuess && (o.letter || o.style)) analysis.styleProfile.letterStyle = { available: true, style: id, guessed: !o.letter, candidates: [id], pageGuess: o.letter && o.style ? guess : null, ...STYLES[id] };
+  }
+  window.VahiniCraft = { ...window.__craft };
+  const language = o.spelling ? { version: 1, checked: true, reason: null, grammar: [], spelling: [{ written: 'recieve', suggestion: 'receive', kind: 'letter_order', pattern: 'ie_ei', against: 'list', places: [{ line: 'line_1', bbox: [153, 820, 120, 70], placed: 'letters' }] }] } : null;
   const host = document.getElementById('report-host');
-  const out = VahiniReport.render(host, { analysis, intake: {}, recognizedText: o.text || 'I recieve it', crops: d.factor_regions || {}, detURL: d.photo, history: o.history || null });
+  const out = VahiniReport.render(host, { analysis, intake: {}, recognizedText: o.text || 'I recieve it', crops: d.factor_regions || {}, detURL: d.photo, history: o.history || null, language });
   const rows = [...host.querySelectorAll('.practice-row')].map(r => ({
     factor: r.dataset.factor,
     badge: r.querySelector('.pr-badge') ? r.querySelector('.pr-badge').textContent : '',
@@ -73,6 +91,7 @@ const RENDER = `window.__render = (opts) => {
     chips: [...host.querySelectorAll('.sn-chip')].map(e => e.dataset.factor),
     bands: [...host.querySelectorAll('.sn-start .sn-meta, .pr-badge')].map(e => e.textContent),
     keep: host.querySelector('.sn-keep') ? host.querySelector('.sn-keep').textContent : '',
+    master: host.querySelector('.sn-note-table tbody td') ? host.querySelector('.sn-note-table tbody td').textContent : '',
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
     locks: Object.fromEntries([...host.querySelectorAll('.sn-lockchip')].map(e => [e.dataset.locked, e.querySelector('i').textContent])),
@@ -83,6 +102,9 @@ const RENDER = `window.__render = (opts) => {
     hardLink: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').getAttribute('href') : '',
     hardText: host.querySelector('.p2-hard a') ? host.querySelector('.p2-hard a').textContent : '',
     hardBeforeClose: !!host.querySelector('.p2-hard + .p2-close'),
+    cursive: [...host.querySelectorAll('[data-cursive-sheets] a')].map(a => [a.getAttribute('href'), a.textContent]),
+    cursiveText: host.querySelector('[data-cursive-sheets]') ? host.querySelector('[data-cursive-sheets]').textContent : '',
+    cursiveBeforeHard: !!host.querySelector('[data-cursive-sheets] + .p2-hard'),
     art: [...host.querySelectorAll('img.rp-art')].map(i => i.getAttribute('src')),
     text: host.textContent,
   };
@@ -141,8 +163,8 @@ try {
   add(row5first(free) === 'size.two-line-ladder' && free.rows.every(r => r.model && r.models.every(m => m !== 'focus')),
     'A first check picks by need (the two-line ladder for letter size) and draws each exercise\'s own model', free.rows.map(r => [r.exercises, r.models]));
   const row = n => free.rows.find(r => r.factor === n);
-  add(/6\.1\/10 · Improving/.test(row('5').badge) && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
-    && row('1').now === 'Mastering' && row('1').done.length === 2, 'Rows show score, stage and the stage path', free.rows);
+  add(row('5').badge === 'Improving' && row('5').now === 'Improving' && JSON.stringify(row('5').done) === '["Learning ✓"]'
+    && row('1').now === 'Mastering' && row('1').done.length === 2, 'Rows show the stage, no score, and the stage path', free.rows);
   // Tries follow the row's own skill (owner, 2026-10-11): letter size is
   // Improving (6.1), so 10 a day; letter shapes is Mastering (7.0), so 5.
   add(/10 tries a day, for 7 days\./.test(row('5').plan) && /5 tries a day, for 7 days/.test(row('1').plan),
@@ -159,26 +181,27 @@ try {
     'Page 2 has the "when writing feels hard" note with its link, before the closing line, and no diagnosis words', { hard: free.hard, link: free.hardLink });
   add(catalogue.factors.every(f => typeof f.why === 'string' && (bundled.factors[String(f.n)] || {}).why === f.why && (bundled.factors[String(f.n)] || {}).page === f.page),
     'The bundle and the served catalogue carry each skill\'s why, win and page');
-  add(/Your words sit on the line\./.test(free.keep) && /You are getting better with every page!/.test(free.closing),
-    'Page 1 opens with a strength and page 2 closes with encouragement', free.keep);
-  add(JSON.stringify(free.others) === '["18","7"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
-    'Other skills we checked lists the rest, then what Pro adds, with no price', { others: free.others, note: free.proNote });
+  add(/Your handwriting is nice to read\./.test(free.keep) && /Your words sit nicely on the line\./.test(free.master) && /You are getting better with every page!/.test(free.closing),
+    'Page 1 opens with a strength and page 2 closes with encouragement', { keep: free.keep, master: free.master });
+  add(JSON.stringify(free.others) === '["7","18"]' && /Pro checks 15 more skills/.test(free.proNote) && !/₹|price/i.test(free.proNote),
+    'Other skills we checked lists the rest, strongest first, then what Pro adds, with no price', { others: free.others, note: free.proNote });
   add(!free.rows.some(r => r.factor === 'spelling'), 'No spelling row without a finding');
   add(free.art.length === 0, 'Without a picture map the report has no pictures');
 
   // Page 2 draws what each exercise's steps say: one drawing per kind, the
   // one the catalogue names for the exercise.
   const drawings = await page.evaluate(() => VahiniReport.MODEL_KINDS.map(k => [k, (VahiniReport.modelHTML(k, 'a o') || '').includes('md-' + (k === 'start-dots' ? 'dots' : k))]));
-  add(drawings.length === 13 && drawings.every(([, ok]) => ok), 'Every drawing kind renders its own model', drawings);
+  add(drawings.length === 15 && drawings.every(([, ok]) => ok), 'Every drawing kind renders its own model', drawings);
   const modelOf = {}; catalogue.factors.forEach(f => (f.exercises || []).forEach(e => { modelOf[e.id] = e.model; }));
   add(free.rows.every(r => r.exercises.every((id, i) => r.models[i] === modelOf[id])), 'Each exercise shows the drawing the catalogue names for it', free.rows.map(r => [r.exercises, r.models]));
   add(await page.evaluate(() => [...document.querySelectorAll('.practice-row')].every(r => r.querySelector('.pr-turn-row .yt'))), 'Each skill has lines to try it, matching its drawing');
 
-  // Spelling row only when the limited check found a word; extra to the skills.
+  // Spelling row only when the server's check found a word (#317); extra
+  // to the skills. It shows the word to write, never our reading.
   const spelled = await page.evaluate(() => window.__render({ free: true, spelling: true }));
-  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /We read recieve\. Did you mean receive\?/.test(spelled.text)
-    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.look-cover-write',
-    'A spelling finding adds its own row after the skills', spelled.rows.map(r => r.factor));
+  add(JSON.stringify(spelled.rows.map(r => r.factor)) === '["8","5","1","spelling"]' && /receive/.test(spelled.text) && !/We read recieve/.test(spelled.text)
+    && /1 word to check/.test(spelled.rows[3].badge) && spelled.rows[3].exercises[0] === 'spell.ie-ei' && /i and e together/.test(spelled.text) && /receive friend/.test(spelled.text) && /receive, friend, field, piece/.test(spelled.text),
+    'A spelling finding adds its own row after the skills, practising its pattern (i and e) with more words than the one', spelled.rows.map(r => r.factor));
 
   // Pro: band decides (up to 2), tier caps; a Mastering skill gets one.
   const pro = await page.evaluate(() => window.__render({ scores: { 3: 3.0, 6: 7.6 } }));
@@ -208,6 +231,67 @@ try {
   add(telugu.rows.flatMap(r => r.exercises).every(id => catalogue.factors.some(f => (f.exercises || []).some(e => e.id === id && e.script !== 'latin'))),
     'Latin-only exercises are skipped when the page is in another script');
 
+  // Cursive sheets (owner, 2026-11-03): a page written joined, or joined
+  // in places, links the three free cursive sheets on their shop pages,
+  // never the PDFs; a printed page or a page in another script gets none.
+  const SHOP_CURSIVE = [
+    'https://shop.vahinitech.com/products/cursive-lesson-1-basic-strokes/',
+    'https://shop.vahinitech.com/products/cursive-handwriting-worksheets/',
+    'https://shop.vahinitech.com/products/cursive-connecting-letters-worksheets/',
+  ];
+  for (const tier of ['free', 'pro']) {
+    const joined = await page.evaluate(o => window.__render(o), { free: tier === 'free', style: 'cursive' });
+    add(JSON.stringify(joined.cursive.map(l => l[0])) === JSON.stringify(SHOP_CURSIVE) && joined.cursiveBeforeHard
+      && /Free sheets for joined writing:/.test(joined.cursiveText) && /shop\.vahinitech\.com$/.test(joined.cursiveText.trim()) && !/\.pdf/.test(joined.cursiveText),
+      tier + ': a joined page links the three cursive sheets on the shop, before the "writing feels hard" note', joined.cursive);
+    await page.emulateMedia({ media: 'print' });
+    const heights = await page.evaluate(() => { const host = document.getElementById('report-host'); VahiniReport.fitPrintPages(host);
+      return [...host.querySelectorAll('.free-report')].map(p => Math.round(p.getBoundingClientRect().height)); });
+    await page.evaluate(() => VahiniReport.unfitPrintPages(document.getElementById('report-host')));
+    await page.emulateMedia({ media: 'screen' });
+    add(heights.length === 2 && heights.every(h => h <= 1120), tier + ': with the cursive sheets the report still prints on two A4 pages', heights);
+  }
+  const mixed = await page.evaluate(() => window.__render({ free: true, style: 'mixed' }));
+  add(mixed.cursive.length === 3, 'A page joined in places gets the cursive sheets too', mixed.cursive);
+  const printedPage = await page.evaluate(() => window.__render({ free: true, style: 'print' }));
+  const noStyle = await page.evaluate(() => window.__render({ free: true }));
+  const teluguJoined = await page.evaluate(() => window.__render({ style: 'cursive', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' }));
+  add(!printedPage.cursive.length && !teluguJoined.cursive.length && !/joined writing/i.test(printedPage.text),
+    'A printed page and a page in another script get no cursive sheets', { printed: printedPage.cursive, telugu: teluguJoined.cursive, sample: noStyle.cursive });
+  // The letter style picked on the check page (owner, 2026-11-04) leads
+  // the box: its name in its own face, what the page looks like, and its
+  // own sheets. A style with no sheets yet says so and points to our team,
+  // never to another style's sheets; print picked means no cursive box.
+  const fontOf = el => el ? getComputedStyle(el).fontFamily : '';
+  const box = o => page.evaluate(o => { const r = window.__render(o); const b = document.querySelector('[data-cursive-sheets]');
+    const n = b && b.querySelector('.p2-style-name'); return { ...r, font: n ? n.style.fontFamily : '', name: n ? n.textContent : '', id: b ? b.dataset.letterStyle : null }; }, o);
+  const loopedPrinted = await box({ free: true, style: 'print', letter: 'looped' });
+  add(JSON.stringify(loopedPrinted.cursive.map(l => l[0])) === JSON.stringify(SHOP_CURSIVE) && /Your school's style:\s*Looped cursive\./.test(loopedPrinted.cursiveText)
+    && /This page is written in print\./.test(loopedPrinted.cursiveText) && /Playwrite US Trad/.test(loopedPrinted.font),
+    'Looped picked on a printed page: the looped sheets, the name in its own face, and what the page looks like', loopedPrinted.cursiveText);
+  const french = await box({ free: true, style: 'cursive', letter: 'french' });
+  add(french.cursive.length === 1 && /\/reach\.html\?topic=handwriting$/.test(french.cursive[0][0]) && !french.cursive.some(l => /shop\.vahinitech\.com/.test(l[0]))
+    && /French cursive\./.test(french.cursiveText) && /being made/.test(french.cursiveText) && /Playwrite FR Trad/.test(french.font) && french.id === 'french',
+    'French picked: no looped sheets, says its sheets are being made and points to our team', french.cursive);
+  await page.emulateMedia({ media: 'print' });
+  const frenchHeights = await page.evaluate(() => { const host = document.getElementById('report-host'); VahiniReport.fitPrintPages(host);
+    return [...host.querySelectorAll('.free-report')].map(p => Math.round(p.getBoundingClientRect().height)); });
+  await page.evaluate(() => VahiniReport.unfitPrintPages(document.getElementById('report-host')));
+  await page.emulateMedia({ media: 'screen' });
+  add(frenchHeights.length === 2 && frenchHeights.every(h => h <= 1120), 'With a picked style\'s box the report still prints on two A4 pages', frenchHeights);
+  const printPicked = await box({ free: true, style: 'cursive', letter: 'print' });
+  add(!printPicked.cursive.length && !printPicked.cursiveText, 'Print picked: no cursive box, even on a joined page', printPicked.cursiveText);
+  const upright = await box({ free: true, style: 'cursive', guess: 'joined-breaks' });
+  add(!upright.cursive.some(l => /shop\.vahinitech\.com/.test(l[0])) && /This page looks like\s*Joined with breaks\./.test(upright.cursiveText) && /Pick your school's style/.test(upright.cursiveText),
+    'Not sure, page looks like a style with no sheets yet: no looped sheets, asks for the school\'s style', upright.cursiveText);
+  const guessed = await box({ free: true, style: 'cursive' });
+  add(guessed.cursive.length === 3 && /This page looks like\s*Looped cursive\./.test(guessed.cursiveText), 'Not sure, page looks looped: the looped sheets with what it looks like', guessed.cursiveText);
+  const legacy = await box({ free: true, style: 'cursive', noGuess: true });
+  add(legacy.cursive.length === 3 && !/looks like|school's style/.test(legacy.cursiveText), 'A report from before the style guess keeps the looped sheets, with no lead', legacy.cursiveText);
+  const unread = await box({ free: true, letter: 'looped' });
+  add(unread.cursive.length === 3 && !/This page is/.test(unread.cursiveText), 'A picked style shows even when the page\'s style could not be read, without saying how it looks', unread.cursiveText);
+  const teluguPicked = await box({ letter: 'looped', style: 'print', text: 'అమ్మ ఆవు ఇల్లు ఈగ ఉడుత' });
+  add(!teluguPicked.cursive.length, 'A page in another script gets no cursive box, whatever was picked');
   // Rotation: the next check starts after last time's exercises and wraps.
   const first = await page.evaluate(() => window.__render({ free: true }));
   const second = await page.evaluate(p => window.__render({ free: true, history: { date: '2026-10-01', overall: 70, factors: [], practice: p } }), first.out.practice);
@@ -320,11 +404,11 @@ try {
       saved: VahiniProgress.last('Asha'),
     };
   });
-  add(/saved on this device/.test(panel.intro) && /Nothing is sent to Vahini/.test(panel.intro) && panel.list.length === 3 && /this check/.test(panel.list[0]),
+  add(/saved on this device/.test(panel.intro) && /The name stays here\. Vahini keeps only the scores/.test(panel.intro) && panel.list.length === 3 && /this check/.test(panel.list[0]),
     'The panel lists this writer\'s saved checks, newest first', panel.list);
   add(panel.options.length === 2 && /1 October/.test(panel.options[0]), 'Compare defaults to the previous check', panel.options);
   const kinds = Object.fromEntries(panel.rows.map(r => [r[0], r[1]]));
-  add(kinds[5] === 'up' && /↑ \+0\.6/.test(panel.rows.find(r => r[0] === '5')[2]) && kinds[8] === 'same' && kinds[7] === 'tries'
+  add(kinds[5] === 'up' && /↑ better$/.test(panel.rows.find(r => r[0] === '5')[2]) && !panel.rows.some(r => /\d/.test(r[2])) && kinds[8] === 'same' && kinds[7] === 'tries'
     && /needs a few more tries/.test(panel.rows.find(r => r[0] === '7')[2]) && !panel.rows.some(r => /↓/.test(r[2])),
     'Rises of 0.3 get an up arrow; a fall says it needs a few more tries, never a down arrow', panel.rows);
   add(panel.keep === '/progress.html', 'The panel points to Keep my pages for other devices');
@@ -365,6 +449,39 @@ try {
     return VahiniProgress.load().length;
   });
   add(capped === 60, 'Saved checks are capped at 60', capped);
+
+  // ---- Receipts for stored reports (backend/server/report_store.py, 2026-10-16)
+  const calls = [];
+  await page.route('**/api/v2/reports/**', (route) => {
+    const req = route.request();
+    calls.push({ method: req.method(), path: new URL(req.url()).pathname, token: req.headers()['x-report-token'] || null, body: req.postData() || '' });
+    route.fulfill({ status: req.method() === 'DELETE' ? 204 : 200, contentType: 'application/json', body: '{"renewed":1}' });
+  });
+  const receiptId = 'a'.repeat(32);
+  const receiptToken = 'B'.repeat(43);
+  const kept = await page.evaluate(([id, token]) => {
+    localStorage.clear();
+    VahiniProgress.receiptFor({ id, token, expires: '2027-10-03', note: 'Bheema' });
+    const first = VahiniProgress.save(VahiniProgress.entryFrom('Tara', 70, [], [{ n: 1, score: 7 }], null));
+    const second = VahiniProgress.save(VahiniProgress.entryFrom('Tara', 72, [], [{ n: 1, score: 7.2 }], null));
+    VahiniProgress.renew(location.href);
+    return {
+      first, second,
+      bad: VahiniProgress.clean({ ...first, receipt: { id: '../x', token } }),
+    };
+  }, [receiptId, receiptToken]);
+  add(kept.first.receipt && kept.first.receipt.id === receiptId && kept.first.receipt.token === receiptToken
+    && !('note' in kept.first.receipt) && !('receipt' in kept.second) && kept.bad === null,
+    'A check keeps only its own receipt, rebuilt from known fields', kept);
+  await page.evaluate(() => VahiniProgress.forget('Tara'));
+  await delay(300);
+  const renewCall = calls.find((c) => c.method === 'POST' && c.path === '/api/v2/reports/renew');
+  const deleteCall = calls.find((c) => c.method === 'DELETE');
+  add(renewCall && JSON.stringify(JSON.parse(renewCall.body)) === JSON.stringify({ receipts: [{ id: receiptId, token: receiptToken }] }),
+    'A new check renews the earlier receipts and sends nothing else', calls);
+  add(deleteCall && deleteCall.path === '/api/v2/reports/' + receiptId && deleteCall.token === receiptToken,
+    'Forget deletes the stored reports with their receipts', calls);
+  add(!calls.some((c) => /Tara|Asha|Bheema/.test(c.body + c.path)), 'No name ever goes with a receipt', calls);
   await browser.close();
 } catch (error) {
   add(false, 'Practice report checks ran', String(error && error.stack || error));

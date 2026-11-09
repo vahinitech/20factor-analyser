@@ -1,0 +1,77 @@
+{
+ "description": "Eight crops of engraved model handwriting from two public-domain penmanship manuals (Palmer 1915, Zaner 1925 printing of the 1915 edition): running sentences, no drills. A neat reference for scripts/calibrate.py, the ideal end of the range: adult cursive drawn as a model to copy, not children's everyday writing.",
+ "role": "neat-reference",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "palmer-092-specimen": [
+   "this is a specimen of",
+   "the palmer method penmanship.",
+   "it combines legibility, rapidity,",
+   "ease and endurance."
+  ],
+  "palmer-093-practice": [
+   "it is not so much the amount of prac-",
+   "tice, as the kind of practice that counts.",
+   "it is the constant effort to acquire pre-",
+   "cision that leads to success in writing."
+  ],
+  "zaner-088-spacing": [
+   "spacing between letters should",
+   "be wider than in letters, and between",
+   "words wider than between letters."
+  ],
+  "zaner-090-small-writing": [
+   "small writing may be quite plain, easy,",
+   "and rapid; and since it is sometimes necessary",
+   "to write in narrow spaces, it should be prac-",
+   "ticed by all who desire always to \"make good\"."
+  ],
+  "zaner-093-short-loops": [
+   "many people prefer few, short loops,",
+   "simple capitals, rounding minimum",
+   "letters, and narrow ruling."
+  ],
+  "zaner-095-good-writing": [
+   "good writing is more than an",
+   "accomplishment; it is a modern need;",
+   "the passport to good business positions."
+  ],
+  "zaner-096-commercial-asset": [
+   "good writing is a commercial",
+   "asset that is worth much more than",
+   "it costs to acquire.",
+   "good writing is a concrete in-",
+   "dication that its possessor is careful,",
+   "industrious, and systematic.",
+   "good writing is a combination",
+   "of mental and manual training, and",
+   "the habit of recording thought plainly."
+  ],
+  "zaner-097-good-handwriting": [
+   "a good handwriting can neither",
+   "be bought nor sold, but is acquired",
+   "by the coin of intelligent toil",
+   "a good handwriting is a social",
+   "service possession because it serves",
+   "both the writer and the reader.",
+   "a good handwriting becomes a",
+   "personal trademark and a life com-",
+   "panion and protection."
+  ]
+ },
+ "floor_sentences_found": 26,
+ "eye_ranking": []
+}

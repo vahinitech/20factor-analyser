@@ -31,8 +31,7 @@ import hashlib
 import json
 from pathlib import Path
 
-from jsonschema import Draft202012Validator
-from jsonschema.exceptions import best_match
+from report import json_schema
 
 ROOT = Path(__file__).resolve().parent
 TABLE_PATH = ROOT / "stages.json"
@@ -47,7 +46,7 @@ class StagesError(ValueError):
 def _validate(data, what):
     with open(SCHEMA_PATH, encoding="utf-8") as f:
         schema = json.load(f)
-    error = best_match(Draft202012Validator(schema).iter_errors(data))
+    error = json_schema.first_error(json_schema.validator(schema), data)
     if error is not None:
         where = "/".join(str(p) for p in error.path) or "(top)"
         raise StagesError(f"{what}: {where}: {error.message}")

@@ -6,7 +6,7 @@ family keeps both reports; the analyser keeps neither (photos are never
 stored, docs/15-persistence.md). This page lists what a version-2 report
 gives that comparison beyond the factor scores, where each value comes
 from, and what it does not claim. The fields are built by
-`backend/comparison_data.py` from what the scorer and the reader already
+`backend/report/comparison_data.py` from what the scorer and the reader already
 produced; nothing here measures the writing in a new way.
 
 Order of changes across repositories: this analyser change first, then the
@@ -102,6 +102,16 @@ rather than guessed.
 The schema test that checks the marks on real evidence also found that
 `places` from the word-size measurement (#135) send `kind: "word"` and
 `measure: "word_xheight"`, which the schema did not list; both are added.
+
+### Two shared PDFs instead of two photos
+
+The report's "Share PDF on WhatsApp" file carries what the viewer needs
+(owner, 2026-10-16): the stored report's receipt in its XMP metadata and
+the page photo, at most 1600 px on its long side, as the embedded file
+`vahini-page.jpg`. The viewer reads both in the browser, fetches the record
+with `GET /api/v2/reports/{id}` and `X-Report-Token`, and scales each mark
+onto the embedded photo with the formula above (the photo is the uploaded
+one scaled, never cropped). Details: [10-practice-framework.md](10-practice-framework.md#share-the-pdf-on-whatsapp).
 
 ## Real change or normal variation? (not published yet)
 

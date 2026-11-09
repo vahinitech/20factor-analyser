@@ -30,8 +30,10 @@ const FREE_LIMITS = cat.tiers.free, PRO_LIMITS = cat.tiers.pro;
 const need = S.needs(FREE);
 assert.equal(need[18], 0, 'a composite keeps none of its need');
 const own18 = 8.5 - 6.4;
-assert.ok(Math.abs(need[5] - (3.5 + own18 * 0.25)) < 1e-9, 'letter size gets its share of legibility');
-assert.ok(Math.abs(need[1] - (1.0 + own18 * 0.35)) < 1e-9);
+// The four factors carry 0.70 of legibility; the reading share is split
+// between them in proportion.
+assert.ok(Math.abs(need[5] - (3.5 + own18 * 0.15 / 0.70)) < 1e-9, 'letter size gets its share of legibility');
+assert.ok(Math.abs(need[1] - (1.0 + own18 * 0.30 / 0.70)) < 1e-9);
 assert.ok(Math.abs(S.needs([f(5, 5.0, 'estimated')])[5] - 3.5 * 0.6) < 1e-9, 'an estimate counts 0.6');
 assert.equal(S.needs([f(3, 9.1)])[3], 0, 'a strong skill needs nothing');
 

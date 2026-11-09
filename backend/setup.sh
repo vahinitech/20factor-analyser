@@ -35,9 +35,9 @@ echo "[2/4] Upgrading pip..."
 "$PY" -m pip install --upgrade pip --disable-pip-version-check
 
 echo "[3/4] Installing core + engine tiers..."
-"$PY" -m pip install -r "$SERVER_DIR/requirements-core.txt"
+"$PY" -m pip install -r "$SERVER_DIR/requirements/core.txt"
 for e in "${ENGINES[@]}"; do
-  req="$SERVER_DIR/requirements-$e.txt"
+  req="$SERVER_DIR/requirements/$e.txt"
   if [ -f "$req" ]; then
     echo "  -> $e"
     if [ "$e" = "trocr" ]; then

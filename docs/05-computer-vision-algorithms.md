@@ -6,7 +6,7 @@ and a tiny pseudocode sketch. No prior CV knowledge assumed.
 
 > **Computer Vision (CV)** = software that "looks at" an image and extracts facts from it.
 > Vahini's CV is **deterministic**: fixed maths, no randomness: so the same photo always
-> produces the same measurements. Code: `backend/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
+> produces the same measurements. Code: `backend/vision/computer_vision.py`, `geometry.py` (image, server-side), `imu.js` (pen motion, browser-side).
 
 ---
 
@@ -26,21 +26,23 @@ print marks vs paper). Two measurements come straight from that mask:
   the stroke's width at that point. Printed type holds this width nearly
   constant end to end, low variance. A pen's width wanders with speed and
   pressure, higher variance: that variance, not the width itself, is the
-  signal, and it is the main structural cue behind Letter Formation and the
-  printed-vs-handwriting split.
+  signal, and it is the main cue behind the printed-vs-handwriting split.
 - *Edge crispness.* Canny edges divided by ink area. Print has sharp,
   mostly straight contours; a drawn line has soft, curved ones.
-- *Loop closure* (Structure factor 3, for letters like a/o/d/p/e/g/q) is
-  currently a proxy, not per-letter contour tracing: it is the share of
-  loop-shaped letters among everything the OCR engine actually read on the
-  page. This is the one factor here that leans on reading the words rather
-  than pure pixels.
+- *Loop closure* (Structure factor 3, for a/b/d/e/g/o/p/q) counts the
+  closed bowls in each word's ink (section 11) against the bowl letters in
+  the word read. The closing is measured in the pixels; only how many
+  bowls a word should have comes from reading the words.
 
 **One word.** A word's own bounding box, and its neighbours on the same
 line, give two more measurements: the gaps between adjacent letters (their
 consistency is Letter Spacing, factor 9) and the word's width divided by
-its own letter count, an average character width feeding Stroke Order and
-Size Consistency. None of this needs the word read correctly. It only
+its own letter count, an average character width. Inside the word's
+small-letter band, the strokes each column of ink crosses are counted, and
+the word's outline is followed to see how much it turns: a scribbled word
+crosses and turns far more than the writer's other words, and Letter
+Formation, Legibility and Character Distinction count it as hard to read
+(#193). None of this needs the word read correctly. It only
 needs the boxes OCR detection already draws around each cluster of ink,
 the same orange boxes shown on the page in the report.
 
@@ -53,8 +55,9 @@ instead: a page where one line suddenly veers scores worse here than a
 page that leans the same modest amount throughout. Slant here is that
 page-level tilt-variability signal, not a per-letter cursive-lean angle, a
 simplification, like loop closure above. The line's own bounding-box
-height and width, compared against every other line's, give Size
-Consistency and Line Quality. Each line's left edge, collected down the
+height, compared against every other line's, feeds Letter Formation and,
+on pages too small to measure word by word, Size Consistency. Line
+Quality (smoothness) and Stroke Order are left to the sensor pen (#192). Each line's left edge, collected down the
 whole page, gives Margins: an edge that steps in and out scores lower than
 one that holds steady. The vertical gap between consecutive lines'
 centres feeds line-spacing rhythm.
@@ -62,23 +65,22 @@ centres feeds line-spacing rhythm.
 **The whole page.** A few factors are not measured directly. They are
 weighted blends of the ones above. Overall Neatness, for example, is 30%
 Size Consistency, 20% Word Spacing, 20% Margins, 15% Line Straightness and
-15% Slant. Legibility leans similarly on Letter Formation, Size
-Consistency, Word Spacing and Baseline. Character Distinction is the one
-factor that uses OCR's own confidence directly, a confident, easy read
-implies clearly distinct letterforms, alongside how digit-heavy the text
-is.
+15% Slant. Legibility blends how surely the words were read with Letter
+Formation, Size Consistency, Word Spacing and Baseline. Character
+Distinction is how surely the words were read, word by word: a confident,
+easy read implies clearly distinct letterforms.
 
 **What never depends on reading the words correctly:** stroke width, glyph
 height, edge crispness, letter and word spacing, baseline tilt, line
 straightness, margins, line spacing. Every one of these comes from pixel
 geometry and detected boxes, not from what the OCR engine thought the
 letters said. **What does lean on it, as a secondary signal only:** loop
-closure and the ascender/descender proxy (factor 6, the share of
-tall/descending letters like b/d/f/h/k/l/t/g/j/p/q/y in the recognised
+closure (how many bowls each word should have; whether they close is
+measured in the ink) and the ascender/descender proxy (factor 6, the share
+of tall/descending letters like b/d/f/h/k/l/t/g/j/p/q/y in the recognised
 text), plus Character Distinction's confidence term. When OCR cannot read
-a page at all, those specific sub-signals fall back to a neutral default
-rather than failing the scan. The geometry-only factors are unaffected
-either way.
+a page at all, those factors are reported as not measured rather than
+failing the scan. The geometry-only factors are unaffected either way.
 
 ---
 
@@ -217,7 +219,7 @@ upper (l, h, t), middle (a, o, e), lower (g, y, p).
 **Why:** handwriting coaches teach letter size as one proportion: a 't' stands **two**
 x-heights tall, a 'g' hangs **two** x-heights deep (the 1:2 rule). The three classic
 mistakes are writing everything in one zone, over-reaching up, and over-reaching down.
-**How** (`backend/zone_analysis.py`, measured per line from ink):
+**How** (`backend/vision/zone_analysis.py`, measured per line from ink):
 
 ```
 binarise the line crop (iterative midpoint threshold)
@@ -262,16 +264,26 @@ pre-processing.
 
 ## 11. Loop-closure topology (flood fill from the border)
 
-**What:** checks whether round letters (a, o, e, g) are properly **closed**.
-**How:** flood-fill the *background* inward from the image border. Any background pocket that the
-flood could **not** reach must be fully enclosed by ink: i.e. a closed loop:
+**What:** checks whether letters with a bowl (a, b, d, e, g, o, p, q) close it.
+**How:** `letter_geometry.py` binarises each line and asks OpenCV for its contours with
+`RETR_CCOMP`, which returns the ink's outer edges and, one level down, its holes. A hole is
+background fully enclosed by ink: a closed bowl. A bowl left open, like a c, has no hole.
 
 ```
-flood background from all four borders
-for each loop-bearing letter:
-    closed if its box contains background pixels the flood never reached
-loopRatio = closed letters ÷ eligible letters        # F3
+for each hole in the line's ink:
+    keep it if it is 0.15 to 1.6 small letters across,
+       reaches no lower than 0.3 small letters below the baseline,
+       and either stays below 1.3 small letters up,
+       or starts within 0.3 of the baseline (a bowl written tall)
+for each word (or the whole line, when the words found do not match the words read):
+    closed += min(holes kept in the word, bowl letters in the word)
+closed share = closed ÷ bowl letters                  # F3, not measured below 5
 ```
+
+The loops of tall letters (l, h, k) start half a small letter or more up their stem and rise
+past the band; the loops of tails (g, j, y) hang below the baseline; neither is kept. A hole
+that is not a bowl (a joined r, two letters touching) can only count up to its own word's bowl
+letters, so it cannot make up for a bowl left open in another word.
 
 ---
 

@@ -44,12 +44,14 @@ to the ones it builds on.
 | 19 | [Comparison data](19-comparison-data.md) | What a report gives the paid before/after comparison: section scores, comparability facts, factor marks on the photo, and normal variation |
 | 20 | [Languages](20-languages.md) | The design for more scripts and languages: language packs, the per-line script decision, what each factor needs, maturity levels, and the build order |
 | 21 | [Performance, complexity and coverage](21-performance-and-coverage.md) | The design for timing every scan step, budgets on large calls, recording each function's growth (big O) in CI, a profiling job, and coverage with a ratchet |
+| 22 | [Datasets](22-datasets.md) | Every dataset used for training, tests and evaluation: publisher, licence, use, what is committed and what ships |
+| 23 | [Therapist agreement test](23-therapist-agreement.md) | The protocol for comparing factor scores with occupational therapists' marks on consented pages: consent, server-only pages, the marking sheet, the agreement numbers and how many pages and therapists are needed |
 
 ## Elsewhere
 
 - The API reference: [backend/API-V2.md](../backend/API-V2.md); its JSON
   Schemas: [backend/schemas/README.md](../backend/schemas/README.md).
-- Server set-up and engines: [backend/README.md](../backend/README.md).
+- Server set-up and what is where: [backend/README.md](../backend/README.md); engines and settings: [06](06-reading-engines.md#engine-settings-and-modes).
 - Practice framework details: [practice-framework/](practice-framework/).
 - Worked examples and the sample report generator: [examples/](examples/).
 - Superseded notes on earlier report layouts, and dated notes such as the

@@ -84,11 +84,15 @@ def _prepare(bench, sets):
     for name in sets:
         _folder, meta = bench._load_set(name)  # pylint: disable=W0212
         bench._apply_settings(meta)  # pylint: disable=W0212
-    import classify  # noqa: F401 pylint: disable=unused-import
-    import computer_vision  # noqa: F401 pylint: disable=unused-import
-    import ink_geometry  # noqa: F401 pylint: disable=unused-import
-    import layout_filter  # noqa: F401 pylint: disable=unused-import
-    import recognizer  # noqa: F401 pylint: disable=unused-import
+    from reading import classify  # noqa: F401 pylint: disable=unused-import
+    from vision import (
+        computer_vision,
+    )  # noqa: F401 pylint: disable=unused-import
+    from vision import ink_geometry  # noqa: F401 pylint: disable=unused-import
+    from reading import (
+        layout_filter,
+    )  # noqa: F401 pylint: disable=unused-import
+    from reading import recognizer  # noqa: F401 pylint: disable=unused-import
     import scoring  # noqa: F401 pylint: disable=unused-import
 
 
@@ -334,7 +338,7 @@ def markdown(result, baseline_note):
         f"{m['snapshot_mib']:.1f} MiB. Each allocation is charged to the "
         "innermost line of our own code that led to it. This is Python's "
         "view of one replay, not the server's resident memory: that is "
-        "`backend/load_test.py` on stage.",
+        "`backend/tools/load_test.py` on stage.",
         "",
     ]
     head = "| # | Site | Code | MiB | Blocks |"

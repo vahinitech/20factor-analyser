@@ -218,39 +218,9 @@ function analyze(text, docKey, reading){
   };
 }
 
-/* A deliberately limited, auditable list of common English misspellings.
-   Unknown words, names and valid regional spellings are never flagged merely
-   for being absent. Suggestions require confirmation against the source. */
-const SPELLING = {
-  accomodate:'accommodate', acheive:'achieve', acheived:'achieved',
-  adress:'address', becuase:'because', beacuse:'because', begining:'beginning',
-  beleive:'believe', belive:'believe', calender:'calendar', comming:'coming',
-  definately:'definitely', diffrent:'different', enviroment:'environment',
-  goverment:'government', grammer:'grammar', happend:'happened',
-  imporant:'important', independance:'independence', intresting:'interesting',
-  knowlege:'knowledge', languge:'language', neccessary:'necessary',
-  necesary:'necessary', occassion:'occasion', occured:'occurred',
-  recieve:'receive', recieved:'received', recieving:'receiving',
-  seperate:'separate', seperately:'separately', sentance:'sentence',
-  speach:'speech', sucess:'success', succesful:'successful',
-  tommorow:'tomorrow', tommorrow:'tomorrow', untill:'until',
-  usefull:'useful', usualy:'usually', wierd:'weird', writting:'writing',
-};
-function checkSpelling(text, reading){
-  // English words only: a page the server read as another language is not
-  // checked. With no language information it runs as before.
-  if (readsEnglish(reading)===false) return [];
-  const source=String(text||'');
-  const findings=[];
-  for(const match of source.matchAll(/\b[A-Za-z]+(?:['’][A-Za-z]+)?\b/g)){
-    const key=match[0].toLowerCase();
-    const suggestion=Object.hasOwn(SPELLING,key) ? SPELLING[key] : null;
-    if(!suggestion) continue;
-    findings.push({word:match[0],suggestion,start:match.index,end:match.index+match[0].length,
-      context:source.slice(Math.max(0,match.index-35),Math.min(source.length,match.index+match[0].length+35))});
-  }
-  return findings;
-}
+/* Spelling is not checked here any more: the server checks every page's
+   words against a large word list and the reader's own letter scores
+   (backend/reading/spelling.py, #317), and the report reads its findings. */
 
-global.VahiniCraft = { analyze, kindOf, readsEnglish, GUIDES, checkSpelling };
+global.VahiniCraft = { analyze, kindOf, readsEnglish, GUIDES };
 })(window);

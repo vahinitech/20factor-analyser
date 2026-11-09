@@ -23,14 +23,14 @@ from fastapi import UploadFile
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import comparison_data  # noqa: E402
-import compact_reports  # noqa: E402
-import contract_schemas  # noqa: E402
-import entitlements  # noqa: E402
-import factor_needs  # noqa: E402
+from report import comparison_data  # noqa: E402
+from report import compact_reports  # noqa: E402
+from report import contract_schemas  # noqa: E402
+from server import entitlements  # noqa: E402
+from scoring_parts import needs as factor_needs  # noqa: E402
 import scoring  # noqa: E402
 from languages import profile, registry  # noqa: E402
-from report_contract import public_report  # noqa: E402
+from report.report_contract import public_report  # noqa: E402
 from backend.tests.test_comparison_data import (  # noqa: E402
     FREE,
     read_payload,
@@ -301,20 +301,13 @@ class RulesetHash(unittest.TestCase):
 
 
 def page():
-    arr = np.full((200, 600, 3), 255, dtype=np.uint8)
-    lines = []
-    for i, text in enumerate(("a good dog ran up", "the big hill today")):
-        top, bottom = 30 + i * 60, 70 + i * 60
-        corners = [[20, top], [540, top], [540, bottom], [20, bottom]]
-        lines.append(
-            {
-                "text": text,
-                "score": 0.9,
-                "box": [20, top, 520, 40],
-                "poly": corners,
-            }
-        )
-    return arr, lines
+    """Two lines drawn as joined writing (test_letter_geometry), so Loop
+    Closure has bowls in the ink to measure."""
+    # pylint: disable=import-outside-toplevel
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from test_letter_geometry import joined_page
+
+    return joined_page(["a good dog ran up", "the big hill today"])
 
 
 def score(ruleset):
@@ -392,7 +385,7 @@ class EmptiedClasses(unittest.TestCase):
 
 
 def load_server():
-    path = Path(__file__).resolve().parents[1] / "ppocr-server.py"
+    path = Path(__file__).resolve().parents[1] / "server/app.py"
     spec = importlib.util.spec_from_file_location("profile_test_server", path)
     server = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(server)

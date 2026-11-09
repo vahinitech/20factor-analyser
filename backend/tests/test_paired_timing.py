@@ -133,7 +133,7 @@ class TestTable(unittest.TestCase):
 
     def test_without_stages_there_is_no_stage_table(self):
         _failed, text = paired.table(history([(10, 10)] * 3))
-        self.assertNotIn("backend/perf.py", text)
+        self.assertNotIn("backend/server/perf.py", text)
 
     def test_scan_without_perf_records_nothing(self):
         with paired._scan(None) as record:  # pylint: disable=W0212

@@ -1,0 +1,3 @@
+- CI runs again: a step name that #295 added was not valid YAML, so GitHub refused the whole workflow and no CI run started on main or on pull requests.
+- A new "Workflow lint" check runs actionlint on every change under `.github/`, from a workflow of its own, so a workflow file that does not parse fails a check instead of silently stopping CI.
+- Two failures that merged while CI was not running are fixed: a test file from #311 was not black-formatted, and #301's `turned` check in the compact decoder had no unit test, which dropped `compact-client.js` under its coverage baseline.

@@ -5,22 +5,27 @@
 # boxes, word gaps, letter sizes, ink variance and what the ink inside
 # the lines shows (letter_geometry.py, ink_geometry.py).
 
+import bisect
 import math
 import re
 
 import numpy as np
 
-from baseline_track import track_rows
-import letter_geometry
-import computer_vision
-import ink_geometry
+from vision.baseline_track import track_rows
+from vision import letter_geometry
+from vision import computer_vision
+from vision import ink_geometry
 import languages
+from reading import detector
 from scoring_parts.page import (
     _detilted_left_x,
     _group_lines_by_rows,
     _page_tilt_degrees,
 )
+from scoring_parts.reading import _reading_features
 from scoring_parts.stats import _cv, _std, mean
+from scoring_parts.availability import MIN_BOWLS
+from styles import letter_styles
 
 try:
     import cv2
@@ -32,10 +37,173 @@ except Exception:
 # rise above the small letters or drop below the line.
 _PACK = languages.language()
 _LETTER_RE = re.compile(_PACK.char_class("letter"))
-_LOOP_RE = re.compile(_PACK.char_class("loop"))
 _TALL_RE = re.compile(
     _PACK.char_class("ascender") + "|" + _PACK.char_class("descender")
 )
+
+
+# Margin Discipline (factor 10): a row that starts more than this share
+# of the page width right of the other rows' median start is a centred
+# title, a date or a signature, not a line that missed the margin (#201).
+MARGIN_OUTLIER = 0.15
+# A paragraph's first line set in at least PARA_INDENT of the page width
+# (and no further than MARGIN_OUTLIER) is an indent, not a missed margin:
+# the first row, or a row after one that ends PARA_SHORT of the block's
+# width short of the longest row.
+PARA_INDENT = 0.02
+PARA_SHORT = 0.25
+# Fewer counted rows than this and the margin is not measured: two
+# starts always sit the same distance from their median.
+MIN_MARGIN_ROWS = 3
+
+
+def _margin_rows(lefts, rights=None):
+    """The rows' starts Margin Discipline counts, top to bottom: not one
+    far right of the median start (MARGIN_OUTLIER), and, when the rows'
+    right ends are given, not a paragraph's indented first line
+    (PARA_INDENT, PARA_SHORT)."""
+    if not lefts:
+        return []
+    mid = float(np.median(lefts))
+    rows = [
+        (x, r)
+        for x, r in zip(lefts, rights or [None] * len(lefts))
+        if x - mid <= MARGIN_OUTLIER
+    ]
+    if rights is None:
+        return [x for x, _ in rows]
+    end = max(r for _, r in rows)
+    short = end - PARA_SHORT * max(1e-6, end - mid)
+    return [
+        x
+        for i, (x, _) in enumerate(rows)
+        if not ((i == 0 or rows[i - 1][1] < short) and x - mid >= PARA_INDENT)
+    ]
+
+
+def _margin_spread(lefts, rights=None):
+    """How far the rows' starts stray from the margin: the mean distance
+    from the median start, as a share of the page width, over the rows
+    _margin_rows counts. None below MIN_MARGIN_ROWS counted rows.
+
+    The coefficient of variation it replaces divides by the mean start,
+    so the same spread scored worse the nearer the writing sat to the
+    page's edge, and one date at the right took a page to 0 (#201). The
+    median of the distances would ignore one indented line among four,
+    so their mean is taken around the median instead."""
+    kept = _margin_rows(lefts, rights)
+    if len(kept) < MIN_MARGIN_ROWS:
+        return None
+    mid = float(np.median(kept))
+    return mean([abs(x - mid) for x in kept])
+
+
+# Spacing (factors 8 and 9, #197): a gap more than ODD_GAP times the
+# usual one stands out, and so does a word gap under NARROW_WORD_GAP of
+# the page's median word gap (a planted gap a quarter as wide is still
+# wider than the gaps between letters, so it is compared with the other
+# word gaps). Letter gaps under GAP_FLOOR small letters are too small to
+# compare by ratio: most letter gaps are a few pixels, and one pixel
+# more would double them.
+ODD_GAP = 2.0
+NARROW_WORD_GAP = 0.5
+GAP_FLOOR = 0.10
+
+
+def _word_spacing(gaps):
+    """How far the word gaps stray from their median, as a share of it,
+    and the share of gaps that stand out (narrower than NARROW_WORD_GAP
+    or wider than ODD_GAP times the median).
+
+    The coefficient of variation it replaces squared every distance, so
+    one odd gap and an evenly uneven page looked alike, and a scale
+    loose enough for neat writing lost a planted gap (#197). The mean
+    distance from the median keeps every gap counted, as Margin
+    Discipline does (_margin_spread), and an odd gap is scored on its
+    own. (0.0, 0.0) below three gaps, where the factor is not measured."""
+    if len(gaps) < 3:
+        return 0.0, 0.0
+    mid = float(np.median(gaps))
+    if mid <= 1e-9:
+        return 0.0, 0.0
+    odd = sum(
+        1 for g in gaps if g < NARROW_WORD_GAP * mid or g > ODD_GAP * mid
+    )
+    return mean([abs(g - mid) / mid for g in gaps]), odd / len(gaps)
+
+
+def _letter_spacing(words):
+    """Letter Spacing from each word's letter gaps, in small letters:
+    (spread, odd share, words spaced off), or (None, None, None) with
+    fewer than five gaps.
+
+    - spread: the median distance of a gap from its own word's median
+      gap, as a share of that median (at least GAP_FLOOR), over the
+      words with two gaps or more. A word compared with itself is not
+      moved by a writer who spaces one word wider than another, and one
+      gap read wrongly cannot set it;
+    - odd share: the gaps more than ODD_GAP times their word's median;
+    - words spaced off: the words whose median gap is more than ODD_GAP
+      times the page's, a word written with its letters apart, which a
+      comparison inside the word cannot see."""
+    gaps = [g for wg in words for g in wg]
+    if len(gaps) < 5:
+        return None, None, None
+    devs, odd = [], 0
+    for wg in words:
+        if len(wg) < 2:
+            continue
+        mid = float(np.median(wg))
+        base = max(mid, GAP_FLOOR)
+        devs.extend(abs(g - mid) / base for g in wg)
+        odd += sum(1 for g in wg if g > ODD_GAP * base)
+    if not devs:
+        return None, None, None
+    page = max(float(np.median(gaps)), GAP_FLOOR)
+    mids = [float(np.median(wg)) for wg in words if wg]
+    off = sum(1 for m in mids if m > ODD_GAP * page) / len(mids)
+    return float(np.median(devs)), odd / len(devs), off
+
+
+def _row_rights(starts, lines, tilt_deg, w, h):
+    """The detilted right end of each start's row, as a share of the
+    page width. Only lines whose tops lie within a line's height of the
+    start's can share its row (detector.on_same_row needs them to
+    overlap), so each start looks at those alone."""
+    ordered = sorted(lines, key=lambda l: float(l["box"][1]))
+    tops = [float(l["box"][1]) for l in ordered]
+    tallest = max((float(l["box"][3]) for l in lines), default=0.0)
+    out = []
+    for s in starts:
+        y, bh = float(s["box"][1]), float(s["box"][3])
+        near = ordered[
+            bisect.bisect_left(tops, y - tallest) : bisect.bisect_right(
+                tops, y + bh
+            )
+        ]
+        right = max(
+            float(l["box"][0]) + float(l["box"][2])
+            for l in near + [s]
+            if l is s or detector.on_same_row(s, l)
+        )
+        out.append(
+            _detilted_left_x([right, y, 0, bh], tilt_deg, w, h)
+            / max(1.0, float(w))
+        )
+    return out
+
+
+# Line angles (factors 7, 11, 12): a page tilted up to this many degrees
+# is taken as photographed straight, and only the tilt beyond it as the
+# camera's. On a page of four lines one line sinking moves their median,
+# so taking all of it out hid a planted sinking line on 3 of 20 pages;
+# within a degree nothing is taken out and those pages score as before.
+TILT_FREE = 1.0
+
+
+def _camera_tilt(tilt_deg):
+    """The part of the page's tilt that is the camera's, in degrees."""
+    return math.copysign(max(0.0, abs(tilt_deg) - TILT_FREE), tilt_deg)
 
 
 def _extract_features(arr: np.ndarray, lines, layout):
@@ -51,11 +219,18 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # right (words the reader never found between) is not a line start,
     # and counting its edge as one scored Margin Discipline 0 on two UJI
     # test pages.
+    starts = sorted(
+        computer_vision.line_starts(arr, lines),
+        key=lambda l: float(l["box"][1]) + float(l["box"][3]) * 0.5,
+    )
     lefts = [
         _detilted_left_x(l.get("box") or [0, 0, 0, 0], tilt_deg, w, h)
         / max(1.0, float(w))
-        for l in computer_vision.line_starts(arr, lines)
+        for l in starts
     ]
+    # Where each row ends: the right edge of its last line, for telling
+    # a paragraph's indented first line from a missed margin.
+    rights = _row_rights(starts, lines, tilt_deg, w, h)
     scores = [float(l.get("score", 0.0)) for l in lines]
     texts = [str(l.get("text", "") or "") for l in lines]
     n_lines = len(lines)
@@ -77,6 +252,11 @@ def _extract_features(arr: np.ndarray, lines, layout):
         ys = sorted(y_centers)
         line_spacing = [ys[i + 1] - ys[i] for i in range(len(ys) - 1)]
 
+    # Line angles are measured against the page, not the photo's edges:
+    # a phone turned 3 degrees cost level writing a median 11.5 points of
+    # 100 (#304). camera_deg is the page's tilt (its lines' median angle,
+    # as Margin Discipline uses) beyond TILT_FREE.
+    camera_deg = _camera_tilt(tilt_deg)
     slopes = []
     signed_slopes = []
     for l in lines:
@@ -86,7 +266,7 @@ def _extract_features(arr: np.ndarray, lines, layout):
             x1, y1 = float(poly[1][0]), float(poly[1][1])
             dx = max(1e-6, x1 - x0)
             ang = math.degrees(math.atan2(y1 - y0, dx))
-            slopes.append(abs(ang))
+            slopes.append(abs(ang - camera_deg))
             signed_slopes.append(ang)
         # Lines without a usable poly are skipped entirely (not given a
         # fake 0.0) so they don't silently pull line_slope_abs toward
@@ -111,15 +291,23 @@ def _extract_features(arr: np.ndarray, lines, layout):
         if line_gaps:
             line_h = float(max(1.0, (l.get("box") or [0, 0, 0, 1])[3]))
             word_gaps.extend(g / line_h for g in line_gaps)
+    word_spread, word_odd = _word_spacing(word_gaps)
 
     full = " ".join(texts)
     digits_ratio = (
         len(re.findall(r"\d", full)) / max(1, len(full)) if full else 0.0
     )
-    loop_chars = len(_LOOP_RE.findall(full))
-    alpha_chars = len(_LETTER_RE.findall(full))
-    loop_ratio = (loop_chars / max(1, alpha_chars)) if alpha_chars else 0.0
-    tall_chars = len(_TALL_RE.findall(full))
+    # Tall and letter totals come from what the reader saw in the ink.
+    # With a copied passage the line's text is the passage, and counting
+    # its letters gave loops and tall letters the ink never showed (#209,
+    # #200's fallback, now gone). The expected bowl count below
+    # (_stroke_features) stays on the passage: it says what should be
+    # there, the ink says what is.
+    seen = " ".join(
+        str(l.get("text_as_read", l.get("text", "")) or "") for l in lines
+    )
+    alpha_chars = len(_LETTER_RE.findall(seen))
+    tall_chars = len(_TALL_RE.findall(seen))
     tall_ratio = (tall_chars / max(1, alpha_chars)) if alpha_chars else 0.0
 
     ink_cv = 0.0
@@ -143,21 +331,22 @@ def _extract_features(arr: np.ndarray, lines, layout):
     # its line's own baseline (letter_geometry.py). Line box heights grow
     # with a line's slope, so they counted tilt as size (#135); they remain
     # the fallback when fewer than three words can be measured.
+    # Each word is compared with the size expected where it sits
+    # (letter_geometry.size_words): scraps, impossible readings and
+    # numbers left out, the page's top-to-bottom trend taken out.
     geo = letter_geometry.measure_page(arr, lines)
-    word_xh = [
-        wd["xheight"] for g in geo if g for wd in g["words"] if wd["xheight"]
-    ]
+    sized = letter_geometry.size_words(lines, geo, h)
+    word_xh = [wd["xheight"] / expected for _, wd, expected in sized]
     size_by_words = len(word_xh) >= 3
-    xh_med = float(np.median(word_xh)) if word_xh else 0.0
     words_off_size = (
-        sum(1 for v in word_xh if abs(v / xh_med - 1.0) >= SIZE_OFF)
-        / len(word_xh)
-        if size_by_words and xh_med > 0
+        sum(1 for v in word_xh if abs(v - 1.0) >= SIZE_OFF) / len(word_xh)
+        if size_by_words
         else None
     )
 
     fx = {
         **_stroke_features(geo, texts),
+        **_reading_features(lines, geo),
         "size_cv": _cv(word_xh) if size_by_words else _cv(heights),
         "size_basis": "words" if size_by_words else "lines",
         "words_off_size": words_off_size,
@@ -170,6 +359,8 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "width_cv": _cv(widths),
         "char_w_cv": _cv(char_w),
         "left_cv": _cv(lefts),
+        "left_spread": _margin_spread(lefts, rights),
+        "margin_rows": len(_margin_rows(lefts, rights)),
         "line_slope_abs": mean(slopes),
         "line_slope_std": _std(slopes),
         # median SIGNED line angle: >0 means lines descend left-to-right
@@ -185,13 +376,14 @@ def _extract_features(arr: np.ndarray, lines, layout):
         "baseline_rows_tracked": kf["rows_used"],
         "line_spacing_cv": _cv(line_spacing),
         "word_gap_cv": _cv(word_gaps),
+        "word_gap_spread": word_spread,
+        "word_gaps_odd": word_odd,
         "word_gap_count": len(word_gaps),
         # Latin letters recognised on the page. Loops (3) and letter zones
         # (6) count Latin letters only, so a page in another script, such
         # as Telugu, has none to measure.
         "latin_letters": alpha_chars,
         "digits_ratio": digits_ratio,
-        "loop_ratio": loop_ratio,
         "tall_ratio": tall_ratio,
         "ink_cv": ink_cv,
         "layout_complexity": float(
@@ -208,16 +400,24 @@ def _ink_features(arr, lines):
     (ink_geometry.py): the reader drew no box, so angles come from each
     row's fitted baseline and sizes from its letters."""
     ink = ink_geometry.page_features(arr, lines)
+    spread, odd = _word_spacing(ink["gaps"])
+    # Against the page's tilt, as for the reader's lines.
+    tilt = _camera_tilt(
+        float(np.median(ink["signed"])) if ink["signed"] else 0.0
+    )
+    angles = [abs(a - tilt) for a in ink["signed"]] or ink["angles"]
     out = {
         "ink_rows": True,
-        "line_slope_abs": mean(ink["angles"]),
-        "line_slope_std": _std(ink["angles"]),
+        "line_slope_abs": mean(angles),
+        "line_slope_std": _std(angles),
         "line_slope_signed_med": (
             float(np.median(ink["signed"])) if ink["signed"] else 0.0
         ),
         "baseline_rows_tracked": 0,
         "baseline_wave_med": None,
         "word_gap_cv": _cv(ink["gaps"]),
+        "word_gap_spread": spread,
+        "word_gaps_odd": odd,
         "word_gap_count": len(ink["gaps"]),
         "n_words": ink["words"],
     }
@@ -236,20 +436,28 @@ def _ink_features(arr, lines):
 # (marked_places.py marks the same words).
 SIZE_OFF = 0.30
 BOWL_LETTERS = _PACK.letter_set("bowl")
-MIN_BOWLS = 3
 
 
 def _stroke_features(geo, texts):
     """What the ink inside the lines shows (letter_geometry.py) for the
-    factors whose names it measures: closed bowls against the letters
-    read that have one (a, b, d, e, g, o, p, q) (3), how jagged the strokes are (4), how even the gaps
-    between letters are (9), how far words wander off their line's
-    baseline (11), and how much the words' lean varies (17). None where
-    the page gives too little to measure."""
+    factors whose names it measures: the share of the letters read that
+    have a bowl (a, b, d, e, g, o, p, q) whose bowl is closed in the ink,
+    counted word by word (3), how even the gaps between letters are (9),
+    how far words wander off their line's baseline (11), how much the
+    words' lean varies (17) and their mean lean (the letter-style guess). None where the page gives too little to
+    measure."""
     lines = [g for g in geo if g]
-    expected = sum(1 for t in texts for ch in t.lower() if ch in BOWL_LETTERS)
-    bowls = sum(g["bowls"] for g in lines)
+    loops = [
+        letter_geometry.count_loops(g, t, BOWL_LETTERS)
+        for g, t in zip(geo, texts)
+        if g
+    ]
+    expected = sum(e for e, _c in loops)
+    closed = sum(c for _e, c in loops)
     gaps = [x for g in lines for x in g["letter_gaps"]]
+    spread, odd, spaced_off = _letter_spacing(
+        [wd["letter_gaps"] for g in lines for wd in g["words"]]
+    )
     waves = [g["wave"] for g in lines if g.get("wave") is not None]
     offs = [abs(wd["off"]) for g in lines for wd in g["words"]]
     slants = [
@@ -259,8 +467,13 @@ def _stroke_features(geo, texts):
         if wd.get("slant") is not None
     ]
     return {
-        "bowl_share": (bowls / expected if expected >= MIN_BOWLS else None),
+        "bowl_share": (closed / expected if expected >= MIN_BOWLS else None),
+        "bowl_letters": expected,
+        "bowl_closed": closed,
         "letter_gap_cv": _cv(gaps) if len(gaps) >= 5 else None,
+        "letter_gap_spread": spread,
+        "letter_gaps_odd": odd,
+        "words_spaced_off": spaced_off,
         "line_wave": float(np.max(waves)) if waves else None,
         # Share of words whose baseline sits WORD_OFF small letters or
         # more off their line's (letter_geometry.WORD_DROP_LOOK).
@@ -271,4 +484,7 @@ def _stroke_features(geo, texts):
             else None
         ),
         "slant_std": _std(slants) if len(slants) >= 3 else None,
+        # Which way the words lean on average: the letter-style guess
+        # reads it (styles/letter_styles.py); no factor does.
+        "slant_mean": letter_styles.mean_lean(slants),
     }

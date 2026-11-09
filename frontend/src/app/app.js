@@ -113,7 +113,6 @@ function drawDetectionOverlay(img, pyReport, maxW){
 }
 
 const state = {
-  role:'individual',
   intake:{},
   imageEl:null,        // HTMLImageElement of the uploaded sample
   logoData:null,
@@ -129,6 +128,7 @@ const PASSAGES = [
 /* ---------- screens / steps ---------- */
 const STEP_OF = { upload:0, imu:0, process:1, report:2 };
 function go(name){
+  if (window.VahiniGuide) VahiniGuide.close();   // Pihu's guide ends with its screen
   $$('.screen').forEach(s=>s.classList.remove('on'));
   $('#screen-'+name).classList.add('on');
   const idx = STEP_OF[name] != null ? STEP_OF[name] : 0;
@@ -139,9 +139,6 @@ function go(name){
   $$('.steps .sep').forEach((el,i)=>el.classList.toggle('done', i<idx));
   window.scrollTo(0,0);
 }
-
-/* ---------- role selection (personas removed: always the individual) ---------- */
-function selectRole(){ state.role = 'individual'; }
 
 /* ---------- intake (no personal details collected) ---------- */
 function collectIntake(){
@@ -254,7 +251,8 @@ const MAX_PICK_BYTES = 10 * 1024 * 1024;
 
 /* A host page may give each notice a picture: window.VAHINI_NOTICE_ART maps
    an outcome code (busy, ocr_unavailable, daily_limit, no_handwriting,
-   handwriting_not_read, not_writing_page, server_down, too_large, invalid_file, key_problem,
+   handwriting_not_read, not_writing_page, turned_page, server_down,
+   server_restarting, server_back, check_failed_twice, too_large, invalid_file, key_problem,
    account_unavailable, too_big, heic, unreadable, pdf_unreadable,
    photo_warning, pdf_pages) to an image path on this site. vahinitech.com fills it from its own drawings;
    without it every notice keeps its icon or plain text. Only same-site
@@ -325,6 +323,7 @@ function setupUploadDrop(){
 /* "Try a sample": our own photo, loaded straight into the preview. It never
    passes through #file-input, so it is not stored as a visitor's upload, and
    VAHINI_SAMPLE_RUN stops a printed sample report from being stored too. */
+let sampleBlob = null;      // the sample file as fetched, sent unchanged
 async function loadBundledSample(){
   if (serviceUp === false) return;
   setDzStatus('Loading the sample page…');
@@ -334,9 +333,10 @@ async function loadBundledSample(){
     const blob = await res.blob();
     readImageFile(new File([blob], 'handwriting-sample.jpg', { type:'image/jpeg' }), (img, url)=>{
       window.VAHINI_SAMPLE_RUN = true;
+      sampleBlob = blob;
       keepForSample(true);
       showSample(img, url);
-      setDzStatus('Sample page loaded. Press Run analysis to see its report.');
+      setDzStatus('Sample page loaded. Press Analyse my handwriting to see its report.');
     });
   }catch(_e){ setDzStatus('The sample page could not be loaded. Try your own photo.'); }
 }
@@ -425,7 +425,7 @@ function handleSample(file){
     setDzStatus('Converting your iPhone photo (HEIC) to JPEG…');
     heicToJpeg(file).then(jpeg=>readImageFile(jpeg, (img, url)=>{
       showSample(img, url);
-      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Run analysis.');
+      if (!$('#dz-status').textContent) setDzStatus('Converted your iPhone photo (HEIC) to JPEG. Press Analyse my handwriting.');
     }, unreadable)).catch(unreadable);
   });
 }
@@ -444,6 +444,16 @@ function clearSample(){
 function reportOutcome(outcome){
   if (!outcome || window.VAHINI_SAMPLE_RUN) return;
   try{ if (window.VahiniInsights && typeof VahiniInsights.check === 'function') VahiniInsights.check(outcome); }catch(_e){}
+}
+
+/* "How was the report?" (owner, 2026-10-23): the popup in analyser.html asks
+   once per check, ten seconds after the report appears, so the Friday report
+   can say why reports are read but not printed. Never for a sample run;
+   without the popup's script this does nothing. */
+function askAboutReport(){
+  if (window.VahiniGuide) VahiniGuide.report();   // Print and the other view, once per browser
+  if (window.VAHINI_SAMPLE_RUN) return;
+  try{ if (window.VahiniReportFeedback && typeof VahiniReportFeedback.arm === 'function') VahiniReportFeedback.arm(); }catch(_e){}
 }
 
 /* ---------- recognition-server availability gate -----------------------
@@ -466,7 +476,7 @@ function applyServiceGate(){
   if (go) go.disabled = down || !state.imageEl;
 }
 
-/* Developer instructions (docker compose, ppocr-server.py) only make sense on
+/* Developer instructions (docker compose, server/app.py) only make sense on
    the machine running the server; visitors on vahinitech.com get plain words. */
 function onLocalHost(){
   return ['localhost','127.0.0.1','[::1]'].includes(location.hostname);
@@ -488,7 +498,7 @@ async function checkService(){
     detail.textContent = serviceUp
       ? 'Connected.'
       : (onLocalHost()
-        ? 'Start it with docker compose up -d, or python backend/ppocr-server.py. It reconnects automatically.'
+        ? 'Start it with docker compose up -d, or python backend/server/app.py. It reconnects automatically.'
         : 'The analyser is busy or offline. It reconnects by itself, or press Retry now.');
   }
   applyServiceGate();
@@ -500,18 +510,24 @@ function startServicePolling(){
   serviceCheckTimer = setInterval(checkService, 10000);
 }
 
-/* Preview the uploaded photo in the process screen. Scoring runs server-side
-   now, so there is no in-browser detection overlay to draw; without this
-   the stage box would sit empty (and visibly black) for the whole pipeline. */
+/* Preview the uploaded photo in the process screen and sweep it line by
+   line until the report (owner, 2026-10-25; src/app/scan-sweep.js). The
+   scoring runs on the server; the sweep shows the photo's own lines. */
+let stopSweep = null;
 function showProcStagePreview(img){
   const host = $('#proc-stage');
   if (!host) return;
-  const old = host.querySelector('img.proc-preview'); if (old) old.remove();
+  if (stopSweep){ stopSweep(); stopSweep = null; }
+  host.classList.remove('is-scanning');
+  host.querySelectorAll('.scan-sweep, .scan-cap, .scan-bars, img.proc-preview').forEach(el=>el.remove());
   const el = document.createElement('img');
   el.className = 'proc-preview';
   el.alt = 'uploaded handwriting sample';
   el.src = img.src;
   host.appendChild(el);
+  if (!window.VahiniScanSweep) return;
+  const sweep = ()=>{ if (el.isConnected) stopSweep = VahiniScanSweep.start(host, el); };
+  if (el.complete && el.naturalWidth) sweep(); else el.addEventListener('load', sweep, { once: true });
 }
 
 /* ---------- expected passage ---------- */
@@ -532,6 +548,10 @@ function setupPassages(){
     else state.expected = PASSAGES.find(p=>p.id===id).text;
   });
   list.addEventListener('input', e=>{ if(e.target.id==='custom-text') state.expected = e.target.value; });
+  // "Does this page copy a sentence?" (owner, 2026-10-25): optional; empty
+  // means free writing, notes or anything else.
+  const copied = $('#cs-text');
+  if (copied) copied.addEventListener('input', ()=>{ state.expected = copied.value.replace(/\s+/g,' ').trim().slice(0,300); });
 }
 
 /* ---- scan history (progress vs last scan) ------------------------------ */
@@ -599,6 +619,111 @@ function showReject(rej){
   if(retry) retry.addEventListener('click', ()=>{ clearSample(); go('upload'); });
 }
 
+function showServerDown(){
+  const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
+  showReject({
+    outcome: 'server_down',
+    reason: 'Recognition server not reachable',
+    detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
+      + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
+    tips: serverDownTips([
+      'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
+      'Or start it directly: python backend/server/app.py',
+      'Then reload this page and upload the photo again',
+    ]),
+  });
+}
+
+/* A check that got no answer (owner, 2026-10-23). On stage that day one
+   photo stopped the analyser mid-scan and the page said "not reachable";
+   sent again, the same photo stopped it again. Now the page waits for the
+   server to answer its health check, then offers this photo once more, on
+   a tap, never by itself. A second drop of the same photo ends with "we
+   could not check this photo": it is not offered a third time. A request
+   that got no answer did not use up a free check (daily_limit.py spends
+   one only on a report). */
+const DROP_WAIT_MS = 90000, DROP_POLL_MS = 3000;
+let droppedPhoto = null;   // the photo whose check last got no answer
+let dropWait = 0;          // bumped to stop a wait the visitor left
+
+function showDropNotice(n){
+  const panel = $('#screen-process .panel');
+  if (!panel) return;
+  if (processPanelHTML === null) processPanelHTML = panel.innerHTML;
+  const head = $('#screen-process .screen-head'); if (head) head.style.display = 'none';
+  reportOutcome(n.outcome);
+  const card = document.createElement('div'); card.className = 'reject-card';
+  const art = noticeArt(n.outcome);
+  if (art) card.appendChild(artImg(art, 'reject-art'));
+  const h = document.createElement('h2'); h.textContent = n.title; card.appendChild(h);
+  const p = document.createElement('p'); p.className = 'reject-detail'; p.textContent = n.detail; card.appendChild(p);
+  if (n.waiting){
+    const wait = document.createElement('div'); wait.className = 'drop-wait';
+    wait.innerHTML = '<div class="drop-wait__bar" role="progressbar" aria-label="Waiting for the checker"><span></span></div>';
+    const note = document.createElement('p'); note.textContent = n.waiting; wait.appendChild(note);
+    card.appendChild(wait);
+  }
+  const actions = document.createElement('div'); actions.className = 'drop-actions';
+  n.actions.forEach(a=>{
+    const el = document.createElement(a.href ? 'a' : 'button');
+    el.className = 'btn ' + (a.primary ? 'btn-primary' : 'btn-ghost');
+    el.textContent = a.label;
+    if (a.href) el.href = a.href; else el.addEventListener('click', a.run);
+    actions.appendChild(el);
+  });
+  card.appendChild(actions);
+  if (n.note){ const note = document.createElement('p'); note.className = 'reject-detail drop-note'; note.textContent = n.note; card.appendChild(note); }
+  panel.textContent = ''; panel.appendChild(card);
+}
+
+function chooseAnotherPhoto(){ dropWait++; droppedPhoto = null; clearSample(); go('upload'); }
+
+async function showDropped(img){
+  if (droppedPhoto === img){
+    droppedPhoto = null;
+    showDropNotice({
+      outcome: 'check_failed_twice',
+      title: 'We could not check this photo',
+      detail: 'It stopped the checker twice. A photo of another page usually works. This did not use up a free check.',
+      actions: [
+        { label: 'Choose another photo', primary: true, run: chooseAnotherPhoto },
+        { label: 'Ask our team', href: '/reach.html?topic=handwriting' },
+      ],
+      note: 'The photo was not saved.',
+    });
+    return;
+  }
+  droppedPhoto = img;
+  const mine = ++dropWait;
+  showDropNotice({
+    outcome: 'server_restarting',
+    title: 'The checker is starting again',
+    detail: 'It stopped part way through your photo. Your photo is still here on your phone.',
+    waiting: 'Waiting for it. This usually takes under half a minute.',
+    actions: [{ label: 'Choose another photo', run: chooseAnotherPhoto }],
+  });
+  const until = Date.now() + DROP_WAIT_MS;
+  while (mine === dropWait && Date.now() < until){
+    const res = await VahiniOCR.checkHealth();
+    if (mine !== dropWait) return;
+    if (res && res.ok){
+      serviceUp = true; applyServiceGate();
+      showDropNotice({
+        outcome: 'server_back',
+        title: 'The checker is ready',
+        detail: 'Try this photo once more. This does not use up a free check.',
+        actions: [
+          { label: 'Check this photo again', primary: true, run: ()=>{ if (whoAsked()) return; dropWait++; runPipeline(); } },
+          { label: 'Choose another photo', run: chooseAnotherPhoto },
+        ],
+      });
+      return;
+    }
+    await new Promise(r=>setTimeout(r, DROP_POLL_MS));
+  }
+  if (mine === dropWait){ droppedPhoto = null; showServerDown(); }
+}
+
 /* The photo as uploaded: JPEG, long side capped at the server's own working
    size (VAHINI_OCR_MAX_SIDE, 2600), which it would resize to anyway. A full-
    size PNG was 1.2 MB for a 960x1280 photo and 6.1 MB for 3024x4032; the JPEG
@@ -618,6 +743,36 @@ function imageToBlob(img){
     if (!c.toBlob) return res(null);
     c.toBlob(b=>res(b || null), 'image/jpeg', 0.92);
   }).then(b=>b || VahiniOCR.canvasToBlob(c));
+}
+
+/* The photo turned the way the server read it (pyReport.turned, degrees
+   clockwise, #297): a page photographed on its side with no EXIF turn is
+   read upright, and every box and strip in the report is on the upright
+   page, so the report draws from a copy turned the same way. Capped like
+   the upload; resolves to the photo itself when there is nothing to do. */
+function turnedImage(img, turn){
+  if (![90, 180, 270].includes(turn)) return Promise.resolve(img);
+  const w0 = img.naturalWidth || img.width, h0 = img.naturalHeight || img.height;
+  const s = Math.min(1, UPLOAD_MAX_SIDE / Math.max(w0, h0));
+  const w = Math.max(1, Math.round(w0 * s)), h = Math.max(1, Math.round(h0 * s));
+  const quarter = turn !== 180;
+  const c = document.createElement('canvas');
+  c.width = quarter ? h : w; c.height = quarter ? w : h;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.translate(c.width / 2, c.height / 2);
+  ctx.rotate(turn * Math.PI / 180);
+  ctx.drawImage(img, -w / 2, -h / 2, w, h);
+  return new Promise(res=>{
+    const done = url=>{
+      const out = new Image();
+      out.onload = ()=>res(out);
+      out.onerror = ()=>res(img);
+      out.src = url;
+    };
+    if (c.toBlob) c.toBlob(b=>done(b ? URL.createObjectURL(b) : c.toDataURL('image/jpeg', 0.92)), 'image/jpeg', 0.92);
+    else done(c.toDataURL('image/jpeg', 0.92));
+  });
 }
 
 /* Warn, before upload, about the two photo problems that measurably change
@@ -673,6 +828,19 @@ function sampleCounts(pyReport){
 /* Server-only pipeline: the recognition server computes every report (OCR +
    the 20-factor analysis). The browser sends the image and renders the result;
    there is no in-browser scorer or offline fallback. */
+/* Who is checking (report-share.js, DPDP Rules 2025 rule 10): true when
+   the answer is missing, after showing the "Who is checking?" row with
+   what to do. Every way into a check asks it first. force: the server
+   refused the answer sent (422 who_required). */
+function whoAsked(force){
+  const W = window.VahiniWho;
+  if (!W || (!force && W.forCheck())) return false;
+  const up = $('#screen-upload');
+  if (up && !up.classList.contains('on')) go('upload');
+  W.missing(force);
+  return true;
+}
+
 async function runPipeline(){
   window.VAHINI_CHECK_FACTS = null;   // facts belong to one report; a new run starts with none
   keepStatus('');
@@ -681,7 +849,7 @@ async function runPipeline(){
   if (processPanelHTML !== null){ const pp=$('#screen-process .panel'); if(pp) pp.innerHTML = processPanelHTML; }
   const ph=$('#screen-process .screen-head'); if(ph) ph.style.display='';
   renderLog();
-  const img = state.imageEl;
+  let img = state.imageEl;
   collectIntake();
 
   // Defensive re-check: the "Run analysis" button is normally disabled while
@@ -696,7 +864,7 @@ async function runPipeline(){
       detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now.',
       tips: serverDownTips([
         'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python backend/ppocr-server.py',
+        'Or start it directly: python backend/server/app.py',
         'Then reload this page and upload the photo again',
       ]),
     });
@@ -705,7 +873,9 @@ async function runPipeline(){
 
   // 1 load: rasterise the upload and show it as the sample
   stepState('load','active');
-  const blob = await imageToBlob(img);
+  // The sample page goes as the file itself: the server takes who=sample
+  // only for those exact bytes (backend/server/who_checks.py).
+  const blob = (window.VAHINI_SAMPLE_RUN && sampleBlob) ? sampleBlob : await imageToBlob(img);
   let detURL = await compressImageURL(img.src, 1100, 0.72);
   showProcStagePreview(img);
   stepState('load','done', `<b>${img.naturalWidth}×${img.naturalHeight}</b> photo, sent as ${Math.max(1, Math.round((blob && blob.size || 0)/1024))} KB`);
@@ -719,8 +889,10 @@ async function runPipeline(){
   stepState('ocr','active', 'On Vahini\u2019s server. This usually takes 5 to 20 seconds.');
   let pyReport = null;
   if (blob && window.VahiniOCR && typeof VahiniOCR.serverPythonReport === 'function'){
-    pyReport = await VahiniOCR.serverPythonReport(blob, state.expected || '');
+    // The sample page is not the sentence the visitor typed.
+    pyReport = await VahiniOCR.serverPythonReport(blob, window.VAHINI_SAMPLE_RUN ? '' : (state.expected || ''));
   }
+  if (pyReport && pyReport.error_code === 'who_required'){ whoAsked(true); return; }
   if (pyReport && pyReport.error_code === 'busy'){
     showReject({
       outcome: 'busy',
@@ -796,7 +968,7 @@ async function runPipeline(){
   }
   if (pyReport && pyReport.error_code === 'daily_limit'){
     // The free tier allows a few checks a day per connection; a Pro access
-    // key is never limited (backend/daily_limit.py).
+    // key is never limited (backend/server/daily_limit.py).
     showReject({
       outcome: 'daily_limit',
       reason: 'Today\u2019s free checks are used',
@@ -842,6 +1014,20 @@ async function runPipeline(){
     });
     return;
   }
+  if (pyReport && pyReport.error_code === 'turned_page'){
+    // The lines run up and down and the server could not tell which way
+    // up the page is: refused rather than scored on its side (#297).
+    showReject({
+      outcome: 'turned_page',
+      reason: 'This photo is on its side',
+      detail: 'The lines of writing run up and down in this photo, and we could not tell which way up the page is, so we did not score it. This did not use up one of your free checks.',
+      tips: [
+        'Turn the photo so the lines of writing run across, then upload it again',
+        'Or take a new photo with the top of the page at the top of the screen',
+      ],
+    });
+    return;
+  }
   if (pyReport && pyReport.error_code === 'not_writing_page'){
     // Mostly numbers and sums: a maths or science notebook page. The
     // factors measure letters, words and word gaps, so it is not scored.
@@ -857,21 +1043,11 @@ async function runPipeline(){
     });
     return;
   }
-  if (!pyReport || pyReport.ok === false || !pyReport.analysis){
-    const why = (window.VahiniOCR && typeof VahiniOCR.getLastServerError === 'function') ? VahiniOCR.getLastServerError() : '';
-    showReject({
-      outcome: 'server_down',
-      reason: 'Recognition server not reachable',
-      detail: 'This analyser computes every report on the Vahini recognition server, which isn’t responding right now'
-        + (why && onLocalHost() ? ' (' + why + ')' : '') + (onLocalHost() ? '. Start the server and try again.' : '.'),
-      tips: serverDownTips([
-        'Run the server: docker compose up -d (serves the app + OCR on the same origin)',
-        'Or start it directly: python backend/ppocr-server.py',
-        'Then reload this page and upload the photo again',
-      ]),
-    });
-    return;
-  }
+  // No answer at all (a dropped connection, a 502): wait for the server and
+  // offer this photo once more. A refusal with a body keeps its own screen.
+  if (!pyReport){ showDropped(img); return; }
+  if (pyReport.ok === false || !pyReport.analysis){ showServerDown(); return; }
+  droppedPhoto = null;
   const pyTiming = pyReport._timing || null;
   const vlResult = {
     document_context: pyReport.document_context || null,
@@ -881,6 +1057,12 @@ async function runPipeline(){
     measurements: pyReport.measurements || {},
     ambiguous_word_gaps: Array.isArray(pyReport.ambiguous_word_gaps) ? pyReport.ambiguous_word_gaps : [],
   };
+  // A photo the server read turned (#297): draw from a copy turned the
+  // same way, so "From your page" and every strip show it upright.
+  if (pyReport.turned){
+    img = await turnedImage(img, pyReport.turned);
+    if (img !== state.imageEl) detURL = await compressImageURL(img.src, 1100, 0.72);
+  }
   // Redraw the sample with the detected word boxes (orange) + baselines
   // (teal): the detection view shown on the report's first page.
   const boxedURL = drawDetectionOverlay(img, pyReport);
@@ -901,8 +1083,11 @@ async function runPipeline(){
   const pipeline = { nLines:counts.nLines, nWords:counts.nWords, nChars:counts.nChars, ocrEngine:'server', vl:vlResult, timing: pyTiming };
   const crops = serverFactorCrops(vlResult);
   const history = loadHistory(state.intake.writerName);
-  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, letterFindings:null, history });
+  const rendered = VahiniReport.render($('#report-host'), { intake:state.intake, analysis, expectedText:state.expected, recognizedText, ocrEngine:'server', detURL, pipeline, crops, measurements:(vlResult&&vlResult.measurements)||{}, language:pyReport.language||null, letterFindings:null, history });
   saveHistory(state.intake.writerName, analysis.overallMeasured!=null?analysis.overallMeasured:analysis.overall, analysis.sections, analysis.results, rendered);
+  // The shared PDF carries this check's receipt and the page photo for the
+  // Pro comparison (report-share.js); a sample run is not the visitor's page.
+  if (window.VahiniReportShare) VahiniReportShare.setCheck(window.VAHINI_SAMPLE_RUN ? null : { receipt: pyReport.receipt, image: img });
   stepState('score','done', `Report ready`);
   window.VAHINI_CHECK_FACTS = checkFacts(analysis, counts, img);
   keepIfAsked(blob, window.VAHINI_CHECK_FACTS);
@@ -911,6 +1096,7 @@ async function runPipeline(){
   // found on 2026-10-07 (cv-fallback after ~19 s under memory pressure).
   reportOutcome(((analysis.recognition || {}).backend === 'cv-fallback') ? 'no_text' : 'report');
   go('report');
+  askAboutReport();
 }
 
 /* What a printed report is stored as on vahinitech.com (analyser.html
@@ -973,6 +1159,94 @@ function setWriteLang(value){
   window.VAHINI_OCR_LANG = te ? 'te' : 'auto';
   const note = $('#write-lang-note');
   if (note) note.hidden = !te;
+  // Letter styles are an English-page choice (backend/styles).
+  const styles = $('#letter-style');
+  if (styles) styles.hidden = te;
+  const sum = $('#po-style');
+  if (sum) sum.parentNode.hidden = te;
+}
+/* The letter style taught at school (#346): Not sure until picked. A link
+   such as analyser.html?style=looped opens with that style picked, so the
+   site's cursive pages can send a family straight here. */
+function setupLetterStyle(){
+  // The site's "Check your cursive" links end in #letter-style: open the
+  // optional row there, so a family who came for cursive sees the styles.
+  if (location.hash === '#letter-style') openLetterStyle();
+  const wanted = new URLSearchParams(location.search).get('style');
+  if (!wanted || !/^[a-z0-9-]{2,40}$/.test(wanted)) return;
+  const radio = document.querySelector(`input[name="letter-style"][value="${wanted}"]`);
+  if (!radio) return;
+  radio.checked = true;
+  // Open every fold around it: "More styles" and the optional row.
+  for (let d = radio.closest('details'); d; d = d.parentElement.closest('details')) d.open = true;
+  showPageOpts();
+}
+function openLetterStyle(){
+  const box = $('#page-opts'), styles = $('#letter-style');
+  if (!box || !styles || styles.hidden) return;
+  box.open = true;
+  // The browser's own jump to the fragment ran while the row was shut.
+  requestAnimationFrame(() => box.scrollIntoView({ block:'center' }));
+}
+/* Letter style and the copied sentence fold into one row under the
+   language, so Analyse stays near the photo (owner, 2026-11-04). The row
+   says what is picked, so a closed fold still shows the choice. */
+function showPageOpts(){
+  const style = $('#po-style'), sent = $('#po-sent');
+  if (!style || !sent) return;
+  const c = document.querySelector('input[name="letter-style"]:checked');
+  const name = c && c.value !== 'unsure' && c.parentNode.querySelector('.ls-name');
+  style.textContent = name ? name.textContent : 'Not sure';
+  sent.textContent = (($('#cs-text') || {}).value || '').trim() ? 'Added' : 'None';
+}
+function setupPageOpts(){
+  const box = $('#page-opts');
+  if (!box) return;
+  box.addEventListener('change', showPageOpts);
+  box.addEventListener('input', showPageOpts);
+  // Open, the row's link folds it again, so it says so.
+  const change = box.querySelector('.po-change');
+  if (change) box.addEventListener('toggle', () => { change.textContent = box.open ? 'Done' : 'Change'; });
+  showPageOpts();
+}
+/* Once a photo is in, the terms line and Analyse stick to the bottom of the
+   screen (CSS, keyed on the button being enabled) until the visitor
+   scrolls to their place. The marker after the bar tells us when it is
+   stuck, for the shadow and to lift the site's Feedback button above it. */
+function setupRunBar(){
+  const bar = $('#run-bar'), end = $('#run-bar-end');
+  if (!bar || !end || !('IntersectionObserver' in window)) return;
+  // is-stuck means "the bar's place is below the screen"; the CSS shows the
+  // stuck look only while the button is enabled, which is when it sticks.
+  new IntersectionObserver((e) => {
+    bar.classList.toggle('is-stuck', !e[0].isIntersecting && e[0].boundingClientRect.top > 0);
+  }).observe(end);
+  // On the root, so the page's scroll padding can read it too.
+  const height = () => document.documentElement.style.setProperty('--run-bar-h', bar.offsetHeight + 'px');
+  if ('ResizeObserver' in window) new ResizeObserver(height).observe(bar);
+  height();
+}
+/* "What you will learn": one skill tile plays at a time while the list is
+   on screen. With reduced motion every tile stays at its settled frame. */
+function setupSkillTiles(){
+  const list = $('#benefit-list');
+  if (!list || !('IntersectionObserver' in window)) return;
+  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const rows = list.children;
+  let i = -1, timer = null;
+  const next = () => {
+    if (document.hidden) return;   // no work in a background tab
+    if (i >= 0) rows[i].classList.remove('is-on');
+    i = (i + 1) % rows.length;
+    void rows[i].offsetWidth;   // restart the animation on a repeat visit
+    rows[i].classList.add('is-on');
+  };
+  new IntersectionObserver((e) => {
+    clearInterval(timer); timer = null;
+    if (!e[0].isIntersecting) return;
+    if (i < 0) next();
+    timer = setInterval(next, 3400);
+  }).observe(list);
 }
 function setupWriteLang(){
   const radios = document.querySelectorAll('input[name="write-lang"]');
@@ -1153,7 +1427,7 @@ async function finishIMU(){
         + (onLocalHost() ? ' Start the server and capture again.' : ''),
       tips: serverDownTips([
         'Run the server: docker compose up -d',
-        'Or start it directly: python backend/ppocr-server.py',
+        'Or start it directly: python backend/server/app.py',
       ]),
     });
     return;
@@ -1227,6 +1501,7 @@ function renderSampleReport(){
     pipeline: { nLines: s.nLines||0, nWords: s.nWords||0, nChars: s.nChars||0, ocrEngine: 'server' },
     crops: serverFactorCrops({ factor_regions: data.factor_regions || {} }),
     measurements: data.measurements || {},
+    language: data.language || null,
     letterFindings: null,
     history: null,
   });
@@ -1336,11 +1611,11 @@ function renderCaseStudies(){
 function init(){
   if (document.body.hasAttribute('data-sample-report')){ renderSampleReport(); return; }
   if (document.body.hasAttribute('data-case-studies')){ renderCaseStudies(); return; }
-  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPassages(); setupLogo();
+  setupUploadDrop(); setupKeepPages(); setupWriteLang(); setupPageOpts(); setupLetterStyle(); setupRunBar(); setupSkillTiles(); setupPassages(); setupLogo();
   // upload is step 1: straight to analysis
-  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (!keepEmailMissing()) runPipeline(); });
+  const goProcess = $('#go-process'); if(goProcess) goProcess.addEventListener('click', ()=>{ if (whoAsked()) return; if (!keepEmailMissing()) runPipeline(); });
   // optional: capture live with the sensor pen instead
-  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; collectIntake(); startIMU(); });
+  const usePen = $('#use-pen'); if(usePen) usePen.addEventListener('click', e=>{ e.preventDefault(); if (serviceUp === false) return; if (whoAsked()) return; collectIntake(); startIMU(); });
   const serviceRetry = $('#service-retry'); if(serviceRetry) serviceRetry.addEventListener('click', checkService);
   // imu screen
   const bm3 = $('#back-mode3'); if(bm3) bm3.addEventListener('click', cancelIMU);
@@ -1362,6 +1637,7 @@ function init(){
 
   // demo helper (testing / "try sample"): always runs the server pipeline.
   window.runDemo = async function(_role, _instant){
+    if (whoAsked()) return 0;
     const img = new Image();
     await new Promise(r=>{ img.onload=r; img.onerror=r; img.src='uploads/test-handwriting.png'; });
     state.imageEl = img;

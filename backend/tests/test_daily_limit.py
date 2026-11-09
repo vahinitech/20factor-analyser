@@ -14,7 +14,7 @@ sys.path.insert(0, SERVER_DIR)
 from starlette.exceptions import (  # noqa: E402  pylint: disable=wrong-import-position
     HTTPException,
 )
-from daily_limit import (  # noqa: E402  pylint: disable=wrong-import-position
+from server.daily_limit import (  # noqa: E402  pylint: disable=wrong-import-position
     IST,
     DailyLimit,
 )
@@ -98,7 +98,7 @@ class EndpointTests(unittest.TestCase):
     def setUpClass(cls):
         spec = importlib.util.spec_from_file_location(
             "ppocr_server_daily_limit",
-            os.path.join(SERVER_DIR, "ppocr-server.py"),
+            os.path.join(SERVER_DIR, "server/app.py"),
         )
         cls.mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(cls.mod)

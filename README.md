@@ -52,16 +52,19 @@ python backend/analyser-ocr-server.py
 
 ## What it measures
 
-| Section | Weight | Factors |
-|---|---|---|
-| Structure | 30% | Letter Formation, Stroke Order, Loop Closure, Line Quality, Size Consistency, Ascender/Descender |
-| Spatial | 30% | Baseline, Word Spacing, Letter Spacing, Margins, Line Straightness, Vertical Alignment |
-| Dynamics | 20% | Speed, Pressure, Stroke Continuity, Pen Lifts (needs the sensor pen) |
-| Style & Readability | 20% | Slant, Legibility, Character Distinction, Overall Neatness |
+| Section | Factors |
+|---|---|
+| Structure | Letter Formation, Stroke Order and Line Quality (both need the sensor pen), Loop Closure, Size Consistency, Ascender/Descender |
+| Spatial | Baseline, Word Spacing, Letter Spacing, Margins, Line Straightness, Vertical Alignment |
+| Dynamics | Speed, Pressure, Stroke Continuity, Pen Lifts (needs the sensor pen) |
+| Style & Readability | Slant, Legibility, Character Distinction, Overall Neatness |
 
-The overall score is the weighted average of the section scores, 0 to 100.
-From a photo, the Dynamics factors are not scored; the headline uses only what
-was actually measured. The full report is two pages: the overall score,
+The overall score, 0 to 100, counts five factors: Letter Formation 40
+points, Baseline 20, Size Consistency 20, Line Straightness 10 and Slant 10
+(`_OVERALL_POINTS` in `backend/scoring.py`, [docs/03](docs/03-scoring-criteria.md)).
+The other fifteen are scored and shown as practice findings. A factor not
+measured on a page, such as the Dynamics factors from a photo, is left out
+and the rest are scaled back to 100. The full report is two pages: the overall score,
 handwriting-region coverage and up to three priorities with reference crops
 from the writer's own page; then illustrated coaching and ruled practice
 space. The hosted anonymous Free report is a five-factor summary served from
@@ -72,6 +75,9 @@ score table in either report.
 
 Start at [docs/00-start-here.md](docs/00-start-here.md): the documents are
 numbered in the order to read them.
+
+Operators giving, renewing or taking back Pro: [docs/17-access-and-trials.md](docs/17-access-and-trials.md)
+(`deployment/grant-pro.sh` does a grant in one command).
 
 ## See it before you scan
 
@@ -113,8 +119,9 @@ traces to a real measurement: character-level stroke width and edge
 shape, word-level letter spacing, line-level tilt and height, and a few
 page-level blends of the factors below it. Most of this never depends on
 reading the words correctly; only loop closure, the ascender/descender
-proxy and Character Distinction's confidence term lean on OCR text as a
-secondary signal. The full walkthrough, from one stroke up to the whole
+proxy and the reading confidence in Letter Formation, Legibility and
+Character Distinction lean on OCR text as a secondary signal. The full
+walkthrough, from one stroke up to the whole
 page, is in `docs/05-computer-vision-algorithms.md`.
 
 ## Repository layout
@@ -145,7 +152,7 @@ Run the tests:
 
 ```bash
 # Python server tests (no heavy paddle/torch install needed)
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python -m unittest discover -v -s backend/tests -t .
 
 # Headless Chrome report checks

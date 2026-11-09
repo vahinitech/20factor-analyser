@@ -7,7 +7,7 @@ Three suites, smallest first. CI runs all of them on every push and PR.
 Server logic without the heavy paddle/torch install:
 
 ```bash
-pip install -r backend/requirements-core.txt
+pip install -r backend/requirements/core.txt
 python -m unittest discover -v -s backend/tests -t .
 ```
 

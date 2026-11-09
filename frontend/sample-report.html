@@ -11,6 +11,7 @@
 <meta name="color-scheme" content="only light">
 <title>Sample Report, Vahini 20-Factor Handwriting Analysis</title>
 <link rel="stylesheet" href="styles/report.css">
+<link rel="stylesheet" href="styles/letter-style-fonts.css">
 <link rel="stylesheet" href="styles/studio.css">
 <link rel="stylesheet" href="styles/nav.css">
 <!-- The Vahini design system (--v-* tokens, v-* classes), served by vahinitech.com -->
@@ -41,6 +42,8 @@
 <section class="screen on" id="screen-report">
   <div class="report-layout">
     <div class="report-host" id="report-host"></div>
+    <!-- Under the report: the other view of the same check, never printed. -->
+    <p class="view-switch" id="view-switch-row" data-html2canvas-ignore="true"><button type="button" class="view-switch__btn" id="view-switch" data-i18n="side.view.student">Student view</button></p>
     <aside class="report-side" id="report-side" aria-label="Your report" data-html2canvas-ignore="true">
       <div class="side-card">
         <h2 data-i18n="side.title">Your report</h2>

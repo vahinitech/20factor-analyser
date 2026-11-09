@@ -11,7 +11,7 @@
 # yet every number in the example docs is actual scorer output anyone can
 # regenerate:
 #
-#     pip install -r backend/requirements-core.txt
+#     pip install -r backend/requirements/core.txt
 #     python docs/examples/generate_examples.py
 #
 # Each scenario builds the `lines`/`layout` shapes the recognizer hands to

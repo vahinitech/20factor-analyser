@@ -17,11 +17,11 @@ SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 
 import config  # noqa: E402
-import ocr_backends  # noqa: E402
-import classify  # noqa: E402
-import gpu_detect  # noqa: E402
+from reading import ocr_backends  # noqa: E402
+from reading import classify  # noqa: E402
+from reading import gpu_detect  # noqa: E402
 import scoring  # noqa: E402
-import detector  # noqa: E402
+from reading import detector  # noqa: E402
 
 # White-box tests deliberately reach into module-private helpers below.
 # pylint: disable=protected-access
@@ -111,7 +111,7 @@ class TestReversePrint(unittest.TestCase):
         self.assertLess(probability, classify.PRINTED_THRESHOLD)
 
     def test_heading_excluded_from_scores_and_factor_evidence(self):
-        import computer_vision
+        from vision import computer_vision
 
         page = np.full((220, 320, 3), 255, np.uint8)
         page[10:82, 10:240] = self._heading()
@@ -347,7 +347,7 @@ class TestClassifier(unittest.TestCase):
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "ppsrv_align", os.path.join(SERVER_DIR, "ppocr-server.py")
+            "ppsrv_align", os.path.join(SERVER_DIR, "server/app.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
@@ -368,7 +368,7 @@ class TestClassifier(unittest.TestCase):
         import importlib.util
 
         spec = importlib.util.spec_from_file_location(
-            "ppsrv_align2", os.path.join(SERVER_DIR, "ppocr-server.py")
+            "ppsrv_align2", os.path.join(SERVER_DIR, "server/app.py")
         )
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

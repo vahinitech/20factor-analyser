@@ -4,7 +4,7 @@
 /* =========================================================================
    Vahini OCR / analysis server client.
    Recognition AND the 20-factor scoring run on the PP-OCRv5 server (see
-   ppocr-server.py: PaddleOCR v5, runs fully on your own machine), or any
+   server/app.py: PaddleOCR v5, runs fully on your own machine), or any
    endpoint set via window.VAHINI_OCR_ENDPOINT. The browser only sends the
    image and renders the returned analysis; there is no in-browser scorer.
    ========================================================================= */
@@ -14,7 +14,7 @@
 /* Candidate endpoints, tried in order:
    1. an explicit window.VAHINI_OCR_ENDPOINT
    2. same-origin /ocr
-   3. the local PP-OCRv5 helper server (ppocr-server.py) on this machine,
+   3. the local PP-OCRv5 helper server (server/app.py) on this machine,
       only when the page itself is local: on vahinitech.com it would send
       every visitor's browser to a port on their own computer. */
 const PAGE_IS_LOCAL = ['localhost', '127.0.0.1', '[::1]', '']
@@ -97,10 +97,29 @@ function normalize(j){
   return null;
 }
 
+/* Who is checking (report-share.js): one word the server asks for before
+   it reads a page, never kept (DPDP Rules, rule 10). */
+function appendWho(fd){
+  const who = global.VahiniWho && global.VahiniWho.forCheck();
+  if (who) fd.append('who', who);
+}
+
+/* The letter style taught at school (#346), as its registry id, when the
+   visitor picked one on an English page. Not sure sends nothing, and the
+   check guesses. One word, changes no score, never kept. */
+function appendLetterStyle(fd){
+  const doc = global.document;
+  if (!doc || (window.VAHINI_OCR_LANG || 'auto') === 'te') return;
+  const picked = doc.querySelector('input[name="letter-style"]:checked');
+  const value = picked ? picked.value : '';
+  if (value && value !== 'unsure' && /^[a-z0-9-]{2,40}$/.test(value)) fd.append('letter_style', value);
+}
+
 async function tryEndpoint(url, blob){
   const fd = new FormData();
   fd.append('image', blob, 'sample.png');
   fd.append('det', 'true'); fd.append('rec', 'true');
+  appendWho(fd);
   fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
   // NB: do NOT pin a language: let the server run every script it has loaded
   // (English + Telugu by default) and merge, so mixed pages read fully.
@@ -125,6 +144,7 @@ async function tryEndpoint(url, blob){
 async function tryVLEndpoint(url, blob){
   const fd = new FormData();
   fd.append('image', blob, 'sample.png');
+  appendWho(fd);
   fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
   const ctrl = new AbortController();
   const attempt = (endpointAttempts[url] || 0) + 1;
@@ -155,7 +175,7 @@ async function serverOCR(blob){
       if (out && out.error) lastServerError = out.error;
     }catch(e){ lastServerError = (e && e.message) ? e.message : 'request failed'; }
   }
-  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable: using on-device detector (run ppocr-server.py for PP-OCRv5 recognition)', lastServerError || '');
+  if (CANDIDATES.length) console.info('[Vahini] no recognition server reachable: using on-device detector (run server/app.py for PP-OCRv5 recognition)', lastServerError || '');
   return null;
 }
 
@@ -191,6 +211,8 @@ async function serverPythonReport(blob, expectedText){
       fd.append('image', blob, 'sample.png');
       fd.append('lang', window.VAHINI_OCR_LANG || 'auto');
       fd.append('expected_text', expectedText || '');
+      appendWho(fd);
+      appendLetterStyle(fd);
       const ctrl = new AbortController();
       // Dense, multi-line pages take longer to OCR on CPU; allow generous time
       // before falling back to geometry-only so recognition isn't dropped.
@@ -202,12 +224,12 @@ async function serverPythonReport(blob, expectedText){
         res = await fetch(account.url, { ...account.options, method:'POST', body:fd, signal:ctrl.signal });
       } finally { clearTimeout(t); }
       const raw = await res.text();
-      // 503 is the server's scan cap (backend/scan_slots.py): it is up but
+      // 503 is the server's scan cap (backend/server/scan_slots.py): it is up but
       // full; or, with detail.error_code "ocr_unavailable", it could not
       // read the page right now. Definitive answers, so do not try other
       // endpoints.
       // 429: the free tier's daily checks for this connection are used
-      // (backend/daily_limit.py), or nginx's per-minute burst limit. Both are
+      // (backend/server/daily_limit.py), or nginx's per-minute burst limit. Both are
       // definitive answers from a server that is up.
       if (res.status === 429){
         let detail = null;
@@ -242,12 +264,29 @@ async function serverPythonReport(blob, expectedText){
       // Answers about the file or the key, from a server that is up: each
       // has its own screen instead of "server not reachable".
       if (res.status === 413){ lastServerError = 'too large'; return { ok:false, error_code:'too_large' }; }
-      if (res.status === 422){ lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' }; }
+      // 422 is a file the server could not open, or (who_checks.py,
+      // detail.error_code "who_required") a check that did not say who is
+      // checking: that one goes back to the "Who is checking?" row.
+      if (res.status === 422){
+        let detail = null;
+        try { detail = (JSON.parse(raw) || {}).detail; } catch(_e){ /* not JSON */ }
+        if (detail && detail.error_code === 'who_required'){ lastServerError = 'who required'; return { ok:false, error_code:'who_required' }; }
+        lastServerError = 'invalid file'; return { ok:false, error_code:'invalid_file' };
+      }
       if (res.status === 401 || res.status === 403){ lastServerError = 'key'; return { ok:false, error_code:'key_problem' }; }
       if (!res.ok) throw new Error('HTTP '+res.status+' '+raw.slice(0,120));
       let j = null;
       try { j = JSON.parse(raw); } catch(_e){ throw new Error('Non-JSON /report-python response: '+raw.slice(0,120)); }
+      // The stored report's receipt (backend/server/report_store.py) goes to the
+      // browser's saved checks; earlier receipts are renewed for 12 months.
+      if (global.VahiniProgress){
+        global.VahiniProgress.receiptFor(j && j.receipt);
+        if (j && j.receipt) global.VahiniProgress.renew(requestUrl);
+      }
+      const receipt = j && j.receipt;
       if(j && j.format==='compact') j=await global.VahiniCompact.expand(j,requestUrl);
+      // Kept on the expanded report too, for the shared PDF (report-share.js).
+      if(j && receipt) j.receipt = receipt;
       // The visitor's practice numbers from /api/v2/me (practice report, #122).
       if(j && j.analysis && account && account.practice) j.analysis.practiceLimits = account.practice;
       if (j && j.ok !== false && j.analysis && Array.isArray(j.analysis.results)){

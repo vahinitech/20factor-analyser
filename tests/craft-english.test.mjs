@@ -49,18 +49,10 @@ assert.equal(craft.readsEnglish(reading('telugu','en')),false);
 assert.equal(craft.readsEnglish(reading('mixed','en')),false);
 assert.equal(craft.readsEnglish(reading('latin','en')),true);
 
-// Spelling: the same misspelling is checked only on an English reading.
-const misspelt='I recieve the letter.';
-assert.equal(craft.checkSpelling(misspelt,reading('latin','en')).length,1);
-assert.equal(craft.checkSpelling(misspelt,reading('latin','de')).length,0);
-assert.equal(craft.checkSpelling(misspelt,reading('latin','te')).length,0);
-console.log('PASS spelling runs only on a page read as English');
-
 // No language information (an older cached response, or nothing read):
 // the ASCII count decides, as before.
 for(const none of [undefined,null,{},reading(null),reading('latin'),reading(null,'en')]){
   assert.equal(craft.readsEnglish(none),null);
-  assert.equal(craft.checkSpelling(misspelt,none).length,1);
 }
 assert.equal(craft.kindOf('నేను రేపు బడికి వెళ్తాను',null),'nonlatin');
 assert.equal(craft.kindOf(english,null),'letter');

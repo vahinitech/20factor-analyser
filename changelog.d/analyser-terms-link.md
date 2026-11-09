@@ -1,0 +1,1 @@
+- The consent line above Run now says that running the check accepts the terms of the check, links to them on vahinitech.com (`/terms.html#analyser-terms`), and says the check describes the page and does not diagnose anything. Until now the page asked who was running the check but never pointed to any terms.

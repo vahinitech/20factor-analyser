@@ -64,6 +64,44 @@ weights were learned from:
 
 ---
 
+## Data used for tests and evaluation
+
+Each dataset, with its licence, use and what is committed, is described in
+[docs/22-datasets.md](docs/22-datasets.md) and listed in `sbom.spdx.json` as an
+`SPDXRef-Data-*` package. No raw dataset is redistributed in this repository or the
+image.
+
+- **UJI Pen Characters (Version 2)** (credited above): its 20 test writers
+  make the synthetic test pages and the 20 rendered pages committed in
+  `benchmarks/uji-clean/pages/`. Changes: letters arranged into lines and
+  drawn as a photo of paper would look; the letters are unchanged.
+- **GNHK**: A. W. C. Lee, J. Chung and M. Lee, "GNHK: A Dataset for English
+  Handwriting in the Wild", ICDAR 2021, GoodNotes,
+  <https://github.com/GoodNotes/GNHK-dataset>. **CC BY 4.0**. 200 photos
+  scored for an evaluation on 19 October 2026, resized and otherwise
+  unchanged; none are in this repository.
+- **IIIT-INDIC-HW-WORDS-Telugu**: S. Gongidi and C. V. Jawahar, ICDAR 2021,
+  CVIT, IIIT Hyderabad, <https://ilocr.iiit.ac.in/dataset/23>. Listed there
+  as **CC BY 4.0**; the terms for the copy we hold are not yet confirmed
+  (see docs/22-datasets.md). Trains the Telugu reader and builds Telugu
+  evaluation pages; neither the words, the pages nor the weights are in this
+  repository or the image.
+- **Palmer Method of Business Writing** (A. N. Palmer, 1915) and
+  **Zaner-Bloser Manual 144**, from archive.org: **public domain**. Eight
+  crops in `benchmarks/neat-penmanship/pages/`.
+
+---
+
+## Word lists
+
+**SCOWL 2020.12.07** (Spell Checker Oriented Word Lists), © 2000-2018
+Kevin Atkinson and the contributors named in its notice, permissive
+licence (use, copy, modify, distribute and sell, with the notice kept).
+`backend/languages/words/en.txt.gz` and `never-suggest.txt.gz` are built
+from it by `scripts/build_wordlist.py`; the full notice is
+`backend/languages/words/SCOWL-Copyright.txt`.
+<http://wordlist.aspell.net/>
+
 ## Hosted runtime services (no code redistributed)
 
 | Service | Provider | Terms |
@@ -109,7 +147,7 @@ The SPDX source inventory includes npm test tooling and transitive lockfile
 packages, plus declared core/default Python dependencies. Generate a separate
 inventory from the built container for resolved Python transitives, operating
 system packages and model weights. Refresh the source inventory with
-`python backend/update_sbom.py` after dependency changes.
+`python backend/tools/update_sbom.py` after dependency changes.
 
 
 ## Locally served report fonts
@@ -118,11 +156,15 @@ Spectral, Hanken Grotesk, Caveat and Edu SA Beginner are distributed under the S
 
 **Noto Sans Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-sans-telugu` npm package version 5.3.0 (`NotoSansTelugu-Regular.woff2`, `NotoSansTelugu-Bold.woff2`, licence `notosanstelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). A report printed or saved in Telugu uses it, so the PDF shows Telugu on any device.
 
+**Playwrite** (Copyright 2023 The Playwrite Project Authors, <https://github.com/TypeTogether/Playwrite>), SIL Open Font License 1.1: the US Trad, AR, GB J, AU VIC, FR Trad, DE LA, DE VA and DE SAS faces from Google Fonts' `ofl/playwrite*` files, set to weight 400 and cut to the letters of the letter-style names they draw on the check page by `frontend/gen_letter_styles.py` (`playwrite-*.woff2`, licence `playwrite-OFL.txt`, sources, the originals' hashes and the cut files' hashes in `frontend/assets/fonts/sources.json`). The picker for the letter style taught at school draws each name in its own style.
+
+**Noto Serif Telugu** (Copyright 2022 The Noto Project Authors, <https://github.com/notofonts/telugu>), SIL Open Font License 1.1: the Telugu subset, regular and bold, taken unchanged from the `@fontsource/noto-serif-telugu` npm package version 5.3.0 (`NotoSerifTelugu-Regular.woff2`, `NotoSerifTelugu-Bold.woff2`, licence `notoseriftelugu-OFL.txt`, sources and hashes in `frontend/assets/fonts/sources.json`). It sets the Telugu letters of text the report sets in its serif face (Spectral), scaled to Spectral's letter size, so a Telugu report keeps the English report's fonts and sizes (docs/12-report-rules.md).
+
 ## Browser libraries served with the report
 
 These files are vendored unchanged in `frontend/scripts/vendor/` (npm
 package, version, tarball URL and SHA-256 in `sources.json` there; the SBOM
-entries come from that file through `backend/update_sbom.py`).
+entries come from that file through `backend/tools/update_sbom.py`).
 
 **QR Code Generator for JavaScript** (`qrcode-generator` 2.0.4), Copyright (c) 2009 Kazuhiko Arase, MIT License: `qrcode.js`, which draws the QR code on report page 1. The licence notice is in the file's own header; the package ships no separate licence file. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
 

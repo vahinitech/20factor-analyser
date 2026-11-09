@@ -1,0 +1,37 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://vahinitech.com/schemas/analyser/v2/compare-request.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "receipts"
+  ],
+  "properties": {
+    "receipts": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "token"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{32}$"
+          },
+          "token": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{43}$"
+          }
+        }
+      },
+      "description": "The earlier check first. Either token of a receipt works: the full one from the browser, or the read-only one from a shared PDF."
+    }
+  },
+  "title": "POST /api/v2/compare request body",
+  "description": "Send with Authorization: Bearer <Pro key>. Anything but Pro is refused with 403 before a record is opened."
+}

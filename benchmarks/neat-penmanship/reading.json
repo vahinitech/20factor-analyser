@@ -1,0 +1,54 @@
+{
+ "cer": 31.82,
+ "edits": 266,
+ "graphemes": 836,
+ "pages": {
+  "palmer-092-specimen": {
+   "cer": 56.52,
+   "edits": 39,
+   "graphemes": 69
+  },
+  "palmer-093-practice": {
+   "cer": 26.25,
+   "edits": 42,
+   "graphemes": 160
+  },
+  "zaner-088-spacing": {
+   "cer": 39.0,
+   "edits": 39,
+   "graphemes": 100
+  },
+  "zaner-090-small-writing": {
+   "cer": null,
+   "edits": 0,
+   "graphemes": 0
+  },
+  "zaner-093-short-loops": {
+   "cer": 14.58,
+   "edits": 14,
+   "graphemes": 96
+  },
+  "zaner-095-good-writing": {
+   "cer": 28.85,
+   "edits": 30,
+   "graphemes": 104
+  },
+  "zaner-096-commercial-asset": {
+   "cer": 26.63,
+   "edits": 49,
+   "graphemes": 184
+  },
+  "zaner-097-good-handwriting": {
+   "cer": 43.09,
+   "edits": 53,
+   "graphemes": 123
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 31.82,
+   "edits": 266,
+   "graphemes": 836
+  }
+ }
+}

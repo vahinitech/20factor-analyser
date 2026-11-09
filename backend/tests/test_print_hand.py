@@ -12,8 +12,8 @@ from PIL import Image
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
-import classify  # noqa: E402
-import print_hand  # noqa: E402
+from reading import classify  # noqa: E402
+from reading import print_hand  # noqa: E402
 
 FIXTURES = os.path.join(
     os.path.dirname(os.path.dirname(HERE)), "tests", "fixtures"

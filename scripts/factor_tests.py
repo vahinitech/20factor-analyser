@@ -17,8 +17,9 @@ are scored, and for each mistake this reports, over the writers:
 
 Without --ocr the reader is replaced by each line's ink outline, as in
 planted_pages.py, so only the measuring is tested and the factors made
-from the reader's confidence (1, 2, 18, 19) cannot move; --ocr reads
-every page with the real reader (analyser image).
+from the reader's confidence (1, 18, 19) move only by the ink check for
+tangled words; --ocr reads every page with the real reader (analyser
+image).
 """
 
 import argparse
@@ -46,14 +47,17 @@ TARGETS = {
     "indented_line": ("10",),
     "wavy_line": ("11",),
     "slanted_line": ("17",),
-    "shaky_line": ("4",),
-    "messy_word": ("1", "2", "19", "18"),
+    # A shaky line (factor 4) and stroke order (2) are for the sensor
+    # pen; a photo does not score them (#192).
+    "messy_word": ("1", "19", "18"),
     "low_word": ("7",),
     "tilted_line": ("7", "11", "12"),
     "wide_gap": ("8",),
     "narrow_gap": ("8",),
 }
-SCORED = [str(n) for n in list(range(1, 13)) + list(range(17, 21))]
+SCORED = [
+    str(n) for n in list(range(1, 13)) + list(range(17, 21)) if n not in (2, 4)
+]
 
 
 def score_page(img, hand_lines, ocr):
@@ -83,7 +87,7 @@ def score_page(img, hand_lines, ocr):
     return out
 
 
-def run(uji, kinds, ocr, seed=0, only=None):
+def run(uji, kinds, ocr, seed=0, only=None, ruled=False):
     writers = pp.parse(pp.fetch(uji))
     rows = []
     for wi, writer in enumerate(sorted(writers)):
@@ -97,7 +101,9 @@ def run(uji, kinds, ocr, seed=0, only=None):
 
         def page(kind, letters=letters, wi=wi):
             rng = np.random.default_rng([seed, wi])
-            img, lines, _truth = pp.build_page(letters, rng, kind, "photo")
+            img, lines, _truth = pp.build_page(
+                letters, rng, kind, "photo", ruled=ruled
+            )
             return score_page(img, lines, ocr)
 
         clean = page("clean")

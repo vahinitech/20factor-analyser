@@ -8,164 +8,14 @@
    ========================================================================= */
 (function (global) {
 'use strict';
-/* Overall-score label. Previously imported from VahiniFactors (factors.js); the
-   scoring engine now lives server-side, so this trivial rendering helper is
-   inlined here to keep the report self-contained. */
-const overallBand = (o)=> o>=80?'Strong & consistent' : o>=66?'Developing well' : o>=50?'Emerging: clear focus areas' : 'Early: lots to build on';
-
 /* Single source of truth for the 4 score bands, read by every report page
    that shows a band (scorecard section rows via bandOf(), factor cards and
    the reference-values table via the server-assigned f.band) so the
    thresholds, wording and colour never drift apart between pages again.
    Must track backend/scoring.py's _band(). */
 const bandOf = (score)=> score>=8.5?'strong' : score>=7.0?'good' : score>=4.5?'dev' : 'focus';
-/* Stage names on both pages (owner approval 2026-10-11, #122): the child
-   is on a path, Learning, Improving, Mastering, Strong; the band colours
-   stay. They match the practice catalogue's stages and live in the string
-   tables as stage.<band> (strings/en.js). */
-const BAND_COLOR = { strong:'var(--grow)', good:'var(--band-good)', dev:'var(--gold)', focus:'var(--band-focus)' };
-const BAND_STARS = { strong:'★★★★', good:'★★★☆', dev:'★★☆☆', focus:'★☆☆☆' };
-const SEC_ICON = {
-  structure:'<path d="M4 20 L9 4 M9 20 L14 4 M14 20 L19 4" />',
-  spatial:'<path d="M5 6v12M19 6v12M9 12h6"/><path d="M9 12l2-2M9 12l2 2"/>',
-  dynamics:'<path d="M3 12h3l2-7 4 14 2-7h7"/>',
-  style:'<path d="M4 19h16M7 19l5-12 5 12"/>',
-};
-/* Published reference bands (the "normal ranges" printed on the report's
-   reference-values table: same convention as a medical lab report).
-   Must track backend/scoring.py's _band() thresholds. */
-const REF_BANDS = { strong:[8.5,10.0], good:[7.0,8.4], dev:[4.5,6.9], focus:[0.0,4.4] };
-
-function ringSVG(score){
-  const r=78, c=2*Math.PI*r, off=c*(1-score/100);
-  return `<svg viewBox="0 0 178 178" style="position:absolute;inset:0;">
-    <circle cx="89" cy="89" r="${r}" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="13"/>
-    <circle cx="89" cy="89" r="${r}" fill="none" stroke="var(--accent)" stroke-width="13"
-      stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${off}" transform="rotate(-90 89 89)"/>
-  </svg>`;
-}
-
-/* line chart for the 8-week projected trajectory */
-function trajectoryChart(curve, nowVal, projVal){
-  const w=1040, h=190, padL=46, padR=20, padT=18, padB=30;
-  const ys = curve.map(p=>p.overall);
-  const maxW = Math.max(...curve.map(p=>p.w));
-  const lo = Math.max(0, Math.min(...ys)-8), hi = 100;
-  const X = (wk)=> padL + (wk/maxW)*(w-padL-padR);
-  const Y = (v)=> padT + (1-(v-lo)/(hi-lo))*(h-padT-padB);
-  const pts = curve.map(p=>[X(p.w), Y(p.overall)]);
-  const line = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
-  const area = line+` L ${X(maxW)} ${h-padB} L ${padL} ${h-padB} Z`;
-  let grid='';
-  [25,50,75,100].forEach(v=>{ if(v>=lo){ const y=Y(v); grid+=`<line x1="${padL}" y1="${y}" x2="${w-padR}" y2="${y}" stroke="var(--hair)" stroke-width="1"/><text x="${padL-8}" y="${y+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="Hanken Grotesk">${v}</text>`; } });
-  let wk='';
-  curve.forEach(p=>{ if(p.w%2===0){ wk+=`<text x="${X(p.w)}" y="${h-9}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="Hanken Grotesk">${p.w===0?'now':'wk '+p.w}</text>`; } });
-  const bandY = Y(100), bandH = Y(80)-Y(100);
-  return `<svg viewBox="0 0 ${w} ${h}" style="width:100%;height:auto;display:block;">
-    <rect x="${padL}" y="${bandY}" width="${w-padL-padR}" height="${bandH}" fill="var(--grow)" opacity="0.07"/>
-    <text x="${w-padR-4}" y="${Y(90)+4}" text-anchor="end" font-size="10" fill="var(--grow)" font-family="Hanken Grotesk" font-weight="700">strong zone</text>
-    ${grid}${wk}
-    <path d="${area}" fill="var(--accent)" opacity="0.10"/>
-    <path d="${line}" fill="none" stroke="var(--accent)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${X(0)}" cy="${Y(nowVal)}" r="6" fill="#fff" stroke="var(--ink)" stroke-width="3"/>
-    <circle cx="${X(maxW)}" cy="${Y(projVal)}" r="6" fill="var(--accent)" stroke="#fff" stroke-width="2.5"/>
-    <text x="${X(0)+10}" y="${Y(nowVal)-10}" font-size="12" font-weight="800" fill="var(--ink)" font-family="Hanken Grotesk">${nowVal}</text>
-    <text x="${X(maxW)-8}" y="${Y(projVal)-12}" text-anchor="end" font-size="12" font-weight="800" fill="var(--accent-deep)" font-family="Hanken Grotesk">${projVal}</text>
-  </svg>`;
-}
-
-/* mini signal chart (filled area + line) for the IMU report page */
-function sparkline(values, color, w, h){
-  w=w||520; h=h||96; if(!values||!values.length) return '';
-  const min=Math.min(...values), max=Math.max(...values), rng=(max-min)||1;
-  const pts = values.map((v,i)=>[ (i/(values.length-1))*w, h-6 - ((v-min)/rng)*(h-16) ]);
-  const line = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
-  const area = line+` L ${w} ${h} L 0 ${h} Z`;
-  return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" style="width:100%;height:${h}px;display:block;">
-    <path d="${area}" fill="${color}" opacity="0.12"/>
-    <path d="${line}" fill="none" stroke="${color}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-  </svg>`;
-}
-
-/* ---- exercise drill drawings (CSS/SVG, direction arrows) --------------- */
-function exDraw(type){
-  const INK='#27406b';
-  const rail = `<line x1="14" y1="20" x2="326" y2="20" stroke="#cdd6e6" stroke-width="1.4"/>
-    <line x1="14" y1="44" x2="326" y2="44" stroke="#cdd6e6" stroke-width="1.2" stroke-dasharray="4 4"/>
-    <line x1="14" y1="68" x2="326" y2="68" stroke="#9fb0cb" stroke-width="1.6"/>`;
-  const defs = `<defs><marker id="ah_${type}" markerWidth="7" markerHeight="7" refX="5.5" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 Z" fill="currentColor"/></marker></defs>`;
-  const AR = `stroke="currentColor" stroke-width="1.6" stroke-dasharray="3 3" fill="none" stroke-linecap="round" marker-end="url(#ah_${type})"`;
-  let s='';
-  if(type==='slant'){
-    s+='<line x1="170" y1="14" x2="170" y2="74" stroke="#e3d6bd" stroke-width="1.2" stroke-dasharray="3 3"/>';
-    for(let i=0;i<6;i++){ const x=26+i*22; s+=`<line x1="${x}" y1="68" x2="${x+13}" y2="20" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`; }
-    for(let i=0;i<6;i++){ const x=190+i*22; s+=`<line x1="${x}" y1="20" x2="${x+13}" y2="68" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>`; }
-    s+=`<path d="M24 80 L40 80" ${AR}/><path d="M198 80 L214 80" ${AR}/>`;
-  } else if(type==='round'){
-    for(let i=0;i<5;i++){ const cx=40+i*26; s+=`<ellipse cx="${cx}" cy="44" rx="9" ry="17" transform="rotate(-16 ${cx} 44)" fill="none" stroke="${INK}" stroke-width="2.6"/>`; }
-    for(let i=0;i<5;i++){ const cx=200+i*26; s+=`<circle cx="${cx}" cy="44" r="13" fill="none" stroke="${INK}" stroke-width="2.6"/>`; }
-    s+='<line x1="170" y1="14" x2="170" y2="74" stroke="#e3d6bd" stroke-width="1.2" stroke-dasharray="3 3"/>';
-    s+=`<path d="M44 30 A14 14 0 1 0 30 47" ${AR}/><path d="M204 30 A14 14 0 1 0 190 47" ${AR}/>`;
-  } else if(type==='rhythm'){
-    let pts=''; for(let i=0;i<8;i++){ const x=24+i*18; pts+=`${x},${i%2?64:24} `; }
-    s+=`<polyline points="${pts.trim()}" fill="none" stroke="${INK}" stroke-width="2.8" stroke-linejoin="round"/>`;
-    let g='M186 44 '; for(let i=0;i<5;i++) g+='q 13 26 26 0 ';
-    s+=`<path d="${g}" fill="none" stroke="${INK}" stroke-width="2.8" stroke-linecap="round"/>`;
-    s+='<line x1="170" y1="14" x2="170" y2="74" stroke="#e3d6bd" stroke-width="1.2" stroke-dasharray="3 3"/>';
-    s+=`<path d="M150 80 L168 80" ${AR}/><path d="M300 80 L318 80" ${AR}/>`;
-  } else if(type==='frame'){
-    s+=`<rect x="40" y="12" width="260" height="62" rx="3" fill="none" stroke="${INK}" stroke-width="2"/>`;
-    s+=`<rect x="58" y="22" width="224" height="42" rx="2" fill="none" stroke="#cdd6e6" stroke-width="1.4" stroke-dasharray="4 3"/>`;
-    for(let i=0;i<4;i++){ const y=30+i*9; s+=`<line x1="66" y1="${y}" x2="${200+(i%2?40:0)}" y2="${y}" stroke="#bcc7da" stroke-width="2"/>`; }
-    s+=`<path d="M58 17 L98 17" ${AR}/><path d="M52 22 L52 50" ${AR}/>`;
-  } else if(type==='wave'){
-    s+=`<path d="M22 44 Q52 16 82 44 T142 44 T202 44 T262 44 T322 44" fill="none" stroke="${INK}" stroke-width="2" stroke-linecap="round"/>`;
-    [2,3,4,5,6,7].forEach((w,i)=>{ const x=40+i*48; s+=`<line x1="${x}" y1="70" x2="${x+22}" y2="70" stroke="${INK}" stroke-width="${w}" stroke-linecap="round"/>`; });
-    s+=`<path d="M30 80 L300 80" ${AR}/>`;
-    s+=`<text x="40" y="64" font-size="8" font-family="Hanken Grotesk" fill="currentColor" font-weight="700">light</text>`;
-    s+=`<text x="280" y="64" font-size="8" font-family="Hanken Grotesk" fill="currentColor" font-weight="700">heavy</text>`;
-  }
-  return `<svg viewBox="0 0 340 86" preserveAspectRatio="xMidYMid meet">${defs}${rail}${s}</svg>`;
-}
-const EX_CAP = { slant:['forward  /  →','back  \\  →'], round:['ovals','circles'], rhythm:['zigzag','wave loops'], frame:['draw frame','write inside'], wave:['light → heavy','then even'] };
-
-/* ---- role config ------------------------------------------------------- */
-function roleConfig(role){
-  const map = {
-    student:{ label:'Student', greet:(n)=>`Brilliant effort, ${n}!`, you:'you', show:'kid' },
-    parent:{ label:'Parent / Guardian', greet:(n)=>`${n}'s handwriting journey`, you:'your child', show:'kid' },
-    coach:{ label:'Coach / Instructor', greet:(n)=>`Assessment for ${n}`, you:'the writer', show:'coach' },
-    institute:{ label:'Institute / School', greet:(n)=>`Assessment for ${n}`, you:'the student', show:'coach' },
-    individual:{ label:'Individual', greet:()=>`Your handwriting, in twenty factors`, you:'you', show:'individual' },
-  };
-  return map[role] || map.individual;
-}
 
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
-
-/* document-type accuracy colour + panel */
-function docAccColor(acc){
-  if(/high/i.test(acc)) return { c:'var(--grow)', bg:'var(--grow-soft)', t:'Strong fit' };
-  if(/moderate/i.test(acc)) return { c:'#9A7B25', bg:'var(--gold-soft)', t:'Usable' };
-  return { c:'var(--accent-deep)', bg:'var(--accent-soft)', t:'Reduced accuracy' };
-}
-function docTypeChip(dt){
-  const a = docAccColor(dt.accuracy);
-  return `<span style="display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;color:${a.c};background:${a.bg};padding:5px 12px;border-radius:99px;">
-    <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2h9l5 5v15H6z"/><path d="M14 2v6h6"/></svg>
-    ${esc(dt.label)}</span>`;
-}
-/* ---- strip internal jargon (§4C Fxx, "proxy", section refs) from copy --- */
-function plainText(s){
-  return String(s||'')
-    .replace(/\s*\(§4[ABC][^)]*\)/g,'')
-    .replace(/\s*§4[ABC]\s*F?\d*/g,'')
-    .replace(/\s*\(image proxy[^)]*\)/ig,'')
-    .replace(/\s*\([^)]*proxy[^)]*\)/ig,'')
-    .replace(/\bproxy\b/ig,'estimate')
-    .replace(/\s*\(\s*\)/g,'')
-    .replace(/\s{2,}/g,' ').replace(/\s+([.;,])/g,'$1').replace(/;\s*$/,'').trim();
-}
 
 /* ---- per-factor "where we look" visual: a handwriting sample with the
    exact region this factor measures highlighted, so a human can SEE why
@@ -318,11 +168,14 @@ function classificationPanels(summary){
 }
 
 
+/* Skills only the sensor pen measures: stroke order (2) and smoothness
+   (4) as well as the four Dynamics (#192, scoring_parts/needs.py). */
+const PEN_SKILLS=[2,4,13,14,15,16];
 /* Pen capture: the server scores the trace image and marks the four
    Dynamics factors unmeasured; the pen's own per-stroke measurements fill
-   them in here, and the section and overall scores are recomputed with the
-   published weights so every factor counts. */
-const SECTION_WEIGHTS={structure:0.30,spatial:0.30,dynamics:0.20,style:0.20};
+   them in here, and the section scores are recomputed. The overall stays
+   the server's: it counts factors 1, 5, 7, 11 and 17 only
+   (scoring._OVERALL_POINTS, #304), which the pen does not change. */
 function applyPenDynamics(analysis, imu){
   const dyn=imu && imu.dynamics;
   if(!analysis || !Array.isArray(analysis.results) || !dyn) return analysis;
@@ -340,12 +193,8 @@ function applyPenDynamics(analysis, imu){
     s.avg=fs.length?Number((fs.reduce((n,f)=>n+f.score,0)/fs.length).toFixed(1)):null;
     s.avg100=s.avg==null?null:Math.round(s.avg*10);
     s.scoredCount=fs.length;
-    s.weight=SECTION_WEIGHTS[s.id]??s.weight;
   });
-  const scored=(analysis.sections||[]).filter(s=>s.avg100!=null);
-  const wsum=scored.reduce((n,s)=>n+s.weight,0)||1;
-  const overall=Math.round(scored.reduce((n,s)=>n+s.avg100*(s.weight/wsum),0));
-  analysis.overall=overall; analysis.overallMeasured=overall; analysis.measuredCount=live.length;
+  analysis.measuredCount=live.length;
   const ranked=live.slice().sort((a,b)=>a.score-b.score);
   analysis.topWeak=ranked.slice(0,3); analysis.topStrong=ranked.slice().reverse().slice(0,4);
   return analysis;
@@ -353,7 +202,7 @@ function applyPenDynamics(analysis, imu){
 
 /* ---- practice (docs/10-practice-framework.md; owner approval 2026-10-11, #122)
    Exercises, tips and how many tries come from the practice catalogue
-   (backend/practice_catalog.py), never from this file: the catalogue served
+   (backend/report/practice_catalog.py), never from this file: the catalogue served
    with the report's dictionary version when there is one, otherwise the copy
    build_bundle.py packs into the bundle (window.VahiniPracticeCatalog).
    Which ones a report prints is chosen by VahiniPracticeSelect
@@ -503,6 +352,8 @@ function modelHTML(kind, example){
       return `<div class="md md-pairs">${pairs.map(p=>`<span class="md-pair">${hand(p)}</span>`).join('')}</div>`;
     }
     case 'margin': return '<div class="md md-margin"><i></i><i></i><i></i></div>';
+    case 'ovals': return '<div class="md md-ovals"><svg viewBox="0 0 300 40" aria-hidden="true"><g transform="translate(6 0) skewX(-16)"><ellipse cx="32" cy="20" rx="8" ry="16"/><ellipse cx="34" cy="20" rx="8" ry="16"/><ellipse cx="36" cy="20" rx="8" ry="16"/><ellipse cx="82" cy="20" rx="8" ry="16"/><ellipse cx="84" cy="20" rx="8" ry="16"/><ellipse cx="86" cy="20" rx="8" ry="16"/><ellipse cx="132" cy="20" rx="8" ry="16"/><ellipse cx="134" cy="20" rx="8" ry="16"/><ellipse cx="136" cy="20" rx="8" ry="16"/><ellipse cx="182" cy="20" rx="8" ry="16"/><ellipse cx="184" cy="20" rx="8" ry="16"/><ellipse cx="186" cy="20" rx="8" ry="16"/></g><path class="md-way" d="M247 20 A11 11 0 1 0 236 31 M236 31 l-5 -4 M236 31 l-5 4"/><path class="md-way" d="M265 20 A11 11 0 1 1 276 31 M276 31 l5 -4 M276 31 l5 4"/></svg></div>';
+    case 'push-pulls': return '<div class="md md-push-pulls"><svg viewBox="0 0 300 40" aria-hidden="true"><path d="M24 36 L35 4 M29 36 L40 4 M34 36 L45 4 M39 36 L50 4 M84 36 L95 4 M89 36 L100 4 M94 36 L105 4 M99 36 L110 4 M144 36 L155 4 M149 36 L160 4 M154 36 L165 4 M159 36 L170 4"/><path class="md-way" d="M236 34 L248 6 M248 6 l-5 4 M248 6 l1 6 M236 34 l5 -4 M236 34 l-1 -6"/></svg></div>';
     case 'waves': return '<div class="md md-waves"><svg viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M4 12 H140"/><path d="M160 22 c12 -16 24 16 36 0 s24 16 36 0 s24 16 36 0"/><path d="M4 30 H140"/></svg></div>';
     case 'page': return '<div class="md md-page"><span class="md-sheet"><i></i><i></i><i></i><i></i></span></div>';
     default: return '';
@@ -532,6 +383,37 @@ function qrSVG(text){
 /* The last render, so "Print in" can redraw the same report in another
    language: same scores, crops, photo, history and pictures. */
 let lastRender = null;
+/* Who the report is for (owner, 2026-10-23; issue #291): "parent" (today's
+   report, the default) or "student" (the student view above it). Chosen by
+   ?for=student on the check page's address or the "Report for" switch
+   beside the report, and kept in this tab only: never sent, never stored
+   with a photo. */
+const AUDIENCE_KEY = 'vahini_report_for';
+let view = null;
+function audience(){
+  if (view) return view;
+  let v = null;
+  try{ v = new URLSearchParams(location.search).get('for'); }catch(_e){ /* no address */ }
+  if (v !== 'student' && v !== 'parent'){ try{ v = sessionStorage.getItem(AUDIENCE_KEY); }catch(_e){ /* blocked */ } }
+  view = v === 'student' ? 'student' : 'parent';
+  return view;
+}
+function setAudience(v){
+  view = v === 'student' ? 'student' : 'parent';
+  try{ sessionStorage.setItem(AUDIENCE_KEY, view); }catch(_e){ /* this page only */ }
+  return view;
+}
+/* "Details for your teacher" opens and folds the two pages on screen. */
+function wireStudent(host){
+  const btn = host.querySelector('.stu-more');
+  if (!btn) return;
+  btn.addEventListener('click', ()=>{
+    const open = host.classList.toggle('stu-folded') === false;
+    btn.setAttribute('aria-expanded', String(open));
+    btn.textContent = btn.getAttribute(open ? 'data-open' : 'data-closed');
+  });
+}
+
 function rerender(){
   if (!lastRender || !lastRender.host.isConnected) return null;
   return render(lastRender.host, lastRender.data);
@@ -542,34 +424,61 @@ function render(host, data){
   lastRender = { host, data };
   const t=translatorFor(data);
   host.setAttribute('lang', t.lang);
+  host.toggleAttribute('data-caseless', !!(global.VahiniI18n && VahiniI18n.caseless(t.lang)));
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
   // A page in a language whose letters are not read yet, measured from
   // the shape of its writing (ink_geometry.py): its layout is scored and
   // the letter skills come with that language's reader.
   const inkOnly=rec.backend==='ink-geometry';
-  const INK_LAYOUT=[5,7,8,10,11,20], PEN=[13,14,15,16];
+  const INK_LAYOUT=[5,7,8,10,11,20];
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const stage=band=>t('stage.'+band);
   const measured=analysis.results.filter(isLive);
   const sorted=measured.filter(f=>![18,20].includes(f.n)).sort((a,b)=>a.score-b.score || a.n-b.n);
   const toGrow=sorted.filter(f=>f.score<8.5);
   const maintenance=!toGrow.length && sorted.length>0;
-  const readable=['high','passage-verified'].includes(rec.level);
-  // Classification entries preserve original OCR, unlike passage-corrected
-  // text. Never check the printed stream or score-excluded regions.
+  // The handwriting the reader read (classification keeps the original
+  // reading; printed and score-excluded lines are left out).
   const classification=analysis.textClassification;
   const sources=classification
     ? (classification.handwritten || []).filter(r=>r.included_in_scoring).map(r=>({id:r.evidence_id||r.id,text:r.text}))
     : [{id:null,text:recognizedText}];
-  const hasText=sources.some(r=>String(r.text||'').trim());
-  // English spelling runs only on a page the server read as English (#221).
-  const spelling=readable && window.VahiniCraft
-    ? sources.flatMap(r=>VahiniCraft.checkSpelling(r.text,analysis.comparability).map(f=>({...f,region:r.id}))) : [];
+  // Spelling comes from the server's check (#317: the `language` section,
+  // each word checked against the reader's letter scores), not from a list
+  // in the browser (owner, 2026-10-24). No section, or a page the server
+  // did not check, makes no claim either way.
+  const langSec=data.language&&data.language.checked?data.language:null;
+  const spelling=langSec?(langSec.spelling||[]).filter(f=>f&&f.suggestion):[];
   const firstSpelling=spelling[0];
+  // Grammar from the same check (owner, 2026-10-25: on the parent report
+  // too, not only the student view).
+  const grammar=langSec?(langSec.grammar||[]).filter(f=>f&&f.suggestion&&f.rule):[];
   const free=analysis.access?.tier==='free';
   const tier=free?'free':'pro';
   const cat=practiceCatalog(analysis);
+  // Spelling as a teacher practises it (owner, 2026-10-24): findings
+  // grouped by the pattern the server named, the largest group first; each
+  // pattern brings its rule, its exercise and practice words from the
+  // catalogue, so the child practises the pattern, not one word.
+  const spellPatterns=(()=>{
+    const lib=(cat&&cat.spelling&&cat.spelling.patterns)||[];
+    const groups=[];
+    spelling.forEach(f=>{
+      const id=f.pattern||'other';
+      let g=groups.find(x=>x.id===id);
+      if(!g){ const entry=lib.find(p=>p.id===id)||lib.find(p=>p.id==='other')||null; g={id,entry,found:[]}; groups.push(g); }
+      g.found.push(f);
+    });
+    const local=g=>{const e=g.entry||{}, own=(e.i18n||{})[t.lang]||{};
+      return {name:own.name||e.name||'', rule:own.rule||e.rule||''};};
+    groups.forEach(g=>{
+      Object.assign(g,local(g));
+      const mine=g.found.map(f=>f.suggestion.toLowerCase());
+      g.words=[...new Set([...mine,...((g.entry&&g.entry.words)||[])])].slice(0,6);
+    });
+    return groups.sort((a,b)=>b.found.length-a.found.length);
+  })();
   const lim=practiceLimits(analysis, cat, tier);
   // Skill names: in another language the English name follows in brackets
   // on its first use on each page, so a teacher and a parent mean the same
@@ -587,11 +496,18 @@ function render(host, data){
   // left out, up to the tier's number. The first one is "Start here".
   const rowFactors=(maintenance?sorted:toGrow).slice(0,lim.areas_max);
   const first=rowFactors[0]||null;
-  const spellingStatus=inkOnly ? t('note.ink')
-    : !readable ? t('spelling.deferred')
-    : !hasText ? t('spelling.notext')
-    : spelling.length ? t('spelling.found')
-    : t('spelling.clear');
+  // Page 1's "Spelling and grammar" line (owner, 2026-10-25): how many
+  // words and sentences page 2 has, never "no mistakes".
+  const langStatus=(()=>{
+    if(inkOnly) return t('note.ink');
+    if(!langSec) return t('lang.notchecked');
+    const parts=[spelling.length?t.n('lang.words',spelling.length):'',grammar.length?t.n('lang.sentences',grammar.length):''].filter(Boolean);
+    if(!parts.length) return t('lang.clear');
+    return t('lang.found',{what:parts.length>1?t('lang.and',{a:parts[0],b:parts[1]}):parts[0]});
+  })();
+  // On the row of "A close look at your own writing", whose right side is
+  // empty, so page 1 is no taller (both reports stay on two A4 sheets).
+  const langLine=`<p class="sn-lang" data-lang-found="${spelling.length+grammar.length}"><b>${esc(t('lang.title'))}</b> <span>${esc(langStatus)}</span></p>`;
   const writer=String(intake.writerName||'').trim();
   // Brand row with the Vahini logo and the website; the patent numbers on
   // every page (owner instruction, 2026-10-10). Both stay as written in
@@ -610,8 +526,6 @@ function render(host, data){
     const sheet=worksheetFor(f);
     return sheet?`<p class="practice-sheet">${esc(t('row.sheet'))} <a href="${esc(sheetURL(sheet))}">${esc(sheet.title)} (PDF)</a></p>`:'';
   };
-  const rawOverall=analysis.overallMeasured ?? analysis.overall;
-  const overall=Number.isFinite(rawOverall)?rawOverall:null;
   // The last check saved in this browser, for the change line and the chips.
   const prev=history&&history.date?history:null;
   const prevScore=Object.fromEntries((prev&&Array.isArray(prev.factors)?prev.factors:[]).map(f=>[f.n,f.score]));
@@ -621,8 +535,10 @@ function render(host, data){
   const BETTER_BY=0.3;
   const gain=f=>Number.isFinite(prevScore[f.n])?f.score-prevScore[f.n]:null;
   const improved=measured.filter(f=>gain(f)!==null&&gain(f)>=BETTER_BY-1e-9);
-  const sinceLine=prev&&Number.isFinite(prev.overall)&&overall!=null
-    ?`<p class="since-last">${esc(t('sn.since',{date:fmtDay(prev.date),was:prev.overall,now:overall}))}${improved.length?` ${esc(t.n('sn.since.better',improved.length))}`:''}</p>`:'';
+  // Scores stay internal; the report says how many skills got better
+  // (owner, 2026-10-23: no numbers on the report).
+  const sinceLine=prev&&improved.length
+    ?`<p class="since-last">${esc(t('sn.since',{date:fmtDay(prev.date)}))} ${esc(t.n('sn.since.better',improved.length))}</p>`:'';
   const wholePageCrop=c=>{const b=c&&c.bbox,s=c&&c.source_size;
     return Array.isArray(b)&&b.length===4&&Array.isArray(s)&&s.length===2&&b[2]*b[3]>0.8*s[0]*s[1];};
 
@@ -639,26 +555,40 @@ function render(host, data){
 
   /* ---- page 1: "Your writing snapshot" (version C, owner approval
      2026-10-11) -------------------------------------------------------- */
-  const overallBandId=overall==null?null:bandOf(overall/10);
-  const scorePill=overall==null?'':`<span class="sn-score band-${overallBandId}" data-band="${overallBandId}"><b>${overall}</b><small>${esc(t('sn.outof'))} · ${esc(stage(overallBandId))}</small></span>`;
+  // No overall score on the report (owner, 2026-10-23): it is kept for
+  // progress and comparison, never shown.
   const best=sorted.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0]||measured.slice().sort((a,b)=>b.score-a.score||a.n-b.n)[0];
   /* Vidhya's note (owner, 2026-10-14): the page opens the way a teacher
      writes on a child's work. What went well, the one or two skills to
      work on next, a promise to practise, and her score for the page.
      Vidhya is the series' teacher; her picture comes from the host like
      every character. Built only from this report's own scores. */
-  const lcFirst=x=>t.lang==='en'&&x?x.charAt(0).toLowerCase()+x.slice(1):x;
   const goalOf=f=>t.has('goal.'+f.n)?t('goal.'+f.n):nameOn(1,f)+'.';
-  const grows=rowFactors.slice(0,2).map(goalOf);
-  const growText=grows.length>1?t('vt.grow.two',{a:lcFirst(grows[0]),b:lcFirst(grows[1])})
-    :grows.length?t('vt.grow.one',{a:lcFirst(grows[0])}):t('vt.grow.none');
-  const keepText=best?(t.has('keep.title.'+best.n)?t('keep.title.'+best.n):nameOn(1,best)+'.'):'';
+  /* Vidhya's note in words, no scores (owner, 2026-10-23): what the writer
+     is a master at beside what to improve next, as a two-column table.
+     Praise comes only from five skills at Mastering or Strong (1, 5, 7,
+     11, 17: the set #305 proposes for the overall, its
+     scoring._OVERALL_POINTS), so a measurement known to misread a page
+     never praises it. */
+  const COUNTED=[1,5,7,11,17];
+  const mastered=measured.filter(f=>COUNTED.includes(f.n)&&f.score>=7&&!rowFactors.includes(f))
+    .sort((a,b)=>b.score-a.score||a.n-b.n).slice(0,3);
+  const skillOf=n=>measured.find(f=>f.n===n);
+  const clear=skillOf(1), easy=skillOf(18);
+  const opening=clear&&clear.score>=8.5&&easy&&easy.score>=7?t('vt.open.beautiful')
+    :(clear&&clear.score>=7)||(easy&&easy.score>=7)?t('vt.open.nice'):t('vt.open.thanks');
+  const praised=mastered.map(f=>t.has('well.'+f.n)?t('well.'+f.n):t('keep.title.'+f.n));
+  const improve=rowFactors.slice(0,2).map(goalOf);
+  const noteRows=Math.max(praised.length,improve.length);
+  const noteTable=noteRows?`<table class="sn-note-table"><thead><tr><th scope="col">${esc(t('vt.master'))}</th><th scope="col">${esc(t('vt.improve'))}</th></tr></thead>
+      <tbody>${Array.from({length:noteRows},(_,r)=>`<tr><td>${esc(praised[r]||'')}</td><td>${esc(improve[r]||'')}</td></tr>`).join('')}</tbody></table>`
+    :`<p class="sn-grow">${esc(t('vt.grow.none'))}</p>`;
+  const keepN=(mastered[0]||best||{}).n;
   const teacherNote=best?`<div class="sn-teacher">${artImg('teacher','rp-art-teacher')}<div class="sn-note">
       <h2 class="sn-title">${esc(t('sn.title'))}</h2>
-      <p class="sn-keep" data-factor="${best.n}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(t('vt.well',{keep:keepText}))}</p>
-      <p class="sn-grow">${esc(growText)}</p>
-      <p class="sn-promise">${esc(t('vt.promise'))}</p>
-      <div class="sn-note-end">${overall!=null?`<p class="sn-grade">${esc(t('vt.score',{score:overall,stage:stage(overallBandId)}))}</p>`:''}<p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
+      <p class="sn-keep" data-factor="${keepN}"><span class="sn-hello">${esc(writer?t('vt.hello.name',{name:writer}):t('vt.hello'))}</span> ${esc(opening)}</p>
+      ${noteTable}
+      <div class="sn-note-end"><p class="sn-promise">${esc(t('vt.promise'))}</p><p class="sn-sign">${esc(t('vt.sign'))}</p></div></div></div>`
     :`<h2 class="sn-title">${esc(t('sn.title'))}</h2>`;
   // "Look closer": the first two skills to grow; a spelling finding may
   // take the second row.
@@ -694,7 +624,7 @@ function render(host, data){
   };
   const startCard=first?`<div class="sn-start" data-factor="${first.n}"><div class="sn-start-top">${LEAF}<span class="sn-pill">${esc(t('sn.start'))}</span></div>${SPARK}
       <h3>${esc(t.has('goal.'+first.n)?t('goal.'+first.n):nameOn(1,first))}</h3>${stepList(t.has('look.'+first.n)?t('look.'+first.n):'').map(s=>`<p>${esc(s)}</p>`).join('')}
-      <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(first.score.toFixed(1))}/10</span> · ${esc(stage(bandOf(first.score)))}</p>
+      <p class="sn-meta">${esc(nameOn(1,first))} · <span class="sn-band-text band-${bandOf(first.score)}">${esc(stage(bandOf(first.score)))}</span></p>
       <span class="sn-try">${PENCIL}${esc(t('sn.start.try.'+(firstExModel&&t.has('sn.start.try.'+firstExModel.unit)?firstExModel.unit:'row')))}</span></div>`:'';
   const chipList=measured.slice().sort((a,b)=>a.n-b.n);
   /* ---- "What we measured on your page" (owner, 2026-10-13, #137): one
@@ -703,12 +633,15 @@ function render(host, data){
      measurement; scores outside its tier are named, not hidden. Estimates,
      blends and the pen skills are labelled as what they are. ------------ */
   const chipHTML=f=>{const band=bandOf(f.score), g=improved.includes(f);
-    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(f.score.toFixed(1))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better',{gain:gain(f).toFixed(1)}))}">↑</span>`:''}</b></div>`;};
+    return `<div class="sn-chip" data-factor="${f.n}"><span class="sn-ic">${iconSVG(f.n)}</span><span class="sn-cn">${esc(t.has('chip.'+f.n)?t('chip.'+f.n):skillName(f))}</span><b class="band-${band}" data-band="${band}">${esc(stage(band))}${g?`<span class="sn-up" title="${esc(t('sn.chip.better'))}">↑</span>`:''}</b></div>`;};
+  // Strongest first, wherever skills are listed (owner, 2026-10-23).
+  const byScore=ns=>ns.slice().sort((a,b)=>(live(b)?live(b).score:-1)-(live(a)?live(a).score:-1)||a-b);
+  const rowScore=r=>{const v=r.scores.map(live).filter(Boolean).map(f=>f.score);return v.length?v.reduce((x,y)=>x+y,0)/v.length:-1;};
   const ms=data.measurements||{};
   const live=n=>measured.find(f=>f.n===n);
   const scoreChip=n=>{const f=live(n);
     if(f) return chipHTML(f);
-    const why=inkOnly&&!INK_LAYOUT.includes(n)&&!PEN.includes(n)?'m.later':inkOnly&&n===8?'m.passage':free?'m.full':'m.nophoto';
+    const why=inkOnly&&!INK_LAYOUT.includes(n)&&!PEN_SKILLS.includes(n)?'m.later':inkOnly&&n===8?'m.passage':free?'m.full':'m.nophoto';
     return `<div class="sn-lockchip" data-locked="${n}"><span class="sn-cn">${esc(t('chip.'+n))}</span><i>${esc(t(why))}</i></div>`;};
   // A strip of the photo around one region, with drawings on top in
   // processed-image pixels (the photo is drawn at its own size).
@@ -725,6 +658,19 @@ function render(host, data){
   };
   const line=(p,q,cls,sw,dash)=>`<line class="${cls}" x1="${p[0]}" y1="${p[1]}" x2="${q[0]}" y2="${q[1]}" stroke-width="${sw.toFixed(2)}"${dash?` stroke-dasharray="${dash}"`:''}/>`;
   const pad=(b,fx,fy)=>[b[0]-b[2]*fx,b[1]-b[3]*fy,b[0]+b[2]*(1+fx),b[1]+b[3]*(1+fy)];
+  // The child's own ink at a place, cut from the photo (spelling and
+  // grammar findings, #317): never our reading of the child's word.
+  // A place estimated from the share of the line's text (not from the
+  // letters) gets a wider cut, so the word is in it.
+  const inkCut=(b,cls,wide)=>{
+    if(!det||!size) return '';
+    const [W,H]=size, px=Math.max(4,b[2]*(wide?0.45:0.08)), py=Math.max(4,b[3]*0.12);
+    let x0=Math.max(0,b[0]-px), y0=Math.max(0,b[1]-py), x1=Math.min(W,b[0]+b[2]+px), y1=Math.min(H,b[1]+b[3]+py);
+    // A one-letter word (i) still gets a square cut, not a sliver.
+    const need=(y1-y0)-(x1-x0);
+    if(need>0){ x0=Math.max(0,x0-need/2); x1=Math.min(W,x1+need/2); }
+    return `<svg class="stu-ink${cls?' '+cls:''}" viewBox="${x0.toFixed(1)} ${y0.toFixed(1)} ${(x1-x0).toFixed(1)} ${(y1-y0).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(t('stu.lang.ink'))}"><image href="${esc(det)}" x="0" y="0" width="${W}" height="${H}" preserveAspectRatio="none"/></svg>`;
+  };
   const mRows=[];
   // 1. Gaps between words: brackets in the gaps the analyser measured.
   const gaps=((crops[8]||{}).places||[]).filter(p=>p.role==='look'&&p.kind==='gap'&&Array.isArray(p.bbox));
@@ -774,23 +720,23 @@ function render(host, data){
     const said=t(ms.reading.confidence_pct>=70?'m.read.easy':'m.read.hard')+' '+t(hard.length>1?'m.read.circled':hard.length?'m.read.circled.one':'m.read.line');
     mRows.push({key:'read',strip:strip(pad(L.bbox,0.03,0.3),draw),text:said,how:t(hard.length?'m.read.how':'m.read.how.line'),scores:[1,19]});
   }
-  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${r.scores.map(scoreChip).join('')}</div></div>`;
-  const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${ns.map(scoreChip).join('')}</div></div>`;
+  const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${byScore(r.scores).map(scoreChip).join('')}</div></div>`;
+  const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${byScore(ns).map(scoreChip).join('')}</div></div>`;
   const counts=data.pipeline||{};
   const mSub=inkOnly ? t('m.sub.ink',{lines:ms.lines||counts.nLines||0})
     : t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
-  const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${[13,14,15,16].map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
+  const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${PEN_SKILLS.map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
   // The whole map, measurement by measurement, on screen only: what we
   // measure, the scores built from it, and whether a page can show it.
-  const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[2,9,4],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',[13,14,15,16],'pen']];
-  const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>{const f=live(n);return esc(t('chip.'+n))+(f?` <b>${esc(f.score.toFixed(1))}</b>`:'');}).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
+  const TABLE=[['height',[5,6],'yes'],['angle',[7,11],'yes'],['spread',[12,17],'no'],['gaps',[8],'exact'],['edges',[10],'yes'],['confidence',[1,19],'line'],['widths',[9],'no'],['loops',[3],'no'],['blends',[18,20],'no'],['pen',PEN_SKILLS,'pen']];
+  const howTable=`<details class="sn-m-how screen-only" data-html2canvas-ignore="true"><summary>${esc(t('m.table.title'))}</summary><table><thead><tr><th>${esc(t('m.table.what'))}</th><th>${esc(t('m.table.scores'))}</th><th>${esc(t('m.table.shown'))}</th></tr></thead><tbody>${TABLE.map(([k,ns,shown])=>`<tr data-measure="${k}"><td>${esc(t('m.t.'+k))}</td><td>${ns.map(n=>esc(t('chip.'+n))).join(', ')}</td><td>${esc(t('m.shown.'+shown))}</td></tr>`).join('')}</tbody></table></details>`;
   // A score whose measurement row could not be drawn (no photo, or too
   // little to measure) is still shown, never dropped.
   const shownN=new Set([...mRows.flatMap(r=>r.scores),18,20,2,9,4,3,13,14,15,16]);
   const leftover=measured.filter(f=>!shownN.has(f.n)).map(f=>f.n).sort((a,b)=>a-b);
   const measuredHTML=`<div class="sn-h3row"><h3 class="sn-h3">${esc(t('m.title'))}</h3><small>${esc(t('sn.chips.note'))}</small></div>
-      <p class="sn-m-sub">${esc(mSub)}</p>${mRows.map(mRow).join('')}
-      ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[2,9,4,3])}${pen}${howTable}`;
+      <div class="sn-subrow"><p class="sn-m-sub">${esc(mSub)}</p>${langLine}</div>${mRows.slice().sort((a,b)=>rowScore(b)-rowScore(a)).map(mRow).join('')}
+      ${leftover.length?group(t('m.other'),leftover):''}${group(t('m.built'),[18,20])}${group(t('m.est'),[9,3])}${pen}${howTable}`;
   // The first practice: its steps, its example to trace between two guide
   // lines, its self-check and a QR code for the full practice sheet.
   const firstSheet=worksheetFor(first)||rowFactors.map(worksheetFor).find(Boolean)||null;
@@ -800,9 +746,9 @@ function render(host, data){
       <div class="sn-turn" aria-label="${esc(t('sn.turn.aria'))}"><b>${esc(t('sn.turn'))}</b><div class="sn-guide"><span class="md-hand">${esc(firstEx.example||MODEL_WORDS[firstEx.model]||'')}</span></div><div class="sn-guide"></div><p class="sn-chk"><i aria-hidden="true"></i>${esc(firstEx.check)}</p></div>
       ${qr?`<div class="sn-qr" aria-label="${esc(t('sn.qr.alt'))}">${qr}<span>${esc(t('sn.qr'))}</span></div>`:''}</div></div>`:'';
   const cta=`<div class="sn-cta screen-only" data-html2canvas-ignore="true">${firstSheet?`<a class="sn-b1" href="${esc(sheetURL(firstSheet))}" target="_blank" rel="noopener">⇩&nbsp; ${esc(t('sn.download'))}</a>`:''}<a class="sn-b2" href="analyser.html" data-action="new-report">↻&nbsp; ${esc(t('sn.again'))}</a></div>`;
-  const page1Note=[t('sn.note'),spellingStatus,rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
+  const page1Note=[t('sn.note'),rec.printed_lines>0?t.n('note.printed',rec.printed_lines):''].filter(Boolean).join(' ');
   const page1=`<section class="page free-report compact-report snapshot-page snapshot-${tier}" data-screen-label="Your review">
-      <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}${scorePill}</div></div>
+      <div class="sn-top">${brand}<div class="sn-right"><span class="sn-eyebrow">${esc(t('sn.eyebrow'))}</span>${writer?`<span class="sn-writer">${esc(writer)}</span>`:''}</div></div>
       ${teacherNote}${sinceLine}
       ${measured.length?`
       <div class="sn-mid${det?'':' no-photo'}">${zoom()}${startCard}</div>
@@ -850,45 +796,221 @@ function render(host, data){
     const exs=row.exercises, tips=row.tips.map(e=>localEntry(e,t.lang));
     const lastKind=exs.length?exs[exs.length-1].entry.model:'line';
     return `<article class="practice-row coaching-card band-${band}" data-factor="${f.n}">
-      <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(t('row.badge',{score:f.score.toFixed(1),stage:stage(band)}))}</span></div>
+      <div class="pr-skill"><div class="pr-head"><h3>${i+1}. ${esc(nameOn(2,f))}</h3><span class="pr-badge band-${band}">${esc(stage(band))}</span></div>
         ${stagePath(band)}${aboutBlock(f)}${practiceSheet(f)}</div>
       <div class="pr-practice">${exs.map(x=>exerciseBlock(x,f)).join('')||`<p class="pr-steps">${esc(t('row.fallback'))}</p>`}
         <p class="pr-plan">${esc(planText(row.planBand||band,exs.length))}</p>${tips.length?`<div class="pr-tips">${tips.map(tipBlock).join('')}</div>`:''}
         <div class="pr-turn-row"><span class="pr-turn">${esc(t('row.turn'))}</span><div class="writing-lines pr-line" aria-label="${esc(t('row.line.aria'))}">${turnHTML(lastKind)}</div></div></div>
     </article>`;
   };
+  // Page 2's spelling row: the largest pattern's exercise, with the
+  // child's words and the pattern's practice words (owner, 2026-10-24).
+  // Grammar's own ink, fix and rule, in a row's left column.
+  const placeOfFinding=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
+  const inkOne=(f,cls='')=>`<span class="pr-saw-one${cls}">${(p=>p?inkCut(p.bbox,'',p.placed==='estimated'):'')(placeOfFinding(f))}<span class="pr-saw-arrow" aria-hidden="true">→</span><b class="pr-saw-right">${esc(f.suggestion)}</b></span>`;
+  const gramRules=(extra='')=>{
+    const rules=[...new Set(grammar.map(f=>f.rule))].filter(r=>t.has('stu.gr.'+r));
+    return rules.length||extra?`<ul class="pr-gr-rules">${rules.map(r=>`<li>${esc(t('stu.gr.'+r))}</li>`).join('')}${extra?`<li>${esc(extra)}</li>`:''}</ul>`:'';
+  };
   const spellingRow=n=>{
-    const f=firstSpelling, area=cat&&cat.spelling;
-    const ex=area&&area.exercises&&area.exercises[0];
+    // With grammar too, one "Spelling and grammar" row keeps the report on
+    // two A4 sheets (owner, 2026-10-25).
+    const both=grammar.length>0;
+    const top=spellPatterns[0], area=cat&&cat.spelling;
+    const exId=top&&top.entry&&top.entry.exercise;
+    const ex=area&&area.exercises&&(area.exercises.find(e=>e.id===exId)||area.exercises[0]);
     const tips=area?rotate(area.tips||[],(lastPractice.tips||{}).spelling,lim.tips_max):[];
     if(ex) printed.exercises.spelling=[ex.id];
     printed.tips.spelling=tips.map(e=>e.id);
     const d=dose('good');
-    return `<article class="practice-row coaching-card spelling-row" data-factor="spelling">
-      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('spell.title'))}</h3><span class="pr-badge spelling">${esc(t('spell.badge'))}</span></div>
-        <p class="pr-saw">${t.html('spell.saw',{word:`<b>${esc(f.word)}</b>`,suggestion:`<b>${esc(f.suggestion)}</b>`})}</p></div>
-      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:f.suggestion}},{n:1,band:'strong'}):''}
+    const shown=(top?top.found:spelling).slice(0,2);
+    const others=spellPatterns.slice(1).filter(g=>g.name);
+    const spellTitle=top&&top.name?t('spell.title.pattern',{pattern:top.name}):t('spell.title');
+    return `<article class="practice-row coaching-card spelling-row${both?' with-grammar':''}" data-factor="spelling" data-pattern="${esc(top?top.id:'other')}">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(both?t('lang.title'):spellTitle)}</h3><span class="pr-badge spelling">${esc(both?t('lang.and',{a:t.n('lang.words',spelling.length),b:t.n('lang.sentences',grammar.length)}):t.n('spell.badge',spelling.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${shown.map(f=>inkOne(f)).join('')}${both?grammar.slice(0,2).map(f=>inkOne(f,' pr-gr-one')).join(''):''}</div>
+        <p class="pr-saw-why">${both?`<b>${esc(spellTitle)}.</b> `:''}${esc(top&&top.rule?top.rule:t('stu.sp.'+firstSpelling.kind))}</p>
+        ${top&&top.words.length?`<p class="pr-saw-words">${esc(t('spell.words'))} <span class="pr-saw-list">${esc(top.words.join(', '))}</span></p>`:''}
+        ${others.length?`<p class="pr-saw-also">${esc(t('spell.also',{list:others.map(g=>g.name).join(', ')}))}</p>`:''}
+        ${both?gramRules(t('gram.also')):''}</div>
+      <div class="pr-practice">${ex?exerciseBlock({entry:{...ex,example:top?top.words.slice(0,2).join(' '):firstSpelling.suggestion}},{n:1,band:'strong'}):''}
         <p class="pr-plan">${esc(t('spell.plan',{tries:d?d.tries:5,days:d?d.days:7}))}</p>${tips.length?`<div class="pr-tips">${tips.map(e=>tipBlock(localEntry(e,t.lang))).join('')}</div>`:''}<div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
     </article>`;
   };
-  const rows=chosen.rows.map(skillRow).join('')+(firstSpelling?spellingRow(chosen.rows.length+1):'');
-  const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>a.score-b.score||a.n-b.n);
+  // Grammar beside spelling (owner, 2026-10-25): the page's own ink for
+  // each sentence, the fix, one plain rule each, and "Read it aloud".
+  const grammarRow=n=>{
+    const fixes=grammar.slice(0,3).map(f=>f.suggestion);
+    const ex={id:'gram.read-aloud',title:t('gram.ex.title'),steps:t('gram.ex.steps'),unit:'sentence',model:'trace',example:fixes.slice(0,2).join('. ')+'.'};
+    const d=dose('good');
+    return `<article class="practice-row coaching-card grammar-row" data-factor="grammar">
+      <div class="pr-skill"><div class="pr-head"><h3>${n}. ${esc(t('gram.title'))}</h3><span class="pr-badge spelling">${esc(t.n('gram.badge',grammar.length))}</span></div>
+        <div class="pr-saw pr-saw-ink">${grammar.slice(0,3).map(f=>inkOne(f)).join('')}</div>
+        ${gramRules()}</div>
+      <div class="pr-practice">${exerciseBlock({entry:ex},{n:1,band:'strong'})}
+        <p class="pr-plan">${esc(t('gram.plan',{tries:3,days:d?Math.min(d.days,5):5}))}</p><div class="writing-lines pr-line" aria-label="${esc(t('spell.line.aria'))}">${turnHTML('line')}</div></div>
+    </article>`;
+  };
+  const rows=chosen.rows.map(skillRow).join('')
+    +(firstSpelling?spellingRow(chosen.rows.length+1):grammar.length?grammarRow(chosen.rows.length+1):'');
+  const others=measured.filter(f=>!rowFactors.includes(f)).sort((a,b)=>b.score-a.score||a.n-b.n);
   const praise=f=>{const b=bandOf(f.score);
     if([18,20].includes(f.n)&&(b==='focus'||b==='dev')) return t('other.composite');
     return b==='strong'?t('other.strong'):b==='good'?t('other.good'):'';};
   const locked=Math.max(0,20-analysis.results.length);
-  const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),score:f.score.toFixed(1),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
+  const otherBox=others.length||free?`<div class="other-skills">${others.length?`<p class="os-list"><b>${esc(t('other.title'))}</b> ${others.map(f=>`<span data-factor="${f.n}">${esc(t('other.item',{skill:nameOn(2,f),stage:stage(bandOf(f.score))}))}${praise(f)?': '+esc(praise(f)):''}</span>`).join(' · ')}</p>`:''}
       ${free&&locked?`<p class="pro-note"><b>${esc(t('pro.ask'))}</b> ${esc(t('pro.more',{n:locked}))}</p>`:''}</div>`:'';
   // When writing feels hard: encouragement and where to read more, never a
   // diagnosis or a promise (owner, 2026-10-11).
   const hardURL=`${sheetBase()}/signs-child-needs-handwriting-help.html`;
   const hardNote=`<div class="p2-hard"><p><b>${esc(t('hard.title'))}</b> ${esc(t('hard.text'))} ${esc(t('hard.more'))} <a href="${esc(hardURL)}" target="_blank" rel="noopener">${SITE}/signs-child-needs-handwriting-help</a></p></div>`;
+  // Cursive sheets (owner, 2026-11-03, 2026-11-04): the letter style the
+  // family picked on the check page leads; on Not sure, a page written
+  // joined, or joined in places, gets the sheets of the style it looks
+  // like. A style's sheets are its own: one with none yet says so and
+  // points to our team, never to another style's sheets. The links go to
+  // the shop pages, where the family downloads them (owner: the shop gets
+  // the visit), never straight to the PDFs.
+  const style=analysis.styleProfile;
+  const verdict=style&&style.available?style.verdict:null;
+  const joinedPage=verdict==='cursive'||verdict==='mixed';
+  // A report from before the style guess (#350) carries no letterStyle:
+  // a joined page then gets the looped sheets as before, with no lead.
+  const LOOPED={style:'looped',guessed:true,legacy:true,sheets:['cursive-lesson-1-basic-strokes','cursive-handwriting-worksheets','cursive-connecting-letters-worksheets']};
+  const ls=style&&style.letterStyle&&style.letterStyle.available?style.letterStyle:(joinedPage?LOOPED:null);
+  const picked=ls&&!ls.guessed?ls:null;
+  const lsCursive=ls&&ls.style!=='print';
+  const showStyle=latin&&lsCursive&&(picked||joinedPage);
+  const SHOP='shop.vahinitech.com';
+  const SHEET_KEYS={'cursive-lesson-1-basic-strokes':'cursive.lesson1','cursive-handwriting-worksheets':'cursive.letters','cursive-connecting-letters-worksheets':'cursive.joins'};
+  const sheetName=slug=>SHEET_KEYS[slug]?t(SHEET_KEYS[slug]):slug.replace(/-/g,' ');
+  const shopLink=slug=>`<a href="${esc(`https://${SHOP}/products/${slug}/`)}" target="_blank" rel="noopener">${esc(sheetName(slug))}</a>`;
+  const styleName=l=>`<span class="p2-style-name"${l.font?` style="font-family:'${esc(l.font)}',cursive"`:''}>${esc(l.name||l.style)}</span>`;
+  let cursiveNote='';
+  if(showStyle){
+    const sheets=(ls.sheets||[]).filter(x=>/^[a-z0-9-]{2,80}$/.test(x));
+    const lead=picked
+      ?`<b>${esc(t('cursive.school'))}</b> ${styleName(ls)}.${verdict?' '+esc(t('cursive.page.'+verdict)):''}`
+      :`<b>${esc(t('cursive.looks'))}</b> ${styleName(ls)}. ${esc(t('cursive.pick'))}`;
+    const body=sheets.length
+      ?`<b>${esc(t('cursive.title'))}</b> ${sheets.map(shopLink).join(' · ')}. ${esc(t('cursive.where'))} ${SHOP}`
+      :`${esc(t('cursive.making'))} ${esc(t('cursive.ask'))} <a href="${esc(sheetBase()+'/reach.html?topic=handwriting')}" target="_blank" rel="noopener">${SITE}/reach</a>`;
+    cursiveNote=`<div class="p2-cursive" data-cursive-sheets data-letter-style="${esc(ls.style)}">${ls.legacy?'':`<p>${lead}</p>`}<p>${body}</p></div>`;
+  }
   const closing=`<div class="p2-close">${artImg('encourage','rp-art-encourage')}<p><b>${esc(t('close.cheer'))}</b> ${esc(t('close.next'))}</p></div>`;
   const page2=`<section class="page free-report compact-report practice-page practice-${tier}" data-screen-label="Practise and improve">${head(t('head.page2'))}
       <h2>${esc(t('p2.title'))}</h2><p class="p2-sub">${esc(t('p2.sub'))}</p>
-      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${hardNote}${closing}`:empty}
+      ${rows?`<div class="practice-wrap"><div class="pr-cols" aria-hidden="true"><span>${esc(t('p2.cols.skill'))}</span><span>${esc(t('p2.cols.how'))}</span></div><div class="practice-table">${rows}</div></div>${otherBox}${cursiveNote}${hardNote}${closing}`:empty}
       ${foot(2)}</section>`;
-  host.innerHTML=page1+page2;
+  /* ---- the student view (owner, 2026-10-23, option A) ------------------
+     One screen above the two pages, for a student reading alone: one
+     strength, one thing to practise and the five free skills, with no score
+     and no skill names. Every sentence sits beside its proof, drawn from
+     what the server measured on this page: the "keep" and "look" places of
+     each skill (vision/marked_places.py) and the page measurements. A skill
+     with no proof says so instead of making a claim. The pages stay as they
+     are, folded behind "Details for your teacher" on screen; print and the
+     shared PDF are unchanged. ---------------------------------------- */
+  const student=(data.audience||audience())==='student';
+  const studentCard=()=>{
+    const FIVE=[1,5,7,8,18];
+    const live5=measured.filter(f=>FIVE.includes(f.n));
+    const placesOf=(n,role)=>((crops[n]||{}).places||[]).filter(p=>p.role===role&&Array.isArray(p.bbox)&&p.bbox.length===4);
+    const S=ms.size&&ms.size.line, L=ms.slope&&ms.slope.line, R=ms.reading&&ms.reading.line;
+    const under=(b,cls,dash)=>vw=>line([b[0],b[1]+b[3]],[b[0]+b[2],b[1]+b[3]],cls,vw*0.008,dash);
+    const boxes=(list,cls)=>vw=>list.map(q=>{const [x,y,w,h]=q.bbox;
+      return `<rect class="${cls}" x="${x}" y="${y}" width="${w}" height="${h}" rx="${(vw*0.004).toFixed(1)}" stroke-width="${(vw*0.008).toFixed(2)}"/>`;}).join('');
+    const gapRegion=g=>[g[0]-0.16*size[0],g[1]-g[3]*0.15,g[0]+g[2]+0.16*size[0],g[1]+g[3]*1.15];
+    const band=vw=>line(S.midline[0],S.midline[1],'sn-m-band',vw*0.007)+line(S.baseline[0],S.baseline[1],'sn-m-band',vw*0.007);
+    const rings=(list,vw)=>list.map(l=>{const b=l.bbox;
+      return `<ellipse class="sn-m-read sn-m-ring" cx="${b[0]+b[2]/2}" cy="${b[1]+b[3]/2}" rx="${(Math.max(b[2],b[3]*0.32)*0.85).toFixed(1)}" ry="${(b[3]*0.55).toFixed(1)}" stroke-width="${(vw*0.007).toFixed(2)}"/>`;}).join('');
+    const ok=(html,say,extra)=>html?{strip:html,say,...(extra||{})}:null;
+    // What this page shows well, skill by skill: the server's "keep" place.
+    const keepProof={
+      1:()=>{const q=placesOf(1,'keep')[0]; return q&&ok(strip(pad(q.bbox,0.03,0.3),under(q.bbox,'sn-m-band')),'stu.keep.1');},
+      5:()=>S&&placesOf(5,'keep').length?ok(strip(pad(S.bbox,0.02,0.3),band),'stu.keep.5'):null,
+      7:()=>{const q=placesOf(7,'keep')[0]; return q&&ok(strip(pad(q.bbox,0.04,0.35),under(q.bbox,'sn-m-band')),'stu.keep.7');},
+      8:()=>{const q=placesOf(8,'keep')[0]; return q&&size&&ok(strip(gapRegion(q.bbox),boxes([q],'sn-m-band')),'stu.keep.8');},
+    };
+    // What to look at: the server's "look" places and the page measurements.
+    const lookProof={
+      1:()=>{const hard=R&&Array.isArray(R.letters)?R.letters.filter(l=>Array.isArray(l.bbox)&&l.bbox.length===4).slice(0,2):[];
+        return hard.length?ok(strip(pad(R.bbox,0.03,0.3),vw=>rings(hard,vw)),'stu.see.1',{todo:'stu.do.1'}):null;},
+      5:()=>S?ok(strip(pad(S.bbox,0.02,0.3),band),'stu.do.5'):null,
+      7:()=>{if(!L||!Array.isArray(L.baseline)) return null; const [a,b]=L.baseline;
+        return ok(strip(pad(L.bbox,0.04,0.35),vw=>line(a,[b[0],a[1]],'sn-m-level',vw*0.006,'8 6')+line(a,b,'sn-m-slope',vw*0.01)),b[1]<a[1]?'stu.see.7.up':'stu.see.7.down',{todo:'stu.do.7'});},
+      8:()=>{const gaps=placesOf(8,'look').filter(q=>q.kind==='gap'); if(!gaps.length||!size) return null;
+        const reg=gapRegion(gaps[0].bbox), inside=gaps.filter(q=>q.bbox[1]<reg[3]&&q.bbox[1]+q.bbox[3]>reg[1]);
+        const say=inside.length>1?'stu.see.8.both':'stu.see.8.'+(inside[0].direction==='narrower'?'narrower':'wider');
+        return ok(strip(reg,boxes(inside,'sn-m-gap')),say,{todo:'stu.do.8'});},
+      18:()=>R?ok(strip(pad(R.bbox,0.03,0.3),under(R.bbox,'sn-m-read','7 5')),'stu.see.18'):null,
+    };
+    const proofOf=(f,role)=>{const fn=(role==='keep'?keepProof:lookProof)[f.n]; try{ return fn?fn():null; }catch(_e){ return null; }};
+    // One skill to practise: the lowest of the five below Strong, as on page 1.
+    const now=live5.filter(f=>f.n!==18&&f.score<8.5).sort((a,b)=>a.score-b.score||a.n-b.n)[0]||null;
+    const state=f=>f===now?'now':f.n===18?'grow':f.score>=7?'keep':'later';
+    const strong=live5.filter(f=>state(f)==='keep').sort((a,b)=>b.score-a.score||a.n-b.n);
+    const shown=strong.map(f=>[f,proofOf(f,'keep')]).find(([,pr])=>pr);
+    const ICON={keep:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>', now:PENCIL,
+      later:'<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/></svg>',
+      grow:'<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17l5-5 4 4 5-7"/><path d="M15 9h4v4"/></svg>'};
+    const mark=(st,label)=>`<span class="stu-mk stu-mk-${st}">${ICON[st]}${label?`<span>${esc(t('stu.tag.'+st))}</span>`:''}</span>`;
+    const proofBox=pr=>pr?`<div class="stu-proof">${pr.strip}</div>`:'';
+    const greet=writer?t('stu.greet.name',{name:writer}):t('stu.greet');
+    const greetCard=`<div class="stu-card stu-greet"><div class="stu-who">${artImg('teacher','stu-art')}<p class="stu-say">${esc(greet)}</p></div>
+      ${shown?`<p>${esc(t(shown[1].say))}</p>${proofBox(shown[1])}`:`<p>${esc(t(now?'stu.nostrength':'stu.allgood'))}</p>`}</div>`;
+    let workCard='';
+    if(now){
+      const pr=proofOf(now,'look'), d=dose(bandOf(now.score)), sheet=worksheetFor(now);
+      const plan=!d?'':d.per==='week'?t('stu.plan.week',{tries:d.tries}):d.days===7?t('stu.plan',{tries:d.tries}):t('stu.plan.days',{tries:d.tries,days:d.days});
+      const todo=pr?(pr.todo||''):'stu.do.'+now.n;
+      workCard=`<div class="stu-card stu-work" data-factor="${now.n}"><span class="stu-pill">${PENCIL}<span>${esc(t('stu.practise'))}</span></span>
+        ${proofBox(pr)}<p>${esc(t(pr?pr.say:'stu.noproof'))}${todo&&t.has(todo)?` ${esc(t(todo))}`:''}</p>
+        ${t.has('stu.why.'+now.n)?`<p class="stu-why">${esc(t('stu.why.'+now.n))}</p>`:''}
+        ${plan?`<div class="stu-plan">${artImg('practise','stu-plan-art')}<span>${esc(plan)}</span></div>`:''}
+        ${sheet?`<a class="stu-btn" href="${esc(sheetURL(sheet))}" target="_blank" rel="noopener">${esc(t('stu.sheet'))}</a>`:''}
+        <p class="stu-again">${esc(t('stu.again'))}</p></div>`;
+    }
+    const order={keep:0,now:1,later:2,grow:3};
+    const rowsOf=live5.slice().sort((a,b)=>order[state(a)]-order[state(b)]||(state(a)==='keep'?b.score-a.score:a.score-b.score)||a.n-b.n);
+    const fiveRows=rowsOf.map(f=>{const st=state(f), pr=proofOf(f,st==='keep'?'keep':'look');
+      return `<li class="stu-row stu-row-${st}" data-factor="${f.n}" data-state="${st}">${mark(st,false)}<div class="stu-row-body"><p>${esc(t(pr?pr.say:'stu.noproof'))} ${mark(st,true)}</p>${proofBox(pr)}</div></li>`;}).join('');
+    const fiveCard=`<div class="stu-card stu-five"><h2>${esc(t.n('stu.five',live5.length))}</h2><ul>${fiveRows}</ul></div>`;
+    // Words and sentences to check (#317), first on the screen (owner,
+    // 2026-10-24): only what the server's
+    // language check found, each shown as the child's own ink at its
+    // place and the word to write. Never our reading of the child's word,
+    // which can be off by a letter, and never "no mistakes": nothing
+    // found, or a page not checked, shows no card.
+    const lgSec=data.language&&data.language.checked?data.language:null;
+    const lgPlace=f=>(f.places||[]).find(p=>Array.isArray(p.bbox)&&p.bbox.length===4);
+    const LG_ARROW='<svg class="stu-arrow" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15"/><path d="M13 6l6 6-6 6"/></svg>';
+    // One compact card: words beside sentences, each finding on one line
+    // (the child's ink, an arrow, the word to write with its reason under
+    // it), a one-line tip under each. The ink is the proof, so no strip.
+    const lgFix=(f,why)=>{const p=lgPlace(f);
+      return `<li class="stu-fix">${p?inkCut(p.bbox,'',p.placed==='estimated'):''}${LG_ARROW}<span class="stu-fix-text"><span class="stu-right">${esc(f.suggestion)}</span><span class="stu-fix-why">${esc(why)}</span></span></li>`;};
+    const lgTip=key=>`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(t(key))}</span></p>`;
+    let langCards='';
+    if(lgSec){
+      const words=(lgSec.spelling||[]).slice(0,3), sentences=(lgSec.grammar||[]).slice(0,3);
+      const copied=words.some(f=>f.against==='sentence');
+      const wordPart=words.length?`<div class="stu-lang-sec stu-words" data-lang="spelling"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.sp.pill'))}</span>${copied?`<span class="stu-lang-note">${esc(t('stu.sp.copied'))}</span>`:''}</div>
+        <ul class="stu-fixes">${words.map(f=>{const g=spellPatterns.find(x=>x.found.includes(f));
+          return lgFix(f,g&&g.name?g.name:t('stu.sp.'+f.kind));}).join('')}</ul>
+        ${spellPatterns.some(g=>g.name)?`<div class="stu-patterns"><p class="stu-patterns-head">${esc(t('stu.sp.patterns'))}</p><ul>${spellPatterns.slice(0,2).filter(g=>g.name).map(g=>`<li data-pattern="${esc(g.id)}"><b>${esc(g.name)}:</b> <span class="stu-pattern-words">${esc(g.words.join(', '))}</span></li>`).join('')}</ul></div>`:''}
+        ${spellPatterns[0]&&spellPatterns[0].rule?`<p class="stu-tip">${artImg('tip','stu-tip-art')}<span>${esc(spellPatterns[0].rule)}</span></p>`:lgTip('stu.sp.tip')}</div>`:'';
+      const sentencePart=sentences.length?`<div class="stu-lang-sec stu-sentences" data-lang="grammar"><div class="stu-lang-head"><span class="stu-pill stu-pill-lang">${esc(t('stu.gr.pill'))}</span></div>
+        <ul class="stu-fixes">${sentences.map(f=>lgFix(f,t('stu.gr.'+f.rule))).join('')}</ul>${lgTip('stu.gr.tip')}</div>`:'';
+      if(wordPart||sentencePart) langCards=`<div class="stu-card stu-lang">${wordPart}${sentencePart}</div>`;
+    }
+    const more=`<button type="button" class="stu-more" aria-expanded="false" data-open="${esc(t('stu.teacher.hide'))}" data-closed="${esc(t('stu.teacher'))}">${esc(t('stu.teacher'))}</button>`;
+    return `<section class="stu" aria-label="${esc(t('stu.label'))}" data-html2canvas-ignore="true">${langCards}<div class="stu-main${workCard?'':' stu-main-one'}">${greetCard}${workCard}${fiveCard}</div>${more}</section>`;
+  };
+  host.classList.toggle('stu-view',student);
+  host.classList.toggle('stu-folded',student);
+  host.innerHTML=(student?studentCard():'')+page1+page2;
+  if(student) wireStudent(host);
   // A PDF made for sharing showed the report as it was: make it again.
   if(window.VahiniReportShare) VahiniReportShare.invalidate();
   wirePrintFit(host);
@@ -926,12 +1048,29 @@ const FIT_SLACK_PX = 6;
    then the "why" sentence, then the win box, and mark the row with how far
    it went (data-trim). Only where the two columns sit side by side. */
 const TRIM_STEPS = ['more', 'why', 'win'];
+/* The spelling row (#317) follows the same rule: the other patterns go
+   first, then the practice words, then the pattern's rule. The grammar row
+   drops its rules. */
+const SPELL_TRIM_STEPS = ['also', 'words', 'rule'];
+const LANG_TRIM_STEPS = ['also', 'words', 'rules', 'rule', 'gram2'];   // gram2: the second sentence's ink
+const GRAMMAR_TRIM_STEPS = ['rules'];
 function trimSkillColumns(host){
+  // The student view folds the pages on screen (display:none), where no row
+  // can be measured. Open them for the measurement only, in this same task,
+  // so nothing is painted open and page 2 trims as in today's report.
+  const hosts = host && host.classList ? [host] : [...document.querySelectorAll('.report-host')];
+  const opened = hosts.filter(h=>h.classList.contains('stu-folded') && !h.classList.contains('stu-printing'));
+  opened.forEach(h=>h.classList.add('stu-printing'));
+  try{ trimRows(host); }finally{ opened.forEach(h=>h.classList.remove('stu-printing')); }
+}
+function trimRows(host){
   (host || document).querySelectorAll('.practice-row').forEach(row=>{
-    TRIM_STEPS.forEach(s=>row.classList.remove('trim-' + s));
+    const spell = row.classList.contains('spelling-row'), gram = row.classList.contains('grammar-row');
+    const steps = spell ? (row.classList.contains('with-grammar') ? LANG_TRIM_STEPS : SPELL_TRIM_STEPS) : gram ? GRAMMAR_TRIM_STEPS : TRIM_STEPS;
+    steps.forEach(s=>row.classList.remove('trim-' + s));
     row.removeAttribute('data-trim');
     const left = row.querySelector('.pr-skill'), right = row.querySelector('.pr-practice');
-    if (!left || !right || !left.querySelector('.pr-about')) return;
+    if (!left || !right || (!spell && !gram && !left.querySelector('.pr-about'))) return;
     if (getComputedStyle(row).gridTemplateColumns.split(' ').length < 2) return;
     const tall = ()=>{
       left.style.alignSelf = right.style.alignSelf = 'start';
@@ -939,7 +1078,7 @@ function trimSkillColumns(host){
       left.style.alignSelf = right.style.alignSelf = '';
       return over;
     };
-    for (const step of TRIM_STEPS){
+    for (const step of steps){
       if (!tall()) break;
       row.classList.add('trim-' + step);
       row.setAttribute('data-trim', step);
@@ -947,6 +1086,7 @@ function trimSkillColumns(host){
   });
 }
 function fitPrintPages(host){
+  host.classList.add('stu-printing');
   fillReportArt(host);
   trimSkillColumns(host);
   const pxPerMM = 96/25.4;
@@ -984,6 +1124,7 @@ function fitPrintPages(host){
   });
 }
 function unfitPrintPages(host){
+  host.classList.remove('stu-printing');
   host.querySelectorAll('section.page').forEach(p=>{
     p.style.zoom=''; p.style.width=''; p.style.minHeight='';
   });
@@ -999,5 +1140,5 @@ function wirePrintFit(host){
 }
 
 if (document.readyState !== 'complete') window.addEventListener('load', ()=>fillReportArt(document), { once:true });
-global.VahiniReport = { render, rerender, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','page']) };
+global.VahiniReport = { render, rerender, audience, setAudience, fitPrintPages, unfitPrintPages, trimSkillColumns, classificationPanels, applyPenDynamics, fillReportArt, modelHTML, stepList, MODEL_KINDS: Object.keys(MODEL_WORDS).concat(['margin','waves','ovals','push-pulls','page']) };
 })(window);

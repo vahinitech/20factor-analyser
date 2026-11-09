@@ -17,8 +17,8 @@
 
 import numpy as np
 
-import perf
-from plain_groups import build_coach_view, build_plain_groups
+from server import perf
+from report.plain_groups import build_coach_view, build_plain_groups
 from scoring_parts import (
     advisory,
     availability,
@@ -40,16 +40,27 @@ from scoring_parts.features import (
     _stroke_features,
     cv2,
 )
+from scoring_parts.reading import (
+    TANGLE_FULL,
+    TANGLE_POINTS,
+    TANGLE_START,
+    _reading_features,
+)
 from scoring_parts.page import (
     _detilted_left_x,
     _group_lines_by_rows,
     _page_tilt_degrees,
 )
 from scoring_parts.results import AnalysisResult, FactorScore, SectionScore
-from scoring_parts.spatial import LETTER_GAP_SCALE, WAVE_SCALE
+from scoring_parts.spatial import (
+    LETTER_GAP_SCALE,
+    WAVE_SCALE,
+    WORD_GAP_SCALE,
+)
 from scoring_parts.stats import _band, _clamp10, _cv, _std, mean
 from scoring_parts.structure import BOWL_FULL
 from scoring_parts.style import SLANT_SCALE
+from styles import letter_styles
 
 __all__ = [
     "AnalysisResult",
@@ -61,7 +72,11 @@ __all__ = [
     "SIZE_OFF",
     "SLANT_SCALE",
     "SectionScore",
+    "TANGLE_FULL",
+    "TANGLE_POINTS",
+    "TANGLE_START",
     "WAVE_SCALE",
+    "WORD_GAP_SCALE",
     "WORD_LETTERS",
     "_MIN_WORD_GAPS",
     "_UNMEASURED_REASONS",
@@ -73,6 +88,7 @@ __all__ = [
     "_group_lines_by_rows",
     "_ink_features",
     "_page_tilt_degrees",
+    "_reading_features",
     "_score_factor_map",
     "_std",
     "_stroke_features",
@@ -108,11 +124,36 @@ _SECTIONS = [
     },
 ]
 
+# The overall score out of 100, as points per factor (owner, 23 October
+# 2026, #304): only the five measurements that hold up on neat photos of
+# real pages count. The other factors are still scored and shown as
+# practice findings; each comes back into the overall once it passes the
+# neat-page test in docs/history/neat-pages-score-2026-10-23.md. A factor
+# not measured on a page is left out and the rest are scaled to 100.
+_OVERALL_POINTS = {1: 40, 7: 20, 5: 20, 11: 10, 17: 10}
+# Size Consistency counts in the overall only when measured on at least
+# this many words (or letter groups): from 3 words its score was 2 or
+# more points off the page's own in 20% of draws, from 10 in 8% (owner,
+# 23 October 2026, #305). It is still scored and shown below that.
+_OVERALL_MIN_SIZE_WORDS = 10
+
 _FACTOR_META = {
-    1: ("structure", "Letter Formation Accuracy", "shape regularity proxy"),
-    2: ("structure", "Stroke Order Consistency", "stroke order proxy"),
+    1: (
+        "structure",
+        "Letter Formation Accuracy",
+        "word-by-word reading confidence and tangled-word ink check",
+    ),
+    2: (
+        "structure",
+        "Stroke Order Consistency",
+        "stroke order, recorded by the sensor pen",
+    ),
     3: ("structure", "Loop Closure", "loop-bearing character consistency"),
-    4: ("structure", "Line Quality (Smoothness)", "stroke smoothness proxy"),
+    4: (
+        "structure",
+        "Line Quality (Smoothness)",
+        "stroke smoothness, recorded by the sensor pen",
+    ),
     5: ("structure", "Size Consistency", "letter-height consistency"),
     6: ("structure", "Ascender / Descender Control", "zone balance"),
     7: ("spatial", "Baseline Alignment", "baseline drift"),
@@ -138,8 +179,16 @@ _FACTOR_META = {
     ),
     16: ("dynamics", "Pen Lift Frequency", "pen-lift proxy from segmentation"),
     17: ("style", "Slant Consistency", "slant variation"),
-    18: ("style", "Legibility Score", "composite readability"),
-    19: ("style", "Character Distinction", "character separability proxy"),
+    18: (
+        "style",
+        "Legibility Score",
+        "reading confidence blended with shape, size, spacing and line",
+    ),
+    19: (
+        "style",
+        "Character Distinction",
+        "word-by-word reading confidence",
+    ),
     20: ("style", "Overall Neatness", "layout neatness composite"),
 }
 
@@ -267,16 +316,29 @@ def _score_factor_map(fx):
 
 # The features each formula reads, reported in its scoring_inputs.
 _INPUT_FEATURES = {
-    1: ("avg_score", "height_cv"),
+    1: (
+        "reading",
+        "conf_low",
+        "words_read",
+        "avg_score",
+        "height_cv",
+        "tangle_worst",
+        "tangle_points",
+    ),
     2: ("char_w_cv", "avg_score"),
-    3: ("bowl_share", "loop_ratio"),
+    3: ("bowl_share", "bowl_letters"),
     4: ("width_cv",),
     5: ("size_cv", "words_off_size"),
     6: ("tall_ratio",),
     7: ("line_slope_abs", "words_off_line"),
-    8: ("word_gap_cv", "word_gap_count"),
-    9: ("letter_gap_cv", "char_w_cv"),
-    10: ("left_cv",),
+    8: ("word_gap_spread", "word_gaps_odd", "word_gap_count"),
+    9: (
+        "letter_gap_spread",
+        "letter_gaps_odd",
+        "words_spaced_off",
+        "char_w_cv",
+    ),
+    10: ("left_spread", "margin_rows"),
     11: ("line_slope_abs", "line_wave"),
     12: ("line_slope_std",),
     13: ("width_cv",),
@@ -284,8 +346,8 @@ _INPUT_FEATURES = {
     15: ("n_chars", "n_words"),
     16: ("char_w_cv",),
     17: ("slant_std", "line_slope_std"),
-    18: (),
-    19: ("avg_score", "digits_ratio"),
+    18: ("reading",),
+    19: ("reading", "conf_low", "words_read"),
     20: (),
 }
 
@@ -305,13 +367,15 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
     scores = _score_factor_map(fx)
     checks = advisory.run_checks(arr, lines)
     zone_based = advisory.apply_zone_score(checks["zones"], scores)
-    supplied = availability.page_supplies(lines, fx, zone_based)
+    supplied = availability.page_supplies(
+        lines, fx, zone_based, checks["style"]
+    )
     basis = _based_on(fx)
     results = [
         _factor_result(n, fx, scores, supplied, basis, checks, zone_based)
         for n in range(1, 21)
     ]
-    sections, overall = _section_scores(results)
+    sections, overall = _section_scores(results, _left_out(fx))
     measured_results = [r for r in results if not r.unmeasured]
     ranked = sorted(measured_results, key=lambda r: float(r.score))
     top_weak = ranked[:3]
@@ -342,18 +406,29 @@ def _analysis(arr, lines, fx) -> AnalysisResult:
         baseline_drift=baseline_drift,
         zone_profile=zone_profile,
         tbar_profile=advisory.profile(checks["tbars"]),
-        style_profile=advisory.profile(checks["style"]),
+        style_profile=_style_profile(checks["style"], fx),
         coach_tips=coach_tips,
         tip_pillars=tip_pillars,
     )
 
 
+def _style_profile(style_check, fx):
+    """The style check as the report carries it, with the letter-style
+    guess for "Not sure" (#350). The guess changes no score."""
+    out = dict(advisory.profile(style_check))
+    if out.get("available"):
+        out["letterStyle"] = letter_styles.guess(
+            style_check, fx.get("slant_mean")
+        )
+    return out
+
+
 def _based_on(fx):
     """What each factor's measurement counted, for its basedOn line."""
     return {
-        1: f"{fx['n_chars']} letters",
+        1: f"{fx['n_words']} words",
         2: f"{fx['n_words']} words",
-        3: f"{fx['n_chars']} letters",
+        3: f"{fx.get('bowl_letters', 0)} letters with a bowl",
         4: f"{fx['n_lines']} lines",
         5: (
             f"{fx['size_count']} {fx['size_basis']}"
@@ -373,7 +448,7 @@ def _based_on(fx):
         16: f"{fx['n_words']} words",
         17: f"{fx['n_lines']} lines",
         18: f"{fx['n_lines']} lines",
-        19: f"{fx['n_chars']} letters",
+        19: f"{fx['n_words']} words",
         20: f"{fx['n_lines']} lines",
     }
 
@@ -395,13 +470,25 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
         score = round(float(scores.get(n, 0.0)), 1)
         value = f"{round(score * 10):.0f}%"
         evidence = f"Server-side OCR/layout heuristic based on {detail}."
+        if n == 3:
+            evidence = (
+                f"{fx['bowl_closed']} of {fx['bowl_letters']} letters "
+                "with a bowl (a, b, d, e, g, o, p, q) have it closed in "
+                "the ink."
+            )
     else:
         score = 0.0
         value = "Not measured"
-        evidence = availability.unmeasured_evidence(missing_kind)
+        evidence = availability.unmeasured_evidence(missing_kind, n)
     evidence = advisory.factor_evidence(n, evidence, checks, zone_based)
+    if missing_kind is None and n in (1, 18, 19) and fx.get("tangle_points"):
+        evidence += (
+            " The most tangled word's strokes cross and turn "
+            f"{fx['tangle_worst']:.1f} times as much as the usual word "
+            "on this page, so it counts as hard to read."
+        )
     if missing_kind is not None:
-        scoring_inputs = availability.unmeasured_inputs(missing_kind, fx)
+        scoring_inputs = availability.unmeasured_inputs(missing_kind, fx, n)
     elif n == 6 and zone_based:
         scoring_inputs = {
             "method": "zone_geometry",
@@ -414,7 +501,7 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
             "component_scores": {
                 str(key): scores[key]
                 for key in {
-                    18: (1, 5, 8, 7),
+                    18: ("reading", 1, 5, 8, 7),
                     20: (5, 8, 10, 11, 17),
                 }.get(n, ())
             },
@@ -434,15 +521,26 @@ def _factor_result(n, fx, scores, supplied, basis, checks, zone_based):
         based_on=None if missing_kind else basis.get(n),
         conf=missing_kind or "measured",
         unmeasured=missing_kind is not None,
-        unmeasured_reason=_UNMEASURED_REASONS.get(missing_kind),
+        unmeasured_reason=availability.unmeasured_reason(missing_kind, n),
         unmeasured_kind=missing_kind,
         scoring_inputs=scoring_inputs,
     )
 
 
-def _section_scores(results):
+def _left_out(fx):
+    """Measured factors the overall leaves out on this page: Size when
+    it rests on too few words (_OVERALL_MIN_SIZE_WORDS)."""
+    few = (
+        fx.get("size_basis") not in ("words", "letter groups")
+        or int(fx.get("size_count") or 0) < _OVERALL_MIN_SIZE_WORDS
+    )
+    return (5,) if few else ()
+
+
+def _section_scores(results, left_out=()):
     """The four sections and the overall score. A section's score is the
-    mean of its measured factors."""
+    mean of its measured factors; the overall is the points-weighted mean
+    of the measured factors in _OVERALL_POINTS, less those in left_out."""
     sections = []
     for sec_meta in _SECTIONS:
         fs = [r for r in results if r.sec == sec_meta["id"]]
@@ -460,21 +558,48 @@ def _section_scores(results):
             )
         )
 
-    live_sections = [s for s in sections if s.avg100 is not None]
-    wsum = sum(float(s.weight) for s in live_sections) or 1.0
-    # The serialized weights are the ones the overall score actually used:
-    # a section with no measured factor (Dynamics from a photo) carries 0
-    # and the others are renormalised to sum to 1, so clients cannot
-    # recompute a different headline from the published weights.
+    counted = [
+        r
+        for r in results
+        if r.n in _OVERALL_POINTS and not r.unmeasured and r.n not in left_out
+    ]
+    if not counted:
+        # None of the five on this page (a script whose letters the
+        # reader cannot read): the old blend of every measured factor,
+        # so a page that has scores still gets a headline.
+        return sections, _all_factor_overall(sections)
+    total = float(sum(_OVERALL_POINTS[r.n] for r in counted))
+    # The serialized weights are each section's share of the overall:
+    # the points of its counted factors on this page, out of those
+    # counted, 0 for a section with none.
+    for section in sections:
+        section.weight = round(
+            sum(_OVERALL_POINTS[r.n] for r in counted if r.sec == section.id)
+            / total,
+            4,
+        )
+    overall = int(
+        round(
+            sum(_OVERALL_POINTS[r.n] * float(r.score) for r in counted)
+            / total
+            * 10
+        )
+    )
+    return sections, overall
+
+
+def _all_factor_overall(sections):
+    """The overall before 23 October 2026: the section means weighted by
+    _SECTIONS, renormalised over the sections with a measured factor.
+    Sets each section's serialized weight to the share it used."""
+    live = [s for s in sections if s.avg100 is not None]
+    wsum = sum(float(s.weight) for s in live) or 1.0
     for section in sections:
         section.weight = (
             round(float(section.weight) / wsum, 4)
             if section.avg100 is not None
             else 0.0
         )
-    overall = int(
-        round(
-            sum(float(s.avg100 or 0) * float(s.weight) for s in live_sections)
-        )
+    return int(
+        round(sum(float(s.avg100 or 0) * float(s.weight) for s in live))
     )
-    return sections, overall

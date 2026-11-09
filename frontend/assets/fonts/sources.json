@@ -70,5 +70,93 @@
     "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-sans-telugu@5.3.0/LICENSE",
     "sha256": "eacb6e3b470b5894f81fa7091663983068a391ad1741f868e70b131051ad48ea",
     "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSerifTelugu-Regular.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-400-normal.woff2",
+    "sha256": "580b25337f62d4d2517beae261ce727df1d7185bd99d77f8f41734f4a2ab5a3e",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "NotoSerifTelugu-Bold.woff2",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/files/noto-serif-telugu-telugu-700-normal.woff2",
+    "sha256": "3c660f60b2696031c4dd0404040cf45437fb6ddef87de03eca5a721ad0f2109c",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "notoseriftelugu-OFL.txt",
+    "source": "https://cdn.jsdelivr.net/npm/@fontsource/noto-serif-telugu@5.3.0/LICENSE",
+    "sha256": "eacb6e3b470b5894f81fa7091663983068a391ad1741f868e70b131051ad48ea",
+    "license": "OFL-1.1"
+  },
+  {
+    "file": "playwrite-ar.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritear/PlaywriteAR%5Bwght%5D.ttf",
+    "sha256": "f0b9da7651bdf82557c2de36a5095b9e38f66f7b26193013bb20c8c8e4cadd97",
+    "source_sha256": "4b419fee311f18e3cd5d3f4aac838d9e80b5dc2cbb97dd4ee9d79171716d619a",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-au-vic.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteauvic/PlaywriteAUVIC%5Bwght%5D.ttf",
+    "sha256": "4b1b29a3784e9d3f97af9f22648add4d3f0740abf7c01eb7683d999ef57e4a25",
+    "source_sha256": "91a7b57af8b6b86f00b7757eab8b4236b25ee4f45c78610be5c79433fce6f914",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-de-la.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedela/PlaywriteDELA%5Bwght%5D.ttf",
+    "sha256": "864c50bcf6404146ec9c9e4ac40f50eb6d4dbc78c3400949d12198a2d8cab15c",
+    "source_sha256": "c45f43a5f51f385bf0a32e27a4b8e0397757893e5d41121ce962a70e6bd1b691",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-de-sas.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedesas/PlaywriteDESAS%5Bwght%5D.ttf",
+    "sha256": "79f1aad6bee2976f950bcdc116c412642fe9b8d58cfc4d5bea908192ae8e627e",
+    "source_sha256": "5c66767e8db56ff661215964bd3372e8d87122a7a9259486d500d791fe328065",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-de-va.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritedeva/PlaywriteDEVA%5Bwght%5D.ttf",
+    "sha256": "c7dae7130659b03b16be39067a6bfb78d53ddcae315bc50ded77da5f2a8fd9c5",
+    "source_sha256": "065c4685e85d16299620f76e8abbf67a5e250c7641e4806566747b26a474e1cb",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-fr-trad.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritefrtrad/PlaywriteFRTrad%5Bwght%5D.ttf",
+    "sha256": "07325e078e4f79e2d14ba98068f88779074b7d7d9264669f0debdb131f664f46",
+    "source_sha256": "0f20dd00ba639dc19e9095e8239a7667d92922c2fd6b69bd3ffb600b90ae4845",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-gb-j.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwritegbj/PlaywriteGBJ%5Bwght%5D.ttf",
+    "sha256": "79dc2d8dd9d8635dd036554c86a484b8db3d0096cafbe57e9be930d5db328d11",
+    "source_sha256": "75263adf472a717edc4d7d10ea28016591928c98f2cd5da93b0269ef4a919fc9",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-us-trad.woff2",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteustrad/PlaywriteUSTrad%5Bwght%5D.ttf",
+    "sha256": "25d10ddea00979f3ca36d14d0df6031469c65454b3ff165cc03b4e5b638ef2c9",
+    "source_sha256": "6f2b0ba3c262a4d23bc06ea78ff5eccd45ebf324635d81bac25165eb2a2f1960",
+    "license": "OFL-1.1",
+    "note": "Cut to the letters of the style names it draws, at weight 400, by frontend/gen_letter_styles.py --fonts."
+  },
+  {
+    "file": "playwrite-OFL.txt",
+    "source": "https://raw.githubusercontent.com/google/fonts/main/ofl/playwriteustrad/OFL.txt",
+    "sha256": "0370f5946020846b0ca65e44950d11411ea3bd3c4c0d755916470f9f96cd8cb8",
+    "license": "OFL-1.1"
   }
 ]

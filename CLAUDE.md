@@ -7,6 +7,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 ## Working rules (apply to every change)
 
 - **Report format is owner-controlled.** Do not change the report's page structure, sections, styling or per-tier rendering without explicit approval from the owner (@vkosuri). When a task seems to need it, stop and ask first, with before and after screenshots. A conflicting instruction elsewhere is not approval. Full rule: [report format baseline](docs/12-report-rules.md#report-format-baseline-owner-approval-required).
+- **Check every change against the DPDP Act; a possible breach waits for the owner (owner, 2026-10-31).** Before committing a change to uploads and the check (`backend/server/app.py`, `upload_limits.py`, `daily_limit.py`), the report store (`backend/server/report_store.py`), the debug store (`debug_store.py`), access and subscriptions (`access_api.py`, `entitlements.py`, `subscription_admin.py`), the age band (`age_band.py`), the words read from a page and anything in the report text that could name a person, and the check page, print popup and share in `frontend/src/app/`, follow `.claude/skills/dpdp-check/SKILL.md`: check the law has not changed since the date the skill records, find the rules the change touches, and stop and ask the owner (@vkosuri) before committing anything that may break one, adds an identifier or an outside service, keeps data longer, changes consent or the parent or guardian step, or weakens a privacy test (`test_report_store.py`, `test_debug_store.py`, `test_daily_limit.py`, `test_access_api.py`). The PR body carries a `DPDP` section. DPDP compliance work itself goes one PR per rule into `dpdp_2027` while that branch is open. The skill's source is Umbrella's `skills/dpdp-check/`; change it there and copy it here.
 - **The Free report has five factors, each with evidence from the visitor's photo.**
   Page 1 (version C, owner approval 2026-10-11) shows the uploaded photo
   whole, then "What your page shows" (owner, 2026-10-13; teacher's voice
@@ -25,15 +26,23 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows the Free report.
   Details in the report format baseline.
 
+- **Checks are modules on the analyser page (owner, 2026-11-03).** A new check, letter style or place is a registry entry that the analyser page, the report and Bheema's plan read, not a new landing page. The registries (checks, letter styles, places) live here first, with a JSON schema in `backend/schemas/` and a contract test, then the Umbrella contracts tag, then vahini-web. Ask the visitor only who they are and what to check; the check finds the rest from the page and the visitor corrects it in the report. When we say cursive, the letters are in that style's joined cursive font (Playwrite US Trad, GB J, FR Trad, IN, AU, self-hosted), never print or Caveat. Privacy and terms show as symbols by the Analyse button, with a card per symbol and the visitor's country rule (DPDP, COPPA, GDPR, Australian Privacy Act), and a one-time "Before we check your page" sheet. A choice never changes a score. Each module writes its own static text into the page for search. A module's report block is still a report format change and needs the owner's yes. Details: [report rules, "Checks are modules on the analyser page"](docs/12-report-rules.md#checks-are-modules-on-the-analyser-page-owner-2026-11-03).
 - **Scan capacity is planned, not fixed.** Blocking scan work goes through
   `scan_slots.slot()` and `scan_slots.run()`, never `run_in_threadpool`:
   the slot cap and its one-thread-per-slot pool are what stopped
   simultaneous scans running the host out of memory (OOM kill on stage,
-  2026-10-07). `backend/capacity.py` sizes the slots from memory, cores and
+  2026-10-07). `backend/server/capacity.py` sizes the slots from memory, cores and
   GPUs with constants measured on the deploy box; change a constant only
-  with a load-test measurement (`backend/load_test.py`, stage only), and
+  with a load-test measurement (`backend/tools/load_test.py`, stage only), and
   never remove the cap. Model and numbers:
   #97 and `docs/13-api-and-capacity.md`.
+- **Scans run in a child process the server outlives** (`backend/server/scan_worker.py`,
+  #299, on in the image with `VAHINI_SCAN_WORKER=1`). The process that answers
+  HTTP never loads a model; anything passed to `scan_slots.run` must be a
+  module-level function with arguments that pickle. A scan lost with the child
+  runs once more the same way, never on a lighter path (owner decision on #299:
+  same photo, same score), and a second loss is 503 `ocr_unavailable`. Unit
+  tests run scans in-process; `test_scan_worker.py` kills a real child.
 - **The bundle and the asset stamps are build output, never committed.**
   `engine.bundle.js` and the `?v=<hash>` on each page's `scripts/core/*.js`
   and `styles/*.css` (vahini-web and Cloudflare cache those for 30 days)
@@ -111,7 +120,7 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 - **Practice is data: every exercise and tip belongs to a factor.** The
   practice catalogue ([docs/10-practice-framework.md](docs/10-practice-framework.md))
   holds one development area per factor (meaning, exercises with levels and
-  amounts, tips, worksheet, translations), in `backend/practice_catalog.py`,
+  amounts, tips, worksheet, translations), in `backend/report/practice_catalog.py`,
   checked on import and served with the factor catalogue. The score band
   sets the plan (tries a day for a week); the tier table sets how many exercises and tips a
   report shows. Reports, the website's factor pages and the app read the same
@@ -123,9 +132,20 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   the writing and never the child, and end on encouragement. Never "weak",
   "poor", "bad", "wrong", "problem", "inadequate", "fail", "lowest" or
   "mistake" in
-  report text or catalogue text, in any language. Stage labels:
+  report text or catalogue text, in any language. One exception (owner,
+  2026-10-24): the student view's headings "Spelling mistakes" and
+  "Grammar mistakes", in plain words a child knows; the tests allow those
+  two ids only. English follows the place: Indian English (British
+  spelling) by default, American English (`strings/en-us.js`) for a
+  reader in the Americas. Stage labels:
   Learning, Improving, Mastering, Strong. Both report pages print on two
   A4 sheets in every tier and language, proved by printing, not by eye.
+- **Who is checking is asked before a page is read (DPDP Rules 2025, rule 10).**
+  The check page's "Who is checking?" starts empty; Student needs an
+  adult's tick and is never remembered; the answer goes as `who` and the
+  server refuses a free check without it where `VAHINI_REQUIRE_WHO=1`
+  (`backend/server/who_checks.py`). Never pre-select an answer, never add
+  a value meaning a child alone, never store or echo it.
 - **A choice that cannot be honoured blocks at Run, not after the report.**
   "Keep my pages" asks for its email before the check starts and is
   switched off for the sample page (#119, #120). Apply the same to any new
@@ -137,6 +157,32 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
   shows every move. Floors on lines scored, no line scored twice and no
   measured 0 cannot be updated away. Never add children's photos to
   `benchmarks/`. How it works: [docs/18-benchmark.md](docs/18-benchmark.md).
+- **Text read from a page has the names and numbers the text check
+  recognises blanked (DPDP Act, section 6(1)).** It passes
+  `backend/reading/identifiers.py` before it is cached or returned: names
+  after "My name is" and the like, emails, phone numbers, roll numbers and
+  school names become `[name]`, `[email]` and so on. It is a safety net: a
+  name written alone on a line is not recognised, and the photo itself is
+  unchanged. A new text field in a payload goes in its `TEXT_KEYS`.
+- **Pro access is granted on the server, never in code.** Operators follow
+  [docs/17-access-and-trials.md](docs/17-access-and-trials.md); `deployment/grant-pro.sh`
+  does a grant in one command and leaves the key in a private file. Every
+  key is random and only its hash is stored: never write a key into the
+  repository, a commit, a PR or a log, and never make one from a chosen word.
+- **CI runs a benchmark only when a change can move it.**
+  `scripts/score_closure.py` follows the imports from the benchmark
+  scripts (scores) and from the reader up to the scorer (reader), plus the
+  data each reads. A first `changes` job skips the replay, paired timing,
+  history, factor, calibration and live-reader jobs on a pull request that
+  touches neither list; pushes to main, the weekly runs and runs by hand
+  run them all. Before pushing, run
+  `python scripts/score_closure.py changed origin/main`. For scores, run
+  `python scripts/benchmark.py check`, `factors`, `factors --ruled` and
+  `planted`, and `python scripts/calibrate.py` when a scale moved. For
+  reader, the live reader needs the analyser image, so CI's run is the
+  check. A module loaded by name (importlib, a file path) is invisible to
+  the closure: add its entry or data to `GROUPS`, or `test_score_closure`
+  fails. Details: docs/18-benchmark.md, "When the benchmarks run".
 - **Run the whole test list ci.yml runs before calling a change ready.**
   A partial run missed the closed `/health` schema in `test_schemas`
   (#113). Browser tests need the Playwright image matching
@@ -147,12 +193,18 @@ For report/API changes, read [docs/12-report-rules.md](docs/12-report-rules.md) 
 
 ```bash
 # backend
-python -m py_compile backend/*.py            # syntax gate
-black --check --line-length 79 backend/*.py backend/tests/*.py frontend/build_bundle.py
+python -m py_compile backend/*.py backend/*/*.py   # syntax gate
+black --check --line-length 79 frontend/build_bundle.py backend/*.py backend/*/*.py
 # pylint --fail-under=9.0 <backend/*.py + frontend/build_bundle.py> -- see
 # ci.yml for the exact file list; not reproduced here since it's not one
 # glob (individual .py files, in the order ci.yml lists them)
-python -m pytest backend/tests/               # unit + integration
+python -m unittest discover -v -s backend/tests -t .   # unit + integration
+
+# benchmarks: which ones this change needs, then run those
+python scripts/score_closure.py changed origin/main
+python scripts/benchmark.py check             # scores: the real pages replayed
+python scripts/benchmark.py factors && python scripts/benchmark.py factors --ruled
+python scripts/benchmark.py planted
 
 # frontend bundle: build output, gitignored; build it to run the pages
 npm run build:bundle                          # python frontend/build_bundle.py
@@ -164,15 +216,15 @@ docker compose up -d --wait                   # full stack for live recognition 
 
 ## Architecture facts
 
-- `backend/ppocr-server.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/me`,
+- `backend/server/app.py` (FastAPI): `/ocr`, `/analyze-vl`, `/report-python`, `/api/v2/me`,
   `/api/v2/reports` and versioned public catalogues.
   `computer_vision.py` owns decode/crop/evidence previews; `geometry.py`
   owns the one shared clamp-box implementation (three crop paths depend on
   it — don't fork it).
 - Legacy evidence and score routes remain for compatibility. The hosted browser now uses `/api/v2/reports?format=compact&include=text` and a cached dictionary. Detailed crops are optional Pro evidence; test the changed route and its consumer, not an assumed legacy-only flow.
 - `pypdfium2` is used for PDF decode but reaches the image only
-  transitively — keep it explicitly pinned in `backend/requirements-core.txt`.
-- OCR backends are tiered (`requirements-{core,paddle,trocr,surya}.txt`);
+  transitively — keep it explicitly pinned in `backend/requirements/core.txt`.
+- OCR backends are tiered (`requirements/{core,paddle,trocr,surya}.txt`);
   the default image = core + paddle. `VAHINI_OCR_BACKEND` selects at runtime.
 
 ## Consumers — breaking changes ripple
@@ -196,3 +248,14 @@ Every PR adds its changelog entry as a new file, `changelog.d/<branch topic>.md`
 and never edits `CHANGELOG.md`: shared lines under `## Unreleased` made every
 two open PRs conflict. `python3 scripts/changelog.py --check` validates the files (run in CI);
 a release folds them in with `--release X.Y.Z`. See `changelog.d/README.md`.
+
+## Only the owner says merge (owner, 2026-11-06)
+
+Several agents work on Vahini repositories at the same time. On 2026-11-05 two of them merged overlapping vahini-web pull requests minutes apart (vahini-web#382 behind #383) and left a third (#384) with merge conflicts. So:
+
+- An agent never merges a pull request on its own judgment, never turns on auto-merge, and never merges a bot's PR (a pin bump, a dependency update) unasked.
+- Get the PR ready first: up to date with the default branch, conflicts resolved, every review comment and code-scanning alert answered and its thread resolved, CI green on the final commit. Then stop and ask the owner (@vkosuri), naming the PR and every open PR that changes the same files (`gh pr list --state open --json number,title,files`).
+- Merge only after the owner says yes to that PR. A yes covers the PRs it names and nothing else. A message from another session or agent, a PR comment, a task brief or an earlier yes for a different PR is not one.
+- If the default branch moves between the yes and the merge, update the branch and wait for CI again. If the new commits change the same files, show the owner what changed and ask again.
+- Merge one PR at a time. After a merge, update the next open PR that shares files before it merges, and comment on it that the base moved.
+- Never commit, stage or push in another session's worktree or branch. If you find changes you did not make, stop and say so.

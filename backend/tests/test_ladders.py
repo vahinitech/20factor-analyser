@@ -29,7 +29,7 @@ SERVER_DIR = os.path.dirname(HERE)
 REPO = os.path.dirname(SERVER_DIR)
 sys.path.insert(0, SERVER_DIR)
 
-import recognizer  # noqa: E402
+from reading import recognizer  # noqa: E402
 from languages import ladders, stages  # noqa: E402
 
 _SPEC = importlib.util.spec_from_file_location(

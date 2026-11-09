@@ -6,7 +6,7 @@
    Layers on top of report.css (same Ink & Paper tokens).
    ========================================================================= */
 
-body.studio{ background:#EEEEEE; }
+body.studio{ background:var(--v-bg, #E9E9EA); }
 
 /* ---- App frame / progress rail ---------------------------------------- */
 .studio-top{
@@ -185,6 +185,23 @@ body.studio{ background:#EEEEEE; }
 .proc-stage{ background:#0f1320; border-radius:16px; padding:14px; position:relative; overflow:hidden; min-height:330px; display:flex; align-items:center; justify-content:center; }
 .proc-stage canvas{ max-width:100%; max-height:430px; border-radius:8px; display:block; }
 .proc-stage img.proc-preview{ max-width:100%; max-height:430px; border-radius:8px; display:block; object-fit:contain; }
+/* The line-by-line sweep while the server checks (src/app/scan-sweep.js). */
+.proc-stage.is-scanning{ flex-direction:column; align-items:stretch; gap:10px; }
+.proc-stage.is-scanning .stage-tag{ display:none; }
+.scan-sweep{ position:relative; align-self:center; max-width:100%; line-height:0; }
+.scan-sweep img.proc-preview{ max-height:400px; }
+.scan-layer{ position:absolute; inset:0; pointer-events:none; }
+.scan-layer > span{ position:absolute; box-sizing:border-box; }
+.scan-line{ border-radius:4px; opacity:0; transition:opacity .3s, background-color .3s; }
+.scan-line.now{ opacity:1; outline:2px solid color-mix(in srgb, var(--v-accent) 60%, transparent); background:color-mix(in srgb, var(--v-accent) 8%, transparent); }
+.scan-line.done{ opacity:1; background:color-mix(in srgb, var(--v-success) 12%, transparent); box-shadow:inset 3px 0 0 var(--v-success); }
+.scan-letters{ border:1.5px solid color-mix(in srgb, var(--v-accent) 80%, transparent); border-radius:3px; background:color-mix(in srgb, var(--v-accent) 6%, transparent); }
+.scan-beam{ width:3px !important; margin-left:-1px; border-radius:2px; background:var(--v-accent); box-shadow:0 0 12px 4px color-mix(in srgb, var(--v-accent) 45%, transparent); }
+.scan-cap{ margin:0; font-size:15px; font-weight:700; color:var(--v-on-dark); }
+.scan-bars{ display:flex; gap:6px; }
+.scan-bars span{ flex:1; height:6px; border-radius:3px; background:color-mix(in srgb, var(--v-on-dark) 18%, transparent); transition:background-color .3s; }
+.scan-bars span.done{ background:var(--v-success-bg); }
+.scan-bars span.now{ background:var(--v-accent); }
 .proc-stage .stage-tag{ position:absolute; top:12px; left:12px; background:rgba(0,0,0,.6); color:#cfe; font-size:10px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; padding:5px 11px; border-radius:99px; }
 .proc-log{ background:var(--paper); border-radius:16px; padding:20px; }
 .proc-log h3{ font-family:var(--serif); font-size:18px; margin-bottom:4px; }
@@ -296,3 +313,14 @@ body.studio{ background:#EEEEEE; }
   .report-host{ padding:0; }
   .warn-banner{ display:none; }
 }
+
+/* ---- A check that got no answer: waiting for the server (app.js showDropped) */
+.drop-wait{ max-width:300px; margin:0 auto 22px; }
+.drop-wait__bar{ height:8px; border-radius:99px; background:var(--paper-edge); overflow:hidden; position:relative; }
+.drop-wait__bar span{ position:absolute; top:0; bottom:0; width:40%; border-radius:99px; background:var(--accent); animation:dropWait 1.6s ease-in-out infinite; }
+@keyframes dropWait{ from{ left:-40%; } to{ left:100%; } }
+@media (prefers-reduced-motion:reduce){ .drop-wait__bar span{ animation:none; left:0; } }
+.drop-wait p{ font-size:13px; color:var(--ink-2); margin:8px 0 0; }
+.drop-actions{ display:flex; flex-direction:column; gap:10px; align-items:center; }
+.drop-actions a.btn{ text-decoration:none; }
+.drop-note{ font-size:13.5px; margin:14px auto 0; }

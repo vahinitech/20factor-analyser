@@ -39,7 +39,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 2026-10-09.
 
 **Sizes, checked before anything is decoded**
-- 5 MiB per file and 6 MiB per request (`backend/upload_limits.py`), counted
+- 5 MiB per file and 6 MiB per request (`backend/server/upload_limits.py`), counted
   as the bytes arrive. vahini-web's nginx refuses more than 6 MB first.
 - 24 million pixels at most, read from the file header before decoding
   (`computer_vision._check_dimensions`): a decompression bomb never expands.
@@ -56,7 +56,7 @@ test for the new boundary, and the owner's agreement. Owner decisions of
   convenience: each format is another decoder an attacker can reach through
   the public `/ocr`. `backend/tests/test_image_formats.py` sends eleven
   others and fails if one is decoded.
-- Pillow is pinned to an exact version (`requirements-core.txt`). A Pillow
+- Pillow is pinned to an exact version (`requirements/core.txt`). A Pillow
   bump is a security change: read its release notes and run the image tests.
 
 **Nothing kept**
@@ -66,17 +66,35 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 - The website never sends the photo to its own store; only a family that
   ticks "Keep my pages" keeps one, encrypted, in vahini-web
   (`services/persist-api/lib/keepstore.js`).
-- One exception, for stage only: debug storage (`backend/debug_store.py`,
+- Report records (`backend/server/report_store.py`, owner decision 2026-10-16):
+  with `VAHINI_REPORT_STORE_DIR` set, each successful compact report keeps
+  a small record so a later check can be compared with it: the scores, the
+  comparability counts, where each factor was measured (numbers) and the
+  day. It is built from an allowlist, never by deleting fields, and holds
+  no photo, cut-out, words read, caption, file name, typed passage, access
+  key, address, browser or time of day. A random receipt (id and two
+  tokens, only their SHA-256 stored) is the only way back to it: the full
+  token stays in the family's browser, and the read-only one in a shared
+  PDF opens the record only through the Pro comparison
+  (`POST /api/v2/compare`), never alone, and cannot renew or delete it, and nothing
+  links a record to a person. Records expire 12 months after the family's
+  last check (a later check renews the receipts its browser holds) and the
+  family can delete one with its receipt. `backend/tests/test_report_store.py`
+  is the proof: it puts a page naming a child and a school through the real
+  route and searches every byte written.
+- One exception, for stage only: debug storage (`backend/server/debug_store.py`,
   owner decision 2026-10-15). With `VAHINI_DEBUG_STORE=1` and
-  `VAHINI_DEBUG_STORE_DIR` both set, each answered upload keeps its photo
-  and the answer sent back, under `<dir>/analyser/<date>/`, until someone
+  `VAHINI_DEBUG_STORE_DIR` both set, each upload keeps its photo as soon as
+  it is read, and a record of how it ended (the answer sent back, or the
+  refusal or error), under `<dir>/analyser/<date>/`, until someone
   deletes them by hand. It exists so the team can replay a page that scored
   oddly on stage.vahinitech.com. Production never sets either variable;
   vahini-web's `deploy/stage-debug.sh` sets them for the stage analyser
   alone, and every stage page then says that pages are being kept. The
   files are named by a random id, never the visitor's file name, and hold
-  nothing about the caller (address, browser, access key). Refused uploads
-  are not kept, and a failed write never fails the scan. `/health` (and
+  nothing about the caller (address, browser, access key). Refused and failed
+  checks are kept with their error, so a crash can be replayed; a photo too
+  large to read is not. A failed write never fails the scan. `/health` (and
   `/ocr/health`) reports `debug_store: true` while it is on, so a
   production probe can check it is `false`. Any other value, or one
   variable without the other, is off, and off is the code path as it was
@@ -84,10 +102,10 @@ test for the new boundary, and the owner's agreement. Owner decisions of
 
 **Abuse limits**
 - Free tier: 3 checks a day per IP address, Pro never limited
-  (`backend/daily_limit.py`). `X-Real-IP` is trusted only from a private peer.
+  (`backend/server/daily_limit.py`). `X-Real-IP` is trusted only from a private peer.
   nginx adds 12 checks a minute per IP.
 - Scans run one at a time with a short queue inside a memory-limited
-  container (`backend/scan_slots.py`, `backend/capacity.py`).
+  container (`backend/server/scan_slots.py`, `backend/server/capacity.py`).
 
 **The container**
 - Runs as user 10001, never root (`deployment/Dockerfile`, checked by

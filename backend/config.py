@@ -4,14 +4,14 @@
 #
 # config.py — server-wide settings, parsed from environment variables once
 # at import time. Single source of truth for every VAHINI_OCR_* env var;
-# ppocr-server.py exposes these as module-level constants (under their
+# server/app.py exposes these as module-level constants (under their
 # existing names) for the rest of the file to use.
 
 import os
 from dataclasses import dataclass
 
-from model_map import parse_model_map
-from gpu_detect import resolve_use_gpu
+from reading.model_map import parse_model_map
+from reading.gpu_detect import resolve_use_gpu
 from languages import stages
 
 # Every value recognizer.collect_lines() handles. Anything else used to run
