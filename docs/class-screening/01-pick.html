@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 1: pick a class's pages</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 1 of 6 &middot; picking files</span>
+  <div class="crumb"><a href="#">Home</a> / Handwriting check</div>
+  <h1 class="page-title">Check a whole class's handwriting</h1>
+  <p class="lead">One page per child. One table back, with a plain note on any page a therapist may want to look at.</p>
+
+  <div class="who">
+    <b>I am</b>
+    <span class="pill">Parent or guardian</span>
+    <span class="pill hide-phone">Student</span>
+    <span class="pill pill--on">Teacher or therapist</span>
+    <span class="pill hide-phone">Myself</span>
+    <div class="seg"><span>One page</span><span class="on">A whole class</span></div>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Add one page per child</h2>
+      <p class="muted small" style="margin:0">Name each photo with the child's pupil code, like <span class="code">3B-07.jpg</span>. Use codes, not names: the code stays on this computer and is never sent to us.</p>
+
+      <div class="fields">
+        <div class="field"><label>Class</label><div class="in">Class 3B</div><div class="hint">Only on this computer</div></div>
+        <div class="field"><label>Children's ages</label><div class="in">7 to 8</div><div class="hint">Optional</div></div>
+        <div class="field"><label>Writing in</label><div class="in">English</div><div class="hint">Telugu is not scored yet</div></div>
+      </div>
+
+      <div class="drop hide-phone">
+        <strong>Drop the pages here</strong>
+        <span class="muted small">or <a href="#">choose photos</a> &middot; <a href="#">choose a folder</a> &middot; one PDF of the whole class also works</span>
+      </div>
+      <div class="drop hide-desk">
+        <strong>Take each page in turn</strong>
+        <div class="actions" style="justify-content:center;margin-top:10px"><span class="btn btn--main">Take a photo of 3B-08</span><span class="btn btn--ghost">Choose photos</span></div>
+        <span class="muted small">The next code fills in by itself. Tap it to change it.</span>
+      </div>
+
+      <div class="files" aria-label="Pages picked">
+        <div class="files__head"><span></span><span>File</span><span>Pupil code</span><span>Check</span></div>
+        <div class="file"><span class="thumb"></span><span class="name">3B-01.jpg</span><span class="code-in">3B-01</span><span class="ok">Ready</span></div>
+        <div class="file"><span class="thumb"></span><span class="name">3B-02.jpg</span><span class="code-in">3B-02</span><span class="ok">Ready</span></div>
+        <div class="file"><span class="thumb"></span><span class="name">3B-03.jpg</span><span class="code-in">3B-03</span><span class="ok">Ready</span></div>
+        <div class="file file--warn"><span class="thumb"></span><span class="name">Tara.jpg</span><span class="code-in">Tara</span><span class="msg">This looks like a name. Type the pupil code instead.</span></div>
+        <div class="file"><span class="thumb"></span><span class="name">3B-05.jpg</span><span class="code-in">3B-05</span><span class="ok">Ready</span></div>
+        <div class="file file--warn"><span class="thumb"></span><span class="name">IMG_2041.HEIC</span><span class="code-in" style="color:var(--v-text-faint)">Type a code</span><span class="msg">No code in the file name.</span></div>
+        <div class="file file--warn"><span class="thumb"></span><span class="name">3B-12 (1).jpg</span><span class="code-in">3B-12</span><span class="msg">Two pages for 3B-12. Keep one, or give one a new code.</span></div>
+        <div class="file file--bad"><span class="thumb"></span><span class="name">3B-19.jpg</span><span class="code-in">3B-19</span><span class="msg">14 MB, over the 10 MB limit. Take it again, or save it smaller.</span></div>
+        <div class="files__more">and 17 more, all ready &middot; <a href="#">show all</a></div>
+      </div>
+    </section>
+
+    <aside>
+      <div class="estimate">
+        <div class="small">25 pages, checked one at a time</div>
+        <div class="big">About 4 minutes</div>
+        <div class="small" style="margin-top:6px">Up to 6 minutes if many families are checking at the same time. Results appear row by row as each page is done.</div>
+      </div>
+      <ul class="facts">
+        <li>You can close this tab. Come back on this computer and the class picks up where it stopped.</li>
+        <li>Photos are checked and not kept. The table and the pupil codes stay in this browser until you clear them.</li>
+        <li>Your school key is on: class checks do not use the three free checks a day.</li>
+        <li>A page we cannot check is not counted. You can add a new photo for it at the end.</li>
+      </ul>
+      <div class="actions">
+        <span class="btn btn--main">Check 25 pages</span>
+        <span class="muted small">3 pages need a fix first</span>
+      </div>
+      <p class="small muted" style="margin-top:12px">By running the check you confirm you are the children's teacher or therapist and the school has agreed. It describes each page and does not diagnose anything.</p>
+    </aside>
+  </div>
+</main>
+</body>
+</html>
