@@ -625,10 +625,11 @@ measures from the ink:
   Character Distinction, loops and letter zones) stay "Not measured".
   Since 21 October 2026 (draft, waiting for the owner's review) such a
   page scores its layout only: Size, Baseline Alignment, Word Spacing
-  (with the passage), Margin, Line Straightness and Neatness. Smoothness
-  (4) and Vertical Alignment (12), which ink rows gave only from line
-  bands, wait with the letter skills (`unmeasuredKind` `letters_later`),
-  and the report names those "coming next". The slope the report marks
+  (with the passage), Margin, Line Straightness and Neatness. Vertical
+  Alignment (12), which ink rows gave only from line bands, waits with
+  the letter skills (`unmeasuredKind` `letters_later`), and the report
+  names those "coming next". Stroke Order (2) and Smoothness (4) stay
+  with the sensor pen (#192). The slope the report marks
   and draws is the one scored (`ink_geometry.mark_rows`), not the angle
   of the row's outline.
 
