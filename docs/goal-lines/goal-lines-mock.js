@@ -108,11 +108,10 @@
   var NO_LINE_PRO = [
     ["Letter shapes, Clear letters", "built from how sure the text reader was, not from the shapes themselves"],
     ["Closed letters", "compares bowls in the ink with letters the reader guessed, not letter by letter"],
-    ["Letter spacing", "an estimate; it gives our own neat practice page its lowest mark"],
-    ["Stroke order, Smooth lines", "built from the widths of rows and letters, which a photo cannot tie to the skill"],
+    ["Letter spacing", "an estimate; it scores our own neat practice page 0.0"],
     ["Upright strokes", "measures how much row angles vary, not how upright the strokes are"],
     ["Readability, Neat page", "blends of other scores, with no count of their own"],
-    ["Writing speed, Pen pressure, Smooth joins, Pen lifts", "need the Vahini sensor pen"]
+    ["Stroke order, Smooth lines, Writing speed, Pen pressure, Smooth joins, Pen lifts", "need the Vahini sensor pen"]
   ];
   var NO_LINE_FREE = [
     ["Letter shapes", "built from how sure the text reader was, not from the shapes themselves"],
