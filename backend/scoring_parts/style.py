@@ -27,17 +27,21 @@ def add_scores(fx, s):
 
     # Composites leave Word Spacing or Margin Discipline out, and reweight
     # the rest, when too few word gaps or line starts were measured for it
-    # to mean anything.
+    # to mean anything, and the line-angle scores when no row had a slope
+    # (their slope is then a stand-in 0.0, not level writing).
     def _blend(parts):
         live = [
             (w, s[k])
             for k, w in parts
-            if (k != 8 or spacing_ok) and (k != 10 or margin_ok)
+            if (k != 8 or spacing_ok)
+            and (k != 10 or margin_ok)
+            and (k not in (7, 11, 17) or slope_ok)
         ]
         return sum(w * v for w, v in live) / sum(w for w, _ in live)
 
     spacing_ok = fx.get("word_gap_count", 3) >= _MIN_WORD_GAPS
     margin_ok = fx.get("left_spread", 0.0) is not None
+    slope_ok = fx.get("line_slope_count", 1) > 0
     # Legibility reads the page directly (how surely its words were
     # read) besides the shapes, size, spacing and line that make it easy
     # to read (#193). Character Distinction is how surely the reader told

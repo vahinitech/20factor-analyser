@@ -408,6 +408,9 @@ def _ink_features(arr, lines):
     angles = [abs(a - tilt) for a in ink["signed"]] or ink["angles"]
     out = {
         "ink_rows": True,
+        # Rows that had a slope to measure; 0 leaves the slope factors
+        # unmeasured (availability.py), never level.
+        "line_slope_count": len(angles),
         "line_slope_abs": mean(angles),
         "line_slope_std": _std(angles),
         "line_slope_signed_med": (
