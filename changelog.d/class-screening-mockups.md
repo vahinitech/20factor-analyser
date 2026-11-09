@@ -5,3 +5,4 @@
   the capacity arithmetic for the one-slot server and the decisions left to
   the owner. A proposal only: nothing is built and the report does not
   change.
+- The class-check proposal now says how a resumed page is matched to its photo (a fingerprint and version kept in the browser, with an explicit keep or recheck) and that a retry is at least once, deduplicated locally, and can leave a second score record after a lost answer.

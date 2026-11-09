@@ -30,6 +30,10 @@ Each screen is an HTML file here, shown at desktop (1440 px) and phone
 | 5. Pages refused (sideways, mostly numbers, printed) and the waits a teacher may see (busy, server restarted) | [05-refused-desktop.png](screens/05-refused-desktop.png) | [05-refused-phone.png](screens/05-refused-phone.png) |
 | 6. Export: a landscape A4 print, and a CSV | [06-export-desktop.png](screens/06-export-desktop.png) | [06-export-phone.png](screens/06-export-phone.png) |
 
+Screen 3 still shows the short wording ("we skip the 14 codes already done").
+The rule it should follow is in [Page identity, resume and retry](#page-identity-resume-and-retry);
+the screen and its screenshots change if the owner approves it.
+
 ![Finished table, desktop](screens/04-finished-desktop.png)
 
 What the screens keep from the current page and rules:
@@ -149,14 +153,93 @@ scan still peaks at about 1.6 GB inside the 2.5 GB limit, which stays.
    #299): a child's row in the class table and the same page checked alone
    must agree.
 
+## Page identity, resume and retry
+
+A pupil code says who a page is for, not which photo it is. One page in
+flight stops two pages running at once; it does not stop a replaced photo
+being skipped, or a page being scored twice. So every page has an identity
+that stays in the browser, and the retry rule says plainly what it can leave
+on the server.
+
+### Which page is which
+
+| Part | What it is | Where it stays |
+|---|---|---|
+| Class id | random, made when the class is created | the browser, never sent |
+| Pupil code | from the file name, unique inside one class | the browser, never sent |
+| Fingerprint | SHA-256 of the original file's bytes, taken when it is picked (Web Crypto), before the page is shrunk for upload | the browser, never sent |
+| Version | starts at 1, goes up by one each time a row's photo is replaced | the browser, never sent |
+
+A row is class id + pupil code. The result it holds is for one fingerprint
+and version. Because the class id is part of the key, 3B-04 in one class and
+3B-04 in another are two rows that cannot touch each other.
+
+Inside one class, two different photos with one code start neither page until
+the teacher renames one (screen 1's duplicate warning). The same photo picked
+twice is one row. A photo whose fingerprint is already on a row with another
+code asks before it is checked, since it may be the wrong child's page.
+
+### Picking the folder again (option B)
+
+| The file picked | What the page does |
+|---|---|
+| Code done, same fingerprint | skipped, no request, "already checked" |
+| Code done, different fingerprint | not checked and not skipped: the row says "this photo is different from the one checked" and asks. **Keep this result** sends nothing. **Check the new photo** sends it, and only when its answer arrives does it replace the result and raise the version |
+| Code not done | checked |
+| Code new to this class | added as a new row after the teacher agrees |
+| Code in the class but not in the folder | left as it is |
+
+Pages that need an answer wait at the end, and the rest of the class goes on.
+The fingerprint compares bytes, so a photo saved again from another program
+counts as different. That costs a question, never a wrong skip. Option A has
+no re-pick, but it follows the same table if the teacher adds files.
+
+### Retry is at least once, deduplicated in the browser
+
+`POST /api/v2/reports` has no idempotency key, and the proposal does not add
+one (decision 12). If the server finished a page and the answer was lost, the
+browser cannot tell that from a page that never arrived. Each row's state is
+written down before the request goes (waiting, sent, done, refused), so a
+closed tab comes back knowing which page had no answer.
+
+| What happened | Row | Sent again? |
+|---|---|---|
+| A report came back | done | no |
+| Refused (a 4xx, or `ok: false`) | refused, not counted | no |
+| 503 with `Retry-After` (busy) | waiting | after the wait; does not use up the retry |
+| 503 `ocr_unavailable` (scan lost twice on the server, #299) | "try again" | no, the teacher chooses |
+| No answer: connection lost, timed out, or the tab closed while the row was `sent` | sent | once, same file, same path |
+| No answer the second time | "not sure this page was checked", with Try again | only if the teacher presses it |
+
+The number of tries is saved with the row, so reopening the tab does not
+start the count again. An answer to anything but the row's latest send is
+dropped. A row holds one result however many times its page was sent.
+
+**What a repeat leaves on the server.** `_keep_report` runs for every
+successful request, including one answered from the 180-second response
+cache. So a retry after a lost answer can leave two score records for one
+page, and only the second receipt reaches the browser. The first cannot be
+deleted through a receipt and stays until it expires, 12 months on (no
+name, photo, words, file name or pupil code in it). On a key that is never
+limited it costs no free check. Scores stay the same (#112, #299). Totals
+counted from `report_store` can run slightly above the number of pages, and
+nothing should be read from those totals as a count of children. Each row
+keeps its receipt, so replacing a photo or clearing the class deletes the
+records the browser holds a receipt for (`DELETE` by receipt, as today).
+Only a lost answer leaves one behind. The note under the finished table
+says this in one line when it has happened.
+
 ## What is kept, and where
 
 - **Our server:** the same as a single check today. The photo is checked
   and not stored. The analyser's anonymous score record (`report_store.py`:
-  day, scores, no name or file name) is written per page as for any check.
-  The pupil code and the class name are never sent.
-- **The teacher's browser:** the class name, the pupil codes and each row's
-  stages and flag, until the teacher clears the class (proposed: cleared by
+  day, scores, no name or file name) is written per successful request as
+  for any check, and can be written twice for one page after a lost answer
+  (see above). The pupil code, the class name and the fingerprint are never
+  sent.
+- **The teacher's browser:** the class id and name, the pupil codes, each
+  row's stages, flag, fingerprint, version, tries and receipt, until the
+  teacher clears the class (proposed: cleared by
   itself 30 days after the last check, decision 10). In option A of screen 3
   also the photos not yet checked, each removed as soon as it is checked.
 - **The export:** made in the browser. The CSV and the printed sheet carry
@@ -171,9 +254,10 @@ scan still peaks at about 1.6 GB inside the 2.5 GB limit, which stays.
 2. **Resuming after the tab closes** (screen 3). A: the unchecked photos wait
    in the teacher's browser storage, so Continue is one click. B: only the
    results are kept, and the teacher picks the same folder again; the page
-   skips the codes already done. Proposed: B first, because no photo is left
-   at rest anywhere, even on a shared school computer. A later if teachers
-   ask.
+   skips only pages whose code and photo both match, and asks about a changed
+   photo ([the table above](#picking-the-folder-again-option-b)). Proposed: B
+   first, because no photo is left at rest anywhere, even on a shared school
+   computer. A later if teachers ask.
 3. **The flag rule.** Two or more skills at Learning, as drafted, or a
    threshold set from #325's results. Should a page with all five at
    Improving (3B-16 in the mock-up) be flagged? Launch with the "not yet
@@ -198,19 +282,37 @@ scan still peaks at about 1.6 GB inside the 2.5 GB limit, which stays.
 10. **How long a finished class stays in the browser:** 30 days proposed.
 11. **The consent line** before the check starts ("the school has agreed")
     needs to match the schools privacy draft being written alongside.
+12. **A second record after a lost answer.** Proposed: accept it, say so in
+    the note under the table, and change no contract. The alternative is an
+    idempotency key on `POST /api/v2/reports`: one record per page, but a new
+    field in a public contract and a new value the server must hold, which
+    needs its own DPDP check.
 
 ## If approved: what building it means
 
 - Version 1 is page work in `frontend/`: a runner that sends one page at a
   time to `POST /api/v2/reports` with the school key, follows
-  `Retry-After` on 503, retries a lost page once on the same path, keeps
+  `Retry-After` on 503, matches and retries pages by the rules in
+  [Page identity, resume and retry](#page-identity-resume-and-retry), keeps
   results in the browser and makes the CSV and print sheet there. No new
   endpoint and no contract change.
 - Server work only for decision 5 (class pages capped in `scan_slots`) and
   decision 6 (a second slot, through the vahini-web compose files).
 - Tests: the runner never has more than one page in flight; a refusal is not
-  counted; the CSV escapes formula cells; no pupil code or class name is in
-  any request; the phone layout keeps every column.
+  counted; the CSV escapes formula cells; no pupil code, class name or
+  fingerprint is in any request; the phone layout keeps every column.
+- Tests for page identity, on made-up images only:
+  - a replaced photo under the same code is neither skipped nor scored until
+    the teacher chooses, and Keep sends nothing;
+  - the same code in two classes gives two rows, and finishing or clearing
+    one leaves the other alone;
+  - two photos with one code in a class start neither page;
+  - a stub server that records the page and then drops the answer gets
+    exactly one retry, the row shows one result, the stub holds two records
+    and the table's note appears;
+  - a tab closed with a row `sent` retries it once after reopening, and not
+    again on the next reopening;
+  - a late answer to an earlier send is dropped.
 
 ## Viewing and regenerating
 
