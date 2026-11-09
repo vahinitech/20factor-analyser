@@ -21,6 +21,15 @@ INK_LAYOUT = (5, 7, 8, 10, 11, 20)
 # the ink (features._stroke_features); with fewer, one open bowl moves
 # the score by a fifth or more.
 MIN_BOWLS = 5
+# The ink-row factors scored from row slopes. A row of fewer than six
+# letters has no slope (ink_geometry.MIN_SLOPE_LETTERS): with no row
+# measured, line_slope_abs is a stand-in 0.0 and would read as level.
+SLOPE_FACTORS = (7, 11)
+_NEEDS_SLOPE = "Needs at least one line of six or more letters."
+_NO_SLOPE_EVIDENCE = (
+    "Every line on this page has fewer than six letters, too few to "
+    "show which way the line runs."
+)
 # Why a factor is not measured, by the kind its missing need gives
 # (factor_needs.py).
 _UNMEASURED_REASONS = {
@@ -39,6 +48,8 @@ _UNMEASURED_REASONS = {
 _FACTOR_REASONS = {
     3: f"Needs at least {MIN_BOWLS} letters with a bowl on measured lines.",
     10: "Needs at least three lines starting at the margin.",
+    7: _NEEDS_SLOPE,
+    11: _NEEDS_SLOPE,
 }
 _FACTOR_EVIDENCE = {
     3: (
@@ -46,6 +57,8 @@ _FACTOR_EVIDENCE = {
         "p, q) were found on lines measured in the ink."
     ),
     10: "Fewer than three lines start at the left margin on this page.",
+    7: _NO_SLOPE_EVIDENCE,
+    11: _NO_SLOPE_EVIDENCE,
 }
 # The evidence line an unmeasured factor shows, by kind.
 _UNMEASURED_EVIDENCE = {
@@ -103,6 +116,8 @@ def missing_kind(n, fx, supplied):
         return "insufficient"
     if n == 10 and fx.get("left_spread", 0.0) is None:
         return "insufficient"
+    if n in SLOPE_FACTORS and fx.get("line_slope_count", 1) == 0:
+        return "insufficient"
     return None
 
 
@@ -154,6 +169,11 @@ def unmeasured_inputs(kind, fx, n=None):
         return {
             "method": "insufficient_data",
             "features": {"margin_rows": fx.get("margin_rows", 0)},
+        }
+    if n in SLOPE_FACTORS:
+        return {
+            "method": "insufficient_data",
+            "features": {"line_slope_count": fx.get("line_slope_count", 0)},
         }
     return {
         "method": "insufficient_data",

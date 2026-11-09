@@ -236,6 +236,52 @@ class TestInkScores(unittest.TestCase):
         result = scoring.build_analysis(arr, rows, {})
         return {r.n: r for r in result.results}
 
+    def test_a_page_of_only_short_rows_has_no_slope_to_score(self):
+        # Every row is under six letters, so none has a slope. An empty
+        # list must not reach the formulas as a perfectly level 0.0.
+        arr = draw_page([[2, 2]] * 4, tilt_last=4.0)
+        rows = ig.find_rows(arr)
+        self.assertEqual(len(rows), 4)
+        ig.mark_rows(arr, rows)
+        self.assertTrue(all(r["ink_angle"] is None for r in rows))
+        by_n = self.factors(arr, rows)
+        for n in (7, 11):
+            self.assertTrue(by_n[n].unmeasured, n)
+            self.assertEqual(by_n[n].unmeasured_kind, "insufficient", n)
+            self.assertEqual(
+                by_n[n].scoring_inputs,
+                {
+                    "method": "insufficient_data",
+                    "features": {"line_slope_count": 0},
+                },
+            )
+            self.assertIn("six or more letters", by_n[n].unmeasured_reason)
+        # Neatness stays measured, from the parts that were: its line
+        # parts are left out, not counted as perfect.
+        parts = [(5, 0.30)]
+        if not by_n[8].unmeasured:
+            parts.append((8, 0.20))
+        if not by_n[10].unmeasured:
+            parts.append((10, 0.20))
+        expected = sum(w * by_n[k].score for k, w in parts) / sum(
+            w for _, w in parts
+        )
+        self.assertFalse(by_n[20].unmeasured)
+        self.assertAlmostEqual(by_n[20].score, expected, delta=0.06)
+
+    def test_a_mixed_page_scores_the_slope_of_its_long_rows(self):
+        arr = draw_page([[2, 2], [3, 4]], tilt_last=8.0)
+        rows = ig.find_rows(arr)
+        fx = ig.page_features(arr, rows)
+        self.assertEqual(len(fx["angles"]), 1)
+        result = scoring.build_analysis(arr, rows, {})
+        by_n = {r.n: r for r in result.results}
+        fx = scoring._ink_features(arr, rows)  # pylint: disable=W0212
+        self.assertEqual(fx["line_slope_count"], 1)
+        for n in (7, 11):
+            self.assertFalse(by_n[n].unmeasured, n)
+            self.assertLess(by_n[n].score, 10.0, n)
+
     def test_a_mark_takes_out_the_tilt_the_score_takes_out(self):
         rows = [
             {"ink_angle": 5.0, "ink_signed": 5.0},
