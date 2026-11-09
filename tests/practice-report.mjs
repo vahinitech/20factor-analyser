@@ -95,6 +95,7 @@ const RENDER = `window.__render = (opts) => {
     others: [...host.querySelectorAll('.other-skills [data-factor]')].map(e => e.dataset.factor),
     proNote: host.querySelector('.pro-note') ? host.querySelector('.pro-note').textContent : '',
     locks: Object.fromEntries([...host.querySelectorAll('.sn-lockchip')].map(e => [e.dataset.locked, e.querySelector('i').textContent])),
+    pen: [...host.querySelectorAll('.sn-pen-skill')].map(e => e.textContent),
     sub: host.querySelector('.sn-m-sub') ? host.querySelector('.sn-m-sub').textContent : '',
     text: host.textContent,
     closing: host.querySelector('.p2-close') ? host.querySelector('.p2-close').textContent : '',
@@ -209,13 +210,15 @@ try {
   const pr3 = pro.rows.find(r => r.factor === '3');
   add(pr3 && pr3.exercises.length === 2 && /15 tries a day in all/.test(pr3.plan) && pr3.now === 'Learning', 'Pro, Learning band: two exercises and 15 tries a day', pr3);
   // A Telugu page measured from the ink (owner review pending): the letter
-  // skills say they come next, never "full review", and the page says it
-  // was measured from the shape of the writing, not that the photo was
-  // unclear.
+  // skills say they come next, never "full review", stroke order and
+  // smoothness stay with the sensor pen (#192), and the page says it was
+  // measured from the shape of the writing, not that the photo was unclear.
   const ink = await page.evaluate(() => window.__render({ ink: true }));
-  add(['2', '3', '4', '9', '18'].every(k => ink.locks[k] === 'coming next')
+  add(['3', '9', '18'].every(k => ink.locks[k] === 'coming next')
+    && !['2', '4'].some(k => k in ink.locks)
+    && ['Stroke order', 'Smooth lines'].every(s => ink.pen.includes(s))
     && !ink.chips.some(n => ['1', '2', '3', '4', '6', '9', '12', '17', '18', '19'].includes(n)),
-  'A page measured from the ink names its letter skills as coming next', ink.locks);
+  'A page measured from the ink names its letter skills as coming next and leaves stroke order and smoothness to the pen', { locks: ink.locks, pen: ink.pen });
   add(/Measured from the shape of the writing/.test(ink.text) && !/not clear enough/.test(ink.text) && !/words/.test(ink.sub),
     'A page measured from the ink says how it was measured', { sub: ink.sub });
   const mastering = await page.evaluate(() => window.__render({ scores: Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i + 1, 9]).concat([[6, 7.6]])) }));
