@@ -1,0 +1,1 @@
+- A `pr-base` check runs on every pull request so the default branch ruleset can require it, which is what makes "branch must be up to date" take effect.
