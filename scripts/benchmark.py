@@ -35,6 +35,7 @@ when to use which.
 import argparse
 import contextlib
 import difflib
+import datetime
 import glob
 import hashlib
 import importlib.util
@@ -43,6 +44,7 @@ import json
 import os
 import unicodedata
 import sys
+import subprocess
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 BACKEND = os.path.join(ROOT, "backend")
@@ -546,7 +548,7 @@ def _limits(meta, results, expected):
 
 def eye_agreement(meta, results):
     order = meta.get("eye_ranking") or []
-    if not order:
+    if len(order) < 3 or any(page not in results for page in order):
         return None
     ours = sorted(order, key=lambda p: -results[p]["overall"])
     return round(_spearman(ours, order), 3)
@@ -638,6 +640,77 @@ def _write_results(path, data):
         f.write("\n")
 
 
+def run_identity():
+    """Identify the checkout, without reading credentials or requiring CI."""
+    sha = os.environ.get("GITHUB_SHA")
+    if not sha:
+        try:
+            sha = subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
+            ).strip()
+        except (OSError, subprocess.CalledProcessError):
+            sha = None
+    return {
+        "sha": sha,
+        "date": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+    }
+
+
+def observation(name, meta, results, expected, problems, table, worse):
+    """Unratcheted measurements and their baselines from this one replay.
+
+    Missing pages stay in the line denominator. A failed replay is not a
+    valid zero, and score moves are distinct from invalid measurements.
+    """
+    folder, _meta = _load_set(name)
+    pages = sorted(set(_pages(folder)) | set(expected.get("pages", {})))
+    states = {}
+    for page in pages:
+        notes = [p for p in problems if p.startswith(page + ":")]
+        states[page] = {
+            "state": (
+                "skipped"
+                if page not in results
+                else ("invalid" if notes else "valid")
+            ),
+            "diagnostics": notes,
+            "written_lines": _written_lines(meta, page),
+        }
+    missing = set(pages) - set(results)
+    diagnostics = list(problems) + list(worse)
+    diagnostics += [f"{p}: no current measurement" for p in sorted(missing)]
+    valid = not problems and not missing
+    return {
+        "schema": 1,
+        "set": name,
+        "source": (
+            "ink-only replay" if _ink_mode(meta) else "kept-reader replay"
+        ),
+        **run_identity(),
+        "valid": valid,
+        "status": (
+            "invalid"
+            if not valid
+            else ("regression" if worse else ("changed" if table else "pass"))
+        ),
+        "diagnostics": diagnostics,
+        "page_states": states,
+        "observed": {
+            "scores": _results(name, meta, results),
+            "reading": None if _ink_mode(meta) else reading(meta, results),
+        },
+        "baseline": {
+            "scores": expected,
+            "reading": _load_reading(name),
+        },
+        "reading_note": (
+            "Not measured: ink-only set"
+            if _ink_mode(meta)
+            else "CER covers matched lines only; inspect line coverage beside it."
+        ),
+    }
+
+
 def cmd_check(args):
     meta, results, problems = run_set(args.set)
     folder = os.path.join(SETS[0], args.set)
@@ -679,6 +752,13 @@ def cmd_check(args):
     worse = report_reading(args.set, meta, results, "Reading")
     for p in worse:
         _report(f"- {p}")
+    if args.results:
+        _write_results(
+            os.path.join(args.results, args.set, "current.json"),
+            observation(
+                args.set, meta, results, expected, problems, table, worse
+            ),
+        )
     return 1 if (table or problems or worse) else 0
 
 
@@ -1041,9 +1121,10 @@ def cmd_factors(args):
     kinds = list(RULED_KINDS if args.ruled else ft.TARGETS)
     with contextlib.redirect_stderr(io.StringIO()):
         rows = ft.run(args.uji, kinds, False, ruled=args.ruled)
+    measured = ft.summarise(rows)
     now = {
         kind: {n: t.get("caught") for n, t in v["targets"].items()}
-        for kind, v in ft.summarise(rows).items()
+        for kind, v in measured.items()
     }
     name = "factors-ruled" if args.ruled else "factors"
     path = os.path.join(SETS[0], name, "expected.json")
@@ -1074,6 +1155,27 @@ def cmd_factors(args):
     if args.ruled:
         problems += _spread_report(
             now["same_passage"], old.get("same_passage")
+        )
+    if getattr(args, "json", None):
+        # The same rows as factor_tests.py --json, from this run only.
+        _write_results(
+            args.json,
+            {
+                "schema": 1,
+                "set": name,
+                "source": "ink outlines, no OCR",
+                **run_identity(),
+                "summary": measured,
+                "rows": rows,
+                "baseline": old,
+                "diagnostics": problems,
+                "status": (
+                    "regression"
+                    if problems
+                    else ("changed" if now != old else "pass")
+                ),
+                "same_passage": now.get("same_passage"),
+            },
         )
     for p in problems:
         _report(f"- {p}")
@@ -1359,6 +1461,9 @@ def main(argv=None):
         )
         p.add_argument("--update", action="store_true")
         if name == "factors":
+            p.add_argument(
+                "--json", help="keep this run's factor rows and summary"
+            )
             p.add_argument(
                 "--ruled",
                 action="store_true",

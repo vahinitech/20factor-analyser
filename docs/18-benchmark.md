@@ -98,6 +98,59 @@ Some limits cannot be updated away; `check` fails on them whatever
 - each page replayed twice gives the same result;
 - agreement with the ranking by eye falls by at most 0.05.
 
+## Visual accuracy report for maintainers
+
+Download `benchmark-results` from the replay job and open `index.html`.
+The report shows raw character error rate beside written-line coverage,
+page validity and diagnostics, and each changed or unavailable factor.
+The CER applies only to matched lines, so a lower CER with fewer lines
+scored is not evidence that reading improved. Score changes are shown for
+review, not labelled improvements simply because the scores rose.
+
+`check --results <dir>` still writes `expected.json` and the ratcheted
+`reading.json` for an intentional baseline update. It also writes
+`<set>/current.json`: the raw observations, the accepted baselines used
+by that run, the commit, date, source, and valid/invalid/skipped states.
+The report reads only this new file as current evidence. A missing page
+stays in the coverage denominator and has no invented score or CER.
+Legacy artifacts without it are labelled unavailable, never silently
+read as current accuracy.
+
+The existing factor job now keeps `factor-results`: its own `index.html`
+and the measured rows and summary from both unruled and ruled runs.
+`benchmark.py factors --json <file>` exports the same rows and summary
+as `factor_tests.py --json`, plus the baseline and run provenance. It
+uses the factor run already in progress. The report shows the measured
+pair count, catch rate, accepted floor, mean target drop and reported
+side effects. No measured pairs means skipped. This is a geometry test
+using ink outlines, not a live OCR result.
+
+The history job keeps `accuracy-history/index.html`. New history lines
+separate `catch_baseline` (accepted floors) from `catch` (observations,
+empty unless a matching unruled `--factor-results` file is supplied).
+Old history `catch` fields came from `expected.json`; the report labels
+them as accepted floors and excludes them from measured detection.
+The existing review gate for lowering an accepted floor remains. Invalid
+replays cannot pass the history check or contribute to its median.
+Older records have no validity information and are labelled unverified.
+
+To combine downloaded outputs locally:
+
+```sh
+python scripts/accuracy_report.py --results /tmp/benchmark-results \
+  --factor-results /tmp/factor-results/factors.json \
+  --factor-results /tmp/factor-results/factors-ruled.json \
+  --history /tmp/bench-history --out /tmp/accuracy/index.html
+```
+
+Every input is optional. Missing jobs say unavailable; the renderer never
+runs OCR, downloads data, or substitutes an accepted baseline. It uses
+only Python's standard library and a self-contained HTML file, with no
+scripts, external assets, photos or recognised text. CI creates these
+reports even after a benchmark gate fails, in the existing jobs and
+under their existing change filters and time limits. Nothing changes in
+the customer-facing report.
+
 ## Matching a person's eye
 
 The question behind the benchmark is whether the scores rank pages the way

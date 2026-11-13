@@ -1,0 +1,3 @@
+- Add offline CI accuracy reports from the current replay and factor-test results, with complete line counts for reading error rates, score changes, skipped or invalid inputs, and the source of existing accuracy floors. These reports do not add recognition or change scoring.
+- Add isolated Free and Pro browser flows for consent gates, upload, all returned factor records, unavailable sensor-only skills, errors, retry and phone/desktop review screenshots. Screenshots are not approved pixel baselines.
+- Let the existing live recognition test use an already authorized staging or local Pro key without saving or logging it. The default Free CI check is unchanged. No customer report layout or production behavior changes.

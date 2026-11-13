@@ -13,12 +13,19 @@
  *   VAHINI_BASE_URL=http://localhost:8080 node tests/e2e-recognition.mjs
  *
  * Requires the OCR server reachable at BASE (e.g. `docker compose up -d`).
+ * Optional VAHINI_PRO_KEY uses an already authorized key for staging or a
+ * local stack only. No key is generated, persisted or written to artifacts.
+ * With no key, the existing Free recognition tier and CI behavior remain.
  */
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import fs from 'node:fs';
+import { liveRecognitionOptions } from './helpers/live-recognition-options.mjs';
 
-const BASE = (process.env.VAHINI_BASE_URL || 'http://localhost:8080').replace(/\/$/, '');
+const LIVE = liveRecognitionOptions();
+const BASE = LIVE.base;
+const SENSOR_FACTORS = [2, 4, 13, 14, 15, 16];
+const EXPECTED_FACTORS = LIVE.tier === 'pro' ? Array.from({ length: 20 }, (_, i) => i + 1) : [1, 5, 7, 8, 18];
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FIXTURE = path.join(ROOT, 'tests', 'fixtures', 'handwriting-sample.jpg');
 
@@ -65,6 +72,19 @@ async function main() {
     page.on('pageerror', (e) => pageErrors.push(String(e)));
 
     await page.goto(`${BASE}/analyser/analyser.html`, { waitUntil: 'load', timeout: 30000 });
+    if (LIVE.key) {
+      // A redirect must not move a staging credential to another website.
+      if (new URL(page.url()).origin !== new URL(BASE).origin) {
+        throw new Error('The staging/local page redirected to a different origin; no Pro key was sent');
+      }
+      // The existing account client checks the key on this origin, keeps it
+      // only in this page's memory and adds it to the same-origin request.
+      // Never print the thrown browser error or a request/header dump here.
+      const connected = await page.evaluate(async key => {
+        try { return (await VahiniAccount.connect(key)).tier === 'pro'; } catch { return false; }
+      }, LIVE.key);
+      if (!connected) throw new Error('The authorized staging/local key did not establish Pro access');
+    }
     await page.setInputFiles('#file-input', FIXTURE);
     await page.waitForSelector('#go-process:not([disabled])', { timeout: 15000 });
     // The in-browser photo check (#87) must stay quiet on a clear photo.
@@ -95,6 +115,16 @@ async function main() {
 
     if (resp.ok() && json.ok) ok('compact report request succeeded', `HTTP ${resp.status()}`);
     else fail('compact report request succeeded', `HTTP ${resp.status()} :: ${json.error || ''}`);
+
+    const numbers = (json.factors || []).map(f => f.n).sort((a, b) => a - b);
+    if (JSON.stringify(numbers) === JSON.stringify(EXPECTED_FACTORS) && json.access?.tier === LIVE.tier) {
+      ok(`${LIVE.tier} returns every expected factor exactly once`, `${numbers.length} records`);
+    } else fail(`${LIVE.tier} returns every expected factor exactly once`, 'Unexpected tier or factor set');
+    if (LIVE.tier === 'pro') {
+      const sensorOnly = SENSOR_FACTORS.every(n => json.factors?.some(f => f.n === n && f.st === 'u' && f.s === null));
+      if (sensorOnly) ok('all six sensor-only factors are unavailable on a still photo');
+      else fail('all six sensor-only factors are unavailable on a still photo', 'A sensor-only factor was absent or scored');
+    }
 
     const backend = json.recognition?.backend || '';
     if (backend && backend !== 'cv-fallback') ok('report uses recognition server', `backend "${backend}"`);
@@ -129,8 +159,15 @@ async function main() {
     // (owner, 2026-10-13): the live server must send evidence.measurements.
     const strips = await page.locator('#report-host .sn-m svg image').count();
     const photo = await page.locator('#report-host .sn-zoom svg image, #report-host .sn-zoom img').count();
-    if (chips === 5 && strips >= 3 && photo === 1) ok('free report shows the photo, five skills and what was measured on it', `${strips} measurement strips`);
-    else fail('free report shows the photo, five skills and what was measured on it', `chips ${chips}, strips ${strips}, photo ${photo}`);
+    const available = (json.factors || []).filter(f => f.st !== 'u' && f.s !== null).length;
+    const expectedChips = LIVE.tier === 'pro' ? available : 5;
+    if (chips === expectedChips && strips >= 3 && photo === 1) ok(`${LIVE.tier} report shows the photo and available skills`, `${chips} skills, ${strips} measurement strips`);
+    else fail(`${LIVE.tier} report shows the photo and available skills`, `chips ${chips}, strips ${strips}, photo ${photo}`);
+    if (LIVE.tier === 'pro') {
+      const sensorChips = await page.locator('#report-host .sn-m-pen .sn-chip').count();
+      if (sensorChips === 0) ok('Pro UI does not turn unavailable sensor-only factors into scored skills');
+      else fail('Pro UI does not turn unavailable sensor-only factors into scored skills');
+    }
     const nextVisible = await page.locator('#next-steps').isVisible();
     const sheet = await page.getAttribute('#ns-practice-link', 'href');
     if (nextVisible && /\.pdf$|practice\.html/.test(sheet || '')) ok('next step links a practice sheet', sheet);
@@ -144,7 +181,8 @@ async function main() {
   }
 
   let passed = 0;
-  for (const r of results) { console.log(`${r.ok ? 'PASS' : 'FAIL'} ${r.n}${r.d ? ` :: ${r.d}` : ''}`); if (r.ok) passed += 1; }
+  const redacted = text => LIVE.key ? String(text).split(LIVE.key).join('[redacted]') : text;
+  for (const r of results) { console.log(redacted(`${r.ok ? 'PASS' : 'FAIL'} ${r.n}${r.d ? ` :: ${r.d}` : ''}`)); if (r.ok) passed += 1; }
   console.log(`\nSummary: ${passed}/${results.length} checks passing`);
   if (passed !== results.length || results.length === 0) process.exitCode = 1;
 }
