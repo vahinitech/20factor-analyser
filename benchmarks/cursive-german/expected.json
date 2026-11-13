@@ -1,0 +1,131 @@
+{
+ "eye_agreement": null,
+ "pages": {
+  "berger-001-grund-und-boden": {
+   "lines": [
+    "lichem Fols oder doch ans",
+    "Blockon",
+    "besteht. Er Tang",
+    "Gewachsen,auferwodieSpalten",
+    "ausgefallt sind vderSeingero'lt damit",
+    "grober",
+    "Hugsand. Benassert und",
+    "isterxur etation 07"
+   ],
+   "overall": 72,
+   "repeats": 0,
+   "scores": {
+    "1": 5.1,
+    "10": 9.4,
+    "11": 8.9,
+    "12": 9.8,
+    "17": 9.0,
+    "18": 5.8,
+    "19": 7.5,
+    "20": 6.6,
+    "3": 0.0,
+    "5": 6.9,
+    "6": 2.1,
+    "7": 9.7,
+    "8": 0.0,
+    "9": 0.0
+   },
+   "sentences_found": 6,
+   "unmatched": 2
+  },
+  "berger-012-boeschungen": {
+   "lines": [
+    "abschissig and",
+    "mihsamzuersteigen;schr and snurein",
+    "kann,mitunterso steil.",
+    "SohetRten",
+    "dap seene Erddecke daran zwhaf lten vermag und",
+    "nackter Fels herausragt, der nicht zwerk blimmen.ist.",
+    "an alsdann von steiler; senkrechter, ja",
+    "von iberhangender Fets nand Dere Vame Gebir",
+    "bedentet eine Masse von Be Bergenund Be rgricken",
+    "mit cYmYelw daznischen."
+   ],
+   "overall": 70,
+   "repeats": 0,
+   "scores": {
+    "1": 6.3,
+    "10": 9.3,
+    "11": 8.2,
+    "12": 9.8,
+    "17": 7.5,
+    "18": 6.4,
+    "19": 8.2,
+    "20": 6.3,
+    "3": 0.0,
+    "5": 5.1,
+    "6": 2.9,
+    "7": 9.2,
+    "8": 2.5,
+    "9": 0.0
+   },
+   "sentences_found": 9,
+   "unmatched": 1
+  },
+  "berger-018-weiher": {
+   "lines": [
+    "Wein eiher ist cin stehendes Wasser das nund",
+    "hat und deshalb reiner und fre rischerals fit:ennasserist",
+    "cin",
+    "Weiher hernirdein Landsee genannt eroderdie",
+    "Land und alle Inseln ra",
+    "geniber derOber desMeeres(Meerspiegel hervor"
+   ],
+   "overall": 65,
+   "repeats": 0,
+   "scores": {
+    "1": 5.5,
+    "10": 9.5,
+    "11": 8.1,
+    "12": 9.4,
+    "17": 9.5,
+    "18": 6.2,
+    "19": 8.3,
+    "20": 6.6,
+    "3": 0.0,
+    "5": 4.4,
+    "6": 6.5,
+    "7": 8.3,
+    "8": 3.7,
+    "9": 0.0
+   },
+   "sentences_found": 5,
+   "unmatched": 1
+  },
+  "wohingenau-2009-schulausgangsschrift": {
+   "lines": [
+    "Dies ist eine Schribschrift wre sie hentutage",
+    "verwendet wird. Alle Kleinbuchstaben werden",
+    "verbunden, was die Lesbarkeit erschwert.",
+    "Falsches Uben von Xylophor honwsi qu\u00e4lb",
+    "jeden gro/Ber Beren"
+   ],
+   "overall": 73,
+   "repeats": 0,
+   "scores": {
+    "1": 8.1,
+    "10": 9.4,
+    "11": 8.3,
+    "12": 9.6,
+    "17": 7.5,
+    "18": 6.8,
+    "19": 8.5,
+    "20": 5.9,
+    "3": 9.4,
+    "5": 4.1,
+    "6": 8.0,
+    "7": 8.2,
+    "8": 2.3,
+    "9": 5.6
+   },
+   "sentences_found": 5,
+   "unmatched": 0
+  }
+ },
+ "set": "cursive-german"
+}

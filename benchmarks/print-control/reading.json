@@ -1,0 +1,19 @@
+{
+ "cer": 59.46,
+ "edits": 22,
+ "graphemes": 37,
+ "pages": {
+  "manuscript-writing-101-poetry": {
+   "cer": 59.46,
+   "edits": 22,
+   "graphemes": 37
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 59.46,
+   "edits": 22,
+   "graphemes": 37
+  }
+ }
+}

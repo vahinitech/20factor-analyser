@@ -1,0 +1,111 @@
+{
+ "description": "Eight crops of French joined handwriting: four from P. Meyrat's Recueil méthodique de principes d'écriture (about 1900), the looped cursive of French primary schools, and four engraved plates of D'Avignon's L'Écriture américaine (Paris, early 19th century), its adult ancestor. Family 3 (#342).",
+ "role": "cursive-reference",
+ "family": "french",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "davignon-007-salutaire": [
+   "quelque salutaire que soit le",
+   "conseil que l'on donne à quelqu'un,",
+   "il est souvent nuisible à celui qui",
+   "le donne quand celui qui peut le",
+   "recevoir, n'est capable de le suivre."
+  ],
+  "davignon-008-flatte": [
+   "celui qui n'est flatté que",
+   "de son mérite ne parvient",
+   "pas, et ne point être certain",
+   "de réüssir dans ce monde."
+  ],
+  "davignon-009-reconnaissance": [
+   "il faut que la reconnaissance, paraisse",
+   "bien pésante à la plupart des hommes,",
+   "qui sont si lents à en donner des marques",
+   "effectives, et si prompts à saisir le moindre",
+   "prétexte de s'en dispenser, et s'en dégager."
+  ],
+  "davignon-010-vertu": [
+   "la vertu pour se faire aimer,",
+   "doit garder pour elle même la",
+   "sévérité, et ne montrer aux autres",
+   "que la sérénité, et la tranquillité",
+   "dont elle doit jouir au-dedans."
+  ],
+  "meyrat-018-engagements": [
+   "ne prenons pas d'engagements",
+   "à la légère, mais une fois notre",
+   "parole donnée, tenons-la.",
+   "agir pendant la colère, c'est",
+   "s'embarquer pendant la tempête."
+  ],
+  "meyrat-020-esprit": [
+   "ce n'est pas un grand avantage d'avoir l'esprit",
+   "vif si on ne l'a juste.",
+   "une once de vanité gâte un quintal de mérite.",
+   "l'ignorance est la plus dangereuse des maladies",
+   "et la cause de toutes les autres."
+  ],
+  "meyrat-021-mirabeau": [
+   "à la tribune, mirabeau avait un geste brusque",
+   "et saccadé. sa voix, lors même qu'il ne jetait qu'un",
+   "mot de son banc, avait un accent formidable, qu'on",
+   "démêlait dans l'assemblée comme le rugissement du",
+   "lion dans la ménagerie. sa chevelure, quand il secouait",
+   "la tête, avait quelque chose d'une crinière."
+  ],
+  "meyrat-023-affaires": [
+   "poussez vos affaires et que ce ne soient pas elles qui vous poussent.",
+   "aidons-nous mutuellement: la charge des malheurs en sera plus légère.",
+   "l'économie est vertu dans la pauvreté et sagesse dans l'aisance."
+  ]
+ },
+ "page_style": {
+  "davignon-007-salutaire": {
+   "slant": "slanted",
+   "scheme": "D'Avignon, écriture américaine (early 19th century, engraved)"
+  },
+  "davignon-008-flatte": {
+   "slant": "slanted",
+   "scheme": "D'Avignon, écriture américaine (early 19th century, engraved)"
+  },
+  "davignon-009-reconnaissance": {
+   "slant": "slanted",
+   "scheme": "D'Avignon, écriture américaine (early 19th century, engraved)"
+  },
+  "davignon-010-vertu": {
+   "slant": "slanted",
+   "scheme": "D'Avignon, écriture américaine (early 19th century, engraved)"
+  },
+  "meyrat-018-engagements": {
+   "slant": "slanted",
+   "scheme": "Meyrat, French school cursive (moyenne cursive, c. 1900)"
+  },
+  "meyrat-020-esprit": {
+   "slant": "slanted",
+   "scheme": "Meyrat, French school cursive (fine cursive, c. 1900)"
+  },
+  "meyrat-021-mirabeau": {
+   "slant": "slanted",
+   "scheme": "Meyrat, French school cursive (cursive expédiée, c. 1900)"
+  },
+  "meyrat-023-affaires": {
+   "slant": "upright",
+   "scheme": "Meyrat, French school cursive (fine cursive droite, c. 1900)"
+  }
+ },
+ "floor_sentences_found": 0,
+ "eye_ranking": []
+}

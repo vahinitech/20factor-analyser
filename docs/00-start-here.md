@@ -46,6 +46,7 @@ to the ones it builds on.
 | 21 | [Performance, complexity and coverage](21-performance-and-coverage.md) | The design for timing every scan step, budgets on large calls, recording each function's growth (big O) in CI, a profiling job, and coverage with a ratchet |
 | 22 | [Datasets](22-datasets.md) | Every dataset used for training, tests and evaluation: publisher, licence, use, what is committed and what ships |
 | 23 | [Therapist agreement test](23-therapist-agreement.md) | The protocol for comparing factor scores with occupational therapists' marks on consented pages: consent, server-only pages, the marking sheet, the agreement numbers and how many pages and therapists are needed |
+| 24 | [Cursive pages by letter family](24-cursive-families.md) | The public-domain model pages for each family of joined writing, how `benchmark.py families` reads them, and what the analyser does on each family today |
 
 ## Elsewhere
 

@@ -1,5 +1,6 @@
 {
  "description": "Twenty pages of real handwriting, one per writer of the published test split of UJI Pen Characters (Version 2), four sentences each, no planted mistake. The pages scored on vahinitech.com's tested-on-real-handwriting page.",
+ "family": "print",
  "source": "source.md",
  "lang": "auto",
  "settings": {
@@ -24,5 +25,87 @@
  ],
  "lines_per_page": 4,
  "floor_sentences_found": 77,
- "eye_ranking": []
+ "eye_ranking": [],
+ "page_style": {
+  "UJI_W12": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UJI_W13": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UJI_W14": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UJI_W15": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UJI_W16": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W18": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W21": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W24": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W27": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W30": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W33": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W36": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W39": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W42": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W45": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W48": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W51": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W54": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W57": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  },
+  "UPV_W60": {
+   "slant": "not recorded",
+   "scheme": "UJI Pen Characters, print letters written one at a time on a tablet"
+  }
+ }
 }
