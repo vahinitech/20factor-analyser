@@ -17,8 +17,8 @@ of PASSES passes of scripts/paired_timing.py's worker) and its memory
 peak (the largest resident size of those passes), and replays the set as
 `benchmark.py check` does for the reading's character error rate, the
 written lines scored, the mean overall score and the agreement with the
-ranking by eye. It adds each planted mistake's
-catch rate from benchmarks/factors/expected.json and, when given
+ranking by eye. It records accepted catch floors separately from measurements. When given
+--factor-results it adds observed rates from that run, and when given
 `--work` (perf_budgets.py --results, #250), the page's total work count.
 
 `check` fails when accuracy falls against the median of the last RECENT
@@ -112,13 +112,23 @@ def scored(name, pages=None):
     set's pages: replayed as `benchmark.py check` does, unless given."""
     bench = _module("benchmark")
     if pages is None:
-        meta, pages, _problems = bench.run_set(name)
+        meta, pages, problems = bench.run_set(name)
     else:
         _folder, meta = bench._load_set(name)
+        problems = []
+    problems += bench._limits(meta, pages, {})
+    folder, _meta = bench._load_set(name)
     out = {
+        "valid": not problems,
+        "diagnostics": problems,
         "sentences_found": sum(p["sentences_found"] for p in pages.values()),
-        "overall_mean": round(
-            statistics.mean(p["overall"] for p in pages.values()), 2
+        "sentences_total": sum(
+            bench._written_lines(meta, p) for p in bench._pages(folder)
+        ),
+        "overall_mean": (
+            round(statistics.mean(p["overall"] for p in pages.values()), 2)
+            if pages
+            else None
         ),
         "eye": bench.eye_agreement(meta, pages),
         "cer": None,
@@ -129,7 +139,7 @@ def scored(name, pages=None):
 
 
 def catch_rates(path=None):
-    """Each planted mistake's catch rate, as "mistake/factor": rate."""
+    """Accepted floors (not observations), as "mistake/factor": rate."""
     path = path or os.path.join(ROOT, "benchmarks", "factors", "expected.json")
     if not os.path.exists(path):
         return {}
@@ -171,7 +181,7 @@ def _git(*args):
         return ""
 
 
-def collect(name, work=None, cpu=None, pages=None):
+def collect(name, work=None, cpu=None, pages=None, factor_results=None):
     """One history line for the set at this checkout."""
     if cpu is None:
         cpu = measure(name)
@@ -184,8 +194,25 @@ def collect(name, work=None, cpu=None, pages=None):
         "cpu_s": cpu[0],
         "peak_mib": cpu[1],
         "work_total": work_total(name, work),
-        "catch": catch_rates(),
+        "catch": {},
+        "catch_source": "not measured",
+        "catch_baseline": catch_rates(),
     }
+    if factor_results:
+        factor_run = _load(factor_results)
+        # Never compare a ruled run against the unruled accepted floors.
+        if factor_run.get("set") != "factors":
+            raise ValueError("history needs an unruled factors run")
+        if factor_run.get("sha") != line["sha"]:
+            raise ValueError("factor observations must be from this commit")
+        line["catch"] = {
+            f"{kind}/{n}": target["caught"]
+            for kind, entry in factor_run["summary"].items()
+            for n, target in entry["targets"].items()
+            if target.get("measured", 0) > 0
+            and target.get("caught") is not None
+        }
+        line["catch_source"] = "measured factor pairs"
     line.update(scored(name, pages))
     return line
 
@@ -214,7 +241,9 @@ def compare(now, past, accepted=None):
     """(failures, flags) of a line against the median of past lines;
     accepted: accepted_falls()."""
     fails, flags = [], []
-    past = past[-RECENT:]
+    if now.get("valid") is False:
+        return ["current replay is invalid; inspect its diagnostics"], []
+    past = [p for p in past if p.get("valid") is not False][-RECENT:]
     if not past:
         return fails, flags
     for key, label, _better in TRACKED[:3]:
@@ -234,14 +263,38 @@ def compare(now, past, accepted=None):
     old, new = _median(past, "eye"), now.get("eye")
     if old is not None and new is not None and new < old - EYE_DROP:
         fails.append(f"agreement with the eye fell to {new} from {old}")
-    for key, rate in (now.get("catch") or {}).items():
-        values = [p["catch"][key] for p in past if key in p.get("catch", {})]
+    measured = now.get("catch_source") == "measured factor pairs"
+    for key, rate in (now.get("catch") or {}).items() if measured else ():
+        values = [
+            p["catch"][key]
+            for p in past
+            if p.get("catch_source") == "measured factor pairs"
+            and key in p.get("catch", {})
+        ]
         if not values or rate >= statistics.median(values):
             continue
         text = (
             f"{key} caught on {rate} of writers, median "
             f"{statistics.median(values)}"
         )
+        ok = (accepted or {}).get(key)
+        if ok and rate >= ok["rate"]:
+            flags.append(f"{text}: accepted in #{ok['pr']}, {ok['why']}")
+        else:
+            fails.append(text)
+    # Preserve the existing review gate for an accepted-floor edit, but
+    # never call that edit a measurement of this run's detection accuracy.
+    for key, rate in (now.get("catch_baseline") or {}).items():
+        values = []
+        for previous in past:
+            floors = previous.get("catch_baseline")
+            if floors is None and "catch_source" not in previous:
+                floors = previous.get("catch", {})
+            if key in (floors or {}):
+                values.append(floors[key])
+        if not values or rate >= statistics.median(values):
+            continue
+        text = f"accepted catch floor {key} lowered to {rate}"
         ok = (accepted or {}).get(key)
         if ok and rate >= ok["rate"]:
             flags.append(f"{text}: accepted in #{ok['pr']}, {ok['why']}")
@@ -277,7 +330,9 @@ def trend(lines, now=None):
         "|---|---|---|",
     ]
     for key, label, _better in TRACKED:
-        values = [r.get(key) for r in rows]
+        values = [
+            r.get(key) if r.get("valid") is not False else None for r in rows
+        ]
         if all(v is None for v in values):
             continue
         out.append(f"| {label} | `{spark(values)}` | {values[-1]} |")
@@ -301,13 +356,16 @@ def main(argv=None):
     c.add_argument("--set", default="uji-clean")
     c.add_argument("--work", help="perf_budgets.py --results folder")
     c.add_argument("--out", required=True)
+    c.add_argument(
+        "--factor-results", help="this commit's benchmark.py factors --json"
+    )
     for name in ("append", "check"):
         p = sub.add_parser(name)
         p.add_argument("--history", required=True)
         p.add_argument("line")
     args = ap.parse_args(argv)
     if args.cmd == "collect":
-        line = collect(args.set, args.work)
+        line = collect(args.set, args.work, factor_results=args.factor_results)
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(line, f, sort_keys=True)
         return 0
