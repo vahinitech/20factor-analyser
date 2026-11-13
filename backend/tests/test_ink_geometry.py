@@ -19,6 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 SERVER_DIR = os.path.dirname(HERE)
 sys.path.insert(0, SERVER_DIR)
 from vision import ink_geometry as ig  # noqa: E402
+from vision import marked_places  # noqa: E402
 import scoring  # noqa: E402
 
 cv2 = ig.cv2
@@ -138,6 +139,25 @@ class TestInkGeometry(unittest.TestCase):
         for g in geo[:-1]:
             self.assertLess(g["angle"], 0.5)
 
+    def test_the_low_end_of_a_steep_line_is_still_letters(self):
+        # Sinking 6 degrees, the last letters sit wholly below the row's
+        # middle, like a vattu; they are full height, so they stay.
+        arr = draw_page([SENTENCE] * 2, tilt_last=6.0)
+        rows = ig.find_rows(arr)
+        page = ig._page_ink(arr)  # pylint: disable=protected-access
+        g = ig.measure_row(page, rows[-1])
+        self.assertEqual(len(g["letters"]), sum(SENTENCE))
+        self.assertAlmostEqual(g["angle"], 6.0, delta=0.6)
+
+    def test_a_row_of_a_few_letters_has_no_slope(self):
+        arr = draw_page([[3, 4], [2, 2]], tilt_last=4.0)
+        geo = ig.measure_page(arr, ig.find_rows(arr))
+        self.assertIsNotNone(geo[0]["angle"])
+        self.assertIsNone(geo[1]["angle"])
+        self.assertIsNone(geo[1]["signed_angle"])
+        feats = ig.page_features(arr, ig.find_rows(arr))
+        self.assertEqual(len(feats["angles"]), 1)
+
     def test_strokes_below_the_line_do_not_move_the_baseline(self):
         arr = draw_page([SENTENCE] * 3)
         geo = ig.measure_page(arr, ig.find_rows(arr))
@@ -176,6 +196,37 @@ class TestInkGeometry(unittest.TestCase):
         self.assertEqual(a, b)
 
 
+class TestInkMarks(unittest.TestCase):
+    """The report marks and draws the slope that was scored."""
+
+    def setUp(self):
+        if cv2 is None:
+            self.skipTest("OpenCV unavailable")
+        self.arr = draw_page([SENTENCE] * 4, tilt_last=4.0)
+        self.rows = ig.find_rows(self.arr)
+        ig.mark_rows(self.arr, self.rows)
+        for i, r in enumerate(self.rows):
+            r["evidence_id"] = f"line_{i + 1}"
+
+    def test_the_sinking_row_is_marked(self):
+        places = marked_places.free_skill_places(self.arr, self.rows, [])
+        looks = [p for p in places["7"] if p["role"] == "look"]
+        self.assertEqual([p["region_id"] for p in looks], ["line_4"])
+        self.assertAlmostEqual(looks[0]["value"], 4.0, delta=0.6)
+
+    def test_the_measured_baseline_is_drawn(self):
+        out = marked_places.page_measurements(self.arr, self.rows)
+        line = out["slope"]["line"]
+        self.assertEqual(line["region_id"], "line_4")
+        (x0, y0), (x1, y1) = self.rows[-1]["ink_baseline"]
+        self.assertEqual(
+            line["baseline"],
+            marked_places._point_pairs(  # pylint: disable=W0212
+                [[x0, y0], [x1, y1]]
+            ),
+        )
+
+
 class TestInkScores(unittest.TestCase):
     def setUp(self):
         if cv2 is None:
@@ -185,13 +236,77 @@ class TestInkScores(unittest.TestCase):
         result = scoring.build_analysis(arr, rows, {})
         return {r.n: r for r in result.results}
 
-    def test_geometry_is_measured_and_reading_is_not(self):
+    def test_a_page_of_only_short_rows_has_no_slope_to_score(self):
+        # Every row is under six letters, so none has a slope. An empty
+        # list must not reach the formulas as a perfectly level 0.0.
+        arr = draw_page([[2, 2]] * 4, tilt_last=4.0)
+        rows = ig.find_rows(arr)
+        self.assertEqual(len(rows), 4)
+        ig.mark_rows(arr, rows)
+        self.assertTrue(all(r["ink_angle"] is None for r in rows))
+        by_n = self.factors(arr, rows)
+        for n in (7, 11):
+            self.assertTrue(by_n[n].unmeasured, n)
+            self.assertEqual(by_n[n].unmeasured_kind, "insufficient", n)
+            self.assertEqual(
+                by_n[n].scoring_inputs,
+                {
+                    "method": "insufficient_data",
+                    "features": {"line_slope_count": 0},
+                },
+            )
+            self.assertIn("six or more letters", by_n[n].unmeasured_reason)
+        # Neatness stays measured, from the parts that were: its line
+        # parts are left out, not counted as perfect.
+        parts = [(5, 0.30)]
+        if not by_n[8].unmeasured:
+            parts.append((8, 0.20))
+        if not by_n[10].unmeasured:
+            parts.append((10, 0.20))
+        expected = sum(w * by_n[k].score for k, w in parts) / sum(
+            w for _, w in parts
+        )
+        self.assertFalse(by_n[20].unmeasured)
+        self.assertAlmostEqual(by_n[20].score, expected, delta=0.06)
+
+    def test_a_mixed_page_scores_the_slope_of_its_long_rows(self):
+        arr = draw_page([[2, 2], [3, 4]], tilt_last=8.0)
+        rows = ig.find_rows(arr)
+        fx = ig.page_features(arr, rows)
+        self.assertEqual(len(fx["angles"]), 1)
+        result = scoring.build_analysis(arr, rows, {})
+        by_n = {r.n: r for r in result.results}
+        fx = scoring._ink_features(arr, rows)  # pylint: disable=W0212
+        self.assertEqual(fx["line_slope_count"], 1)
+        for n in (7, 11):
+            self.assertFalse(by_n[n].unmeasured, n)
+            self.assertLess(by_n[n].score, 10.0, n)
+
+    def test_a_mark_takes_out_the_tilt_the_score_takes_out(self):
+        rows = [
+            {"ink_angle": 5.0, "ink_signed": 5.0},
+            {"ink_angle": 5.0, "ink_signed": 5.0},
+            {"ink_angle": 9.0, "ink_signed": 9.0},
+            {"ink_angle": None, "ink_signed": None},
+        ]
+        # pylint: disable=W0212
+        camera = marked_places._camera_deg(rows)
+        self.assertGreater(camera, 0.0)
+        self.assertAlmostEqual(
+            marked_places._line_angle(rows[2], camera), 9.0 - camera
+        )
+        self.assertIsNone(marked_places._line_angle(rows[3], camera))
+
+    def test_layout_is_measured_and_letters_wait_for_the_reader(self):
         arr = draw_page([SENTENCE] * 4)
         f = self.factors(arr, ig.find_rows(arr))
-        for n in (5, 7, 11, 12, 20):
+        for n in (5, 7, 10, 11, 20):
             self.assertFalse(f[n].unmeasured, n)
-        for n in (1, 2, 3, 9, 17, 18, 19):
-            self.assertTrue(f[n].unmeasured, n)
+        for n in (1, 3, 6, 9, 12, 17, 18, 19):
+            self.assertEqual(f[n].unmeasured_kind, "letters_later", n)
+        # Stroke order and smoothness are the sensor pen's (#192).
+        for n in (2, 4):
+            self.assertEqual(f[n].unmeasured_kind, "imu", n)
         self.assertGreater(f[7].score, 9.0)
         self.assertTrue(f[5].based_on.endswith("letter groups"))
         # Words are not known without a passage.
