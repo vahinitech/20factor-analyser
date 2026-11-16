@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 2: queued and running</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+<script src="mock-data.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 2 of 6 &middot; queued and running</span>
+  <h1 class="page-title">Class 3B</h1>
+  <p class="lead">Checking one page at a time. Rows fill in as each page is done.</p>
+
+  <section class="card">
+    <div class="status-line">
+      <span class="big">10 of 25 done</span>
+      <span class="muted">About 2 minutes 15 seconds left</span>
+      <span class="muted small hide-phone" style="margin-left:auto">Started 10:41 &middot; on this computer</span>
+    </div>
+    <div class="progress" aria-label="Progress, one square per page">
+      <i class="done"></i><i class="done"></i><i class="flag"></i><i class="refused"></i><i class="done"></i><i class="done"></i><i class="flag"></i><i class="done"></i><i class="refused"></i><i class="done"></i>
+      <i class="run"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+    </div>
+    <div class="legend"><span><i style="background:var(--band-strong)"></i>Checked</span><span><i style="background:var(--band-dev)"></i>Worth a look</span><span><i style="background:var(--v-text-faint)"></i>Not checked</span><span><i style="background:var(--v-accent)"></i>Checking now</span><span><i style="background:var(--v-surface-alt)"></i>Waiting</span></div>
+    <div class="actions">
+      <span class="btn btn--ghost">Pause</span>
+      <span class="btn btn--quiet">Stop and clear this class</span>
+    </div>
+    <div class="note">You can close this tab. The photos still to check stay on this computer, not on our server. Open this page again on this computer and press Continue.</div>
+    <div class="note note--warn">Families checking a single page take turns with your class, so at busy times a page can wait a little longer. Nothing is lost while it waits.</div>
+  </section>
+
+  <div class="table-wrap"><table class="class" id="t"></table></div>
+</main>
+<script>MOCK.fill("t", { done: 10, run: 10, limit: 14, waitText: "Waiting", fresh: 9 });</script>
+</body>
+</html>
