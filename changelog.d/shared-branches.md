@@ -1,0 +1,1 @@
+- Agent instructions now say to fetch and integrate a branch before changing it and again before every push, because people and agents push to the same branches, the agent's own PR branch included (owner, 2026-11-16).
