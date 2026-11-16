@@ -259,3 +259,14 @@ Several agents work on Vahini repositories at the same time. On 2026-11-05 two o
 - If the default branch moves between the yes and the merge, update the branch and wait for CI again. If the new commits change the same files, show the owner what changed and ask again.
 - Merge one PR at a time. After a merge, update the next open PR that shares files before it merges, and comment on it that the base moved.
 - Never commit, stage or push in another session's worktree or branch. If you find changes you did not make, stop and say so.
+
+## Shared branches: sync before you change anything (owner, 2026-11-16)
+
+People and agents push to the same branches, your own PR branch included: the owner pushes review fixes to it, and another session may stack work on it. On 2026-11-16 an agent committed on dot-matrix #29 without fetching it first; the owner had already pushed a fix there, so the change was written against stale code and the push was rejected. So:
+
+- Before editing, run `git status` (stop and say so if there is work you did not make), fetch the branch and its base, and bring your copy up to date: `git merge --ff-only origin/<branch>`, or start a new branch from the freshly fetched `origin/main`. Rebase only local commits that were never pushed; never rebase a pushed commit.
+- Read what came in, resolve conflicts locally keeping the other person's work, and rerun the checks before you start.
+- Fetch again before every commit and every push. A rejected push means someone else pushed: integrate, retest and push again. Never force-push a shared branch.
+- Say in the PR or your report what you integrated (commit and author).
+
+Full steps: Umbrella `skills/shared-branches/SKILL.md`.
