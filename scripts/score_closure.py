@@ -55,6 +55,9 @@ GROUPS = {
             "backend/languages/",
             "backend/models/",
             "backend/perf/",
+            # letter_styles.json picks each page's style guess, which
+            # `benchmark.py families` keeps per page (#342).
+            "backend/styles/",
             "backend/requirements.txt",
             "backend/requirements/",
             "scripts/score_closure.py",

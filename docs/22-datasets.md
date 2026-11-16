@@ -21,6 +21,7 @@ Audited on 22 October 2026 against each dataset's own page. "Unverified" means t
 | GNHK | CC BY 4.0 | Evaluation of 200 real photos, 19 October 2026 | No | No |
 | IIIT-INDIC-HW-WORDS-Telugu | **Unverified** (see below) | Trains the Telugu reader; Telugu evaluation pages | No | No (the reader is not used by a scan yet) |
 | Palmer (1915) and Zaner (Manual 144) penmanship manuals | Public domain | Neat reference set for calibration | 8 crops (`benchmarks/neat-penmanship/pages`) | No |
+| Cursive reference pages by family (Barnes 1898, Bridges 1907, Meyrat about 1900, D'Avignon, Berger 1866, a Commons sample, Pitman 1920) | Public domain | Style check and reader per letter-model family ([24](24-cursive-families.md)) | 24 crops (`benchmarks/cursive-*`, `benchmarks/print-control`) | No |
 | The sample photo `handwriting-sample.jpg` | **Source not recorded** | Sample report, fixtures, `sample-page` benchmark | Yes | Yes (`frontend/assets/samples/`, `sample-report-data.js`) |
 | `tests/fixtures/samples/` pages | **Source not recorded** | Printed-text refusal tests; real test lines for the print-or-handwriting reader | Yes (8 images, 544 KB) | No |
 | Therapist agreement pages (planned) | Written consent from the school and each family, for this test only | Evaluation against therapists' marks ([23](23-therapist-agreement.md)) | No | No |
@@ -62,6 +63,10 @@ The 24 font families (25 files) listed with their SHA-256 in `scripts/print_hand
 ## Palmer and Zaner penmanship manuals
 
 A. N. Palmer, *The Palmer Method of Business Writing*, 1915 (<https://archive.org/details/palmermethodofbu00palmrich>), and the Zaner-Bloser *Manual 144* (<https://archive.org/details/zaner-method-writing-manual-144>). Public domain, as recorded in [benchmarks/neat-penmanship/source.md](../benchmarks/neat-penmanship/source.md).
+
+## Cursive reference pages by letter-model family
+
+Model handwriting for the families in [24-cursive-families.md](24-cursive-families.md) (#342): Barnes's National Vertical Penmanship No. 6 (American Book Company, 1898), M. M. Bridges' A New Handwriting for Teachers (Oxford, 1907 printing), P. Meyrat's Recueil méthodique de principes d'écriture (Limoges, about 1900), D'Avignon's L'Écriture américaine (Paris, early 19th century), A. Berger's 21 Vorlegeblätter zum Schönschreiben in englischer Current (Munich, 1866), Manuscript Writing and Lettering (Pitman, 1920), all from the Internet Archive, and one Schulausgangsschrift sample from Wikimedia Commons that its adult writer released into the public domain. Public domain in the USA and India; each set's `source.md` gives the scan, the rights evidence and what was cropped. Only Barnes and Berger carry a rights field on the Internet Archive; the others rest on their dates, as the `source.md` files say. No child's writing.
 
 ## Sample and fixture photos
 

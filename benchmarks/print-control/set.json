@@ -1,0 +1,40 @@
+{
+ "description": "One page of adult model manuscript writing (print script, every letter apart) from a 1920 British handbook for schools, the print-only control for the cursive families (#342). The uji-clean set is the other control.",
+ "role": "cursive-reference",
+ "family": "print",
+ "source": "source.md",
+ "lang": "auto",
+ "settings": {
+  "VAHINI_OCR_BACKEND": "paddle",
+  "VAHINI_OCR_LANGS": "en",
+  "VAHINI_OCR_VARIANTS": "2",
+  "VAHINI_OCR_GPU": "0",
+  "VAHINI_OCR_MAX_SIDE": "2600",
+  "VAHINI_OCR_VERSION": "PP-OCRv5",
+  "VAHINI_OCR_DET_MODEL_NAME": "PP-OCRv5_mobile_det",
+  "VAHINI_OCR_REC_MODEL_MAP": "en:en_PP-OCRv5_mobile_rec",
+  "VAHINI_OCR_DET_LIMIT_SIDE_LEN": "2048",
+  "VAHINI_LAYOUT_MODEL": "PP-DocLayout-M"
+ },
+ "page_text": {
+  "manuscript-writing-101-poetry": [
+   "by poetry we mean the",
+   "art of employing words",
+   "in such a manner as to",
+   "produce an illusion on",
+   "the imagination, the art",
+   "of doing by means of",
+   "words what the painter",
+   "does by means of colours.",
+   "-lord macaulay."
+  ]
+ },
+ "page_style": {
+  "manuscript-writing-101-poetry": {
+   "slant": "upright",
+   "scheme": "British manuscript writing (1920)"
+  }
+ },
+ "floor_sentences_found": 0,
+ "eye_ranking": []
+}

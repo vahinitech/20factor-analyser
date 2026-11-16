@@ -113,6 +113,7 @@ class WhatRunsForWhichChange(unittest.TestCase):
         "backend/tests/test_calibrate.py": (False, False),
         "backend/scoring_parts/spatial.py": (True, False),
         "benchmarks/factors/expected.json": (True, False),
+        "backend/styles/letter_styles.json": (True, False),
         "backend/reading/detector.py": (True, True),
         "backend/requirements/core.txt": (True, True),
         "deployment/Dockerfile": (False, True),

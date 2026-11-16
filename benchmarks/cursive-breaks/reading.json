@@ -1,0 +1,39 @@
+{
+ "cer": 34.06,
+ "edits": 267,
+ "graphemes": 784,
+ "pages": {
+  "bridges-006-ways-of-life": {
+   "cer": 37.84,
+   "edits": 56,
+   "graphemes": 148
+  },
+  "bridges-007-stone-pine": {
+   "cer": 66.67,
+   "edits": 12,
+   "graphemes": 18
+  },
+  "bridges-008-read-not": {
+   "cer": 42.25,
+   "edits": 60,
+   "graphemes": 142
+  },
+  "bridges-009-bays": {
+   "cer": 33.09,
+   "edits": 91,
+   "graphemes": 275
+  },
+  "bridges-009-musk-rose": {
+   "cer": 23.88,
+   "edits": 48,
+   "graphemes": 201
+  }
+ },
+ "scripts": {
+  "Latin": {
+   "cer": 34.06,
+   "edits": 267,
+   "graphemes": 784
+  }
+ }
+}

@@ -1,6 +1,7 @@
 {
  "description": "Eight crops of engraved model handwriting from two public-domain penmanship manuals (Palmer 1915, Zaner 1925 printing of the 1915 edition): running sentences, no drills. A neat reference for scripts/calibrate.py, the ideal end of the range: adult cursive drawn as a model to copy, not children's everyday writing.",
  "role": "neat-reference",
+ "family": "looped",
  "source": "source.md",
  "lang": "auto",
  "settings": {
@@ -73,5 +74,39 @@
   ]
  },
  "floor_sentences_found": 26,
- "eye_ranking": []
+ "eye_ranking": [],
+ "page_style": {
+  "palmer-092-specimen": {
+   "slant": "slanted",
+   "scheme": "Palmer Method"
+  },
+  "palmer-093-practice": {
+   "slant": "slanted",
+   "scheme": "Palmer Method"
+  },
+  "zaner-088-spacing": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  },
+  "zaner-090-small-writing": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  },
+  "zaner-093-short-loops": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  },
+  "zaner-095-good-writing": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  },
+  "zaner-096-commercial-asset": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  },
+  "zaner-097-good-handwriting": {
+   "slant": "slanted",
+   "scheme": "Zaner Method"
+  }
+ }
 }

@@ -588,6 +588,18 @@ pieces, and the table in the job summary shows how far each page is from
 the thresholds (on 21 October 2026 the closest was UPV_W21: lines span 75%
 of its rows, a quarter of them short).
 
+## Cursive reference pages by family (#342)
+
+`benchmark.py families` replays every set that names a letter-model
+family in its `set.json` (looped, break letters, French, German, and
+print as the control) and reports per family the style check's verdict,
+the pages and rows read in pieces and the factors not measured. The
+numbers are kept in `benchmarks/cursive-families.json`, which CI's
+`benchmark` job checks; `families --update` keeps new ones. The pages,
+the numbers and what they show are in
+[24-cursive-families.md](24-cursive-families.md). The engraved pages
+above are family 1's slanted pages.
+
 ## Telugu (19 October 2026)
 
 Twenty pages of real Telugu handwriting (five writers, words from
