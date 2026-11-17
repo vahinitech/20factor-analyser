@@ -427,6 +427,11 @@ function render(host, data){
   host.toggleAttribute('data-caseless', !!(global.VahiniI18n && VahiniI18n.caseless(t.lang)));
   if(imu && imu.dynamics) applyPenDynamics(analysis, imu);
   const rec=analysis.recognition || {};
+  // A page in a language whose letters are not read yet, measured from
+  // the shape of its writing (ink_geometry.py): its layout is scored and
+  // the letter skills come with that language's reader.
+  const inkOnly=rec.backend==='ink-geometry';
+  const INK_LAYOUT=[5,7,8,10,11,20];
   const isLive=f=>!f.unmeasured && (f.imuMeasured || f.conf!=='imu') && Number.isFinite(f.score);
   const stage=band=>t('stage.'+band);
   const measured=analysis.results.filter(isLive);
@@ -494,6 +499,7 @@ function render(host, data){
   // Page 1's "Spelling and grammar" line (owner, 2026-10-25): how many
   // words and sentences page 2 has, never "no mistakes".
   const langStatus=(()=>{
+    if(inkOnly) return t('note.ink');
     if(!langSec) return t('lang.notchecked');
     const parts=[spelling.length?t.n('lang.words',spelling.length):'',grammar.length?t.n('lang.sentences',grammar.length):''].filter(Boolean);
     if(!parts.length) return t('lang.clear');
@@ -635,7 +641,8 @@ function render(host, data){
   const live=n=>measured.find(f=>f.n===n);
   const scoreChip=n=>{const f=live(n);
     if(f) return chipHTML(f);
-    return `<div class="sn-lockchip" data-locked="${n}"><span class="sn-cn">${esc(t('chip.'+n))}</span><i>${esc(t(free?'m.full':'m.nophoto'))}</i></div>`;};
+    const why=inkOnly&&!INK_LAYOUT.includes(n)&&!PEN_SKILLS.includes(n)?'m.later':inkOnly&&n===8?'m.passage':free?'m.full':'m.nophoto';
+    return `<div class="sn-lockchip" data-locked="${n}"><span class="sn-cn">${esc(t('chip.'+n))}</span><i>${esc(t(why))}</i></div>`;};
   // A strip of the photo around one region, with drawings on top in
   // processed-image pixels (the photo is drawn at its own size).
   const strip=(region,draw,cls='')=>{
@@ -716,7 +723,8 @@ function render(host, data){
   const mRow=r=>`<div class="sn-m" data-measure="${r.key}">${r.strip||'<div class="sn-m-strip sn-m-none"></div>'}<div class="sn-m-what"><h4>${esc(t('m.'+r.key+'.h'))}</h4><p>${esc(r.text)} <small>${esc(r.how||t('m.'+r.key+'.how'))}</small></p></div><div class="sn-m-scores">${byScore(r.scores).map(scoreChip).join('')}</div></div>`;
   const group=(label,ns)=>`<div class="sn-m-group"><b>${esc(label)}</b><div class="sn-m-scores sn-m-row">${byScore(ns).map(scoreChip).join('')}</div></div>`;
   const counts=data.pipeline||{};
-  const mSub=t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
+  const mSub=inkOnly ? t('m.sub.ink',{lines:ms.lines||counts.nLines||0})
+    : t('m.sub',{lines:ms.lines||counts.nLines||0,words:counts.nWords||0,letters:counts.nChars||0});
   const pen=`<div class="sn-m-pen"><p>${PENCIL}<span><b>${esc(t('m.pen'))}</b> ${esc(t('m.pen.text'))}</span></p><div class="sn-m-scores sn-m-row">${PEN_SKILLS.map(n=>live(n)?chipHTML(live(n)):`<span class="sn-pen-skill">${esc(t('chip.'+n))}</span>`).join('')}</div></div>`;
   // The whole map, measurement by measurement, on screen only: what we
   // measure, the scores built from it, and whether a page can show it.
