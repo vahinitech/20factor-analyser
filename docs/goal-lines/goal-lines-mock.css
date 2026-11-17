@@ -1,0 +1,60 @@
+/* MOCK-UP ONLY (docs/goal-lines). Website theme tokens (var(--v-*)) only,
+   as the report rules require; no colour codes. */
+
+/* The yellow flag that names each proposed part in the screenshots. */
+.gl-flag{
+  margin:0 0 8px; display:inline-block; padding:2px 8px; border-radius:var(--v-radius-pill);
+  background:var(--v-warning-bg); color:var(--v-warning);
+  font:var(--v-weight-bold) 10.5px/1.5 var(--v-font-sans); letter-spacing:.04em; text-transform:uppercase;
+}
+
+/* Option A: teacher card, the page's width, above page 1. */
+.gl-card{
+  width:210mm; max-width:100%; box-sizing:border-box; margin:9mm auto 0;
+  background:var(--v-surface); border:1px solid var(--v-border-strong); border-radius:var(--v-radius-lg);
+  box-shadow:var(--v-shadow-1); padding:var(--v-space-4) var(--v-space-5); color:var(--v-text-2);
+  font:var(--v-text-sm)/1.5 var(--v-font-sans);
+}
+.gl-top{ display:flex; align-items:center; justify-content:space-between; gap:var(--v-space-3); }
+.gl-title{ margin:0; font:var(--v-weight-semibold) var(--v-text-xl)/1.25 var(--v-font-serif); color:var(--v-text); }
+.gl-sub{ margin:var(--v-space-1) 0 var(--v-space-3); color:var(--v-text-muted); font-size:12.5px; }
+.gl-table{ width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.gl-table th, .gl-table td{ text-align:left; vertical-align:top; padding:8px 8px; border-top:1px solid var(--v-border); }
+.gl-table thead th{ border-top:0; color:var(--v-text-muted); font:var(--v-weight-semibold) var(--v-text-xs)/1.3 var(--v-font-sans); text-transform:uppercase; letter-spacing:.06em; }
+.gl-skill{ width:24%; color:var(--v-text); font:var(--v-weight-semibold) var(--v-text-sm)/1.35 var(--v-font-sans); }
+.gl-line{ margin:0; color:var(--v-text); font:var(--v-weight-medium) var(--v-text-sm)/1.45 var(--v-font-sans); }
+.gl-how{ margin-top:2px; color:var(--v-text-muted); font-size:12px; }
+.gl-how summary{ cursor:pointer; color:var(--v-accent-text); }
+.gl-how p{ margin:2px 0 0; }
+.gl-c{ width:1%; white-space:nowrap; }
+.gl-copy{
+  display:inline-flex; align-items:center; gap:5px; cursor:pointer; white-space:nowrap;
+  padding:5px 10px; border-radius:var(--v-radius-pill); border:1px solid var(--v-border-strong);
+  background:var(--v-surface); color:var(--v-accent-text); font:var(--v-weight-semibold) 12px/1.2 var(--v-font-sans);
+}
+.gl-copy:hover{ border-color:var(--v-accent); }
+.gl-copy svg{ width:13px; height:13px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+.gl-top .gl-copy{ background:var(--v-accent); color:var(--v-on-accent); border-color:var(--v-accent); padding:7px 14px; font-size:13px; }
+.gl-none{ margin-top:var(--v-space-3); padding:var(--v-space-3) var(--v-space-4); background:var(--v-bg-alt); border-radius:var(--v-radius-md); }
+.gl-none h3{ margin:0 0 4px; font:var(--v-weight-semibold) var(--v-text-sm)/1.3 var(--v-font-sans); color:var(--v-text); }
+.gl-none ul{ margin:0; padding-left:18px; font-size:12px; }
+.gl-none b{ color:var(--v-text); font-weight:var(--v-weight-semibold); }
+.gl-more{ margin:6px 0 0; font-size:12px; color:var(--v-accent-text); }
+
+/* Option B: a dashed line under each measurement row's words. */
+.gl-row{ margin-top:5px; padding:5px 7px; border:1px dashed var(--v-accent-light); border-radius:var(--v-radius-sm); background:var(--v-accent-soft); }
+.gl-row .gl-flag{ margin-bottom:4px; }
+.gl-row-line, .gl-row-none{ margin:0 0 3px !important; display:flex; align-items:flex-start; justify-content:space-between; gap:8px; font:var(--v-weight-medium) 11.5px/1.35 var(--v-font-sans) !important; color:var(--v-accent-text) !important; }
+.gl-row-line:last-child, .gl-row-none:last-child{ margin-bottom:0 !important; }
+.gl-row .gl-copy{ padding:2px 8px; font-size:11px; flex:none; }
+
+/* Option C: a third printed sheet in the report's own page frame. */
+.gl-sheet .sn-top{ margin-bottom:var(--v-space-3); }
+.gl-sheet-title{ margin:4px 0 2px; font:var(--v-weight-semibold) 22px/1.25 var(--v-font-serif); color:var(--v-text); }
+.gl-table--print td, .gl-table--print th{ font-size:12.5px; }
+.gl-howcell{ width:36%; color:var(--v-text-muted); font-size:11.5px !important; }
+.gl-foot{ margin-top:auto; padding-top:var(--v-space-3); border-top:1px solid var(--v-border); color:var(--v-text-muted); font:10px/1.4 var(--v-font-sans); }
+
+@media print{
+  .gl-card, .gl-row{ display:none !important; }
+}
