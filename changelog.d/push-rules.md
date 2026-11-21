@@ -1,0 +1,1 @@
+- Push rules: the required `pr-base` check fails a pull request whose branch starts with claude, codex or code or is not named `<type>/<topic>`, or whose commits, title or description carry an AI tool's mark or are authored as one. The rules come from the base branch (`scripts/push-rules.mjs`), and `.githooks/pre-push` runs them before a push.

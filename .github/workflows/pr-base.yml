@@ -4,17 +4,47 @@ name: pr-base
 # branch's ruleset can require one check. A required check is what makes
 # GitHub's "branch must be up to date" rule take effect: with none, a PR
 # behind the default branch could still merge (owner, 2026-11-06).
-# Keep it trivial; real CI lives in the other workflows.
+#
+# It also holds the push rules (owner, 2026-11-21; scripts/push-rules.mjs): a branch
+# named <type>/<topic> and never claude/, codex/ or code/, and no AI
+# tool's mark on a commit, the title or the description. The rules are
+# read from the base branch, so a pull request cannot loosen its own check.
+# Keep it small and fast; real CI lives in the other workflows.
 
 on:
   pull_request:
 
-permissions: {}
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   pr-base:
     name: pr-base
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
     steps:
-      - run: echo "Pull request checked against an up-to-date base."
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          sparse-checkout: scripts/push-rules.mjs
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+      - name: Push rules
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.head_ref }}
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          if [ ! -f scripts/push-rules.mjs ]; then
+            echo "The push rules are not on the base branch yet; nothing to check."
+            exit 0
+          fi
+          gh api "repos/$REPO/pulls/$PR/commits" --paginate \
+            --jq '.[] | {sha, message: .commit.message, author: {name: .commit.author.name, email: .commit.author.email}, committer: {name: .commit.committer.name, email: .commit.committer.email}}' \
+            | jq -s --arg branch "$BRANCH" --arg title "$TITLE" --arg body "$BODY" \
+              '{branch: $branch, title: $title, body: $body, commits: .}' > pr.json
+          node scripts/push-rules.mjs --pr pr.json
