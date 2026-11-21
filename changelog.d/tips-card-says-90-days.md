@@ -1,0 +1,1 @@
+- The "Email me practice tips" card after a printed report now says the email address is deleted 90 days after it is sent, the limit `privacy.html` already gives. The consent line changed, so its id is now `pdf-tips-2026-11-21` (India's DPDP Act, section 5 and rule 3).
