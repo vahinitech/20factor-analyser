@@ -69,7 +69,7 @@ Base path defaults to `/persist` (`window.VAHINI_PERSIST_ENDPOINT`).
 
   ```json
   { "type": "report_pdf_lead", "email": "...", "tips": true,
-    "consent": "pdf-tips-2026-10-30", "purpose": "child",
+    "consent": "pdf-tips-2026-11-21", "purpose": "child",
     "page": "/analyser/analyser.html" }
   ```
   Only when the box is ticked and the address is valid. No `kind`, so the
