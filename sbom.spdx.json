@@ -3,9 +3,9 @@
   "dataLicense": "CC0-1.0",
   "SPDXID": "SPDXRef-DOCUMENT",
   "name": "Vahini-20-Factor-Handwriting-Analyser-SBOM",
-  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-e483b5628ef56414b1ed",
+  "documentNamespace": "https://vahinitech.com/spdx/vahini-analyser-b51fa8eb1b6abbe16076",
   "creationInfo": {
-    "created": "2026-11-08T18:16:35Z",
+    "created": "2026-11-21T09:50:19Z",
     "creators": [
       "Organization: Vahini Technologies",
       "Tool: backend/tools/update_sbom.py"
@@ -897,6 +897,31 @@
       "comment": "Declared in backend/requirements/core.txt: vulture==2.14. Resolved container versions require a build SBOM."
     },
     {
+      "SPDXID": "SPDXRef-Vendor--babel-standalone",
+      "name": "@babel/standalone",
+      "versionInfo": "7.29.0",
+      "downloadLocation": "https://registry.npmjs.org/@babel/standalone/-/standalone-7.29.0.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "2623a9e22809915ce789b4461154e277ddce520d5a4320c14d44332a5d0dcea0"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/@babel/standalone@7.29.0"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/babel.min.js (package/babel.min.js). Turns the explainer's .jsx scenes into JavaScript in the browser. Served from here so the page asks no outside host."
+    },
+    {
       "SPDXID": "SPDXRef-Vendor-html2canvas",
       "name": "html2canvas",
       "versionInfo": "1.4.1",
@@ -970,6 +995,56 @@
         }
       ],
       "comment": "Vendored unchanged as frontend/scripts/vendor/qrcode.js (package/dist/qrcode.js). Draws the QR code on report page 1. The MIT licence notice is in the file's header (the package ships no separate licence file)."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-react",
+      "name": "react",
+      "versionInfo": "18.3.1",
+      "downloadLocation": "https://registry.npmjs.org/react/-/react-18.3.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "28348fef6cb0ed8b2ceeb22deaf824428fd13875d84c73d38f77dd216fc24e7f"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react@18.3.1"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/react.development.js (package/umd/react.development.js). Runs the animated explainer on 20-factors-explained.html, which the check page frames. Served from here so the page asks no outside host."
+    },
+    {
+      "SPDXID": "SPDXRef-Vendor-react-dom",
+      "name": "react-dom",
+      "versionInfo": "18.3.1",
+      "downloadLocation": "https://registry.npmjs.org/react-dom/-/react-dom-18.3.1.tgz",
+      "filesAnalyzed": false,
+      "licenseConcluded": "MIT",
+      "licenseDeclared": "MIT",
+      "copyrightText": "NOASSERTION",
+      "primaryPackagePurpose": "LIBRARY",
+      "checksums": [
+        {
+          "algorithm": "SHA256",
+          "checksumValue": "f9044a5e9c39db8bb1a204dff924e526ec0a621e695bb69de1035811be8709e4"
+        }
+      ],
+      "externalRefs": [
+        {
+          "referenceCategory": "PACKAGE-MANAGER",
+          "referenceType": "purl",
+          "referenceLocator": "pkg:npm/react-dom@18.3.1"
+        }
+      ],
+      "comment": "Vendored unchanged as frontend/scripts/vendor/react-dom.development.js (package/umd/react-dom.development.js). Runs the animated explainer on 20-factors-explained.html, which the check page frames. Served from here so the page asks no outside host."
     },
     {
       "SPDXID": "SPDXRef-npm-node-modules--bcoe-v8-coverage",
@@ -3745,6 +3820,11 @@
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
     {
+      "spdxElementId": "SPDXRef-Vendor--babel-standalone",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
       "spdxElementId": "SPDXRef-Vendor-html2canvas",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
@@ -3756,6 +3836,16 @@
     },
     {
       "spdxElementId": "SPDXRef-Vendor-qrcode-generator",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Vendor-react",
+      "relationshipType": "RUNTIME_DEPENDENCY_OF",
+      "relatedSpdxElement": "SPDXRef-Package-Vahini"
+    },
+    {
+      "spdxElementId": "SPDXRef-Vendor-react-dom",
       "relationshipType": "RUNTIME_DEPENDENCY_OF",
       "relatedSpdxElement": "SPDXRef-Package-Vahini"
     },
