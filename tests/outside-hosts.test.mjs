@@ -22,7 +22,7 @@ const OUTSIDE = /^(https?:)?\/\//i;
 const vendor = JSON.parse(read('frontend/scripts/vendor/sources.json')).map((entry) => entry.file);
 
 for (const page of PAGES) {
-  const html = read(page).replace(/<!--[\s\S]*?-->/g, '');
+  const html = read(page);
   for (const [, tag, src] of html.matchAll(LOADS)) {
     assert.ok(!OUTSIDE.test(src), `${page}: <${tag}> loads ${src} from an outside host`);
     const local = /^scripts\/vendor\/([\w.-]+)/.exec(src);
