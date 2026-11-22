@@ -1,0 +1,5 @@
+#!/bin/sh
+# Push rules before a push (scripts/push-rules.mjs). Turn on once per clone:
+#   git config core.hooksPath .githooks
+git fetch -q origin main 2>/dev/null
+exec node scripts/push-rules.mjs --local FETCH_HEAD
