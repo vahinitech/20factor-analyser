@@ -41,14 +41,15 @@
   function goalLines() {
     var out = [];
     // 5 Size Consistency: words whose small letters are 30% or more off the
-    // page's median small-letter height (features.SIZE_OFF).
+    // size expected where they sit (features.SIZE_OFF,
+    // letter_geometry.size_words).
     var n5 = parseInt(factor(5).basedOn, 10);
     var off5 = Math.round(feat(5).words_off_size * n5);
     out.push({
       n: 5, skill: "Letter size",
       line: "Small letters were within 30% of the page's usual small-letter height in " +
         (n5 - off5) + " of " + n5 + " words measured (" + pct(n5 - off5, n5) + "%).",
-      how: "Each word's small-letter height, measured along its own baseline. A word counts as off size when it is 30% or more taller or shorter than the page's middle value."
+      how: "Each word's small-letter height, measured along its own baseline. A word counts as off size when it is 30% or more taller or shorter than the size expected where it sits: the page's middle value, or its trend down the page when the writing grows or shrinks from top to bottom."
     });
     // 7 Baseline Alignment: words whose baseline sits 0.35 small letters or
     // more off their line's (letter_geometry.WORD_DROP_LOOK).
@@ -84,7 +85,7 @@
       n: 11, skill: "Level rows",
       line: "Rows sloped " + one(M.slope.mean_deg) + "° on average over " + rows +
         " rows; the steepest sloped " + one(M.slope.line.angle) + "°.",
-      how: "The angle of each row of writing against level. A photo taken at an angle adds to every row's slope, so compare pages photographed flat."
+      how: "The angle of each row of writing against the page. A tilt the whole page shares beyond 1 degree is taken as the camera's and taken out first."
     });
     // 6 Ascender / Descender Control: zone bands from ink profiles.
     var z = A.zoneProfile || {};

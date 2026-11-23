@@ -54,6 +54,14 @@ The yellow tag on each proposed part is for this review only. The
 in `goal-lines-mock.js`: stroke order and smooth lines now sit with the
 sensor-pen skills, and letter spacing no longer says "lowest mark".
 
+The screenshots and the sample's numbers were made on 28 October 2026.
+Since then #341 measures line angles against the page and compares each
+word's size with the size expected where it sits, so the "how it was
+measured" wording for Letter size and Level rows has changed in
+`goal-lines-mock.js` and the tables here but not in the pictures, and a
+build would recompute every count. The shipped report has also gained the
+cursive sheets box (#351, #358). Render the mock-up again before deciding.
+
 ## The lines, factor by factor
 
 Values are from the sample. "Sent today" says which field holds the number
@@ -62,11 +70,11 @@ while `measurements` go to every tier.
 
 | # | Skill (report name) | Line on the sample | What it rests on (code) | Sent today |
 |---|---|---|---|---|
-| 5 | Letter size | Small letters were within 30% of the page's usual small-letter height in 75 of 84 words measured (89%). | Each word's small-letter height along its own baseline; off size at 30% or more from the page's median (`features.SIZE_OFF`, `words_off_size`, `size_count`). | Words measured: `basedOn`, all tiers. Share off size: scoring inputs, Pro. |
+| 5 | Letter size | Small letters were within 30% of the page's usual small-letter height in 75 of 84 words measured (89%). | Each word's small-letter height along its own baseline; off size at 30% or more from the size expected where the word sits, which is the page's median or, over enough rows, its trend down the page (`features.SIZE_OFF`, `letter_geometry.size_words`, `words_off_size`, `size_count`). | Words measured: `basedOn`, all tiers. Share off size: scoring inputs, Pro. |
 | 7 | Writing on the line | 80 of 87 words sat on their row's baseline, less than a third of a small-letter height above or below it (92%). | Each word's baseline against its row's; off at 0.35 small letters or more (`letter_geometry.WORD_DROP_LOOK`, `words_off_line`). | Share: scoring inputs, Pro. Words measured: **not sent** (see the note below). |
 | 8 | Spaces between words | 67 of 71 gaps between words were between half and twice the page's usual word gap (94%). | Every word gap in the ink against the page's median gap; uneven under 0.5 or over 2 times it (`features.NARROW_WORD_GAP`, `ODD_GAP`, `word_gaps_odd`, `word_gap_count`). | Scoring inputs, Pro. |
 | 10 | Where rows begin | Rows began on average 2.6% of the page width from the usual left edge, over 16 rows. | Mean distance of row starts from the median start, rows starting 15% of the width or more to the right left out as titles or dates (`features._margin_spread`, `left_spread`). | Scoring inputs, Pro. |
-| 11 | Level rows | Rows sloped 2.1° on average over 16 rows; the steepest sloped 6.2°. | Each row outline's angle against level (`marked_places.page_measurements`, `slope.mean_deg`, `slope.line.angle`). A photo taken at an angle adds to every row. | `measurements`, all tiers. |
+| 11 | Level rows | Rows sloped 2.1° on average over 16 rows; the steepest sloped 6.2°. | Each row outline's angle against the page: a tilt the whole page shares beyond 1° is taken as the camera's and taken out first (`features.TILT_FREE`, `marked_places.page_measurements`, `slope.mean_deg`, `slope.line.angle`). | `measurements`, all tiers. |
 | 6 | Tall letters and tails | Over 16 rows, tall letters reached 1.5 times the small-letter height and tails reached 1.4 times (the guide the analyser uses is 2.0 times). | Ink above and below the small-letter band from each row's ink profile (`zoneProfile.ascenderReach`, `descenderReach`, `targetReach`). | Analysis, Pro. |
 | 17 | Slant | The lean of the words varied by 13.5° (standard deviation) across the words measured. | Spread of each word's lean (`features._stroke_features`, `slant_std`). | Scoring inputs, Pro. A weak goal line: it needs a count of words leaning away from the page's usual, which is not computed yet. |
 
