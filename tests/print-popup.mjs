@@ -106,6 +106,7 @@ try {
     add(!fields.bundled, 'No "By continuing you agree" line', fields);
     const lines = await page.textContent('#vg-tips-what');
     add(/Optional/.test(lines) && /PDF does not depend on it/.test(lines), 'One line says what we send and that it is optional', lines);
+    add(/delete your email address 90 days after you send it/.test(lines), 'The same line says the address is deleted after 90 days', lines);
     await page.click('#vg-cancel');
     add(!(await page.isVisible('#vgate')), '"No thanks" closes the card');
     add(answerOf(posts).length === 0 && leadOf(posts).length === 0, '"No thanks" sends nothing', posts);
