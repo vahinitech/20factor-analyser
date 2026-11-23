@@ -70,9 +70,12 @@ often run into each other." Never "dysgraphia", "disorder", "delay",
 "deficit", "at risk", "red flag" or "fails". Under the table, every time:
 the flag describes one page, not the child; a tired page can be flagged and
 a child who finds writing hard can write one good page; and we have not yet
-measured how often the flags agree with a therapist. #325 sets up exactly
-that measurement (agreement on 100 consented pages, sensitivity and
-specificity at several thresholds); its result should set the rule.
+measured how often the flags agree with a therapist. #325 (merged, protocol
+in [23-therapist-agreement.md](../23-therapist-agreement.md)) sets up that
+measurement: agreement on 100 consented pages, with sensitivity and
+specificity at several thresholds. Its flag is an overall score below a
+cut-off, not this rule, so "two or more skills at Learning" needs its own
+line in that analysis before its result can set the rule.
 
 ## Capacity arithmetic
 
