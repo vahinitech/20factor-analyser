@@ -184,3 +184,9 @@ entries come from that file through `backend/tools/update_sbom.py`).
 **html2canvas** 1.4.1, Copyright (c) 2012 Niklas von Hertzen, MIT License: `html2canvas.min.js`, licence `html2canvas-LICENSE.txt`. It draws each report page to an image for that PDF.
 
 jsPDF and html2canvas are loaded only when the share button is pressed; nothing they make is sent to Vahini.
+
+**React** and **React DOM** 18.3.1, Copyright (c) Facebook, Inc. and its affiliates, MIT License: `react.development.js` and `react-dom.development.js`, licence `react-LICENSE.txt`. They run the animated explainer on `20-factors-explained.html`, which the check page frames.
+
+**Babel standalone** (`@babel/standalone` 7.29.0), Copyright (c) 2014-present Sebastian McKenzie and other contributors, MIT License: `babel.min.js`, licence `babel-standalone-LICENSE.txt`. It turns the explainer's `.jsx` scenes into JavaScript in the visitor's browser.
+
+These three were loaded from unpkg.com until November 2026. They are the same files, served from this repository so the page asks no outside host.
