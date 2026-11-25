@@ -661,7 +661,11 @@ def _one_page(arr, raw, verdict):
         step.size(found=0 if facing is None else 2)
     if facing is None:
         return arr, raw, verdict.turn, None
-    log.info("two facing pages, scoring the %s one", facing.used)
+    log.info(
+        "two facing pages (binding at %.2f), scoring the %s one",
+        facing.gutter,
+        facing.used,
+    )
     full = np.array(computer_vision.decode_image(raw, verdict.turn))
     raw = facing_pages.page_photo(full, facing)
     arr = computer_vision.to_numpy(raw, max_side=MAX_OCR_SIDE)
