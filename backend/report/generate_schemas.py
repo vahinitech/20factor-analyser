@@ -609,6 +609,42 @@ def common():
                     "when the photo was read as it is."
                 ),
             },
+            "facingPages": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["found", "used", "box"],
+                "description": (
+                    "The photo held two facing pages, an open notebook, "
+                    "and only one was scored: the first page with "
+                    "writing, left to right (facing_pages.py). The other "
+                    "page is not read or measured. Every box and mark in "
+                    "the report is on the whole photo, after any turn. "
+                    "Absent when the photo shows one page."
+                ),
+                "properties": {
+                    "found": {
+                        "const": 2,
+                        "description": "Pages found in the photo.",
+                    },
+                    "used": {
+                        "enum": ["left", "right"],
+                        "description": (
+                            "The page scored: left, or right when the "
+                            "left page has no writing."
+                        ),
+                    },
+                    "box": {
+                        "type": "array",
+                        "items": {"type": "integer", "minimum": 0},
+                        "minItems": 4,
+                        "maxItems": 4,
+                        "description": (
+                            "x, y, width and height of the page scored, "
+                            "in the photo's pixels after any turn."
+                        ),
+                    },
+                },
+            },
             "languageCheck": language_check(),
             "writingStyle": {
                 "type": "object",
@@ -1247,6 +1283,7 @@ def expanded():
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
             "turned": ref("pageTurn"),
+            "facing_pages": ref("facingPages"),
             "language": ref("languageCheck"),
             "evidence": {
                 "type": "object",
@@ -1439,6 +1476,7 @@ def compact():
             "ruleset": ref("ruleset"),
             "age_band": ref("ageBand"),
             "turned": ref("pageTurn"),
+            "facing_pages": ref("facingPages"),
             "language": ref("languageCheck"),
             "style": ref("writingStyle"),
             "sections": {

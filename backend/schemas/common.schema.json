@@ -1009,6 +1009,39 @@
       ],
       "description": "Degrees the analyser turned the photo clockwise to read it upright, when it was taken sideways or upside down with no EXIF turn (#297). Every box and mark in the report is on the turned photo, so a viewer turns its own copy the same way before drawing them. Absent when the photo was read as it is."
     },
+    "facingPages": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "found",
+        "used",
+        "box"
+      ],
+      "description": "The photo held two facing pages, an open notebook, and only one was scored: the first page with writing, left to right (facing_pages.py). The other page is not read or measured. Every box and mark in the report is on the whole photo, after any turn. Absent when the photo shows one page.",
+      "properties": {
+        "found": {
+          "const": 2,
+          "description": "Pages found in the photo."
+        },
+        "used": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "description": "The page scored: left, or right when the left page has no writing."
+        },
+        "box": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 4,
+          "maxItems": 4,
+          "description": "x, y, width and height of the page scored, in the photo's pixels after any turn."
+        }
+      }
+    },
     "languageCheck": {
       "type": "object",
       "additionalProperties": false,

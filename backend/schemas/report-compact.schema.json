@@ -278,6 +278,9 @@
     "turned": {
       "$ref": "common.schema.json#/definitions/pageTurn"
     },
+    "facing_pages": {
+      "$ref": "common.schema.json#/definitions/facingPages"
+    },
     "language": {
       "$ref": "common.schema.json#/definitions/languageCheck"
     },

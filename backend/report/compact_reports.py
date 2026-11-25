@@ -241,6 +241,10 @@ def build_compact(payload, access, include=()):
         # The photo was read turned this far clockwise (page_turn.py):
         # boxes and marks are on the turned photo (#297).
         report["turned"] = payload["turned"]
+    if payload.get("facing_pages"):
+        # Two facing pages: only the one named was scored, and boxes stay
+        # on the whole photo (facing_pages.py).
+        report["facing_pages"] = payload["facing_pages"]
     if report["ok"]:
         # Counts only, no text, so every tier gets them.
         report["comparability"] = comparison_data.comparability(payload)
