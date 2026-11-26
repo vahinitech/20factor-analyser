@@ -64,6 +64,7 @@ from vision import (
     ink_geometry,
 )  # lines and geometry from the ink, for unread scripts
 from vision import page_turn  # which way up the photo is (#297)
+from vision import facing_pages  # two pages in one photo: score one
 import scoring  # the 20-factor model (FactorScore/SectionScore/AnalysisResult)
 from scoring_parts import (
     needs as factor_needs,
@@ -646,6 +647,31 @@ def _upright(arr, raw, lang):
     return arr, verdict
 
 
+def _one_page(arr, raw, verdict):
+    """(arr, raw, turn, facing): with two facing pages in the photo
+    (facing_pages.py), the working copy and the upload with only the
+    first page with writing kept, left to right, and the rest painted
+    its paper colour, so every later step reads one page. The kept
+    photo is upright already, so it is read with turn 0; the answer
+    still says how far the upload was turned. facing is the answer's
+    facing_pages field, or None for a photo of one page, which is left
+    exactly as it was."""
+    with perf.stage("pages") as step:
+        facing = facing_pages.find(arr)
+        step.size(found=0 if facing is None else 2)
+    if facing is None:
+        return arr, raw, verdict.turn, None
+    log.info(
+        "two facing pages (binding at %.2f), scoring the %s one",
+        facing.gutter,
+        facing.used,
+    )
+    full = np.array(computer_vision.decode_image(raw, verdict.turn))
+    raw = facing_pages.page_photo(full, facing)
+    arr = computer_vision.to_numpy(raw, max_side=MAX_OCR_SIDE)
+    return arr, raw, 0, facing.as_dict(full.shape[1], full.shape[0])
+
+
 def _ocr_process(arr, raw, lang):
     """Synchronous body of /ocr. Run off the event loop via
     run_in_threadpool so one slow analysis (10-30s of CPU work) doesn't
@@ -658,6 +684,7 @@ def _ocr_process(arr, raw, lang):
         arr, verdict = _upright(arr, raw, lang)
         if verdict.unsure:
             return _turned_page_payload("pp-ocrv5", lang, verdict)
+        arr, raw, turn, facing = _one_page(arr, raw, verdict)
         raw_lines, last_err, selected_backend, compare_meta = (
             recognizer.collect_lines(arr, lang)
         )
@@ -667,7 +694,7 @@ def _ocr_process(arr, raw, lang):
             raw_bytes=raw,
             refine_backend=selected_backend,
             read_region=_READ_REGION,
-            turn=verdict.turn,
+            turn=turn,
         )
         if lines and not hand_lines:
             # Text was detected but every line is printed: refuse rather
@@ -728,6 +755,8 @@ def _ocr_process(arr, raw, lang):
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
         **({"turned": verdict.turn} if verdict.turn else {}),
+        # Two facing pages: the page scored and its box (facing_pages.py).
+        **({"facing_pages": facing} if facing else {}),
         "engine": f"pp-ocrv5+{selected_backend}",
         "selected_backend": selected_backend,
         "backend_compare": compare_meta,
@@ -802,6 +831,7 @@ def _analyze_vl_process(arr, raw, lang):
         arr, verdict = _upright(arr, raw, lang)
         if verdict.unsure:
             return _turned_page_payload("pp-ocrv5+vl", lang, verdict)
+        arr, raw, turn, facing = _one_page(arr, raw, verdict)
         raw_lines, last_err, selected_backend, compare_meta = (
             recognizer.collect_lines(arr, lang)
         )
@@ -811,7 +841,7 @@ def _analyze_vl_process(arr, raw, lang):
             raw_bytes=raw,
             refine_backend=selected_backend,
             read_region=_READ_REGION,
-            turn=verdict.turn,
+            turn=turn,
         )
         if lines and not hand_lines:
             # Every detected line is printed: refuse to analyse the page
@@ -934,6 +964,8 @@ def _analyze_vl_process(arr, raw, lang):
         "proc_w": int(arr.shape[1]),
         "proc_h": int(arr.shape[0]),
         **({"turned": verdict.turn} if verdict.turn else {}),
+        # Two facing pages: the page scored and its box (facing_pages.py).
+        **({"facing_pages": facing} if facing else {}),
         "document_context": vl.get("document_context", {}),
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
@@ -1051,6 +1083,7 @@ def _report_python_process(
                 verdict,
                 extra={"analysis": None},
             )
+        arr, raw, turn, facing = _one_page(arr, raw, verdict)
         if _ink_mode(lang):
             # A language the reader cannot find the lines of: measured
             # from the ink (ink_geometry.py), nothing read.
@@ -1066,7 +1099,7 @@ def _report_python_process(
                 raw_bytes=raw,
                 refine_backend=selected_backend,
                 read_region=_READ_REGION,
-                turn=verdict.turn,
+                turn=turn,
             )
         if lines and not hand_lines:
             # Every detected line is printed. Scoring machine type as
@@ -1301,7 +1334,7 @@ def _report_python_process(
             ),
         }
 
-    photo = computer_vision.photo_size(raw, verdict.turn)
+    photo = computer_vision.photo_size(raw, turn)
     language = _language(
         arr, hand_lines, lang, selected_backend, expected_text
     )
@@ -1335,6 +1368,8 @@ def _report_python_process(
         # How far the photo was turned to read it upright (#297): the
         # browser turns its own copy the same way before drawing.
         **({"turned": verdict.turn} if verdict.turn else {}),
+        # Two facing pages: the page scored and its box (facing_pages.py).
+        **({"facing_pages": facing} if facing else {}),
         "document_context": vl.get("document_context", {}),
         "layout": vl.get("layout", {}),
         "regions": vl.get("regions", []),
