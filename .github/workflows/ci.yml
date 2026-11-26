@@ -178,7 +178,11 @@ jobs:
       # coverage-baseline.json is the ratchet (#232,
       # docs/21-performance-and-coverage.md section 6).
       - name: Run server unit + integration tests (every backend/tests/test_*.py)
-        run: python -m coverage run --branch -m unittest discover -v -s backend/tests -t .
+        # The output also goes to unittest.log, from which the privacy
+        # results below are read (scripts/privacy_results.py).
+        run: |
+          set -o pipefail
+          python -m coverage run --branch -m unittest discover -v -s backend/tests -t . 2>&1 | tee unittest.log
       - name: Backend coverage report
         run: |
           python -m coverage json
@@ -193,6 +197,19 @@ jobs:
           if-no-files-found: error
       - name: Backend coverage no lower than coverage-baseline.json
         run: python scripts/coverage_ratchet.py backend coverage/backend.json --check --summary "$GITHUB_STEP_SUMMARY"
+      # Pushes to main only: the website's release fetches these for the
+      # analyser commit it ships (vahini-web docs/06-status-page.md).
+      - name: Record the server privacy tests' results for the status page
+        if: always() && github.event_name == 'push'
+        run: python scripts/privacy_results.py --out privacy-tests.json --unittest-log unittest.log
+      - name: Upload the server privacy tests' results
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-tests-backend
+          path: privacy-tests.json
+          retention-days: 90
+          if-no-files-found: warn
 
   # Real handwriting, replayed: every page's kept reader output goes
   # through this PR's code and must give the scores in expected.json
@@ -523,6 +540,7 @@ jobs:
       - name: "What's new: one line above the upload, the next change on each visit"
         run: npm run test:whats-new
       - name: "Privacy and security: four lines, hover or tap, Escape closes"
+        id: privacy_card
         run: npm run test:privacy-card
       - name: Headless print/handwriting checks
         run: node tests/account-browser.mjs && npm run test:regression:headless
@@ -533,6 +551,7 @@ jobs:
       - name: Student view (one screen, proof for every sentence)
         run: npm run test:student-view
       - name: I am, Report in and the line-by-line sweep on the check page
+        id: check_page_who
         run: npm run test:check-page-who
       - name: Analyse on the first screen with a photo, and the five skill tiles
         run: npm run test:check-page-run-bar
@@ -546,11 +565,29 @@ jobs:
       - name: Every language keeps the English report's fonts, sizes and places
         run: npm run test:parity
       - name: The print popup's optional price question and the Request Pro card
+        id: print_popup
         run: npm run test:print-popup
       - name: '"How was the report?" asks once, after ten seconds, and sends one fixed answer'
         run: npm run test:report-feedback
       - name: The shared PDF carries the receipt and the page photo, still two pages
         run: npm run test:share-embed
+      # The three page tests the status page lists (scripts/privacy_results.py).
+      # A test skipped after an earlier step failed gets no result.
+      - name: Record the page privacy tests' results for the status page
+        if: always() && github.event_name == 'push'
+        env:
+          PRIVACY_CARD: ${{ steps.privacy_card.outcome }}
+          CHECK_PAGE_WHO: ${{ steps.check_page_who.outcome }}
+          PRINT_POPUP: ${{ steps.print_popup.outcome }}
+        run: python3 scripts/privacy_results.py --out privacy-tests.json "privacy-card=$PRIVACY_CARD" "check-page-who=$CHECK_PAGE_WHO" "print-popup=$PRINT_POPUP"
+      - name: Upload the page privacy tests' results
+        if: always() && github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: privacy-tests-browser
+          path: privacy-tests.json
+          retention-days: 90
+          if-no-files-found: warn
 
   # Full stack WITH OCR. The slow part (paddle pip install) is cached as a Docker
   # layer via the GHA cache backend, so warm runs skip it entirely.
