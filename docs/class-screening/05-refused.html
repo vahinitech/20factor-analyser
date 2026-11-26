@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mock-up 5: pages we could not check</title>
+<link rel="stylesheet" href="/site/css/fonts.css">
+<link rel="stylesheet" href="/site/design/v1/vahini.css">
+<link rel="stylesheet" href="mock.css">
+<script src="mock-data.js"></script>
+</head>
+<body>
+<header class="bar"><div class="bar__in"><img src="/site/assets/vahini-logo-64.webp" alt="Vahini"><nav class="bar__links"><span>Use cases</span><span>Who it's for</span><span>Company</span><span>Careers</span></nav><span class="bar__cta">Free handwriting check</span></div></header>
+<main class="wrap">
+  <span class="mock-tag">Mock-up 5 of 6 &middot; a page refused</span>
+  <h1 class="page-title">3 pages were not checked</h1>
+  <p class="lead">These pages are not counted and have no flag. Add a new photo for each and only those pages are checked again.</p>
+
+  <div class="table-wrap"><table class="class" id="t"></table></div>
+  <div class="actions"><span class="btn btn--main">Check the 3 new photos</span><span class="btn btn--quiet">Leave them out of this class</span></div>
+
+  <section class="card" style="margin-top:22px">
+    <h2>While a class is running</h2>
+    <p class="muted small" style="margin:0 0 10px">The first two are short waits and the page is still checked. The third is rare: the same page was lost twice.</p>
+    <div class="table-wrap" style="margin-top:0">
+      <table class="class">
+        <tbody>
+          <tr class="is-run"><td class="c-code"><span class="code">3B-16</span></td><td class="c-wide" colspan="6"><span class="running">The server is busy.</span> <span class="refusal">Trying this page again in 20 seconds. The rest of the class waits with it.</span></td></tr>
+          <tr class="is-run"><td class="c-code"><span class="code">3B-18</span></td><td class="c-wide" colspan="6"><span class="running">Checking this page again.</span> <span class="refusal">The server restarted while reading it. It is read once more in exactly the same way, so the result is the one it would have had.</span></td></tr>
+          <tr class="is-refused"><td class="c-code"><span class="code">3B-18</span></td><td class="c-wide" colspan="6"><span class="refusal"><b>Not checked: the server could not finish this page.</b> Your other pages are fine. Try this one again in a minute.</span> <a href="#" class="btn btn--ghost btn--sm" style="margin-left:6px">Try again</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small muted" style="margin-top:10px">If the page loses its connection, the class pauses and starts again by itself when the connection returns.</p>
+  </section>
+</main>
+<script>MOCK.fill("t", { only: "refused", fix: true });</script>
+</body>
+</html>
